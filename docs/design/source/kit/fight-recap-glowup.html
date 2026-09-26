@@ -320,7 +320,7 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 
 /* Preview control, not product UI: switches the recap between the croissant run and the coffee duel. */
 .phone .ff-overlay > .fr-fade { position: absolute; left: 0; right: 0; bottom: 84px; height: 96px; pointer-events: none; background: linear-gradient(to bottom, transparent, var(--bg) 60%); }
-.phone .ff-overlay > .fr-pick { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--overlay); border: 1px solid var(--overlay-line); white-space: nowrap; }
+.phone .ff-overlay > .fr-pick { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--overlay); border: 1px solid var(--overlay-line); text-wrap: nowrap; }
 .fr-pick button { height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px 0 8px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 800; cursor: pointer; flex: none; -webkit-tap-highlight-color: transparent; }
 .fr-pick button[aria-pressed="true"] { background: var(--control-alt); color: var(--text); }
 .fr-stack { display: inline-flex; align-items: center; }
@@ -334,7 +334,7 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 .fr-back { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; }
 .fr-titles { flex: 1; min-width: 0; }
 .fr-name { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
-.fr-sub { margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-sub { margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-wrap: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fr-iconbtn { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--text-secondary); cursor: pointer; }
 
 /* Native fight detail header and segmented control, as shipped. */
@@ -349,7 +349,7 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 .nv-seg button[aria-selected="true"] { background: var(--moss-fill); color: var(--moss-on); }
 
 .fr-sec { display: flex; align-items: center; gap: 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss-text); }
-.fr-sec > span { white-space: nowrap; }
+.fr-sec > span { text-wrap: nowrap; }
 .fr-sec i { flex: 1; height: 1px; background: var(--track); }
 .fr-sec em { font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--text-tertiary); }
 .fr-card { border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
@@ -365,10 +365,38 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 .fr-bar.up { fill: var(--moss-edge); }
 .fr-bar.down { fill: var(--ember-fill); }
 
+/* Chart faces at line ends. */
+.fr-race { position: relative; }
+.fr-endface { position: absolute; display: grid; place-items: center; border-radius: 50%; outline: 2px solid transparent; outline-offset: 1px; }
+.fr-endface.you { outline-color: var(--fr-you); }
+
+/* Steadiness: each person's daily range relative to their own average. */
+.fr-st { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.fr-sr { display: grid; grid-template-columns: 24px 58px 1fr 40px; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; }
+.fr-sr .num { text-align: right; color: var(--text-secondary); font-size: 12px; }
+.fr-sr.you .num { color: var(--moss-text); }
+.fr-rt { position: relative; height: 14px; }
+.fr-rt::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 2px; border-radius: 1px; background: var(--track); }
+.fr-rt::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.fr-rt b { position: absolute; top: 3px; height: 8px; border-radius: 4px; background: var(--fr-ash); transform-origin: center; animation: fr-grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.fr-sr.you .fr-rt b { background: var(--fr-you); }
+.fr-sr.first .fr-rt b { background: var(--fr-rival); }
+.fr-axis { display: flex; justify-content: space-between; margin: 6px 48px 0 90px; font-size: 10px; font-weight: 800; color: var(--text-faint); }
+
+/* Mini bars. */
+.fr-mini { position: relative; display: flex; align-items: flex-end; gap: 4px; }
+.fr-mini b { flex: 1; border-radius: 4px 4px 2px 2px; background: var(--fr-ash-soft); transform-origin: bottom; animation: fr-grow-y 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.fr-mini b.on { background: var(--fr-rival); }
+.fr-mini b.on.you { background: var(--fr-you); }
+.fr-mini-avg { position: absolute; left: -2px; right: -2px; height: 0; border-top: 1.5px dashed var(--text-tertiary); z-index: 1; }
+
+.fr-ticks { display: flex; gap: 4px; margin-top: 6px; }
+.fr-ticks span { flex: 1; min-width: 0; text-align: center; font-size: 10px; font-weight: 800; color: var(--text-faint); text-wrap: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* Leader after each day. */
 .fr-strip { display: flex; gap: 4px; }
 .fr-strip > div { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.fr-strip span { font-size: 10px; font-weight: 800; color: var(--text-faint); white-space: nowrap; }
+.fr-strip span { font-size: 10px; font-weight: 800; color: var(--text-faint); text-wrap: nowrap; }
 .fr-strip .ff-avatar { outline: 2px solid transparent; outline-offset: 1px; }
 .fr-strip .you .ff-avatar { outline-color: var(--fr-you); }
 .fr-strip .swap span { color: var(--text); }
@@ -1017,8 +1045,13 @@ const RC = (() => {
         give(top, { key: "bigday", icon: "bolt", title: "Biggest day", line: `${fmt(best[top].v)} on day ${best[top].i + 1}, the best of anyone`, say: `${Poss(top)} ${B(best[top].v)} on day ${best[top].i + 1} was the biggest day of the fight.` });
         if (comeback) give(comeback.id, { key: "comeback", icon: "trendUp", title: "Comeback", line: `Cut ${fmt(comeback.cut)} from the gap on day ${comeback.i + 1}`, say: `${Nm(comeback.id)} cut ${B(comeback.cut)} from the gap on day ${comeback.i + 1}.` });
         give(leader[0], { key: "fast", icon: "flag", title: "Fast start", line: `Led after day 1 by ${fmt(leadBy[0])}`, say: `${Nm(leader[0])} led after day 1, by ${B(leadBy[0])}.` });
-        const calm = steady.find((id) => !awards[id]);
-        if (calm) give(calm, { key: "steady", icon: "clock", title: "Metronome", line: `Every day between ${fmt(worst[calm].v)} and ${fmt(best[calm].v)}`, say: `${Nm(calm)} ${vb(calm, "were", "was")} the metronome: every day between ${B(worst[calm].v)} and ${B(best[calm].v)}.` });
+        // Metronome goes to the tightest daily range (best day minus worst day) among people still without an award.
+        const range = (id) => best[id].v - worst[id].v;
+        const tight = [...ids].sort((a, b) => range(a) - range(b));
+        const calm = tight.find((id) => !awards[id]);
+        if (calm) give(calm, calm === tight[0]
+            ? { key: "steady", icon: "clock", title: "Metronome", line: `Every day within ${fmt(range(calm))} steps, the tightest of anyone`, say: `${Nm(calm)} ${vb(calm, "were", "was")} the metronome: every day within ${B(range(calm))} steps, the tightest of anyone.` }
+            : { key: "steady", icon: "clock", title: "Steady feet", line: `Every day within ${fmt(range(calm))} steps`, say: `${Nm(calm)} kept every day within ${B(range(calm))} steps.` });
         ids.forEach((id, j) => {
             const below = ids[j + 1];
             if (below && D.every((i) => cum[id][i] > cum[below][i])) give(id, { key: "wall", icon: "lock", title: "Held the line", line: `Ahead of ${nm(below)} after all ${n} days`, say: `${Nm(id)} stayed ahead of ${nm(below)} after all ${n} days.`, below });
@@ -1092,7 +1125,7 @@ const RC = (() => {
             round: f.round ? `Round ${f.round}` : `${n}-day duel`,
         };
     };
-    return { "croissant-r1": build(FF.fight("croissant-r1")), coffee: build(FF.fight("coffee")) };
+    return { "croissant-r1": build(FF.fight("croissant-r1")), coffee: build(FF.fight("coffee")), build };
 })();
 
 // ===== Which past fight is on screen. #fight=coffee starts on the duel. =====
@@ -1139,18 +1172,18 @@ const plain = (html) => html.replace(/<[^>]+>/g, "");
 const strip = (s, size = 28, extra = () => "") => `<div class="fr-strip">${s.D.map((i) => `<div class="${s.changes.includes(i) ? "swap" : ""}${s.leader[i] === s.me ? " you" : ""}">${avatar(s.leader[i], size)}<span>D${i + 1}</span>${extra(i)}</div>`).join("")}</div>`;
 
 // Your running gap to your rival after each day: moss above level, ember below.
-const gapChart = (s, { w = 309, h = 96, uid = "gap", days = true, label = true } = {}) => {
-    const v = s.mine;
+const gapChart = (s, { w = 309, h = 96, uid = "gap", days = true, label = true, vals = null } = {}) => {
+    const v = vals || s.mine;
     const hi = Math.max(0, ...v), lo = Math.min(0, ...v);
     const span = hi - lo || 1;
-    const top = 18, bot = h - (days ? 22 : 6);
+    const top = 18, bot = h - (days ? 30 : 6);
     const x = (i) => X(s, i, 14, w - 14);
     const y = (val) => top + ((hi - val) / span) * (bot - top);
     const z = y(0);
     const pts = v.map((val, i) => [x(i), y(val)]);
     const line = path(pts);
     const area = `${line} L${x(s.n - 1).toFixed(1)} ${z.toFixed(1)} L${x(0).toFixed(1)} ${z.toFixed(1)} Z`;
-    const c = s.mineClose;
+    const c = v.reduce((a, val, i) => (Math.abs(val) < Math.abs(v[a]) ? i : a), 0);
     const lx = Math.min(w - 18, Math.max(18, x(c)));
     // Label on the roomier side of the marked point.
     const ly = y(v[c]) - top > bot - y(v[c]) ? y(v[c]) - 14 : y(v[c]) + 24;
@@ -1270,7 +1303,7 @@ const storySlides = (s) => {
     const art = (cls, list) => `<div class="v3-art ${cls}" aria-hidden="true">${list.map(([id, hgt]) => `<span>${companionArt(FF.people[id].animal, hgt)}</span>`).join("")}</div>`;
     const lost = !s.won;
     const lineup = s.k > 2 ? [...s.ids].reverse().map((id, j) => [id, 118 + j * 8]) : s.ids.map((id) => [id, 176]);
-    const bars = lost ? diffBars(s, s.me, s.W, { w: 309, h: 124, hl: s.slip[s.me].i }) : diffBars(s, s.me, s.R, { w: 309, h: 124, hl: s.decisive });
+    const bars = lost ? diffBars(s, s.me, s.W, { w: 309, h: 170, hl: s.slip[s.me].i }) : diffBars(s, s.me, s.R, { w: 309, h: 170, hl: s.decisive });
     const t = s.top;
     return [
         { tone: "plain", html: `<div class="v3-k">The recap · ${esc(s.round)}</div><h2 class="v3-h">${s.n} days.<br>${s.k} walkers.<br><span class="num">${fmt(s.all)}</span> steps.</h2><p class="v3-s">${esc(s.span)}. ${s.k > 2 ? "Last place" : "The loser"} ${esc(s.actionLower)}.</p>${art("line", lineup)}` },
@@ -1283,6 +1316,379 @@ const storySlides = (s) => {
         { tone: "alt", html: `<div class="v3-k">The awards</div><h2 class="v3-h sm">Everyone gets one.</h2><div class="v3-awards">${s.ids.map((id) => { const a = s.awards[id]; return `<div class="v3-aw${id === s.me ? " you" : ""}">${avatar(id, 44)}<div><b>${esc(a.title)}</b><span>${esc(s.Nm(id))} · ${esc(a.line)}</span></div><i>${icon(a.icon, 18, { stroke: 2.2 })}</i></div>`; }).join("")}</div>${s.k > 2 ? "" : art("line", s.ids.map((id) => [id, 170]))}` },
         { tone: s.won ? "fill" : "plain", html: `<div class="v3-k">Final · ${esc(s.endShort)}</div><h2 class="v3-h">${s.won ? "You won" : `${esc(pname(s.W))} won`}<br>by <span class="num">${fmt(s.margin)}</span>.</h2><div class="v3-final">${s.ids.map((id, j) => `<div class="${id === s.me ? "you" : ""}"><span class="num">${j + 1}</span>${avatar(id, 26)}<em>${esc(s.Nm(id))}</em><b class="num">${fmt(s.total[id])}</b></div>`).join("")}</div>${s.k > 2 ? art("final", [[s.W, 150]]) : ""}<div class="v3-foot"><span class="v3-stake${s.last === s.me ? " mine" : ""}">${icon("flag", 18, { stroke: 2.4 })}<span><b>${esc(s.say.stakes)}</b><small>${s.k > 2 ? "Last place" : "The loser"} does the action</small></span></span><button type="button" class="v3-again" data-again aria-label="Watch again">${icon("refresh", 18, { stroke: 2.4 })}</button></div>` },
     ];
+};
+
+// ===== Parts for options 4 to 7 =====
+const NB = (v) => `<b class="num">${fmt(v)}</b>`;
+// Push labels apart so none overlap; keeps order, stays inside lo..hi.
+const spread = (items, gap, lo, hi) => {
+    const out = items.map((o) => ({ ...o })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < out.length; i++) out[i].y = Math.max(out[i].y, out[i - 1].y + gap);
+    if (out.length && out[out.length - 1].y > hi) out[out.length - 1].y = hi;
+    for (let i = out.length - 2; i >= 0; i--) out[i].y = Math.min(out[i].y, out[i + 1].y - gap);
+    if (out.length && out[0].y < lo) {
+        out[0].y = lo;
+        for (let i = 1; i < out.length; i++) out[i].y = Math.max(out[i].y, out[i - 1].y + gap);
+    }
+    return out;
+};
+const ink = (s, id) => (id === s.me ? "var(--fr-you)" : id === s.rival ? "var(--fr-rival)" : "var(--fr-ash)");
+// Running totals for everyone, faces at the line ends instead of a legend.
+const raceLines = (s, { w = 353, h = 176 } = {}) => {
+    const x0 = 4, x1 = w - 40, top = 10, bot = h - 20;
+    const max = s.total[s.W];
+    const x = (i) => X(s, i, x0, x1);
+    const y = (v) => bot - (v / max) * (bot - top);
+    let g = [0, 0.5, 1].map((fr) => `<line x1="${x0}" x2="${x1}" y1="${y(max * fr).toFixed(1)}" y2="${y(max * fr).toFixed(1)}" style="stroke:var(--hairline)"/>`).join("");
+    const drawOrder = [...s.ids].sort((a, b) => (a === s.me) - (b === s.me) || (a === s.rival) - (b === s.rival));
+    for (const id of drawOrder) {
+        const pts = s.cum[id].map((v, i) => [x(i), y(v)]);
+        g += `<path d="${path(pts)}" fill="none" style="stroke:${ink(s, id)}" stroke-width="${id === s.me ? 3 : 2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+        g += `<circle cx="${pts[s.n - 1][0].toFixed(1)}" cy="${pts[s.n - 1][1].toFixed(1)}" r="3.5" style="fill:${ink(s, id)}"/>`;
+    }
+    g += s.D.map((i) => `<text x="${x(i).toFixed(1)}" y="${h - 4}" text-anchor="middle">D${i + 1}</text>`).join("");
+    const ends = spread(s.ids.map((id) => ({ id, y: y(s.total[id]) })), 22, 10, bot);
+    const faces = ends.map((e) => `<span class="fr-endface${e.id === s.me ? " you" : ""}" style="left:${x1 + 12}px;top:${(e.y - 11).toFixed(1)}px">${avatar(e.id, 22)}</span>`).join("");
+    return `<div class="fr-race" style="height:${h}px"><svg class="fr-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${g}</svg>${faces}</div>`;
+};
+
+// Option 6: gap to the leader, scrubbable, and a heat map of every day.
+const V6 = { mode: "top", day: null };
+const v6Chart = (s) => {
+    const ids = V6.mode === "top" && s.k > 2 ? [s.W, s.R] : s.ids;
+    const W = 321, H = 196, x0 = 40, x1 = W - 44, top = 22, bot = H - 22;
+    const max = Math.max(...ids.flatMap((id) => s.behind[id])) * 1.08 || 1;
+    const x = (i) => X(s, i, x0, x1);
+    const y = (v) => top + (v / max) * (bot - top);
+    const sel = V6.day ?? s.n - 1;
+    let g = `<line x1="${x0 - 4}" x2="${x1 + 4}" y1="${top}" y2="${top}" style="stroke:var(--line)"/><text x="0" y="${top + 3.5}">Leader</text>`;
+    const step = max > 6000 ? 5000 : max > 2400 ? 1000 : 500;
+    for (let v = step; v < max; v += step) g += `<line x1="${x0 - 4}" x2="${x1 + 4}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" style="stroke:var(--hairline)" stroke-dasharray="2 4"/><text x="0" y="${(y(v) + 3.5).toFixed(1)}">−${short(v)}</text>`;
+    g += `<line x1="${x(sel).toFixed(1)}" x2="${x(sel).toFixed(1)}" y1="${top - 6}" y2="${bot + 4}" style="stroke:var(--text-faint)"/>`;
+    const drawOrder = [...ids].sort((a, b) => (a === s.me) - (b === s.me) || (a === s.rival) - (b === s.rival));
+    for (const id of drawOrder) {
+        const pts = s.behind[id].map((v, i) => [x(i), y(v)]);
+        g += `<path d="${path(pts)}" fill="none" style="stroke:${ink(s, id)}" stroke-width="${id === s.me ? 3 : 2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+        g += `<circle cx="${pts[sel][0].toFixed(1)}" cy="${pts[sel][1].toFixed(1)}" r="${id === s.me ? 5 : 4}" style="fill:${ink(s, id)};stroke:var(--card)" stroke-width="2"/>`;
+    }
+    // Rings where the lead changed hands.
+    for (const i of s.changes) g += `<circle cx="${x(i).toFixed(1)}" cy="${top}" r="8" fill="none" style="stroke:${s.leader[i] === s.me ? "var(--moss-edge)" : "var(--ember-fill)"}" stroke-width="2"/>`;
+    g += s.D.map((i) => `<text class="${i === sel ? "on" : ""}" x="${x(i).toFixed(1)}" y="${H - 4}" text-anchor="middle">D${i + 1}</text>`).join("");
+    const ends = spread(ids.map((id) => ({ id, y: y(s.behind[id][s.n - 1]) })), 24, top - 10, bot);
+    const faces = ends.map((e) => `<span class="fr-endface${e.id === s.me ? " you" : ""}" style="left:${x1 + 14}px;top:${(e.y - 12).toFixed(1)}px">${avatar(e.id, 24)}</span>`).join("");
+    return `<svg class="fr-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${g}</svg>${faces}`;
+};
+const v6Read = (s) => {
+    const d = V6.day ?? s.n - 1;
+    const ids = V6.mode === "top" && s.k > 2 ? [s.W, s.R] : s.ids;
+    const rows = [...ids].sort((a, b) => s.cum[b][d] - s.cum[a][d]);
+    return `<div class="v6-rh"><b>Day ${d + 1}</b><span class="fr-say">${s.Nm(s.leader[d])} ${s.leader[d] === s.me ? "lead" : "leads"} by ${NB(s.leadBy[d])}</span></div>
+<div class="v6-rows">${rows.map((id) => `<div class="v6-r${id === s.me ? " you" : ""}">${avatar(id, 22)}<span>${esc(s.Nm(id))}</span><em class="num">${fmt(s.daily[id][d])}</em><b class="num">${s.behind[id][d] ? signed(-s.behind[id][d]) : "Leader"}</b></div>`).join("")}</div>
+<div class="v6-lg"><span>Steps that day</span><span>Behind the leader</span></div>`;
+};
+const v6Heat = (s) => {
+    const all = s.ids.flatMap((id) => s.daily[id]);
+    const lo = Math.min(...all), hi = Math.max(...all);
+    const sel = V6.day ?? s.n - 1;
+    const cell = (id, i) => {
+        const t = (s.daily[id][i] - lo) / (hi - lo || 1);
+        const bg = id === s.me ? `color-mix(in srgb, var(--moss-fill) ${Math.round(14 + t * 76)}%, transparent)` : `color-mix(in srgb, var(--text) ${Math.round(5 + t * 30)}%, transparent)`;
+        return `<span class="v6-c${s.dayWinner[i] === id ? " w" : ""}${id === s.me && t > 0.5 ? " hi" : ""}" style="background:${bg}"><span class="num">${short(s.daily[id][i])}</span></span>`;
+    };
+    return `<div class="v6-hh" style="grid-template-columns:28px repeat(${s.n}, 1fr)"><span></span>${s.D.map((i) => `<span class="${i === sel ? "on" : ""}">D${i + 1}</span>`).join("")}</div>
+${s.ids.map((id) => `<div class="v6-hr" style="grid-template-columns:28px repeat(${s.n}, 1fr)">${avatar(id, 26)}${s.D.map((i) => cell(id, i)).join("")}</div>`).join("")}`;
+};
+// Pointer and keyboard scrubbing across a chart.
+const scrub = (el, count, toIndex, pick) => {
+    let down = false;
+    let cur = -1;
+    const go = (i) => {
+        const j = Math.max(0, Math.min(count - 1, i));
+        if (Number.isFinite(j) && j !== cur) {
+            cur = j;
+            pick(j);
+        }
+    };
+    const onDown = (e) => {
+        if (e.button > 0) return;
+        down = true;
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        go(toIndex(e));
+    };
+    const onMove = (e) => { if (down || e.pointerType === "mouse") go(toIndex(e)); };
+    const onUp = () => { down = false; };
+    const onKey = (e) => {
+        const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!d) return;
+        e.preventDefault();
+        e.stopPropagation();
+        go((cur < 0 ? count - 1 : cur) + d);
+    };
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onUp);
+    el.addEventListener("keydown", onKey);
+    return {
+        set: (i) => { cur = i; },
+        off: () => {
+            el.removeEventListener("pointerdown", onDown);
+            el.removeEventListener("pointermove", onMove);
+            el.removeEventListener("pointerup", onUp);
+            el.removeEventListener("pointercancel", onUp);
+            el.removeEventListener("keydown", onKey);
+        },
+    };
+};
+// Pointer x in the element's own layout units, safe under the phone zoom.
+const localX = (el, e) => {
+    const r = el.getBoundingClientRect();
+    return ((e.clientX - r.left) / (r.width || 1)) * el.offsetWidth;
+};
+
+// Option 7: the moments that mattered, computed.
+const moments = (s) => {
+    const ev = [];
+    const at = (i) => {
+        let e = ev.find((x) => x.i === i && x.to == null);
+        if (!e) ev.push((e = { i, items: [] }));
+        return e;
+    };
+    const l0 = s.leader[0];
+    at(0).items.push({ tone: l0 === s.me ? "up" : "flat", icon: "flag", title: `${s.Nm(l0)} ${s.vb(l0, "take", "takes")} the lead`, text: `${NB(s.daily[l0][0])} on day 1, ${NB(s.leadBy[0])} clear.` });
+    for (const i of s.changes) at(i).items.push({ tone: s.leader[i] === s.me ? "up" : "down", icon: "crown", title: `${s.Nm(s.leader[i])} ${s.vb(s.leader[i], "take", "takes")} the lead`, text: `${NB(s.leadBy[i])} clear after day ${i + 1}.` });
+    for (const i of s.D) {
+        if (s.dayWinner[i] !== s.me || (s.top === s.me && s.best[s.me].i === i)) continue;
+        const next = s.ids.filter((id) => id !== s.me).reduce((a, b) => (s.daily[b][i] > s.daily[a][i] ? b : a));
+        at(i).items.push({ tone: "up", icon: "trophy", title: "You win the day", text: `${NB(s.daily[s.me][i])} to ${esc(s.Poss(next))} ${NB(s.daily[next][i])}.` });
+    }
+    at(s.best[s.top].i).items.push({ tone: s.top === s.me ? "up" : "flat", icon: "bolt", title: "Biggest day of the fight", text: `${s.Poss(s.top)} ${NB(s.best[s.top].v)}, the best of anyone.` });
+    at(s.closest).items.push({ tone: "flat", icon: "target", title: "The closest it got", text: s.closeAhead === s.W ? `${s.Nm(s.R)} got within ${NB(s.closeGap)} of ${esc(s.nm(s.W))}.` : `${esc(s.Poss(s.R))} lead was ${NB(s.closeGap)}. It never got closer.` });
+    if (!s.won) at(s.slip[s.me].i).items.push({ tone: "down", icon: "trendDown", title: "Your hardest day", text: `${esc(pname(s.W))} out-walked you by ${NB(s.slip[s.me].v)}.` });
+    if (!s.won && s.pull.days >= 2 && s.pull.gained > 0) ev.push({ i: s.closest + 1, to: s.n - 1, items: [{ tone: "down", icon: "trendDown", title: `${esc(pname(s.W))} pulls away`, text: `${NB(s.pull.gained)} more in ${s.pull.days} days. The gap never closes again.` }] });
+    ev.sort((a, b) => a.i - b.i);
+    return ev;
+};
+
+// ===== Parts for options 8 to 13 =====
+const SPREAD = 0.45;
+const steadyRows = (s) => {
+    const rel = (v, id) => Math.max(0, Math.min(100, 50 + ((v / s.avg[id] - 1) / SPREAD) * 50));
+    return `<div class="fr-st">${s.steady.map((id, j) => `<div class="fr-sr${id === s.me ? " you" : ""}${j === 0 && id !== s.me ? " first" : ""}">${avatar(id, 24)}<span>${esc(s.Nm(id))}</span><span class="fr-rt"><b style="left:${rel(s.worst[id].v, id).toFixed(1)}%;width:${(rel(s.best[id].v, id) - rel(s.worst[id].v, id)).toFixed(1)}%"></b></span><span class="num">±${Math.round(s.cv[id] * 100)}%</span></div>`).join("")}</div>
+<div class="fr-axis"><span>${signed(-Math.round(SPREAD * 100))}%</span><span>average</span><span>+${Math.round(SPREAD * 100)}%</span></div>`;
+};
+const mini = (vals, { hl = [], avg = null, you = false, h = 48 } = {}) => {
+    const max = Math.max(...vals) || 1;
+    return `<div class="fr-mini" style="height:${h}px">${avg != null ? `<i class="fr-mini-avg" style="bottom:${((avg / max) * 100).toFixed(1)}%"></i>` : ""}${vals.map((v, i) => `<b class="${hl.includes(i) ? "on" : ""}${you ? " you" : ""}" style="height:${Math.max(6, (v / max) * 100).toFixed(1)}%;animation-delay:${(i * 0.04).toFixed(2)}s"></b>`).join("")}</div>`;
+};
+const dayTicks = (s) => `<div class="fr-ticks">${s.D.map((i) => `<span>D${i + 1}</span>`).join("")}</div>`;
+
+// Option 8: one award per person, with the chart that proves it.
+const V8 = { at: 0 };
+const awardViz = (s, id) => {
+    const a = s.awards[id];
+    const you = id === s.me;
+    if (a.key === "wire" || a.key === "closer") return `<div class="v8-led">${s.D.map((i) => `<span class="${s.leader[i] === id ? "on" : ""}${you ? " you" : ""}">D${i + 1}</span>`).join("")}</div><div class="v8-vc">Days in the lead</div>`;
+    if (a.key === "bigday") return `${mini(s.daily[id], { hl: [s.best[id].i], you })}${dayTicks(s)}`;
+    if (a.key === "steady") return `${mini(s.daily[id], { hl: s.D, avg: s.avg[id], you })}${dayTicks(s)}<div class="v8-vc">Dashed line: ${esc(s.poss(id))} average, ${fmt(s.avg[id])}</div>`;
+    if (a.key === "wall") return `${mini(s.D.map((i) => s.cum[id][i] - s.cum[a.below][i]), { hl: s.D, you })}${dayTicks(s)}<div class="v8-vc">Lead over ${esc(s.nm(a.below))} after each day</div>`;
+    if (a.key === "fast") return `${mini(s.ids.map((x) => s.daily[x][0]), { hl: [s.ids.indexOf(id)], you })}<div class="fr-ticks">${s.ids.map((x) => `<span>${esc(s.Nm(x))}</span>`).join("")}</div><div class="v8-vc">Day 1, everyone</div>`;
+    if (a.key === "comeback") return `${mini(s.behind[id].map((v) => Math.max(v, 1)), { hl: [s.comeback.i], you })}${dayTicks(s)}<div class="v8-vc">Steps behind the leader</div>`;
+    return `${mini(s.daily[id], { hl: s.D, you })}${dayTicks(s)}`;
+};
+
+// Option 9: questions people actually ask, answered from the numbers.
+const V9 = { open: 0 };
+const v9Questions = (s) => {
+    const next = s.ids[s.k - 2];
+    const needAvg = (s.total[s.W] + 1) / s.n;
+    const who = s.won ? s.R : s.me;
+    return [
+        {
+            icon: s.won ? "trendUp" : "trendDown",
+            q: s.won ? "Where did I win it?" : "Where did I lose it?",
+            a: `${s.say.slip} ${!s.won ? `${s.say.pull} ${s.say.whatIf}` : s.comeback && s.comeback.id === s.me && s.comeback.i === s.decisive && s.comeback.to < 0 ? `That one day took you from ${NB(s.comeback.from)} down to ${NB(-s.comeback.to)} up.` : s.say.moment}`,
+            viz: `<div class="v9-vh">You minus ${esc(pname(s.won ? s.R : s.W))}, each day</div>${diffBars(s, s.me, s.won ? s.R : s.W, { w: 305, h: 124, hl: s.won ? s.decisive : s.slip[s.me].i })}`,
+        },
+        { icon: "crown", q: "Who led?", a: `${s.say.lead} ${s.say.order}`, viz: `<div class="v9-vh">Leader after each day, and by how much</div>${strip(s, s.n > 4 ? 32 : 44, (i) => `<b class="num">${short(s.leadBy[i])}</b>`)}` },
+        { icon: "target", q: "When was it closest?", a: `${s.say.close} ${s.say.pull}`, viz: `<div class="v9-vh">You vs ${esc(pname(s.rival))}, after each day</div>${gapChart(s, { w: 305, h: 110, uid: "v9g" })}` },
+        {
+            icon: "steps",
+            q: s.won ? "How safe was my lead?" : "What would it have taken?",
+            a: `${s.say.need}${s.won ? ` ${s.say.whatIf}` : ""}`,
+            viz: `<div class="v9-need">${[[who, s.avg[who], `${s.Poss(who)} average`], [s.W, needAvg, "Needed to win"]].map(([id, v, t], j) => `<div class="${j ? "need" : id === s.me ? "you" : ""}"><span>${t}</span><i><b style="width:${((v / (needAvg * 1.04)) * 100).toFixed(1)}%"></b></i><em class="num">${fmt(v)}</em></div>`).join("")}<p class="num">+${fmt(s.perDay(who))} a day</p></div>`,
+        },
+        { icon: "bolt", q: "Who had the biggest day?", a: s.say.best, viz: `<div class="v9-best">${[...s.ids].sort((a, b) => s.best[b].v - s.best[a].v).map((id) => `<div class="${id === s.top ? "top" : ""}${id === s.me ? " you" : ""}">${avatar(id, 24)}<span>${esc(s.Nm(id))}<small>Day ${s.best[id].i + 1}</small></span><i><b style="width:${((s.best[id].v / s.best[s.top].v) * 100).toFixed(1)}%"></b></i><em class="num">${fmt(s.best[id].v)}</em></div>`).join("")}</div>` },
+        { icon: "clock", q: "Who was steadiest?", a: s.say.steady, viz: steadyRows(s) },
+        { icon: "flag", q: "Who's on the hook?", a: `${esc(s.say.stakes)}. ${esc(s.Nm(s.last))} finished ${NB(s.total[next] - s.total[s.last])} behind ${esc(s.nm(next))}.`, viz: `<div class="v9-hook">${companionArt(FF.people[s.last].animal, 120)}<div><b>${esc(s.Nm(s.last))}</b><span>${s.ORD[s.k - 1]} · ${fmt(s.total[s.last])} steps</span></div></div>` },
+    ];
+};
+
+// Option 10: the fight replayed day by day, with a line of commentary for each.
+const V10 = { day: null };
+const v10Calls = (s) => s.D.map((i) => {
+    const l = s.leader[i];
+    const status = `${s.Nm(l)} ${s.vb(l, "lead", "leads")} by ${NB(s.leadBy[i])}.`;
+    if (i === s.n - 1) return { h: `${s.Nm(s.W)} ${s.vb(s.W, "win", "wins")} by ${fmt(s.margin)}.`, sub: `${esc(s.say.stakes)}.` };
+    if (i === 0) return { h: `${s.Nm(l)} ${s.vb(l, "take", "takes")} the lead with ${fmt(s.daily[l][0])}.`, sub: status };
+    if (s.changes.includes(i)) return { h: `${s.Nm(l)} ${s.vb(l, "take", "takes")} the lead.`, sub: `${NB(s.leadBy[i])} clear after day ${i + 1}.` };
+    if (i === s.closest) return { h: `Within ${fmt(s.closeGap)}. The closest it gets.`, sub: s.best[s.top].i === i ? `${s.Poss(s.top)} ${NB(s.best[s.top].v)} is the biggest day of the fight.` : status };
+    if (!s.won && i === s.slip[s.me].i) return { h: `Rough day: ${fmt(s.slip[s.me].v)} lost to ${esc(pname(s.W))}.`, sub: status };
+    if (i === s.best[s.top].i) return { h: `${s.Poss(s.top)} ${fmt(s.best[s.top].v)}, the biggest day of the fight.`, sub: status };
+    const w = s.dayWinner[i];
+    return { h: `${s.Nm(w)} ${s.vb(w, "win", "wins")} the day with ${fmt(s.daily[w][i])}.`, sub: status };
+});
+
+// Option 11: you against one person, with the facts of that duel.
+const V11 = { rival: null };
+const duelFacts = (s, r) => {
+    const d = s.duel(s.me, r);
+    const ahead = d.final >= 0;
+    const perDay = Math.ceil((Math.abs(d.final) + 1) / s.n);
+    const gain = s.best[s.me].v - s.worst[s.me].v;
+    const facts = [
+        { icon: "calendar", t: `Days won: you ${d.aWon}, ${esc(pname(r))} ${d.bWon}.` },
+        { icon: "crown", t: d.swaps === 0 ? `${ahead ? "You" : esc(pname(r))} led after every single day.` : `The lead between you swapped ${d.swaps} ${d.swaps === 1 ? "time" : "times"}.` },
+        { icon: "target", t: `The closest: ${NB(Math.abs(d.gap[d.close]))} after day ${d.close + 1}.` },
+        ahead
+            ? { icon: "trendUp", t: `Your best day against ${esc(pname(r))}: day ${d.help + 1}, ${NB(d.diff[d.help])} more.`, up: true }
+            : { icon: "trendDown", t: `Day ${d.hurt + 1} hurt most: ${esc(pname(r))} out-walked you by ${NB(-d.diff[d.hurt])}.`, down: true },
+        ahead
+            ? { icon: "steps", t: `${esc(pname(r))} needed ${NB(perDay)} more steps a day.` }
+            : { icon: "steps", t: `${NB(perDay)} more steps a day would have done it. About ${s.minutes(perDay)} minutes.` },
+    ];
+    if (!ahead) facts.push({ icon: "refresh", t: gain > -d.final ? `Walk your day ${s.best[s.me].i + 1} again instead of day ${s.worst[s.me].i + 1} and you win by ${NB(gain + d.final)}.` : `Even your best day in place of your worst leaves you ${NB(-d.final - gain)} short.` });
+    return { d, ahead, facts };
+};
+
+// Option 12: who stands where, and what each companion has to say.
+const V12 = { who: null };
+
+// Option 14: what if. Your edited days go through the same recap engine as the real ones.
+// Same shape FF gives a fight, rebuilt from edited daily steps, so RC.build can rerun on it.
+const refight = (f, daily) => {
+    const totals = Object.fromEntries(f.cast.map((id) => [id, daily[id].reduce((a, b) => a + b, 0)]));
+    const standings = f.cast
+        .map((id) => ({ id, person: FF.people[id], total: totals[id], today: daily[id][daily[id].length - 1] }))
+        .sort((a, b) => b.total - a.total)
+        .map((row, i, all) => ({ ...row, rank: 1 + all.filter((o) => o.total > row.total).length }));
+    const days = daily[f.cast[0]].map((_, i) => ({
+        label: `Day ${i + 1}`,
+        scores: Object.fromEntries(f.cast.map((id) => [id, daily[id][i]])),
+        cumulative: Object.fromEntries(f.cast.map((id) => [id, daily[id].slice(0, i + 1).reduce((a, b) => a + b, 0)])),
+    }));
+    return { ...f, daily, totals, standings, me: standings.find((r) => r.id === "marc"), days, dayCount: days.length };
+};
+const WI = { mine: null, day: 0 };
+// Shortcuts computed from the real fight: when you lost, the smallest ways to win; when you won, how much slack you had.
+const wiPresets = (s) => {
+    const real = s.daily[s.me];
+    const set = (i, v) => real.map((x, j) => (j === i ? v : x));
+    if (!s.won) return [
+        { t: `Day ${s.best[s.me].i + 1} twice`, sub: `instead of day ${s.worst[s.me].i + 1}`, mine: set(s.worst[s.me].i, s.best[s.me].v) },
+        { t: `+${fmt(s.perDay(s.me))} a day`, sub: "every day", mine: real.map((v) => v + s.perDay(s.me)) },
+        { t: `Fix day ${s.slip[s.me].i + 1}`, sub: `+${fmt(s.down(s.me) + 1)} that day`, mine: set(s.slip[s.me].i, real[s.slip[s.me].i] + s.down(s.me) + 1) },
+    ];
+    return [
+        { t: `Day ${s.worst[s.me].i + 1} twice`, sub: `instead of day ${s.best[s.me].i + 1}`, mine: set(s.best[s.me].i, s.worst[s.me].v) },
+        { t: `Coast day ${s.decisive + 1}`, sub: `${signed(-(s.margin - 1))} that day`, mine: set(s.decisive, real[s.decisive] - (s.margin - 1)) },
+        { t: `${signed(-s.perDay(s.R))} a day`, sub: "every day", mine: real.map((v) => Math.max(0, v - s.perDay(s.R))) },
+    ];
+};
+const wiMax = (s) => Math.ceil((Math.max(...s.daily[s.me], ...s.daily[s.won ? s.R : s.W]) * 1.5) / 1000) * 1000;
+const wiHero = (s, E, changed) => {
+    const tie = E.margin === 0;
+    const head = tie ? "A tie." : E.won ? `You win by ${fmt(E.margin)}.` : `${esc(pname(E.W))} wins by ${fmt(E.margin)}.`;
+    const delta = E.total[s.me] - s.total[s.me];
+    const place = tie ? "level with " + esc(E.nm(E.W === s.me ? E.R : E.W)) : `${E.place}${E.place !== s.place ? `, not ${s.place}` : ""}`;
+    return `<div class="v14-k">${changed ? "What if" : "What really happened"}</div>
+<h2 class="v14-h num">${head}</h2>
+<p class="v14-s fr-say">${changed ? `<b class="num">${signed(delta)}</b> steps for you. You finish ${place}. ` : "Drag a bar below, or try a shortcut. "}${E.say.lead}</p>`;
+};
+const wiOut = (s, E) => {
+    const moved = (id) => s.ids.indexOf(id) - E.ids.indexOf(id);
+    const was = (now, then) => (now !== then ? `, was ${then}` : "");
+    return `<div class="fr-sec"><span>If it went like this</span><i></i></div>
+<div class="v14-rows">${E.ids.map((id, j) => { const m = moved(id); return `<div class="v14-row${id === s.me ? " you" : ""}"><span class="v14-rk num">${j + 1}</span>${avatar(id, 30)}<b>${esc(pname(id))}</b>${m ? `<em class="${id === s.me ? (m > 0 ? "up" : "down") : ""}">${icon(m > 0 ? "arrowUp" : "arrowDown", 12, { stroke: 2.8 })}${Math.abs(m)}</em>` : ""}<span class="v14-tot num">${fmt(E.total[id])}</span></div>`; }).join("")}</div>
+<div class="v14-strip"><div class="v14-cap">Leader after each day</div>${strip(E, s.n > 4 ? 30 : 40, (i) => `<b class="num">${short(E.leadBy[i])}</b>`)}</div>
+<div class="v14-stats">
+    <div><b class="num">${E.changes.length}</b><span>Lead ${E.changes.length === 1 ? "change" : "changes"}${was(E.changes.length, s.changes.length)}</span></div>
+    <div><b class="num">${E.daysWon[s.me]}<small>/${s.n}</small></b><span>Days you won${was(E.daysWon[s.me], s.daysWon[s.me])}</span></div>
+    <div><b class="num">${fmt(E.closeGap)}</b><span>Closest, after day ${E.closest + 1}</span></div>
+</div>
+<div class="v14-stake${E.last === s.me ? " mine" : ""}">${icon("flag", 16, { stroke: 2.4 })}<span>${esc(E.say.stakes)}.</span></div>`;
+};
+
+// Option 15: the ghost. The finished fight races the one happening now with the same people.
+// Which live fight is the rematch: the next round of the series, or the next fight with the same rival.
+const REMATCH = { "croissant-r1": "croissant", coffee: "nolift" };
+const V15 = { day: null };
+const ghost = (s) => {
+    const now = FF.fight(REMATCH[s.id]);
+    const r = s.rival;
+    const dn = now.dayCount;
+    const N = Math.max(s.n, now.lengthDays);
+    const then = s.D.map((i) => s.cum[s.me][i] - s.cum[r][i]);
+    const nowGap = now.days.map((d) => d.cumulative[s.me] - d.cumulative[r]);
+    const dayThen = s.D.map((i) => s.daily[s.me][i] - s.daily[r][i]);
+    const dayNow = now.days.map((_, i) => now.daily[s.me][i] - now.daily[r][i]);
+    const k = Math.min(dn, s.n) - 1;
+    // Days still to come in the rematch that the finished fight also had: replay them as they went last time.
+    const rest = [];
+    for (let i = dn; i < Math.min(s.n, now.lengthDays); i++) rest.push(i);
+    const proj = [];
+    rest.forEach((i, j) => proj.push((j ? proj[j - 1] : nowGap[dn - 1]) + dayThen[i]));
+    const thenLabel = s.series ? `Round ${s.f.round}` : "Last time";
+    const nowLabel = now.round ? `Round ${now.round}` : "This time";
+    const avgNow = now.totals[s.me] / dn;
+    const left = now.lengthDays - dn;
+    const nowLast = now.standings[now.standings.length - 1].id;
+    const nowNext = now.standings[now.standings.length - 2].id;
+    const [verb, ...tail] = now.action.split(" ");
+    const nowStakes = nowLast === s.me ? `you ${verb.replace(/s$/, "").toLowerCase()} ${tail.join(" ")}` : `${pname(nowLast)} ${verb.toLowerCase()} ${tail.join(" ")}`;
+    const vs = (v) => (v >= 0 ? `${NB(v)} ahead of ${esc(pname(r))}` : `${NB(-v)} behind ${esc(pname(r))}`);
+    const lessons = [];
+    const key = s.won ? s.decisive : s.slip[s.me].i;
+    const keyNow = key < dn ? (dayNow[key] >= 0 ? ` This time you won it by ${NB(dayNow[key])}.` : ` This time ${esc(pname(r))} took it by ${NB(-dayNow[key])}.`) : " That day is still to come.";
+    lessons.push({ icon: "target", tone: key < dn ? (dayNow[key] >= 0 ? "up" : "down") : "", t: `${s.won ? `Day ${key + 1} won it last time: ${NB(dayThen[key])} more than ${esc(pname(r))}.` : `Day ${key + 1} cost you ${NB(-dayThen[key])} last time.`}${keyNow}` });
+    if (proj.length) {
+        const fin = proj[proj.length - 1];
+        const days = proj.length === 1 ? `day ${rest[0] + 1} goes` : `days ${rest[0] + 1} ${proj.length === 2 ? "and" : "to"} ${rest[rest.length - 1] + 1} go`;
+        lessons.push({ icon: fin >= 0 ? "trendUp" : "trendDown", tone: fin >= 0 ? "up" : "down", t: `If ${days} like last time, you ${Math.sign(fin) === Math.sign(nowGap[dn - 1]) ? "still " : ""}finish ${vs(fin)}.` });
+    } else if (left > 0) {
+        const need = Math.ceil((now.totals[s.me] + left * s.avg[s.me] - now.totals[r]) / left);
+        lessons.push({ icon: "steps", tone: "", t: `Last time was ${s.n} days. This one has ${left} to go. Walk like last time, ${NB(s.avg[s.me])} a day, and ${esc(pname(r))} needs ${NB(need)} a day to stay ahead. ${esc(pname(r))} is averaging ${NB(now.totals[r] / dn)}.` });
+    }
+    lessons.push({ icon: "clock", tone: avgNow >= s.avg[s.me] ? "up" : "down", t: `You're averaging ${NB(avgNow)} a day, ${NB(Math.abs(avgNow - s.avg[s.me]))} ${avgNow >= s.avg[s.me] ? "more" : "less"} than last time.` });
+    lessons.push({ icon: "flag", tone: nowLast === s.me ? "down" : "", t: nowLast === s.last ? `${esc(s.Nm(nowLast))} ${s.vb(nowLast, "are", "is")} last again, ${NB(now.totals[nowNext] - now.totals[nowLast])} behind ${esc(s.nm(nowNext))}.` : `Last time ${esc(s.nm(s.last))} lost. Right now ${esc(nowStakes)}.` });
+    return { now, r, dn, N, then, nowGap, dayThen, dayNow, k, rest, proj, thenLabel, nowLabel, lessons, vs, better: nowGap[k] - then[k] };
+};
+const ghostChart = (s, g, sel) => {
+    const W = 321, H = 206, x0 = 18, x1 = W - 22, top = 30, bot = H - 26;
+    const x = (i) => x0 + (g.N === 1 ? 0 : (i * (x1 - x0)) / (g.N - 1));
+    const all = [0, ...g.then, ...g.nowGap, ...g.proj];
+    const hi = Math.max(...all), lo = Math.min(...all);
+    const pad = (hi - lo) * 0.1 || 1;
+    const y = (v) => top + ((hi + pad - v) / (hi - lo + 2 * pad)) * (bot - top);
+    const today = x(g.dn - 1);
+    let svg = `<line x1="0" x2="${W}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" style="stroke:var(--line)" stroke-dasharray="3 4"/><text x="${W}" y="${(y(0) - 5).toFixed(1)}" text-anchor="end">Level</text>`;
+    if (g.dn < g.N) svg += `<rect x="${(today + 10).toFixed(1)}" y="${top - 18}" width="${(x1 + 12 - today - 10).toFixed(1)}" height="${bot - top + 18}" rx="10" style="fill:var(--chip)"/><text x="${((today + 10 + x1 + 12) / 2).toFixed(1)}" y="${top - 6}" text-anchor="middle">${g.N - g.dn} ${g.N - g.dn === 1 ? "day" : "days"} to go</text>`;
+    svg += `<line x1="${today.toFixed(1)}" x2="${today.toFixed(1)}" y1="${top - 18}" y2="${bot}" style="stroke:var(--text-faint)"/><text class="on" x="${today.toFixed(1)}" y="${top - 22}" text-anchor="middle">Today</text>`;
+    svg += `<line x1="${x(sel).toFixed(1)}" x2="${x(sel).toFixed(1)}" y1="${top}" y2="${bot}" style="stroke:var(--line)" stroke-width="10" stroke-linecap="round" opacity="0.6"/>`;
+    const pts = (vals, from = 0) => vals.map((v, i) => [x(i + from), y(v)]);
+    svg += `<path d="${path(pts(g.then))}" fill="none" style="stroke:var(--text-tertiary)" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round"/>`;
+    if (g.proj.length) svg += `<path d="${path([[today, y(g.nowGap[g.dn - 1])], ...pts(g.proj, g.dn)])}" fill="none" style="stroke:var(--fr-you)" stroke-width="2.5" stroke-dasharray="1 6" stroke-linecap="round"/><circle cx="${x(g.dn + g.proj.length - 1).toFixed(1)}" cy="${y(g.proj[g.proj.length - 1]).toFixed(1)}" r="5" style="fill:var(--card);stroke:var(--fr-you)" stroke-width="2"/>`;
+    svg += `<path d="${path(pts(g.nowGap))}" fill="none" style="stroke:var(--fr-you)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+    svg += g.nowGap.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === sel ? 5 : 3.5}" style="fill:${v >= 0 ? "var(--moss-edge)" : "var(--ember-fill)"};stroke:var(--card)" stroke-width="2"/>`).join("");
+    svg += g.then.map((v, i) => (i === sel ? `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4.5" style="fill:var(--card);stroke:var(--text-tertiary)" stroke-width="2"/>` : "")).join("");
+    svg += Array.from({ length: g.N }, (_, i) => `<text class="${i === sel ? "on" : ""}" x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="middle">D${i + 1}</text>`).join("");
+    const end = g.then.length - 1;
+    const faces = `<span class="v15-face ghost" style="left:${x(end).toFixed(1)}px;top:${y(g.then[end]).toFixed(1)}px">${avatar(s.me, 24)}</span><span class="v15-face" style="left:${today.toFixed(1)}px;top:${y(g.nowGap[g.dn - 1]).toFixed(1)}px">${avatar(s.me, 28)}</span>`;
+    return `<svg class="fr-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${svg}</svg>${faces}`;
+};
+const ghostRead = (s, g, sel) => {
+    const nowPart = sel < g.dn ? signed(g.nowGap[sel]) : sel < g.dn + g.proj.length ? `${signed(g.proj[sel - g.dn])} if it goes like last time` : "to come";
+    return `<b>Day ${sel + 1}</b><span><i class="gh"></i>${esc(g.thenLabel)} <b class="num">${sel < g.then.length ? signed(g.then[sel]) : "-"}</b></span><span><i class="nw"></i>${esc(g.nowLabel)} <b class="num">${nowPart}</b></span>`;
 };
 
 const VARIANTS = [
@@ -1301,7 +1707,7 @@ const VARIANTS = [
 .t1-sec { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
 .t1-body > .nv-seg + .t1-sec { margin-top: 18px; }
 .t1-head { display: flex; align-items: center; gap: 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss-text); }
-.t1-head span { white-space: nowrap; }
+.t1-head span { text-wrap: nowrap; }
 .t1-head.stamp { gap: 8px; letter-spacing: 0.1em; font-size: 11.5px; }
 .t1-head i { flex: 1; height: 1px; background: var(--track); }
 .t1-card { border-radius: 22px; background: var(--card); border: 1px solid var(--hairline); padding: 22px; display: flex; flex-direction: column; gap: 12px; }
@@ -1321,7 +1727,7 @@ const VARIANTS = [
 .t1-rk.first { color: var(--gold); }
 .t1-mid { flex: 1; min-width: 0; }
 .t1-rn { font-size: 15px; font-weight: 800; }
-.t1-rc { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t1-rc { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-top: 2px; text-wrap: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .t1-dash { font-size: 11px; font-weight: 800; color: var(--text-faint); }
 .t1-val { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
 .t1-pair { height: 144px; display: flex; align-items: flex-end; justify-content: center; }
@@ -1399,7 +1805,7 @@ const VARIANTS = [
 .v2-row.you .v2-rk { color: var(--moss-text); }
 .v2-mid { flex: 1; min-width: 0; }
 .v2-rn { font-size: 15px; font-weight: 800; }
-.v2-rc { margin-top: 1px; font-size: 11px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v2-rc { margin-top: 1px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-wrap: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .v2-val { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
 .v2-more { display: flex; align-items: center; justify-content: center; gap: 6px; height: 46px; border: 0; border-radius: var(--r-pill); background: var(--control); color: var(--text); font-size: 14px; font-weight: 800; cursor: pointer; }
 `,
@@ -1425,7 +1831,7 @@ const VARIANTS = [
             <div class="v2-stat"><b class="num">${s.daysWon[s.me]}<small>/${s.n}</small></b><span>Days you won</span></div>
             <div class="v2-stat"><b class="num">${s.changes.length}</b><span>Lead ${s.changes.length === 1 ? "change" : "changes"}</span></div>
         </div>
-        <div class="v2-rows">${s.ids.map((id, j) => `<div class="v2-row${id === s.me ? " you" : ""}"><span class="v2-rk num">${j + 1}</span>${avatar(id, 34)}<div class="v2-mid"><div class="v2-rn">${esc(pname(id))}</div><div class="v2-rc">${esc(s.awards[id].title)} · ${esc(s.awards[id].line)}</div></div><span class="v2-val num">${fmt(s.total[id])}</span></div>`).join("")}</div>
+        <div class="v2-rows">${s.ids.map((id, j) => `<div class="v2-row${id === s.me ? " you" : ""}"><span class="v2-rk num">${j + 1}</span>${avatar(id, 34)}<div class="v2-mid"><div class="v2-rn">${esc(pname(id))}</div><div class="v2-rc">${esc(s.why[id])}</div></div><span class="v2-val num">${fmt(s.total[id])}</span></div>`).join("")}</div>
         <button type="button" class="v2-more">See the full recap ${icon("chevronRight", 16, { stroke: 2.6 })}</button>
     </article>
 </div>`);
@@ -1484,6 +1890,7 @@ const VARIANTS = [
 .v3-slide[data-tone="fill"] .fr-bar.up { fill: var(--moss-on); }
 .v3-slide[data-tone="fill"] .fr-svg text { fill: color-mix(in srgb, var(--moss-on) 72%, transparent); }
 .v3-slide[data-tone="fill"] .fr-svg line { stroke: color-mix(in srgb, var(--moss-on) 30%, transparent); }
+.v3-slide[data-tone="fill"] .v3-cap { color: color-mix(in srgb, var(--moss-on) 72%, transparent); }
 .v3-awards { position: relative; z-index: 1; margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
 .v3-aw { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: 18px; background: var(--card); animation: fr-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .v3-aw:nth-child(2) { animation-delay: 0.08s; }
@@ -1595,6 +2002,1004 @@ const VARIANTS = [
             return () => {
                 cancelAnimationFrame(raf);
                 if (!SWITCHING) STORY = null;
+            };
+        }),
+    },
+
+    // 4 ========================================================================
+    {
+        id: "report",
+        name: "Match report",
+        when: "When words should do the work. Reads like the sports page, written by the app from your steps.",
+        changes: [
+            "A headline, a standfirst and three short paragraphs, all generated from the daily steps. The coffee duel writes a different article.",
+            "One chart, the running totals, with faces at the line ends instead of a legend.",
+            "Two pull numbers for the moments that mattered, and a line score at the bottom for anyone who wants every day.",
+        ],
+        css: `
+.v4-body { padding: 12px 20px 200px; }
+.v4-kick { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--moss-text); }
+.v4-kick i { flex: 1; height: 1px; background: var(--line); }
+.v4-h { margin: 12px 0 0; font-size: 34px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; text-wrap: balance; animation: fr-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v4-dek { margin: 12px 0 0; font-size: 17px; font-weight: 700; line-height: 1.4; color: var(--text-secondary); text-wrap: pretty; animation: fr-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.06s both; }
+.v4-by { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; color: var(--text-tertiary); }
+.v4-by .fr-stack .ff-avatar { outline-color: var(--bg); }
+.v4-fig { margin: 18px 0 0; }
+.v4-fig figcaption { margin-top: 6px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.v4-p { margin: 16px 0 0; font-size: 15px; font-weight: 700; line-height: 1.55; color: var(--text-dim); text-wrap: pretty; }
+.v4-p.drop::first-letter { float: left; margin: 4px 8px 0 0; font-size: 50px; font-weight: 800; line-height: 0.8; color: var(--moss-text); }
+.v4-pull { display: grid; grid-template-columns: 1fr 1fr; margin: 20px 0 4px; border-top: 3px solid var(--text); }
+.v4-pull div { padding: 12px 12px 0 0; }
+.v4-pull div + div { padding-left: 14px; border-left: 1px solid var(--line); }
+.v4-pull b { display: block; font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.v4-pull b.up { color: var(--moss-text); }
+.v4-pull span { display: block; margin-top: 6px; font-size: 12px; font-weight: 700; line-height: 1.35; color: var(--text-secondary); }
+.v4-sub { margin: 28px 0 10px; display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); }
+.v4-sub i { flex: 1; height: 1px; background: var(--line); }
+.v4-box { width: 100%; border-collapse: collapse; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v4-box th { font-weight: 800; color: var(--text-faint); padding: 0 0 6px; text-align: center; }
+.v4-box td { padding: 0; text-align: center; height: 36px; border-top: 1px solid var(--hairline); }
+.v4-box td span { display: inline-block; min-width: 30px; padding: 3px 0; border-radius: 7px; }
+.v4-box td.w span { background: var(--control-alt); color: var(--text); font-weight: 800; }
+.v4-box tr.you td.w span { background: var(--moss-fill); color: var(--moss-on); }
+.v4-box td.a { width: 30px; text-align: left; }
+.v4-box td.t { color: var(--text); font-weight: 800; font-size: 12px; text-align: right; }
+.v4-box tr.you td.t { color: var(--moss-text); }
+.v4-note { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--text-faint); }
+`,
+        render: () => {
+            const s = S();
+            const head = s.changes.length === 0
+                ? `${s.W === s.me ? "You lead" : `${esc(pname(s.W))} leads`} every single day`
+                : s.changes.length === 1
+                    ? `${s.W === s.me ? "You come" : `${esc(pname(s.W))} comes`} from behind`
+                    : `${s.changes.length} lead changes, one winner`;
+            const others = s.ids.filter((id) => id !== s.W && id !== s.me);
+            const p2 = s.won ? `${s.say.slip} ${s.say.best} ${s.say.need}` : `${s.say.slip} ${s.say.pull} ${s.say.need}`;
+            const p3 = s.k > 2 ? `${others.map((id) => s.awards[id].say).join(" ")} ${s.say.order}` : "";
+            return view(`${frNav(s)}
+<div class="v4-body">
+    <div class="v4-kick"><span>Match report · ${esc(s.round)}</span><i></i></div>
+    <h2 class="v4-h">${head}</h2>
+    <p class="v4-dek fr-say">${s.won ? "You win" : `${esc(pname(s.W))} wins`} ${esc(s.f.name)} by ${NB(s.margin)} steps over ${s.n} days. ${esc(s.say.stakes)}.</p>
+    <div class="v4-by"><span class="fr-stack">${s.ids.map((id) => avatar(id, 22)).join("")}</span>Written by FitFight from ${s.n * s.k} daily step counts</div>
+    <figure class="v4-fig">${raceLines(s, { w: 353, h: 170 })}<figcaption>Running totals, ${esc(s.span)}</figcaption></figure>
+    <p class="v4-p drop fr-say">${s.say.lead} ${s.say.moment}</p>
+    <div class="v4-pull">
+        <div><b class="num">${fmt(s.closeGap)}</b><span>The closest it got, after day ${s.closest + 1}</span></div>
+        <div><b class="num${s.top === s.me ? " up" : ""}">${fmt(s.best[s.top].v)}</b><span>${esc(s.Poss(s.top))} day ${s.best[s.top].i + 1}, the biggest of the fight</span></div>
+    </div>
+    <p class="v4-p fr-say">${p2}</p>
+    ${p3 ? `<p class="v4-p fr-say">${p3}</p>` : ""}
+    <div class="v4-sub"><span>Line score</span><i></i></div>
+    <table class="v4-box">
+        <thead><tr><th></th>${s.D.map((i) => `<th>D${i + 1}</th>`).join("")}<th style="text-align:right">Total</th></tr></thead>
+        <tbody>${s.ids.map((id) => `<tr class="${id === s.me ? "you" : ""}"><td class="a">${avatar(id, 24)}</td>${s.D.map((i) => `<td class="${s.dayWinner[i] === id ? "w" : ""}"><span class="num">${short(s.daily[id][i])}</span></td>`).join("")}<td class="t num">${fmt(s.total[id])}</td></tr>`).join("")}</tbody>
+    </table>
+    <div class="v4-note">Filled: best walker that day.</div>
+</div>`);
+        },
+        mount: withPick(),
+    },
+
+    // 5 ========================================================================
+    {
+        id: "stat-sheet",
+        name: "Stat sheet",
+        when: "For people who like numbers more than words. Every stat at a glance, no scrolling through a story.",
+        changes: [
+            "A grid of tiles: result, lead changes, closest moment, biggest day, days won. Each has a number and a tiny chart.",
+            "Share of all steps and steadiness get full-width tiles. Steadiness is relative to each person's own average, so a 3,000-a-day walker can beat a 5,000 one.",
+            "Ends on where each person lost ground and what it would have taken to win.",
+        ],
+        css: `
+.v5-body { padding: 12px 20px 200px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v5-t { min-width: 0; padding: 14px 14px 12px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); display: flex; flex-direction: column; animation: fr-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v5-t.wide { grid-column: 1 / -1; padding: 16px; }
+.v5-t:nth-child(2), .v5-t:nth-child(3) { animation-delay: 0.05s; }
+.v5-t:nth-child(4), .v5-t:nth-child(5) { animation-delay: 0.1s; }
+.v5-l { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.v5-v { margin-top: 6px; font-size: 30px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.v5-v small { font-size: 17px; color: var(--text-tertiary); letter-spacing: 0; }
+.v5-v.up { color: var(--moss-text); }
+.v5-v.down { color: var(--ember-text); }
+.v5-c { margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--text-secondary); line-height: 1.3; }
+.v5-viz { margin-top: auto; padding-top: 12px; }
+.v5-hero { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.v5-hero .v5-v { margin: 0; font-size: 32px; }
+.v5-duo { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.v5-dr { display: grid; grid-template-columns: 62px 1fr 56px; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; }
+.v5-dr i { height: 10px; border-radius: 5px; background: var(--track); overflow: hidden; }
+.v5-dr i b { display: block; height: 100%; border-radius: 5px; background: var(--fr-rival); transform-origin: left; animation: fr-grow-x 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both; }
+.v5-dr.you i b { background: var(--fr-you); }
+.v5-dr em { font-style: normal; text-align: right; }
+.v5-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+.v5-dots .ff-avatar { width: 17px !important; height: 17px !important; }
+.v5-dots .ff-avatar.you { outline: 1.5px solid var(--fr-you); }
+.v5-mb { display: flex; align-items: flex-end; gap: 3px; height: 40px; }
+.v5-mb i { flex: 1; border-radius: 3px 3px 1px 1px; background: var(--fr-ash-soft); transform-origin: bottom; animation: fr-grow-y 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v5-mb i.on { background: var(--fr-rival); }
+.v5-mb i.on.you { background: var(--fr-you); }
+.v5-sq { display: flex; gap: 4px; }
+.v5-sq i { flex: 1; max-width: 30px; height: 18px; border-radius: 5px; background: var(--fr-ash-soft); }
+.v5-sq i.you { background: var(--fr-you); }
+.v5-share { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin-top: 14px; gap: 2px; }
+.v5-share i { display: block; height: 100%; transform-origin: left; animation: fr-grow-x 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v5-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-top: 12px; }
+.v5-legend div { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; font-weight: 800; }
+.v5-legend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.v5-legend span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.v5-legend em { font-style: normal; color: var(--text-secondary); }
+.v5-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.v5-lr { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; }
+.v5-lr span small { display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v5-lr b { font-size: 15px; color: var(--ember-text); }
+.v5-lr.you b { color: var(--ember-text); }
+.v5-lr + .v5-lr { padding-top: 10px; border-top: 1px solid var(--hairline); }
+.v5-need { background: var(--ember-wash); border-color: transparent; }
+.v5-need.won { background: var(--moss-wash); }
+.v5-need .v5-l { color: var(--ember-text); }
+.v5-need.won .v5-l { color: var(--moss-text); }
+.v5-need p { margin: 8px 0 0; font-size: 13px; font-weight: 700; line-height: 1.45; color: var(--text-dim); }
+`,
+        render: () => {
+            const s = S();
+            const other = s.won ? s.R : s.me;
+            const maxT = s.total[s.W];
+            const ashes = ["var(--fr-rival)", "var(--fr-ash)", "var(--fr-ash-soft)"];
+            const shareInk = (id) => (id === s.me ? "var(--fr-you)" : ashes[s.ids.filter((x) => x !== s.me).indexOf(id)]);
+            const tb = s.best[s.top];
+            const tile = (cls, label, body) => `<section class="v5-t ${cls}"><div class="v5-l">${label}</div>${body}</section>`;
+            return view(`${frNav(s)}
+<div class="v5-body">
+    ${tile("wide", "Result", `<div class="v5-hero">${avatar(s.W, 44)}<div><div class="v5-v num">by ${fmt(s.margin)}</div><div class="v5-c">${s.won ? "You won" : `${esc(pname(s.W))} won, you came ${s.place}`}</div></div></div>
+        <div class="v5-duo">${[s.W, other].map((id) => `<div class="v5-dr${id === s.me ? " you" : ""}"><span>${esc(s.Nm(id))}</span><i><b style="width:${((s.total[id] / maxT) * 100).toFixed(1)}%"></b></i><em class="num">${fmt(s.total[id])}</em></div>`).join("")}</div>`)}
+    ${tile("", "Lead changes", `<div class="v5-v num">${s.changes.length}</div><div class="v5-c">${s.changes.length === 0 ? `${esc(s.Nm(s.W))} led all ${s.n} days` : `Last on day ${s.take + 1}`}</div><div class="v5-viz v5-dots">${s.D.map((i) => avatar(s.leader[i], 17, s.leader[i] === s.me ? 'class="ff-avatar you"' : "")).join("")}</div>`)}
+    ${tile("", "Closest", `<div class="v5-v num">${fmt(s.closeGap)}</div><div class="v5-c">After day ${s.closest + 1}</div><div class="v5-viz">${gapChart(s, { w: 141, h: 44, uid: "v5g", days: false, label: false })}</div>`)}
+    ${tile("", "Biggest day", `<div class="v5-v num${s.top === s.me ? " up" : ""}">${fmt(tb.v)}</div><div class="v5-c">${esc(s.Nm(s.top))}, day ${tb.i + 1}</div><div class="v5-viz v5-mb">${s.D.map((i) => `<i class="${i === tb.i ? "on" : ""}${s.top === s.me ? " you" : ""}" style="height:${((s.daily[s.top][i] / tb.v) * 100).toFixed(1)}%;animation-delay:${(i * 0.04).toFixed(2)}s"></i>`).join("")}</div>`)}
+    ${tile("", "Days you won", `<div class="v5-v num">${s.daysWon[s.me]}<small>/${s.n}</small></div><div class="v5-c">${s.ids.filter((id) => id !== s.me && s.daysWon[id]).map((id) => `${esc(pname(id))} won ${s.daysWon[id]}`).join(", ") || "Every single one"}</div><div class="v5-viz v5-sq">${s.D.map((i) => `<i class="${s.dayWinner[i] === s.me ? "you" : ""}"></i>`).join("")}</div>`)}
+    ${tile("wide", `Share of all <span class="num">${fmt(s.all)}</span> steps`, `<div class="v5-share">${s.ids.map((id, j) => `<i style="width:${(s.share[id] * 100).toFixed(2)}%;background:${shareInk(id)};animation-delay:${(j * 0.06).toFixed(2)}s"></i>`).join("")}</div>
+        <div class="v5-legend">${s.ids.map((id) => `<div><i style="background:${shareInk(id)}"></i><span>${esc(s.Nm(id))}</span><em class="num">${s.pct(s.share[id])}</em></div>`).join("")}</div>`)}
+    ${tile("wide", "Steadiness", `<div class="v5-c">How far each day strayed from that person's own average. Narrow is steady.</div>${steadyRows(s)}`)}
+    ${tile("wide", "Where each person lost ground", `<div class="v5-rows">${s.ids.map((id) => `<div class="v5-lr${id === s.me ? " you" : ""}">${avatar(id, 24)}<span>${esc(s.Nm(id))}<small>Day ${s.slip[id].i + 1}, against ${esc(s.nm(s.slip[id].foe))}</small></span><b class="num">${signed(-s.slip[id].v)}</b></div>`).join("")}</div>`)}
+    ${tile(`wide v5-need${s.won ? " won" : ""}`, s.won ? "How safe it was" : "What it would have taken", `<div class="v5-v num ${s.won ? "up" : "down"}">+${fmt(s.perDay(s.won ? s.R : s.me))}<small> a day</small></div><p class="fr-say">${s.say.need} ${s.say.whatIf}</p>`)}
+</div>`);
+        },
+        mount: withPick(),
+    },
+
+    // 6 ========================================================================
+    {
+        id: "gap-chart",
+        name: "Behind the leader",
+        when: "Charts only. Borrowed from how F1 shows a race: everyone measured from whoever led that day.",
+        changes: [
+            "One chart answers who led and by how much: the leader runs along the top, everyone else hangs below by their gap.",
+            "Top two zooms in on the fight for first. Everyone shows the whole field. Drag across to read any day.",
+            "A heat map below shows every day of every walker. Outlined cells won the day; slide across it to move the chart too.",
+        ],
+        css: `
+.v6-body { padding: 12px 20px 200px; display: flex; flex-direction: column; gap: 12px; }
+.v6-card { padding: 16px; animation: fr-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v6-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.v6-top b { display: block; font-size: 16px; font-weight: 800; }
+.v6-top small { display: block; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.v6-seg { display: flex; padding: 3px; border-radius: var(--r-pill); background: var(--chip); flex: none; }
+.v6-seg button { position: relative; height: 30px; padding: 0 11px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 800; cursor: pointer; }
+.v6-seg button::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; margin-top: -22px; }
+.v6-seg button[aria-pressed="true"] { background: var(--control-alt); color: var(--text); }
+.v6-plot { position: relative; height: 196px; touch-action: pan-y; cursor: pointer; -webkit-user-select: none; user-select: none; outline: none; }
+.v6-plot:focus-visible { outline: 2px solid var(--moss-edge); outline-offset: 4px; border-radius: 10px; }
+.v6-read { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+.v6-rh { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.v6-rh b { font-size: 14px; font-weight: 800; }
+.v6-rh span { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v6-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.v6-r { display: grid; grid-template-columns: 22px 1fr 60px 64px; align-items: center; gap: 10px; min-height: 30px; font-size: 13px; font-weight: 800; }
+.v6-r em { font-style: normal; text-align: right; color: var(--text-secondary); font-size: 12px; }
+.v6-r b { text-align: right; font-size: 13px; color: var(--ember-text); }
+.v6-r.you span { color: var(--moss-text); }
+.v6-lg { display: flex; justify-content: flex-end; gap: 14px; margin-top: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; color: var(--text-faint); }
+.v6-lg span:first-child { margin-right: 4px; }
+.v6-hh, .v6-hr { display: grid; gap: 3px; align-items: center; }
+.v6-hh { margin-bottom: 4px; }
+.v6-hh span { text-align: center; font-size: 10px; font-weight: 800; color: var(--text-faint); }
+.v6-hh span.on { color: var(--text); }
+.v6-hh span.on::after { content: ""; display: block; width: 4px; height: 4px; margin: 3px auto 0; border-radius: 50%; background: var(--text); }
+.v6-hr + .v6-hr { margin-top: 3px; }
+.v6-heat { touch-action: pan-y; cursor: pointer; -webkit-user-select: none; user-select: none; outline: none; }
+.v6-heat:focus-visible { outline: 2px solid var(--moss-edge); outline-offset: 4px; border-radius: 10px; }
+.v6-c { position: relative; height: 40px; min-width: 0; display: grid; place-items: center; border-radius: 8px; color: var(--text-secondary); font-size: 10px; font-weight: 800; animation: fr-fade 0.5s ease-out both; }
+.v6-c.hi { color: var(--moss-on); }
+.v6-c.w { outline: 2px solid var(--text); outline-offset: -2px; color: var(--text); }
+.v6-c.w.hi { color: var(--moss-on); outline-color: var(--moss-text); }
+.v6-hl { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.v6-hl i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -3px; margin-right: 6px; outline: 2px solid var(--text); outline-offset: -2px; }
+`,
+        render: () => {
+            const s = S();
+            return view(`${frNav(s)}
+<div class="v6-body">
+    <section class="fr-card v6-card">
+        <div class="v6-top"><div><b>Behind the leader</b><small>Steps behind whoever led after each day</small></div>
+            ${s.k > 2 ? `<div class="v6-seg" role="group" aria-label="Who to show">${[["top", "Top two"], ["all", "Everyone"]].map(([m, t]) => `<button type="button" data-mode="${m}" aria-pressed="${V6.mode === m}">${t}</button>`).join("")}</div>` : ""}</div>
+        <div class="v6-plot" tabindex="0" aria-label="Gap to the leader. Drag or use arrow keys to pick a day.">${v6Chart(s)}</div>
+        <div class="v6-read">${v6Read(s)}</div>
+    </section>
+    <section class="fr-card v6-card">
+        <div class="v6-top"><div><b>Every day, every walker</b><small>Bolder cells, more steps. Slide across to pick a day.</small></div></div>
+        <div class="v6-heat" tabindex="0" aria-label="Daily steps for everyone. Drag or use arrow keys to pick a day.">${v6Heat(s)}</div>
+        <div class="v6-hl"><span><i></i>Won the day</span></div>
+    </section>
+</div>`);
+        },
+        mount: withPick((root) => {
+            const s = S();
+            const plot = root.querySelector(".v6-plot");
+            const read = root.querySelector(".v6-read");
+            const heat = root.querySelector(".v6-heat");
+            const paint = () => {
+                plot.innerHTML = v6Chart(s);
+                read.innerHTML = v6Read(s);
+                heat.innerHTML = v6Heat(s);
+            };
+            const pick = (i) => { V6.day = i; sc.set(i); hc.set(i); paint(); };
+            const sc = scrub(plot, s.n, (e) => Math.round(((localX(plot, e) - 40) / (plot.offsetWidth - 84)) * (s.n - 1)), pick);
+            const hc = scrub(heat, s.n, (e) => Math.floor(((localX(heat, e) - 31) / (heat.offsetWidth - 31)) * s.n), pick);
+            sc.set(V6.day ?? s.n - 1);
+            hc.set(V6.day ?? s.n - 1);
+            const onClick = (e) => {
+                const m = e.target.closest("[data-mode]");
+                if (!m) return;
+                V6.mode = m.dataset.mode;
+                root.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b === m)));
+                paint();
+            };
+            root.addEventListener("click", onClick);
+            return () => {
+                sc.off();
+                hc.off();
+                root.removeEventListener("click", onClick);
+                if (!SWITCHING) Object.assign(V6, { mode: "top", day: null });
+                else V6.day = null;
+            };
+        }),
+    },
+
+    // 7 ========================================================================
+    {
+        id: "moments",
+        name: "Key moments",
+        when: "When you want the plot, not the data. Only the days where something happened.",
+        changes: [
+            "A timeline of what happened, found in the numbers: who took the lead, days you won, your hardest day, the closest moment, the pull away.",
+            "Quiet days fold away. Each moment ends with the standings at that point, so you see what it changed.",
+            "Moss when a moment went your way, ember when it hurt, grey when it just happened.",
+        ],
+        css: `
+.v7-body { padding: 10px 20px 200px; }
+.v7-hero { padding: 4px 0 18px; }
+.v7-hero h2 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
+.v7-hero p { margin: 8px 0 0; font-size: 14px; font-weight: 700; color: var(--text-secondary); line-height: 1.45; }
+.v7-line { position: relative; padding-left: 46px; }
+.v7-line::before { content: ""; position: absolute; left: 17px; top: 8px; bottom: 40px; width: 2px; border-radius: 1px; background: var(--track); }
+.v7-m { position: relative; margin-bottom: 14px; animation: fr-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v7-day { position: absolute; left: -46px; top: 0; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--control); color: var(--text-secondary); border: 2px solid var(--bg); line-height: 1; text-align: center; }
+.v7-day small { display: block; font-size: 8px; letter-spacing: 0.06em; opacity: 0.8; }
+.v7-m.up .v7-day { background: var(--moss-fill); color: var(--moss-on); }
+.v7-m.down .v7-day { background: var(--ember-fill); color: var(--ember-on); }
+.v7-card { padding: 14px 16px; }
+.v7-m.up .v7-card { background: var(--moss-wash); border-color: var(--moss-edge); }
+.v7-it + .v7-it { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+.v7-t { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.v7-t svg { color: var(--text-tertiary); }
+.v7-it.up .v7-t svg { color: var(--moss-text); }
+.v7-it.down .v7-t svg { color: var(--ember-text); }
+.v7-x { margin-top: 4px; font-size: 13px; font-weight: 700; line-height: 1.45; color: var(--text-secondary); }
+.v7-x b { color: var(--text); }
+.v7-after { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--dash); font-size: 11px; font-weight: 800; color: var(--text-tertiary); }
+.v7-after > span { flex: none; }
+.v7-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.v7-bar { display: grid; grid-template-columns: 18px 1fr 46px; gap: 6px; align-items: center; }
+.v7-bar i { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
+.v7-bar i b { display: block; height: 100%; border-radius: 3px; background: var(--fr-rival); }
+.v7-bar.you i b { background: var(--fr-you); }
+.v7-bar em { font-style: normal; text-align: right; color: var(--text-secondary); }
+.v7-bar .ff-avatar { width: 18px !important; height: 18px !important; }
+.v7-end { position: relative; padding: 18px; border-radius: var(--r-card); background: var(--control); overflow: hidden; }
+.v7-end.won { background: var(--moss-fill); color: var(--moss-on); }
+.v7-end .v7-k { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; }
+.v7-end h3 { margin: 8px 0 0; max-width: 200px; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.v7-end p { margin: 10px 0 0; max-width: 190px; font-size: 13px; font-weight: 700; line-height: 1.4; opacity: 0.85; }
+.v7-end .v7-art { position: absolute; right: 4px; bottom: -8px; }
+`,
+        render: () => {
+            const s = S();
+            const ev = moments(s);
+            const after = (i) => {
+                const lead = s.leader[i];
+                const two = lead === s.me ? [s.me, s.order[i][1]] : [lead, s.me];
+                const max = s.cum[lead][i];
+                return `<div class="v7-after"><span>After day ${i + 1}</span><div class="v7-bars">${two.map((id) => `<div class="v7-bar${id === s.me ? " you" : ""}">${avatar(id, 18)}<i><b style="width:${((s.cum[id][i] / max) * 100).toFixed(1)}%"></b></i><em class="num">${fmt(s.cum[id][i])}</em></div>`).join("")}</div></div>`;
+            };
+            const tone = (e) => (e.items.some((it) => it.tone === "down") ? "down" : e.items.some((it) => it.tone === "up") ? "up" : "flat");
+            return view(`${frNav(s)}
+<div class="v7-body">
+    <div class="v7-hero"><h2>${s.ids.length} walkers, ${ev.length} moments</h2><p class="fr-say">${s.say.lead}</p></div>
+    <div class="v7-line">
+        ${ev.map((e, j) => `<div class="v7-m ${tone(e)}" style="animation-delay:${(j * 0.05).toFixed(2)}s">
+            <div class="v7-day"><span><small>DAY</small>${e.to != null ? `${e.i + 1}-${e.to + 1}` : e.i + 1}</span></div>
+            <div class="fr-card v7-card">${e.items.map((it) => `<div class="v7-it ${it.tone}"><div class="v7-t">${icon(it.icon, 16, { stroke: 2.4 })}${it.title}</div><div class="v7-x fr-say">${it.text}</div></div>`).join("")}${after(e.to != null ? e.to : e.i)}</div>
+        </div>`).join("")}
+        <div class="v7-m ${s.won ? "up" : "flat"}">
+            <div class="v7-day"><span>${icon("flag", 15, { stroke: 2.4 })}</span></div>
+            <div class="v7-end${s.won ? " won" : ""}"><div class="v7-k">Final · ${esc(s.endShort)}</div><h3 class="fr-say">${s.say.headline}</h3><p>${esc(s.say.stakes)}.</p><div class="v7-art">${companionArt(FF.people[s.W].animal, 132)}</div></div>
+        </div>
+    </div>
+</div>`);
+        },
+        mount: withPick(),
+    },
+
+    // 8 ========================================================================
+    {
+        id: "awards",
+        name: "Awards",
+        when: "When a loss should still feel like something. Everyone leaves with a title and the chart that earned it.",
+        changes: [
+            "One award per person, picked by rules from the numbers: wire to wire, biggest day, metronome, held the line, fast start.",
+            "Big companion cards you swipe through, each with the one chart that proves the award.",
+            "The final order sits below, so the result is never hidden behind the fun.",
+        ],
+        css: `
+.v8-body { padding: 8px 0 200px; }
+.v8-head { padding: 0 20px 14px; }
+.v8-head h2 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+.v8-head p { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.v8-rail { display: flex; gap: 12px; padding: 0 20px 4px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 20px; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; cursor: grab; -webkit-user-select: none; user-select: none; }
+.v8-rail::-webkit-scrollbar { display: none; }
+.v8-rail.drag { scroll-snap-type: none; cursor: grabbing; }
+.v8-rail:focus-visible .v8-card { outline: 2px solid var(--moss-edge); outline-offset: -2px; }
+.v8-card { flex: none; width: 300px; scroll-snap-align: start; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); overflow: hidden; animation: fr-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v8-card:nth-child(2) { animation-delay: 0.06s; }
+.v8-card:last-child { scroll-snap-align: end; }
+.v8-card.you { border-color: var(--moss-edge); }
+.v8-stage { position: relative; height: 200px; display: flex; align-items: flex-end; justify-content: center; background: var(--control); overflow: hidden; }
+.v8-card.you .v8-stage { background: var(--moss-wash); }
+.v8-stage img { pointer-events: none; -webkit-user-drag: none; }
+.v8-stage::before { content: ""; position: absolute; left: 50%; bottom: 4px; width: 220px; height: 40px; margin-left: -110px; border-radius: 50%; background: color-mix(in srgb, var(--text) 6%, transparent); }
+.v8-card.you .v8-stage::before { background: color-mix(in srgb, var(--moss-fill) 22%, transparent); }
+.v8-art { position: relative; margin-bottom: -6px; }
+.v8-medal { position: absolute; left: 14px; top: 14px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--card); color: var(--text); border: 1px solid var(--hairline); }
+.v8-card.you .v8-medal { background: var(--moss-fill); color: var(--moss-on); border-color: transparent; }
+.v8-rank { position: absolute; right: 14px; top: 14px; height: 26px; padding: 0 10px; border-radius: var(--r-pill); display: grid; place-items: center; background: var(--card); font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v8-info { padding: 16px 18px 18px; }
+.v8-who { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v8-who .num { margin-left: auto; }
+.v8-card h3 { margin: 10px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; }
+.v8-card.you h3 { color: var(--moss-text); }
+.v8-card p { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: var(--text-dim); line-height: 1.35; min-height: 38px; }
+.v8-viz { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+.v8-vc { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.v8-led { display: flex; gap: 4px; }
+.v8-led span { flex: 1; height: 36px; border-radius: 8px; display: grid; place-items: center; background: var(--chip); font-size: 10px; font-weight: 800; color: var(--text-faint); }
+.v8-led span.on { background: var(--fr-rival); color: var(--card); }
+.v8-led span.on.you { background: var(--fr-you); color: var(--moss-on); }
+.v8-dots { display: flex; justify-content: center; margin-top: 2px; }
+.v8-dots button { width: 36px; height: 44px; border: 0; padding: 0; background: none; display: grid; place-items: center; cursor: pointer; }
+.v8-dots button::after { content: ""; width: 7px; height: 7px; border-radius: 4px; background: var(--dot-idle); transition: width 0.25s ease, background 0.25s ease; }
+.v8-dots button[aria-current="true"]::after { width: 20px; background: var(--text); }
+.v8-list { padding: 18px 20px 0; }
+.v8-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.v8-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px 8px 10px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
+.v8-row.you { background: var(--moss-wash); border-color: var(--moss-edge); }
+.v8-row .v8-rk { width: 18px; text-align: center; font-size: 13px; font-weight: 800; color: var(--text-tertiary); }
+.v8-row .v8-mid { flex: 1; min-width: 0; }
+.v8-row b { display: block; font-size: 15px; font-weight: 800; }
+.v8-row small { display: block; margin-top: 1px; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v8-row em { font-style: normal; font-size: 15px; font-weight: 800; }
+`,
+        render: () => {
+            const s = S();
+            return view(`${frNav(s)}
+<div class="v8-body">
+    <div class="v8-head"><h2>The awards</h2><p>One each, picked from ${s.n * s.k} daily step counts.</p></div>
+    <div class="v8-rail" tabindex="0" aria-label="Awards. Swipe or use arrow keys.">${s.ids.map((id, j) => { const a = s.awards[id]; return `<article class="v8-card${id === s.me ? " you" : ""}">
+        <div class="v8-stage"><span class="v8-art">${companionArt(FF.people[id].animal, 186)}</span><i class="v8-medal">${icon(a.icon, 20, { stroke: 2.2 })}</i><span class="v8-rank num">${s.ORD[j]}</span></div>
+        <div class="v8-info">
+            <div class="v8-who">${avatar(id, 22)}${esc(s.Nm(id))}<span class="num">${fmt(s.total[id])}</span></div>
+            <h3>${esc(a.title)}</h3>
+            <p>${esc(a.line)}.</p>
+            <div class="v8-viz">${awardViz(s, id)}</div>
+        </div>
+    </article>`; }).join("")}</div>
+    <div class="v8-dots">${s.ids.map((id, j) => `<button type="button" data-dot="${j}" aria-label="${esc(s.Nm(id))}'s award" aria-current="${j === 0}"></button>`).join("")}</div>
+    <div class="v8-list">
+        <div class="fr-sec"><span>Final order</span><i></i><em>${esc(s.endShort)}</em></div>
+        <div class="v8-rows">${s.ids.map((id, j) => `<div class="v8-row${id === s.me ? " you" : ""}"><span class="v8-rk num">${j + 1}</span>${avatar(id, 34)}<div class="v8-mid"><b>${esc(pname(id))}</b><small>${esc(s.awards[id].title)}${j ? ` · ${signed(-(s.total[s.W] - s.total[id]))}` : ""}</small></div><em class="num">${fmt(s.total[id])}</em></div>`).join("")}</div>
+    </div>
+</div>`);
+        },
+        mount: withPick((root, ctx) => {
+            const rail = root.querySelector(".v8-rail");
+            const cards = [...rail.children];
+            const dots = [...root.querySelectorAll("[data-dot]")];
+            const stepW = () => (cards[1] ? cards[1].offsetLeft - cards[0].offsetLeft : 1);
+            const nearest = () => Math.max(0, Math.min(cards.length - 1, Math.round(rail.scrollLeft / stepW())));
+            const mark = () => {
+                V8.at = nearest();
+                dots.forEach((d, j) => d.setAttribute("aria-current", String(j === V8.at)));
+            };
+            const go = (i) => rail.scrollTo({ left: Math.min(rail.scrollWidth - rail.clientWidth, Math.max(0, Math.min(cards.length - 1, i)) * stepW()), behavior: ctx.reduced ? "auto" : "smooth" });
+            let drag = null;
+            let settle = 0;
+            const onDown = (e) => {
+                if (e.pointerType !== "mouse" || e.button > 0) return;
+                drag = { x: e.clientX, left: rail.scrollLeft, k: rail.offsetWidth / (rail.getBoundingClientRect().width || 1) };
+                rail.classList.add("drag");
+                try { rail.setPointerCapture(e.pointerId); } catch (_) {}
+            };
+            const onMove = (e) => { if (drag) rail.scrollLeft = drag.left - (e.clientX - drag.x) * drag.k; };
+            const onUp = () => {
+                if (!drag) return;
+                const moved = rail.scrollLeft - drag.left;
+                const from = Math.round(drag.left / stepW());
+                drag = null;
+                go(Math.abs(moved) > 30 ? from + Math.sign(moved) : from);
+                // Snapping stays off until the smooth scroll lands, so it cannot pull the card back.
+                clearTimeout(settle);
+                settle = setTimeout(() => rail.classList.remove("drag"), 450);
+            };
+            const onKey = (e) => {
+                const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+                if (!d) return;
+                e.preventDefault();
+                e.stopPropagation();
+                go(V8.at + d);
+            };
+            const onDot = (e) => { const b = e.target.closest("[data-dot]"); if (b) go(+b.dataset.dot); };
+            rail.addEventListener("scroll", mark, { passive: true });
+            rail.addEventListener("pointerdown", onDown);
+            rail.addEventListener("pointermove", onMove);
+            rail.addEventListener("pointerup", onUp);
+            rail.addEventListener("pointercancel", onUp);
+            rail.addEventListener("keydown", onKey);
+            root.addEventListener("click", onDot);
+            if (V8.at) rail.scrollLeft = Math.min(V8.at, cards.length - 1) * stepW();
+            mark();
+            return () => {
+                clearTimeout(settle);
+                rail.removeEventListener("scroll", mark);
+                root.removeEventListener("click", onDot);
+                if (!SWITCHING) V8.at = 0;
+            };
+        }),
+    },
+
+    // 9 ========================================================================
+    {
+        id: "ask",
+        name: "Ask the fight",
+        when: "When people come back with a question. Every answer is one sentence and one chart.",
+        changes: [
+            "Seven questions people actually ask after a fight: where did I lose it, who led, when was it closest, what would it have taken.",
+            "Tap a question, the answer opens under it with the one chart that backs it up. One open at a time.",
+            "When you won, the questions turn around: where did I win it, how safe was my lead.",
+        ],
+        css: `
+.v9-body { padding: 10px 20px 200px; display: flex; flex-direction: column; gap: 8px; }
+.v9-top { display: flex; align-items: center; gap: 12px; padding: 4px 0 12px; }
+.v9-top h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.v9-top p { margin: 3px 0 0; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v9-q { border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); animation: fr-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v9-q.open { background: var(--control); }
+.v9-qb { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 8px 16px 8px 10px; border: 0; background: none; color: var(--text); text-align: left; font-size: 16px; font-weight: 800; letter-spacing: -0.01em; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.v9-ic { width: 36px; height: 36px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--chip); color: var(--text-secondary); }
+.v9-q.open .v9-ic { background: var(--text); color: var(--card); }
+.v9-qb span { flex: 1; }
+.v9-qb > svg { color: var(--text-tertiary); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.v9-q.open .v9-qb > svg { transform: rotate(180deg); }
+.v9-a { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.v9-q.open .v9-a { grid-template-rows: 1fr; }
+.v9-a > div { overflow: hidden; }
+.v9-a p { margin: 0; padding: 0 16px; font-size: 15px; font-weight: 700; line-height: 1.5; color: var(--text-dim); text-wrap: pretty; }
+.v9-viz { margin: 14px 8px 8px; padding: 14px 8px 10px; border-radius: 14px; background: var(--card); }
+.v9-vh { margin: 0 4px 8px; font-size: 11px; font-weight: 800; color: var(--text-tertiary); }
+.v9-viz .fr-strip b { font-size: 11px; font-weight: 800; color: var(--text-secondary); }
+.v9-viz .fr-st { margin-top: 0; padding: 0 4px; }
+.v9-viz .fr-axis { margin-right: 52px; margin-left: 94px; }
+.v9-need { padding: 0 6px; display: flex; flex-direction: column; gap: 10px; }
+.v9-need div { display: grid; grid-template-columns: 96px 1fr 50px; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.v9-need i { height: 12px; border-radius: 6px; background: var(--track); overflow: hidden; }
+.v9-need b { display: block; height: 100%; border-radius: 6px; background: var(--fr-ash); transform-origin: left; animation: fr-grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v9-need .you b { background: var(--fr-you); }
+.v9-need .need b { background: var(--fr-rival); }
+.v9-need em { font-style: normal; text-align: right; color: var(--text); }
+.v9-need p { margin: 0; padding: 0; text-align: right; font-size: 13px; font-weight: 800; color: var(--ember-text); }
+.v9-best { padding: 0 6px; display: flex; flex-direction: column; gap: 10px; }
+.v9-best div { display: grid; grid-template-columns: 24px 64px 1fr 44px; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; }
+.v9-best small { display: block; font-size: 10px; font-weight: 700; color: var(--text-tertiary); }
+.v9-best i { height: 10px; border-radius: 5px; background: var(--track); overflow: hidden; }
+.v9-best b { display: block; height: 100%; border-radius: 5px; background: var(--fr-ash); transform-origin: left; animation: fr-grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v9-best .top b { background: var(--fr-rival); }
+.v9-best .top.you b { background: var(--fr-you); }
+.v9-best em { font-style: normal; text-align: right; font-size: 12px; }
+.v9-hook { display: flex; align-items: flex-end; gap: 14px; padding: 0 8px; height: 112px; overflow: hidden; }
+.v9-hook > div { padding-bottom: 18px; }
+.v9-hook b { display: block; font-size: 17px; font-weight: 800; }
+.v9-hook span { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+`,
+        render: () => {
+            const s = S();
+            const qs = v9Questions(s);
+            return view(`${frNav(s)}
+<div class="v9-body">
+    <div class="v9-top">${avatar(s.W, 48)}<div><h2 class="fr-say">${s.say.headline}</h2><p>You came ${s.place} · ${esc(s.say.stakes)}</p></div></div>
+    ${qs.map((q, j) => `<section class="v9-q${j === V9.open ? " open" : ""}" style="animation-delay:${(j * 0.04).toFixed(2)}s">
+        <button type="button" class="v9-qb" data-q="${j}" aria-expanded="${j === V9.open}"><i class="v9-ic">${icon(q.icon, 18, { stroke: 2.3 })}</i><span>${q.q}</span>${icon("chevronDown", 18, { stroke: 2.4 })}</button>
+        <div class="v9-a"><div><p class="fr-say">${q.a}</p><div class="v9-viz">${q.viz}</div></div></div>
+    </section>`).join("")}
+</div>`);
+        },
+        mount: withPick((root) => {
+            const onClick = (e) => {
+                const b = e.target.closest("[data-q]");
+                if (!b) return;
+                const j = +b.dataset.q;
+                V9.open = V9.open === j ? -1 : j;
+                root.querySelectorAll(".v9-q").forEach((q, k) => {
+                    q.classList.toggle("open", k === V9.open);
+                    q.querySelector("[data-q]").setAttribute("aria-expanded", String(k === V9.open));
+                });
+            };
+            root.addEventListener("click", onClick);
+            return () => {
+                root.removeEventListener("click", onClick);
+                if (!SWITCHING) V9.open = 0;
+            };
+        }),
+    },
+
+    // 10 =======================================================================
+    {
+        id: "replay",
+        name: "Replay",
+        when: "The fun one. Watch the week again: the lanes race, and one line of commentary per day.",
+        changes: [
+            "Opens by replaying the fight: companions run their lanes day by day toward the finish, and rows swap when someone overtakes.",
+            "Each day gets one line of commentary written from the numbers: who took the lead, the rough day, the closest moment.",
+            "Tap play or drag the timeline to any day. The gold fill shows how far through the week you are.",
+        ],
+        css: `
+.v10-body { padding: 10px 20px 200px; display: flex; flex-direction: column; gap: 12px; }
+.v10-card { padding: 18px 16px 16px; }
+.v10-k { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
+.v10-h { margin: 6px 0 0; min-height: 56px; font-size: 23px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.12; text-wrap: balance; }
+.v10-h.pop { animation: fr-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v10-s { margin: 6px 0 0; min-height: 20px; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.v10-lanes { position: relative; margin-top: 30px; }
+.v10-finish { position: absolute; top: -8px; bottom: 0; right: 60px; width: 0; border-left: 2px dashed var(--line); }
+.v10-finish span { position: absolute; top: -16px; right: -26px; font-size: 10px; font-weight: 800; color: var(--text-faint); text-wrap: nowrap; }
+.v10-lane { position: absolute; left: 0; right: 0; height: 48px; display: flex; align-items: center; gap: 8px; transition: top 0.5s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.v10-rk { width: 16px; flex: none; text-align: center; font-size: 13px; font-weight: 800; color: var(--text-tertiary); }
+.v10-track { position: relative; flex: 1; height: 38px; }
+.v10-track::before { content: ""; position: absolute; left: 0; right: 0; top: 18px; height: 2px; border-radius: 1px; background: var(--track); }
+.v10-trail { position: absolute; left: 0; top: 16px; height: 6px; border-radius: 3px; background: var(--fr-ash); transition: width 0.6s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.v10-lane.lead .v10-trail { background: var(--fr-rival); }
+.v10-lane.you .v10-trail { background: var(--fr-you); }
+.v10-face { position: absolute; top: 1px; width: 36px; height: 36px; margin-left: -36px; border-radius: 50%; transition: left 0.6s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.v10-face .ff-avatar { outline: 2px solid var(--card); }
+.v10-lane.you .v10-face .ff-avatar { outline-color: var(--fr-you); }
+.v10-val { width: 52px; flex: none; text-align: right; font-size: 13px; font-weight: 800; }
+.v10-lane.you .v10-val { color: var(--moss-text); }
+.v10-ctl { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+.v10-play { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--text); color: var(--card); cursor: pointer; }
+.v10-tl { position: relative; flex: 1; height: 44px; touch-action: none; cursor: pointer; outline: none; }
+.v10-tl:focus-visible { outline: 2px solid var(--moss-edge); outline-offset: 2px; border-radius: 8px; }
+.v10-rail { position: absolute; left: 8px; right: 8px; top: 14px; height: 4px; border-radius: 2px; background: var(--track); }
+.v10-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--gold); transition: width 0.4s ease; }
+.v10-tick { position: absolute; top: 10px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--card); border: 2px solid var(--line); transition: border-color 0.3s ease, background 0.3s ease; }
+.v10-tick.done { border-color: var(--gold); background: var(--gold); }
+.v10-tick.on { width: 16px; height: 16px; top: 8px; margin-left: -8px; border-color: var(--text); background: var(--card); }
+.v10-tl span { position: absolute; top: 28px; transform: translateX(-50%); font-size: 10px; font-weight: 800; color: var(--text-faint); }
+.v10-tl span.on { color: var(--text); }
+.v10-day { padding: 14px 16px; }
+.v10-dh { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 800; }
+.v10-dh span { font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.v10-dr { display: grid; grid-template-columns: 22px 60px 1fr 46px; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; font-weight: 800; }
+.v10-dr i { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.v10-dr i b { display: block; height: 100%; border-radius: 4px; background: var(--fr-ash); transition: width 0.4s ease; }
+.v10-dr.w i b { background: var(--fr-rival); }
+.v10-dr.you i b { background: var(--fr-you); }
+.v10-dr em { font-style: normal; text-align: right; color: var(--text-secondary); }
+.v10-dr.w em { color: var(--text); }
+`,
+        render: (ctx) => {
+            const s = S();
+            const d = V10.day ?? s.n - 1;
+            return view(`${frNav(s)}
+<div class="v10-body">
+    <section class="fr-card v10-card">
+        <div class="v10-k" data-k>Day ${d + 1} of ${s.n}</div>
+        <h3 class="v10-h fr-say" data-h>${v10Calls(s)[d].h}</h3>
+        <p class="v10-s fr-say" data-sub>${v10Calls(s)[d].sub}</p>
+        <div class="v10-lanes" style="height:${s.k * 50}px"><i class="v10-finish"><span>${fmt(s.total[s.W])}</span></i>${s.ids.map((id) => `<div class="v10-lane${id === s.me ? " you" : ""}" data-lane="${id}"><span class="v10-rk num"></span><div class="v10-track"><i class="v10-trail"></i><span class="v10-face">${avatar(id, 36)}</span></div><b class="v10-val num"></b></div>`).join("")}</div>
+        <div class="v10-ctl">
+            <button type="button" class="v10-play" data-play aria-label="Play the replay">${icon("refresh", 18, { stroke: 2.6 })}</button>
+            <div class="v10-tl" data-tl tabindex="0" role="slider" aria-label="Day" aria-valuemin="1" aria-valuemax="${s.n}" aria-valuenow="${d + 1}"><div class="v10-rail"><i class="v10-fill"></i></div>${s.D.map((i) => `<i class="v10-tick" data-tick="${i}" style="left:calc(8px + (100% - 16px) * ${(s.n === 1 ? 0 : i / (s.n - 1)).toFixed(4)})"></i><span style="left:calc(8px + (100% - 16px) * ${(s.n === 1 ? 0 : i / (s.n - 1)).toFixed(4)})">D${i + 1}</span>`).join("")}</div>
+        </div>
+    </section>
+    <section class="fr-card v10-day" data-day></section>
+</div>`);
+        },
+        mount: withPick((root, ctx) => {
+            const s = S();
+            const calls = v10Calls(s);
+            const lanes = Object.fromEntries(s.ids.map((id) => [id, root.querySelector(`[data-lane="${id}"]`)]));
+            const tl = root.querySelector("[data-tl]");
+            const play = root.querySelector("[data-play]");
+            const dayBox = root.querySelector("[data-day]");
+            const head = root.querySelector("[data-h]");
+            let timer = 0;
+            let first = true;
+            const paint = (d) => {
+                V10.day = d;
+                const max = s.total[s.W];
+                for (const id of s.ids) {
+                    const el = lanes[id];
+                    const pct = (s.cum[id][d] / max) * 100;
+                    el.style.top = `${(s.rank[id][d] - 1) * 50}px`;
+                    el.classList.toggle("lead", s.leader[d] === id && id !== s.me);
+                    el.querySelector(".v10-rk").textContent = s.rank[id][d];
+                    el.querySelector(".v10-trail").style.width = `${pct.toFixed(2)}%`;
+                    el.querySelector(".v10-face").style.left = `max(36px, ${pct.toFixed(2)}%)`;
+                    el.querySelector(".v10-val").textContent = fmt(s.cum[id][d]);
+                }
+                root.querySelector("[data-k]").textContent = `Day ${d + 1} of ${s.n}`;
+                head.innerHTML = calls[d].h;
+                root.querySelector("[data-sub]").innerHTML = calls[d].sub;
+                if (!first && !ctx.reduced) { head.classList.remove("pop"); void head.offsetWidth; head.classList.add("pop"); }
+                first = false;
+                tl.querySelector(".v10-fill").style.width = `${s.n === 1 ? 100 : (d / (s.n - 1)) * 100}%`;
+                tl.querySelectorAll("[data-tick]").forEach((t, i) => { t.classList.toggle("done", i < d); t.classList.toggle("on", i === d); });
+                tl.querySelectorAll("span").forEach((t, i) => t.classList.toggle("on", i === d));
+                tl.setAttribute("aria-valuenow", String(d + 1));
+                const dmax = Math.max(...s.ids.map((id) => s.daily[id][d]));
+                dayBox.innerHTML = `<div class="v10-dh">Steps on day ${d + 1}<span>${esc(s.Nm(s.dayWinner[d]))} ${s.vb(s.dayWinner[d], "win", "wins")} the day</span></div>${[...s.ids].sort((a, b) => s.daily[b][d] - s.daily[a][d]).map((id) => `<div class="v10-dr${id === s.dayWinner[d] ? " w" : ""}${id === s.me ? " you" : ""}">${avatar(id, 22)}<span>${esc(s.Nm(id))}</span><i><b style="width:${((s.daily[id][d] / dmax) * 100).toFixed(1)}%"></b></i><em class="num">${fmt(s.daily[id][d])}</em></div>`).join("")}`;
+                play.innerHTML = timer ? icon("x", 18, { stroke: 2.6 }) : d === s.n - 1 ? icon("refresh", 18, { stroke: 2.6 }) : icon("chevronRight", 20, { stroke: 2.8 });
+                play.setAttribute("aria-label", timer ? "Stop" : d === s.n - 1 ? "Replay from day 1" : "Play");
+            };
+            const stop = () => { clearTimeout(timer); timer = 0; paint(V10.day); };
+            const run = (from) => {
+                clearTimeout(timer);
+                const step = (d) => {
+                    timer = d < s.n - 1 ? setTimeout(() => step(d + 1), 1500) : 0;
+                    paint(d);
+                };
+                step(from);
+            };
+            const onPlay = () => (timer ? stop() : run(V10.day === s.n - 1 ? 0 : V10.day + 1));
+            const sc = scrub(tl, s.n, (e) => Math.round(((localX(tl, e) - 8) / (tl.offsetWidth - 16)) * (s.n - 1)), (i) => { clearTimeout(timer); timer = 0; paint(i); });
+            play.addEventListener("click", onPlay);
+            const start = V10.day ?? (ctx.reduced ? s.n - 1 : 0);
+            sc.set(start);
+            if (!ctx.reduced && V10.day == null) run(0);
+            else paint(start);
+            return () => {
+                clearTimeout(timer);
+                sc.off();
+                play.removeEventListener("click", onPlay);
+                V10.day = null;
+            };
+        }),
+    },
+
+    // 11 =======================================================================
+    {
+        id: "head-to-head",
+        name: "Head to head",
+        when: "When the only question is: why did I lose to her? Pick anyone and see your duel inside the fight.",
+        changes: [
+            "Starts on you against the winner: the gap, days won, and every day side by side, the winner of each day in full colour.",
+            "Six facts written from that duel: who led, the closest moment, the day that hurt most, what it would have taken, and the what-if.",
+            "Tap Nico or Léa to see the duels you won. In the coffee duel it is simply you against Hugo.",
+        ],
+        css: `
+.v11-body { padding: 10px 20px 200px; display: flex; flex-direction: column; gap: 12px; }
+.v11-pick { display: flex; gap: 6px; }
+.v11-pick button { flex: 1; min-width: 0; height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 10px 0 6px; border-radius: var(--r-pill); border: 1px solid var(--hairline); background: var(--card); color: var(--text-secondary); font-size: 13px; font-weight: 800; cursor: pointer; }
+.v11-pick button[aria-pressed="true"] { background: var(--control-alt); border-color: var(--line); color: var(--text); }
+.v11-hero { display: grid; grid-template-columns: 1fr 112px 1fr; align-items: center; padding: 18px 8px 16px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); animation: fr-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v11-side { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.v11-side .ff-avatar { margin-bottom: 4px; outline: 3px solid transparent; outline-offset: 2px; }
+.v11-side.you .ff-avatar { outline-color: var(--fr-you); }
+.v11-side b { font-size: 15px; font-weight: 800; }
+.v11-side span { font-size: 13px; font-weight: 800; color: var(--text-secondary); }
+.v11-mid { text-align: center; }
+.v11-res { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.v11-hero.up .v11-res, .v11-hero.up .v11-rl { color: var(--moss-text); }
+.v11-hero.down .v11-res, .v11-hero.down .v11-rl { color: var(--ember-text); }
+.v11-rl { margin-top: 3px; font-size: 12px; font-weight: 800; }
+.v11-days { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: var(--r-pill); background: var(--chip); font-size: 14px; font-weight: 800; }
+.v11-dl { margin-top: 4px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
+.v11-card { padding: 16px; animation: fr-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 0.06s both; }
+.v11-ch { display: grid; grid-template-columns: 1fr auto 1fr; margin-bottom: 10px; font-size: 11px; font-weight: 800; color: var(--text-tertiary); }
+.v11-ch span:last-child { text-align: right; }
+.v11-ch b { font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.v11-row { display: grid; grid-template-columns: 44px 1fr 30px 1fr 44px; align-items: center; gap: 6px; height: 30px; font-size: 11px; font-weight: 800; color: var(--text-faint); }
+.v11-row > b { text-align: center; font-size: 10px; }
+.v11-row em { font-style: normal; }
+.v11-row em:first-child { text-align: right; }
+.v11-row em.w { color: var(--text); }
+.v11-bar { display: flex; height: 12px; }
+.v11-bar.l { justify-content: flex-end; }
+.v11-bar i { height: 100%; border-radius: 6px; background: var(--fr-ash-soft); animation: fr-grow-x 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v11-bar.l i { transform-origin: right; }
+.v11-bar.r i { transform-origin: left; }
+.v11-bar.l i.w { background: var(--fr-you); }
+.v11-bar.r i.w { background: var(--fr-rival); }
+.v11-cap { margin-bottom: 6px; font-size: 11px; font-weight: 800; color: var(--text-tertiary); }
+.v11-facts { display: flex; flex-direction: column; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); padding: 4px 16px; }
+.v11-f { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+.v11-f + .v11-f { border-top: 1px solid var(--hairline); }
+.v11-f i { width: 30px; height: 30px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--chip); color: var(--text-secondary); }
+.v11-f.up i { background: var(--moss-wash); color: var(--moss-text); }
+.v11-f.down i { background: var(--ember-wash); color: var(--ember-text); }
+.v11-f p { margin: 5px 0 0; font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text-dim); }
+`,
+        render: () => {
+            const s = S();
+            const others = s.ids.filter((id) => id !== s.me);
+            const r = others.includes(V11.rival) ? V11.rival : s.rival;
+            const { d, ahead, facts } = duelFacts(s, r);
+            const max = Math.max(...s.D.flatMap((i) => [s.daily[s.me][i], s.daily[r][i]]));
+            return view(`${frNav(s)}
+<div class="v11-body">
+    ${others.length > 1 ? `<div class="v11-pick" role="group" aria-label="Compare with">${others.map((id) => `<button type="button" data-rival="${id}" aria-pressed="${id === r}">${avatar(id, 28)}${esc(pname(id))}</button>`).join("")}</div>` : ""}
+    <section class="v11-hero ${ahead ? "up" : "down"}">
+        <div class="v11-side you">${avatar(s.me, 60)}<b>You</b><span class="num">${fmt(s.total[s.me])}</span></div>
+        <div class="v11-mid"><div class="v11-res num">${signed(d.final)}</div><div class="v11-rl">${ahead ? "ahead" : "short"}</div><div class="v11-days num">${d.aWon} <span>-</span> ${d.bWon}</div><div class="v11-dl">days won</div></div>
+        <div class="v11-side">${avatar(r, 60)}<b>${esc(pname(r))}</b><span class="num">${fmt(s.total[r])}</span></div>
+    </section>
+    <section class="fr-card v11-card">
+        <div class="v11-ch"><span>You</span><b>Each day</b><span>${esc(pname(r))}</span></div>
+        ${s.D.map((i) => { const a = s.daily[s.me][i], b = s.daily[r][i]; return `<div class="v11-row"><em class="num${a > b ? " w" : ""}">${fmt(a)}</em><span class="v11-bar l"><i class="${a > b ? "w" : ""}" style="width:${((a / max) * 100).toFixed(1)}%;animation-delay:${(i * 0.04).toFixed(2)}s"></i></span><b>D${i + 1}</b><span class="v11-bar r"><i class="${b > a ? "w" : ""}" style="width:${((b / max) * 100).toFixed(1)}%;animation-delay:${(i * 0.04).toFixed(2)}s"></i></span><em class="num${b > a ? " w" : ""}">${fmt(b)}</em></div>`; }).join("")}
+    </section>
+    <section class="fr-card v11-card"><div class="v11-cap">You minus ${esc(pname(r))}, after each day</div>${gapChart(s, { w: 319, h: 104, uid: "v11g", vals: d.gap })}</section>
+    <section class="v11-facts">${facts.map((f) => `<div class="v11-f${f.up ? " up" : ""}${f.down ? " down" : ""}"><i>${icon(f.icon, 16, { stroke: 2.3 })}</i><p class="fr-say">${f.t}</p></div>`).join("")}</section>
+</div>`);
+        },
+        mount: withPick((root, ctx) => {
+            const onClick = (e) => {
+                const b = e.target.closest("[data-rival]");
+                if (!b || b.getAttribute("aria-pressed") === "true") return;
+                V11.rival = b.dataset.rival;
+                SWITCHING = true;
+                ctx.rerender();
+                SWITCHING = false;
+            };
+            root.addEventListener("click", onClick);
+            return () => {
+                root.removeEventListener("click", onClick);
+                if (!SWITCHING) V11.rival = null;
+            };
+        }),
+    },
+
+    // 12 =======================================================================
+    {
+        id: "podium",
+        name: "Podium talk",
+        when: "Bold and playful. The companions stand on the podium and each one tells you their side.",
+        changes: [
+            "The result is a podium with the companions on it, fourth place on the lowest step, so the ranking reads in one second.",
+            "Tap a companion and they say their own line, written from their numbers: I led all 7 days, I got within 200 on day 4.",
+            "Under the podium, that person's card: total, share, best day, days won and led, and where they lost ground.",
+        ],
+        css: `
+.v12-body { padding: 6px 20px 200px; }
+.v12-stage { position: relative; padding-top: 4px; }
+.v12-bubble { position: relative; min-height: 92px; margin-bottom: 18px; padding: 14px 16px; border-radius: 20px; background: var(--control-alt); animation: fr-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v12-bubble.you { background: var(--moss-fill); color: var(--moss-on); }
+.v12-bubble::after { content: ""; position: absolute; bottom: -7px; left: var(--tail); width: 16px; height: 16px; margin-left: -8px; border-radius: 3px; background: inherit; transform: rotate(45deg); transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.v12-bubble small { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.7; }
+.v12-bubble p { margin: 5px 0 0; font-size: 19px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.25; text-wrap: pretty; }
+.v12-podium { display: flex; align-items: flex-end; gap: 4px; }
+.v12-slot { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.v12-art { display: block; margin-bottom: -6px; transform-origin: 50% 100%; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease; opacity: 0.72; }
+.v12-art img { pointer-events: none; -webkit-user-drag: none; }
+.v12-slot.on .v12-art { opacity: 1; transform: translateY(-4px); animation: v12-hop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+.v12-block { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; border-radius: 14px 14px 4px 4px; background: var(--control); border: 1px solid var(--hairline); transform-origin: bottom; animation: fr-grow-y 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v12-slot.you .v12-block { background: var(--moss-wash); border-color: var(--moss-edge); }
+.v12-slot.on .v12-block { background: var(--control-alt); }
+.v12-slot.you.on .v12-block { background: color-mix(in srgb, var(--moss-fill) 34%, var(--card)); }
+.v12-block b { font-size: 20px; font-weight: 800; line-height: 1; }
+.v12-block em { margin-top: 4px; font-style: normal; font-size: 11px; font-weight: 800; color: var(--text-secondary); }
+.v12-block.low { flex-direction: row; justify-content: center; align-items: center; gap: 6px; padding-top: 0; }
+.v12-block.low b { font-size: 13px; }
+.v12-block.low em { margin: 0; }
+.v12-floor { height: 1px; margin-top: 0; background: var(--line); }
+.v12-hint { margin: 10px 0 16px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-tertiary); }
+.v12-card { padding: 16px; animation: fr-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v12-ch { display: flex; align-items: center; gap: 12px; }
+.v12-ch > div { flex: 1; min-width: 0; }
+.v12-ch b { display: block; font-size: 17px; font-weight: 800; }
+.v12-ch span { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v12-aw { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: var(--r-pill); background: var(--chip); font-size: 12px; font-weight: 800; color: var(--text-dim); flex: none; }
+.v12-card.you .v12-aw { background: var(--moss-wash); color: var(--moss-text); }
+.v12-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; border-top: 1px solid var(--hairline); }
+.v12-grid div { padding: 12px 4px 0 0; }
+.v12-grid div:nth-child(n + 4) { padding-top: 14px; }
+.v12-grid b { display: block; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.v12-grid span { display: block; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v12-why { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 10px 12px; border-radius: 14px; background: var(--chip); font-size: 13px; font-weight: 700; color: var(--text-dim); }
+.v12-why.down { background: var(--ember-wash); }
+.v12-why svg { flex: none; color: var(--text-secondary); }
+.v12-why.down svg { color: var(--ember-text); }
+@keyframes v12-hop { 0% { transform: translateY(0); } 45% { transform: translateY(-14px); } 100% { transform: translateY(-4px); } }
+`,
+        render: () => {
+            const s = S();
+            const who = s.ids.includes(V12.who) ? V12.who : s.me;
+            const slots = s.k === 2 ? [s.ids[0], s.ids[1]] : [s.ids[1], s.ids[0], ...s.ids.slice(2)];
+            const rk = (id) => s.ids.indexOf(id) + 1;
+            const blockH = (id) => ({ 1: 104, 2: 76, 3: 52 })[rk(id)] || 28;
+            const artH = s.k > 3 ? 116 : 150;
+            return view(`${frNav(s)}
+<div class="v12-body">
+    <section class="v12-stage">
+        <div class="v12-bubble" data-bubble aria-live="polite"></div>
+        <div class="v12-podium">${slots.map((id) => `<button type="button" class="v12-slot${id === s.me ? " you" : ""}" data-who="${id}" aria-pressed="false" aria-label="${esc(s.Nm(id))}, ${s.ORD[rk(id) - 1]}"><span class="v12-art">${companionArt(FF.people[id].animal, artH)}</span><span class="v12-block${blockH(id) < 40 ? " low" : ""}" style="height:${blockH(id)}px"><b class="num">${rk(id)}</b><em class="num">${short(s.total[id])}</em></span></button>`).join("")}</div>
+        <div class="v12-floor"></div>
+    </section>
+    <p class="v12-hint">Tap anyone to hear their side.</p>
+    <section class="fr-card v12-card" data-card></section>
+</div>`);
+        },
+        mount: withPick((root, ctx) => {
+            const s = S();
+            const slots = [...root.querySelectorAll("[data-who]")];
+            const bubble = root.querySelector("[data-bubble]");
+            const card = root.querySelector("[data-card]");
+            const show = (who) => {
+                V12.who = who;
+                const at = slots.findIndex((b) => b.dataset.who === who);
+                const j = s.ids.indexOf(who);
+                slots.forEach((b) => { b.classList.toggle("on", b.dataset.who === who); b.setAttribute("aria-pressed", String(b.dataset.who === who)); });
+                bubble.className = `v12-bubble${who === s.me ? " you" : ""}`;
+                bubble.style.setProperty("--tail", `${(((at + 0.5) / slots.length) * 100).toFixed(1)}%`);
+                bubble.innerHTML = `<small>${esc(s.Nm(who))} · ${s.ORD[j]}</small><p>“${esc(s.quote[who])}”</p>`;
+                if (!ctx.reduced) { bubble.style.animation = "none"; void bubble.offsetWidth; bubble.style.animation = ""; }
+                const a = s.awards[who];
+                card.className = `fr-card v12-card${who === s.me ? " you" : ""}`;
+                card.innerHTML = `<div class="v12-ch">${avatar(who, 44)}<div><b>${esc(pname(who))}</b><span>${s.ORD[j]} of ${s.k} · ${j ? `${signed(-(s.total[s.W] - s.total[who]))} behind` : `won by ${fmt(s.margin)}`}</span></div><span class="v12-aw">${icon(a.icon, 14, { stroke: 2.4 })}${esc(a.title)}</span></div>
+<div class="v12-grid">
+    <div><b class="num">${fmt(s.total[who])}</b><span>Steps</span></div>
+    <div><b class="num">${s.pct(s.share[who])}</b><span>Of all steps</span></div>
+    <div><b class="num">${fmt(s.avg[who])}</b><span>A day</span></div>
+    <div><b class="num">${fmt(s.best[who].v)}</b><span>Best, day ${s.best[who].i + 1}</span></div>
+    <div><b class="num">${s.daysWon[who]}<small>/${s.n}</small></b><span>Days won</span></div>
+    <div><b class="num">${s.ledDays[who]}<small>/${s.n}</small></b><span>Days in the lead</span></div>
+</div>
+<div class="v12-why${j ? " down" : ""}">${icon(j ? "trendDown" : "crown", 16, { stroke: 2.4 })}<span>${j ? `Lost most ground on day ${s.slip[who].i + 1}: ${fmt(s.slip[who].v)} to ${esc(s.nm(s.W))}.` : `${esc(s.why[who])}. Gave up the most on day ${s.slip[who].i + 1}: ${fmt(s.slip[who].v)} to ${esc(s.nm(s.R))}.`}</span></div>`;
+            };
+            const onClick = (e) => { const b = e.target.closest("[data-who]"); if (b) show(b.dataset.who); };
+            root.addEventListener("click", onClick);
+            show(s.ids.includes(V12.who) ? V12.who : s.me);
+            return () => {
+                root.removeEventListener("click", onClick);
+                if (!SWITCHING) V12.who = null;
+            };
+        }),
+    },
+
+    // 13 =======================================================================
+    {
+        id: "big-numbers",
+        name: "Big numbers",
+        when: "The poster. Seven giant numbers you scroll through, each with one line. Made to screenshot.",
+        changes: [
+            "Needs a backlog item: share a recap as an image. The last card has Share the recap.",
+            "No charts to read: each fact is one huge number and one sentence, from all the steps together to the lead changes to what it would have taken.",
+            "Numbers count up as they scroll into view. Moss for your good numbers, ember for the one that hurt.",
+        ],
+        css: `
+.v13-body { padding: 10px 20px 200px; display: flex; flex-direction: column; gap: 10px; }
+.v13-b { position: relative; min-height: 190px; padding: 20px 20px 22px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; animation: fr-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.v13-b.right { align-items: flex-end; text-align: right; }
+.v13-b.flat { background: var(--control); border-color: transparent; }
+.v13-b.alt { background: var(--control-alt); border-color: transparent; }
+.v13-b.wash { background: var(--moss-wash); border-color: var(--moss-edge); }
+.v13-b.fill { background: var(--moss-fill); border-color: transparent; color: var(--moss-on); }
+.v13-b.ember { background: var(--ember-wash); border-color: transparent; }
+.v13-k { position: absolute; left: 20px; top: 18px; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
+.v13-b.right .v13-k { left: auto; right: 20px; }
+.v13-b.wash .v13-k { color: var(--moss-text); }
+.v13-b.fill .v13-k { color: color-mix(in srgb, var(--moss-on) 75%, transparent); }
+.v13-b.ember .v13-k { color: var(--ember-text); }
+.v13-n { position: relative; z-index: 1; margin-top: 30px; font-weight: 800; letter-spacing: -0.055em; line-height: 0.88; }
+.v13-b.wash .v13-n { color: var(--moss-text); }
+.v13-b.ember .v13-n { color: var(--ember-text); }
+.v13-t { position: relative; z-index: 1; margin: 12px 0 0; max-width: 230px; font-size: 16px; font-weight: 800; line-height: 1.3; letter-spacing: -0.01em; text-wrap: pretty; }
+.v13-b.fill .v13-t { color: var(--moss-on); }
+.v13-art { position: absolute; bottom: -10px; pointer-events: none; }
+.v13-b:not(.right) .v13-art { right: -4px; }
+.v13-b.right .v13-art ~ .v13-t { max-width: 190px; }
+.v13-b.right .v13-art { left: -4px; }
+.v13-share { position: relative; z-index: 1; display: flex; gap: 2px; width: 100%; height: 10px; margin-top: 16px; border-radius: 5px; overflow: hidden; }
+.v13-share i { display: block; height: 100%; background: var(--fr-ash-soft); }
+.v13-share i.w { background: var(--fr-rival); }
+.v13-share i.you { background: var(--fr-you); }
+.v13-end { min-height: 230px; background: var(--control-alt); border-color: transparent; }
+.v13-end .v13-t { max-width: 190px; font-size: 24px; line-height: 1.15; letter-spacing: -0.02em; }
+.v13-btn { position: relative; z-index: 1; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 46px; margin-top: 16px; padding: 0 18px; border: 0; border-radius: var(--r-pill); background: var(--text); color: var(--card); font-size: 14px; font-weight: 800; cursor: pointer; }
+`,
+        render: () => {
+            const s = S();
+            const count = ["", "one", "two", "three", "four", "five", "six"][s.k];
+            const t = s.top;
+            const blocks = [
+                { k: s.round, v: s.all, t: `steps between the ${count} of you, ${s.span}.`, tone: "" },
+                { k: "Lead changes", v: s.changes.length, t: s.changes.length === 0 ? `${s.Nm(s.W)} led every single day.` : `${s.Nm(s.W)} took it for good on day ${s.take + 1}.`, tone: "flat", right: true, art: s.W },
+                { k: `Closest · day ${s.closest + 1}`, v: s.closeGap, t: s.closeAhead === s.W ? `steps between ${s.nm(s.R)} and ${s.nm(s.W)}. As close as it got.` : `steps: ${s.poss(s.R)} lead after day ${s.closest + 1}. It never got closer.`, tone: "wash" },
+                { k: `Biggest day · day ${s.best[t].i + 1}`, v: s.best[t].v, t: t === s.me ? "Your best day, and the biggest of the fight." : `${s.Poss(t)} best day, and the biggest of the fight.`, tone: t === s.me ? "fill" : "alt", right: true, art: t },
+                { k: "Share of every step", v: Math.round(s.share[s.W] * 100), suf: "%", t: `of all the steps were ${s.W === s.me ? "yours" : `${pname(s.W)}'s`}.`, tone: "", share: true },
+                s.won
+                    ? { k: `Day ${s.decisive + 1}`, v: s.swing[s.decisive], pre: "+", t: `on ${s.nm(s.R)} in one day. That's where you won it.`, tone: "fill", right: true }
+                    : { k: `Day ${s.slip[s.me].i + 1}`, v: s.slip[s.me].v, pre: "−", t: `to ${pname(s.W)} in one day. Your hardest.`, tone: "ember", right: true },
+                s.won
+                    ? { k: "How safe it was", v: s.perDay(s.R), pre: "+", t: `steps a day is what ${pname(s.R)} needed to catch you.`, tone: "flat" }
+                    : { k: "What it would have taken", v: s.perDay(s.me), pre: "+", t: `steps a day and you win. About ${s.minutes(s.perDay(s.me))} minutes of walking.`, tone: "flat" },
+            ];
+            const size = (txt) => Math.min(120, Math.floor(300 / (txt.length * 0.6)));
+            return view(`${frNav(s)}
+<div class="v13-body">
+    ${blocks.map((b, j) => { const txt = `${b.pre || ""}${fmt(b.v)}${b.suf || ""}`; return `<section class="v13-b ${b.tone}${b.right ? " right" : ""}" style="animation-delay:${Math.min(j, 3) * 0.05}s">
+        <div class="v13-k">${esc(b.k)}</div>
+        ${b.art ? `<div class="v13-art" aria-hidden="true">${companionArt(FF.people[b.art].animal, 136)}</div>` : ""}
+        <div class="v13-n num" data-count="${b.v}" data-pre="${b.pre || ""}" data-suf="${b.suf || ""}" style="font-size:${size(txt)}px">${txt}</div>
+        <p class="v13-t">${esc(b.t)}</p>
+        ${b.share ? `<div class="v13-share">${s.ids.map((id) => `<i class="${id === s.me ? "you" : id === s.W ? "w" : ""}" style="width:${(s.share[id] * 100).toFixed(2)}%"></i>`).join("")}</div>` : ""}
+    </section>`; }).join("")}
+    <section class="v13-b v13-end">
+        <div class="v13-k">Final · ${esc(s.endShort)}</div>
+        <div class="v13-art" aria-hidden="true">${companionArt(FF.people[s.last].animal, 180)}</div>
+        <p class="v13-t">${esc(s.say.stakes)}.</p>
+        <button type="button" class="v13-btn">${icon("share", 17, { stroke: 2.4 })}Share the recap</button>
+    </section>
+</div>`);
+        },
+        mount: withPick((root, ctx) => {
+            if (ctx.reduced) return null;
+            const pending = new Set(root.querySelectorAll("[data-count]"));
+            const raf = new Set();
+            const final = (el) => `${el.dataset.pre}${fmt(+el.dataset.count)}${el.dataset.suf}`;
+            const run = (el) => {
+                const to = +el.dataset.count;
+                const t0 = performance.now();
+                const tick = (now) => {
+                    const k = Math.min(1, (now - t0) / 900);
+                    el.textContent = `${el.dataset.pre}${fmt(to * (1 - Math.pow(1 - k, 3)))}${el.dataset.suf}`;
+                    if (k < 1) raf.add(requestAnimationFrame(tick));
+                };
+                raf.add(requestAnimationFrame(tick));
+            };
+            const check = () => {
+                const view = ctx.screen.getBoundingClientRect();
+                for (const el of pending) {
+                    const r = el.getBoundingClientRect();
+                    if (r.top > view.bottom - 120) continue;
+                    pending.delete(el);
+                    if (r.bottom < view.top + 60) el.textContent = final(el);
+                    else run(el);
+                }
+            };
+            pending.forEach((el) => { el.textContent = `${el.dataset.pre}${fmt(0)}${el.dataset.suf}`; });
+            ctx.screen.addEventListener("scroll", check, { passive: true });
+            check();
+            return () => {
+                ctx.screen.removeEventListener("scroll", check);
+                raf.forEach((id) => cancelAnimationFrame(id));
             };
         }),
     },

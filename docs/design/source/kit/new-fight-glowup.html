@@ -416,6 +416,14 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 .nf-term::after { content: ""; position: absolute; inset: -4px 0; }
 .nf-term.on { color: var(--moss-text); }
 
+/* step-by-step flows (options 15 to 22): shared entrances. Base styles are the final state. */
+@keyframes fl-in-r { from { opacity: 0; transform: translateX(44px); } }
+@keyframes fl-in-l { from { opacity: 0; transform: translateX(-44px); } }
+@keyframes fl-up { from { opacity: 0; transform: translateY(22px); } }
+@keyframes fl-pop { from { opacity: 0; transform: scale(0.8); } }
+@keyframes fl-fade { from { opacity: 0; } }
+.fl-line { display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
+
         </style>
         <style id="gx-variant-css"></style>
     </head>
@@ -930,7 +938,7 @@ const PAGE = {
     id: "new-fight",
     title: "New fight",
     tab: "new",
-    intro: "Fourteen ways to set up a fight. Every option builds the same one: The croissant run, 1 week, you against Bertille, Nico and Léa, and the loser brings croissants for everyone. Everything is live: type, pick a length, remove someone, add @hugo back, slide to start.",
+    intro: "Twenty-two ways to set up a fight. Options 15 to 22 are step by step: one question per screen, then a review and Start. Every option builds the same one: The croissant run, 1 week, you against Bertille, Nico and Léa, and the loser brings croissants for everyone. Everything is live: type, pick a length, remove someone, add @hugo back, slide to start.",
 };
 
 // The fight every option is filled in with, plus the seven lengths (three for testing).
@@ -1412,6 +1420,115 @@ const hgSvg = (s) => {
 <rect class="hg-cap" x="6" y="4" width="108" height="14" rx="7"/>
 <rect class="hg-cap" x="6" y="242" width="108" height="14" rx="7"/>
 </svg>`;
+};
+
+// ---------- 15 to 22. Step by step ----------
+// Marc, 26 Sep: "it has to be as steps, not everything on the same page." Every flow below asks one question per
+// screen (name, loser, length, who), then shows a review with Start, then a started screen.
+// Add &step=N to the URL hash to open a flow on screen N (1 is the first question, 6 is the started screen).
+const FLOW = ["name", "action", "dur", "who", "review"];
+const FL = {
+    name: { label: "Name", ask: "What's it called?", hint: "Optional. Skip it and the loser's job becomes the name.", key: "title", ph: "Weekend walk-off" },
+    action: { label: "The loser", ask: "What does the loser do?", hint: "Optional. Fewest steps when time runs out does it.", key: "action", ph: "Cooks dinner" },
+    dur: { label: "How long", ask: "How long does it last?", hint: "It starts right away. Steps after the end time don't count." },
+    who: { label: "Who", ask: "Who are you taking on?", hint: "Exact usernames. Anyone with the code or invite link can join too." },
+    review: { label: "Review", ask: "Look right?", hint: "Tap anything to change it." },
+};
+const SUGGEST = [
+    ["Brings croissants for everyone", "gift"],
+    ["Cooks dinner", "flame"],
+    ["Buys the coffee", "sun"],
+    ["Sings at karaoke", "megaphone"],
+    ["Picks the next movie", "image"],
+    ["Plans the next hike", "mountain"],
+];
+const flFirst = (dflt) => {
+    const n = parseInt(new URLSearchParams(location.hash.slice(1)).get("step"), 10);
+    return n >= 1 && n <= 6 ? n - 1 : dflt;
+};
+const fl = (vid, first = 0) => st(vid, { i: flFirst(first), go: 1 });
+// A step's entrance plays once when the step changes, never on redraws inside it, never with Reduce Motion.
+const flGo = (s, ctx) => {
+    const g = ctx.reduced ? 0 : s.go;
+    s.go = 0;
+    return g > 0 ? " go-f" : g < 0 ? " go-b" : "";
+};
+const flNext = (s, order) => {
+    if (order[s.i] === "who" && s.typed.trim()) {
+        addHandle(s);
+        if (s.err) return false;
+    }
+    s.i = Math.min(order.length, s.i + 1);
+    s.go = 1;
+    s.top = true;
+    return true;
+};
+const flAct = (order, more) => (act, val, s, el) => {
+    const r = more ? more(act, val, s, el) : false;
+    if (r) return r;
+    if (act === "fl-next") { flNext(s, order); return true; }
+    if (act === "fl-back") { if (!s.i) return "nodraw"; s.i -= 1; s.go = -1; s.top = true; return true; }
+    if (act === "fl-to") { const j = Number(val); s.go = j < s.i ? -1 : 1; s.i = j; s.top = true; return true; }
+    if (act === "fl-pick") { s.action = SUGGEST[Number(val)][0]; return true; }
+    if (act === "fl-again") { Object.assign(s, { i: 0, go: 1, top: true, dur: "1w", crew: [...LOCAL.crew], title: LOCAL.title, action: LOCAL.action, typed: "", err: "" }); return true; }
+    if (act === "fl-none") return "nodraw";
+    return false;
+};
+const FL_LIVE = {
+    title: (s) => s.title.trim() || "no name",
+    "action-lc": (s) => LOCAL.lc(s.action.trim()) || "gets off free",
+};
+// wire() plus three things every flow needs: Next reads Skip while an optional answer is empty,
+// live text outside data-bind, and Enter in a text answer moves on.
+const flMount = (vid, ctx, order, more) => {
+    const phone = ctx.phone;
+    const w = wire(vid, ctx, flAct(order, more), (key, s) => {
+        phone.querySelectorAll(`[data-skip="${key}"]`).forEach((n) => { n.textContent = s[key].trim() ? n.dataset.next : "Skip"; });
+        phone.querySelectorAll("[data-live]").forEach((n) => { n.textContent = FL_LIVE[n.dataset.live](s); });
+    });
+    const enter = (e) => {
+        if (e.key !== "Enter" || !e.target.matches('[data-field="title"], [data-field="action"]')) return;
+        e.preventDefault();
+        const next = phone.querySelector('[data-act="fl-next"]');
+        if (next) next.click();
+    };
+    phone.addEventListener("keydown", enter);
+    return { s: w.s, draw: w.draw, cleanup: () => { phone.removeEventListener("keydown", enter); w.cleanup(); } };
+};
+// "Next" that reads "Skip" while an optional answer is empty.
+const flLabel = (s, k, next = "Next") => {
+    const key = FL[k] && FL[k].key;
+    return key ? `<span data-skip="${key}" data-next="${next}">${s[key].trim() ? next : "Skip"}</span>` : next;
+};
+const flSuggest = (s, cls, size = 15) => SUGGEST.map(([t, ic], j) => `<button type="button" class="${cls}${s.action.trim() === t ? " on" : ""}" data-act="fl-pick" data-val="${j}">${icon(ic, size, { stroke: 2.2 })}<span>${t}</span></button>`).join("");
+const flFacts = (s) => {
+    const d = LOCAL.dur(s.dur);
+    return {
+        name: { icon: "pencil", label: "Name", val: esc(s.title.trim() || "No name, uses the loser's job") },
+        action: { icon: "flag", label: "The loser", val: esc(s.action.trim() || "Nothing, just glory") },
+        dur: { icon: "clock", label: "How long", val: `${d.label} · ends ${d.ends}` },
+        who: { icon: "users", label: "Who", val: s.crew.length ? esc(LOCAL.names(s.crew)) : "Anyone with the code" },
+    };
+};
+const flInvited = (s) => (s.crew.length ? `${esc(LOCAL.names(s.crew))} ${s.crew.length === 1 ? "has" : "have"} the invite.` : "Share the code so people can join.");
+// The four racers art only when the cast is exactly the four in it; otherwise each person's own animal.
+const flCast = (s, ctx, cls, h = 104) =>
+    s.crew.length === 3 && LOCAL.crew.every((id) => s.crew.includes(id))
+        ? `<img class="${cls}" src="${asset(ctx.theme === "day" ? "raceDay" : "raceNight")}" alt="Badger, fox, turtle and rabbit racing">`
+        : `<div class="${cls} fl-line">${["marc", ...s.crew].map((id) => companionArt(LOCAL.P(id).animal, h)).join("")}</div>`;
+
+// ---------- 23. To the line ----------
+// A world wider than the phone. Your badger stands on checkpoint x[i]; the camera keeps it about 130px from the left
+// until the start line and your rivals fill the right edge. All values are world px.
+const WL = { W: 800, x: [70, 200, 330, 540, 575], line: 620, rivals: [628, 796], ground: 178, me: 104 };
+const wlCam = (x) => Math.max(0, Math.min(WL.W - 393, x - 130));
+
+// ---------- 24. Live preview ----------
+const LP_SECS = { "1h": 3600, "6h": 21600, "1d": 86400, "3d": 259200, "1w": 604800, "2w": 1209600, "1m": 2592000 };
+const lpClock = (t) => {
+    const p = (n) => String(n).padStart(2, "0");
+    const d = Math.floor(t / 86400);
+    return `${d ? d + "d " : ""}${p(Math.floor((t % 86400) / 3600))}:${p(Math.floor((t % 3600) / 60))}:${p(t % 60)}`;
 };
 
 const VARIANTS = [
@@ -2948,6 +3065,1222 @@ const VARIANTS = [
                 w.cleanup();
             };
         },
+    },
+
+    // 15 -------------------------------------------------------------
+    {
+        id: "wizard",
+        name: "Classic wizard",
+        when: "Safe polish Marc could ship tomorrow: today's wizard, one question per screen, with Next always under your thumb.",
+        changes: [
+            "Five screens in the order people think: name, loser, length, who, then review. The metric step is gone because every fight is Steps.",
+            "One labelled bar fills in gold as you go. Finished steps are tappable, so going back never means tapping Back three times.",
+            "The loser step suggests stakes, every length shows its end time, and the three testing lengths sit apart.",
+            "Start lands on a started screen with who got the invite, instead of dropping you on Fights.",
+        ],
+        css: `
+.wz { padding-bottom: 190px; }
+.wz-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 44px; }
+.wz-title { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.wz-back { justify-self: start; display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding-right: 12px; margin-left: -6px; font-size: 15px; font-weight: 800; color: var(--text); }
+.wz-back[disabled] { visibility: hidden; }
+.wz-count { justify-self: end; font-size: 13px; font-weight: 800; color: var(--text-secondary); }
+.wz-bar { position: relative; height: 6px; border-radius: 3px; background: var(--dash); overflow: hidden; margin-top: 4px; }
+.wz-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--gold); }
+.wz-bar i.grow { animation: wz-grow 0.6s cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes wz-grow { from { width: var(--from); } }
+.wz-steps { display: flex; justify-content: space-between; margin-top: 6px; }
+.wz-steps > * { position: relative; min-height: 28px; display: inline-flex; align-items: center; font-size: 11px; font-weight: 800; color: var(--text-faint); }
+.wz-steps > * { white-space: nowrap; }
+.wz-steps .cur { color: var(--text); }
+.wz-steps button { color: var(--text-secondary); }
+.wz-steps button::after { content: ""; position: absolute; inset: -8px -6px; }
+.wz-body { margin-top: 24px; }
+.wz-body.go-f { animation: fl-in-r 0.38s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.wz-body.go-b { animation: fl-in-l 0.38s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.wz-q { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; color: var(--text); }
+.wz-hint { font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--text-secondary); margin-top: 8px; }
+.wz-field { display: block; margin-top: 22px; padding: 15px 18px 10px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--line); }
+.wz-field:focus-within { border-color: var(--moss-edge); }
+.wz-field input, .wz-field textarea { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; }
+.wz-cnt { display: block; text-align: right; font-size: 11px; font-weight: 700; color: var(--text-faint); margin-top: 4px; }
+.wz-lab { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin: 22px 0 10px; }
+.wz-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.wz-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 15px 0 13px; border-radius: var(--r-pill); background: var(--card); border: 1px solid var(--hairline); font-size: 13px; font-weight: 800; color: var(--text-dim); }
+.wz-chip .ff-icon { color: var(--text-tertiary); flex: none; }
+.wz-chip.on { background: var(--moss-wash); border-color: var(--moss-edge); color: var(--moss-text); }
+.wz-chip.on .ff-icon { color: var(--moss-text); }
+.wz-durs { margin-top: 22px; padding: 2px 0; }
+.wz-dur { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 0 16px; color: var(--text); }
+.wz-dur b { flex: 1; font-size: 17px; font-weight: 800; }
+.wz-dur small { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.wz-radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex: none; color: var(--moss-on); }
+.wz-dur.on .wz-radio { background: var(--moss-fill); border-color: var(--moss-fill); }
+.wz-dur.on small { color: var(--moss-text); }
+.wz-ends { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.wz-add { margin-top: 22px; }
+.wz-peek { display: flex; align-items: flex-end; justify-content: flex-end; gap: 4px; margin-top: 36px; }
+.wz-say { margin-bottom: 118px; padding: 10px 14px; border-radius: 18px 18px 6px 18px; background: var(--control); font-size: 13px; font-weight: 800; color: var(--text-dim); }
+.wz-body.go-f .wz-peek, .wz-body.go-b .wz-peek { animation: fl-up 0.5s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.wz-sum { margin-top: 20px; }
+.wz-row { text-align: left; }
+.wz-row .nf-row-title { margin-top: 1px; }
+.wz-chev { color: var(--text-faint); display: grid; flex: none; }
+.wz-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.wz-again { display: block; width: 100%; min-height: 44px; margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--text-secondary); text-align: center; }
+.wz-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 26px; padding-bottom: 240px; }
+.wz-art { position: relative; width: 220px; height: 196px; display: flex; justify-content: center; align-items: flex-end; }
+.wz-disc { position: absolute; left: 22px; top: 8px; width: 176px; height: 176px; border-radius: 50%; background: var(--moss-wash); }
+.wz-art img { position: relative; }
+.wz-tick { position: absolute; right: 16px; top: 14px; width: 48px; height: 48px; border-radius: 50%; background: var(--moss-fill); color: var(--moss-on); display: grid; place-items: center; border: 4px solid var(--bg); }
+.wz-eye { color: var(--moss-text); margin-top: 20px; }
+.wz-done-t { font-size: 32px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; margin-top: 6px; }
+.wz-done-s { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-top: 6px; }
+.wz-done-card { width: 100%; margin-top: 22px; text-align: left; }
+.wz-stack { display: flex; flex: none; }
+.wz-stack .ff-avatar { border: 2px solid var(--card); border-radius: 50%; }
+.wz-stack .ff-avatar + .ff-avatar { margin-left: -9px; }
+.wz-done.go-f .wz-disc { animation: fl-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.wz-done.go-f .wz-art img { animation: fl-up 0.5s 0.08s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.wz-done.go-f .wz-tick { animation: fl-pop 0.4s 0.35s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+.wz-done.go-f .wz-eye, .wz-done.go-f .wz-done-t, .wz-done.go-f .wz-done-s, .wz-done.go-f .wz-done-card { animation: fl-up 0.45s 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+`,
+        render: (ctx) => {
+            const s = fl("wizard");
+            const go = flGo(s, ctx);
+            const n = FLOW.length;
+            const d = LOCAL.dur(s.dur);
+            if (s.i >= n) {
+                return {
+                    html: `
+<div class="nf-wrap wz-done${go}">
+  <div class="wz-art"><span class="wz-disc"></span>${companionArt("badger", 178)}<span class="wz-tick">${icon("check", 22, { stroke: 3.2 })}</span></div>
+  <div class="t-eyebrow wz-eye">Fight on</div>
+  <div class="wz-done-t">${esc(fightName(s))}</div>
+  <div class="wz-done-s">Started now · ends ${d.ends}</div>
+  ${group([
+      `<div class="nf-row">${stack(["marc", ...s.crew], 30, "wz-stack")}<span class="nf-row-mid"><span class="nf-row-title">${flInvited(s)}</span><span class="nf-sub">Most steps by ${d.endsShort} wins</span></span></div>`,
+      gRow({ glyph: icon("flag", 16), title: esc(s.action.trim() || "No loser action"), sub: "What the loser does" }),
+  ], "wz-done-card")}
+</div>`,
+                    dock: ctaDock(`<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-none">Open the fight</button><button type="button" class="wz-again" data-act="fl-again">Set up another</button>`),
+                };
+            }
+            const k = FLOW[s.i];
+            const q = FL[k];
+            const pct = ((s.i + 1) / n) * 100;
+            const from = s.wzPct == null ? pct : s.wzPct;
+            s.wzPct = pct;
+            let body = "";
+            if (k === "name") body = `<label class="wz-field"><input data-field="title" value="${esc(s.title)}" placeholder="${q.ph}" maxlength="120" enterkeyhint="next" aria-label="Name"><span class="wz-cnt num" data-count="title">${s.title.length}/120</span></label><div class="wz-peek"><span class="wz-say">Four questions, then you're racing.</span>${companionArt("badger", 176)}</div>`;
+            else if (k === "action") body = `<label class="wz-field"><textarea data-field="action" rows="2" maxlength="120" placeholder="${q.ph}" enterkeyhint="next" aria-label="What the loser does">${esc(s.action)}</textarea></label><div class="wz-lab">Or pick one</div><div class="wz-chips">${flSuggest(s, "wz-chip")}</div>`;
+            else if (k === "dur") {
+                body = `<div class="nf-group wz-durs">${MAIN.map((id) => {
+                    const x = LOCAL.dur(id);
+                    const on = s.dur === id;
+                    return `<button type="button" class="wz-dur${on ? " on" : ""}" data-act="dur" data-val="${id}" aria-pressed="${on}"><b>${x.label}</b><small>ends ${x.endsShort}</small><span class="wz-radio">${on ? icon("check", 13, { stroke: 3.2 }) : ""}</span></button>`;
+                }).join(DIV)}</div><div class="wz-lab">For testing</div><div class="nf-durgrid three">${durChips(s, TEST, "test")}</div><div class="wz-ends">${icon("clock", 14)}Starts now, ends ${d.ends}</div>`;
+            } else if (k === "who") body = `<div class="wz-add">${adder(s)}</div>${s.crew.length ? group(s.crew.map(personRow), "nf-mt") : ""}`;
+            else {
+                const f = flFacts(s);
+                body = `<div class="nf-group wz-sum">${FLOW.slice(0, 4).map((x, j) => `<button type="button" class="nf-row wz-row" data-act="fl-to" data-val="${j}"><span class="nf-glyph">${icon(f[x].icon, 16)}</span><span class="nf-row-mid"><span class="nf-sub">${f[x].label}</span><span class="nf-row-title">${f[x].val}</span></span><span class="wz-chev">${icon("chevronRight", 16, { stroke: 2.4 })}</span></button>`).join(DIV)}</div><div class="wz-terms">${terms(s)}</div>`;
+            }
+            const cta = k === "review"
+                ? `<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-next">${icon("bolt", 18, { stroke: 2.4 })}Start the fight</button>`
+                : `<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-next">${flLabel(s, k)}</button>`;
+            return {
+                html: `
+<div class="nf-wrap wz">
+  <div class="wz-top"><button type="button" class="wz-back" data-act="fl-back" ${s.i ? "" : "disabled"}>${icon("chevronLeft", 20, { stroke: 2.6 })}Back</button><span class="wz-title">New fight</span><span class="wz-count num">${s.i + 1} of ${n}</span></div>
+  <div class="wz-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${s.i + 1}"><i class="${go ? "grow" : ""}" style="width:${pct}%;--from:${from}%"></i></div>
+  <div class="wz-steps">${FLOW.map((x, j) => (j < s.i ? `<button type="button" data-act="fl-to" data-val="${j}">${FL[x].label}</button>` : `<span class="${j === s.i ? "cur" : ""}">${FL[x].label}</span>`)).join("")}</div>
+  <div class="wz-body${go}">
+    <div class="wz-q">${q.ask}</div>
+    <div class="wz-hint">${q.hint}</div>
+    ${body}
+  </div>
+</div>`,
+                dock: ctaDock(cta),
+            };
+        },
+        mount: (root, ctx) => flMount("wizard", ctx, FLOW).cleanup,
+    },
+
+    // 16 -------------------------------------------------------------
+    {
+        id: "chat",
+        name: "Badger asks",
+        when: "When setup should feel like texting a friend: your badger asks, you answer, and one reply is one step.",
+        changes: [
+            "Each screen is one message from your badger and one reply from you. Suggestions are quick replies: tap one and it's sent.",
+            "Progress is a ring around the badger in the header, and your last answer stays at the top so the chat never loses its thread.",
+            "Usernames are typed like messages, and the review arrives as a card in the chat with Start underneath.",
+        ],
+        css: `
+.cv { display: flex; flex-direction: column; min-height: 798px; padding: 0 16px 196px; box-sizing: border-box; }
+.cv-head { display: flex; align-items: center; gap: 10px; min-height: 58px; margin: 0 -16px; padding: 0 16px 8px; border-bottom: 1px solid var(--hairline); }
+.cv-back { width: 44px; height: 44px; margin-left: -10px; display: grid; place-items: center; color: var(--text); }
+.cv-back[disabled] { visibility: hidden; }
+.cv-ring { position: relative; width: 46px; height: 46px; flex: none; }
+.cv-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.cv-ring circle { fill: none; stroke-width: 3; }
+.cv-ring .tr { stroke: var(--dash); }
+.cv-ring .fg { stroke: var(--moss-edge); stroke-linecap: round; }
+.cv-ring .fg.grow { animation: cv-ring 0.7s cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes cv-ring { from { stroke-dashoffset: var(--from); } }
+.cv-ring img { position: absolute; left: 6px; top: 6px; width: 34px; height: 34px; border-radius: 50%; }
+.cv-name { display: flex; flex-direction: column; min-width: 0; }
+.cv-name b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.cv-name span { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-top: 1px; }
+.cv-thread { margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding-top: 18px; }
+.cv-me { align-self: flex-end; max-width: 80%; padding: 11px 15px; border-radius: 20px 20px 6px 20px; background: var(--moss-fill); color: var(--moss-on); font-size: 15px; font-weight: 800; line-height: 1.3; }
+.cv-me.dim { background: var(--moss-wash); color: var(--moss-text); }
+.cv-say { display: flex; align-items: flex-end; }
+.cv-art { flex: none; width: 88px; margin-left: -14px; display: flex; justify-content: center; }
+.cv-bubbles { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-bottom: 10px; }
+.cv-b { max-width: 100%; padding: 11px 15px; border-radius: 20px 20px 20px 6px; background: var(--control); font-size: 15px; font-weight: 800; line-height: 1.3; color: var(--text); }
+.cv-b.ask { font-size: 21px; letter-spacing: -0.02em; line-height: 1.2; padding: 13px 17px; }
+.cv-b.err { background: var(--ember-wash); color: var(--ember-text); }
+.cv-typing { display: none; position: absolute; left: 0; bottom: 10px; gap: 5px; padding: 16px 17px; border-radius: 20px 20px 20px 6px; background: var(--control); }
+.cv-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-tertiary); animation: cv-dot 0.9s ease-in-out infinite; }
+.cv-typing i:nth-child(2) { animation-delay: 0.15s; }
+.cv-typing i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes cv-dot { 0%, 60%, 100% { opacity: 0.35; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+.cv-thread.go-f .cv-typing, .cv-thread.go-b .cv-typing { display: flex; animation: cv-typing 0.95s both; }
+@keyframes cv-typing { 0%, 30% { opacity: 0; } 36%, 88% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+.cv-thread.go-f .cv-me.dim { animation: cv-sent 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.cv-thread.go-f .cv-art, .cv-thread.go-b .cv-art { animation: fl-up 0.4s 0.05s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.cv-thread.go-f .b1, .cv-thread.go-b .b1 { animation: cv-pop 0.3s 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.cv-thread.go-f .b2, .cv-thread.go-b .b2 { animation: cv-pop 0.34s 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.cv-thread.go-f .cv-draft, .cv-thread.go-f .cv-card { animation: cv-pop 0.4s 1.05s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes cv-sent { from { opacity: 0; transform: translateY(120px) scale(0.9); } }
+@keyframes cv-pop { from { opacity: 0; transform: translateY(8px) scale(0.94); } }
+.cv-draft { align-self: flex-end; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 94%; padding: 10px; border-radius: 22px 22px 6px 22px; border: 2px dashed color-mix(in srgb, var(--moss-edge) 70%, transparent); }
+.cv-draft-l { width: 100%; text-align: right; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--moss-text); padding: 0 6px 2px; }
+.cv-tok { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 2px 0 5px; border-radius: var(--r-pill); background: var(--moss-fill); color: var(--moss-on); font-size: 14px; font-weight: 800; }
+.cv-tok .nf-x { width: 34px; height: 34px; background: transparent; color: var(--moss-on); }
+.cv-tok .nf-x::after { inset: -5px; }
+.cv-card { width: 100%; padding: 6px 16px 14px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--line); }
+.cv-card-t { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; padding: 8px 0 6px; color: var(--text); }
+.cv-card-t .ff-icon { color: var(--text-faint); }
+.cv-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; min-height: 48px; padding: 8px 0; border-top: 1px solid var(--hairline); text-align: left; color: var(--text); }
+.cv-row small { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+.cv-row b { font-size: 14px; font-weight: 800; line-height: 1.3; }
+.cv-terms { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; border-top: 1px solid var(--hairline); }
+.cv-card img { display: block; width: calc(100% + 32px); margin: -6px -16px 0; height: 140px; object-fit: cover; object-position: 50% 58%; border-radius: var(--r-card) var(--r-card) 0 0; }
+.cv-card .fl-line { display: flex; justify-content: center; margin: 4px -16px 0; height: 120px; overflow: hidden; }
+.cv-card-s { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.cv-dock { padding: 10px 16px 30px; background: var(--bg); border-top: 1px solid var(--hairline); }
+.cv-quick { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 10px; padding: 0 16px; scrollbar-width: none; }
+.cv-quick::-webkit-scrollbar { display: none; }
+.cv-q { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); border: 1.5px solid var(--moss-edge); color: var(--moss-text); font-size: 14px; font-weight: 800; }
+.cv-q.on { background: var(--moss-wash); }
+.cv-q.test { border-style: dashed; border-color: var(--dash); color: var(--text-secondary); }
+.cv-q.test.on { border-color: var(--moss-edge); color: var(--moss-text); }
+.cv-sep { flex: none; align-self: center; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 2px 0 6px; }
+.cv-bar { display: flex; gap: 8px; align-items: center; }
+.cv-field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 18px; border-radius: var(--r-pill); background: var(--card); border: 1px solid var(--line); }
+.cv-field:focus-within { border-color: var(--moss-edge); }
+.cv-field.err { border-color: var(--ember-text); }
+.cv-field input { font-size: 16px; font-weight: 700; }
+.cv-field b { font-size: 16px; font-weight: 800; }
+.cv-field span { font-size: 13px; font-weight: 700; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; }
+.cv-field span { white-space: nowrap; }
+.cv-send { width: 50px; height: 50px; border-radius: 50%; background: var(--moss-fill); color: var(--moss-on); display: grid; place-items: center; flex: none; }
+.cv-dock.go-f .cv-quick, .cv-dock.go-b .cv-quick { animation: fl-up 0.35s 1.05s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.cv-again { display: block; width: 100%; min-height: 44px; margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--text-secondary); text-align: center; }
+`,
+        render: (ctx) => {
+            const s = fl("chat");
+            const go = flGo(s, ctx);
+            const n = FLOW.length;
+            const d = LOCAL.dur(s.dur);
+            const k = FLOW[s.i] || "done";
+            const R = 20;
+            const C = 2 * Math.PI * R;
+            const pct = Math.min(s.i + 1, n) / n;
+            const from = s.cvPct == null ? pct : s.cvPct;
+            s.cvPct = pct;
+            const said = [
+                esc(s.title.trim() || "Skip the name"),
+                esc(s.action.trim() || "No stakes, just glory"),
+                d.label,
+                s.crew.length ? LOCAL.handles(s.crew) : "Just me for now",
+                "Start the fight",
+            ][s.i - 1];
+            const lines = {
+                name: ["New fight? Love it.", "First things first. What's it called?"],
+                action: [s.title.trim() ? `${esc(s.title.trim())}. Great name.` : "No name. Mysterious.", "What does the loser have to do?"],
+                dur: [s.action.trim() ? "Ooh. Real stakes." : "No stakes, just glory. Fine.", "How long do they get?"],
+                who: [d.test ? `${d.label}. A quick test, got it.` : `${d.label}. Time for a comeback or two.`, "Who are you taking on?"],
+                review: [s.crew.length ? `${esc(LOCAL.names(s.crew))}. Bold.` : "Just you for now. People can join with the code.", "Here's the deal. Look right?"],
+                done: ["Done. It's on.", s.crew.length ? `I told ${esc(LOCAL.names(s.crew))}. May the best walker win.` : "Share the code and may the best walker win."],
+            }[k];
+            const send = (act = "fl-next", label = "Next") => `<button type="button" class="cv-send" data-act="${act}" aria-label="${label}">${icon("arrowUp", 20, { stroke: 2.8 })}</button>`;
+            let extra = "";
+            let dock = "";
+            if (k === "name") dock = `<div class="cv-quick"><button type="button" class="cv-q" data-act="cv-noname">Skip the name</button></div><div class="cv-bar"><label class="cv-field"><input data-field="title" value="${esc(s.title)}" placeholder="${FL.name.ph}" maxlength="120" enterkeyhint="send" aria-label="Name"></label>${send()}</div>`;
+            else if (k === "action") dock = `<div class="cv-quick">${SUGGEST.map(([t], j) => `<button type="button" class="cv-q${s.action.trim() === t ? " on" : ""}" data-act="cv-pick" data-val="${j}">${t}</button>`).join("")}</div><div class="cv-bar"><label class="cv-field"><input data-field="action" value="${esc(s.action)}" placeholder="${FL.action.ph}" maxlength="120" enterkeyhint="send" aria-label="What the loser does"></label>${send()}</div>`;
+            else if (k === "dur") dock = `<div class="cv-quick">${MAIN.map((id) => `<button type="button" class="cv-q${s.dur === id ? " on" : ""}" data-act="cv-dur" data-val="${id}">${LOCAL.dur(id).label}</button>`).join("")}<span class="cv-sep">Testing</span>${TEST.map((id) => `<button type="button" class="cv-q test${s.dur === id ? " on" : ""}" data-act="cv-dur" data-val="${id}">${LOCAL.dur(id).label}</button>`).join("")}</div><div class="cv-bar"><div class="cv-field"><b>${d.label}</b><span>ends ${d.ends}</span></div>${send()}</div>`;
+            else if (k === "who") {
+                extra = `<div class="cv-draft"><span class="cv-draft-l">Your reply</span>${s.crew.map((id) => `<span class="cv-tok">${avatar(id, 32)}${esc(LOCAL.P(id).handle)}<button type="button" class="nf-x" data-act="remove" data-val="${id}" aria-label="Remove ${esc(LOCAL.P(id).handle)}">${icon("x", 12, { stroke: 3 })}</button></span>`).join("") || '<span class="cv-draft-l">Nobody yet. Type a username below.</span>'}</div>`;
+                dock = `<div class="cv-quick"><button type="button" class="cv-q" data-act="fl-next">That's everyone</button></div><div class="cv-bar"><label class="cv-field${s.err ? " err" : ""}"><input data-field="typed" value="${esc(s.typed)}" placeholder="Add a @username" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Username"></label>${send("cv-send", "Add or continue")}</div>`;
+            } else if (k === "review") {
+                const f = flFacts(s);
+                extra = `<div class="cv-card"><button type="button" class="cv-card-t" data-act="fl-to" data-val="0">${esc(fightName(s))}${icon("pencil", 14, { stroke: 2.4 })}</button>${FLOW.slice(1, 4).map((x, j) => `<button type="button" class="cv-row" data-act="fl-to" data-val="${j + 1}"><small>${f[x].label}</small><b>${f[x].val}</b></button>`).join("")}<div class="cv-terms">${terms(s)}</div></div>`;
+                dock = `<div class="cv-quick"><button type="button" class="cv-q" data-act="fl-to" data-val="0">Change something</button></div><button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-next">${icon("bolt", 18, { stroke: 2.4 })}Start the fight</button>`;
+            } else {
+                extra = `<div class="cv-card">${flCast(s, ctx, "cv-cast", 96)}<div class="cv-card-t">${esc(fightName(s))}</div><div class="cv-card-s">${d.left} · ends ${d.ends}</div></div>`;
+                dock = `<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-none">Open the fight</button><button type="button" class="cv-again" data-act="fl-again">Set up another</button>`;
+            }
+            const err = k === "who" && s.err ? `<div class="cv-b err">${esc(s.err)}</div>` : "";
+            const cardInBubbles = k === "review" || k === "done";
+            return {
+                html: `
+<div class="cv">
+  <div class="cv-head">
+    <button type="button" class="cv-back" data-act="fl-back" aria-label="Back" ${s.i && s.i < n ? "" : "disabled"}>${icon("chevronLeft", 22, { stroke: 2.6 })}</button>
+    <span class="cv-ring"><svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true"><circle class="tr" cx="23" cy="23" r="${R}"/><circle class="fg${go ? " grow" : ""}" cx="23" cy="23" r="${R}" style="stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${(C * (1 - pct)).toFixed(1)};--from:${(C * (1 - from)).toFixed(1)}"/></svg><img src="${asset("badger-avatar")}" alt=""></span>
+    <span class="cv-name"><b>Your badger</b><span>${k === "done" ? "Fight on" : `Setting up · ${s.i + 1} of ${n}`}</span></span>
+  </div>
+  <div class="cv-thread${go}">
+    ${said ? `<div class="cv-me dim">${said}</div>` : ""}
+    <div class="cv-say">
+      <span class="cv-art">${companionArt("badger", 112)}</span>
+      <div class="cv-bubbles">
+        <div class="cv-b b1">${lines[0]}</div>
+        <div class="cv-b ask b2">${lines[1]}</div>
+        ${err}
+        <div class="cv-typing" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    ${cardInBubbles || k === "who" ? extra : ""}
+  </div>
+</div>`,
+                dock: `<div class="cv-dock${go}">${dock}</div>`,
+            };
+        },
+        mount: (root, ctx) =>
+            flMount("chat", ctx, FLOW, (act, val, s) => {
+                if (act === "cv-noname") { s.title = ""; flNext(s, FLOW); return true; }
+                if (act === "cv-pick") { s.action = SUGGEST[Number(val)][0]; flNext(s, FLOW); return true; }
+                if (act === "cv-dur") { s.dur = val; flNext(s, FLOW); return true; }
+                if (act === "cv-send") { if (s.typed.trim()) addHandle(s); else flNext(s, FLOW); return true; }
+                return false;
+            }).cleanup,
+    },
+
+    // 17 -------------------------------------------------------------
+    {
+        id: "card-stack",
+        name: "Card stack",
+        when: "When setup should feel quick and physical: one card per question, swipe it away to get the next.",
+        changes: [
+            "Each question is a card on a deck. Swipe it left or tap Next and it flies off; the next card rises from underneath.",
+            "The deck shows what's left: cards peek out below, and the dots under it count down to the review card.",
+            "Swipe right or tap Back and the last card comes back on top. The review card lists every answer; tap one to jump to its card.",
+        ],
+        css: `
+.cs { padding-bottom: 180px; }
+.cs-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.cs-back { width: 44px; height: 44px; margin-left: -12px; display: grid; place-items: center; color: var(--text); }
+.cs-back[disabled] { visibility: hidden; }
+.cs-title { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+.cs-count { min-width: 44px; text-align: right; font-size: 14px; font-weight: 800; color: var(--text-tertiary); }
+.cs-count b { color: var(--text); }
+.cs-deck { position: relative; height: 548px; margin-top: 8px; }
+.cs-card { position: absolute; left: 0; right: 0; top: 0; height: 518px; box-sizing: border-box; padding: 20px 20px 16px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--line); overflow: hidden; transform-origin: 50% 100%; }
+.cs-peek.p1 { transform: translateY(13px) scale(0.95); background: color-mix(in srgb, var(--card) 70%, var(--bg)); border-color: var(--hairline); }
+.cs-peek.p2 { transform: translateY(26px) scale(0.9); background: color-mix(in srgb, var(--card) 42%, var(--bg)); border-color: var(--hairline); }
+.cs-deck.go-f .p1 { animation: cs-p1 0.4s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.cs-deck.go-f .p2 { animation: fl-fade 0.4s 0.1s both; }
+@keyframes cs-p1 { from { transform: translateY(26px) scale(0.9); } }
+.cs-cur { z-index: 2; display: flex; flex-direction: column; touch-action: pan-y; cursor: grab; transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+.cs-cur.dragging { transition: none; cursor: grabbing; }
+.cs-cur.go-f { animation: cs-rise 0.42s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.cs-cur.go-b { animation: cs-return 0.46s cubic-bezier(0.2, 0.9, 0.3, 1); }
+@keyframes cs-rise { from { transform: translateY(13px) scale(0.95); } }
+@keyframes cs-return { from { transform: translateX(-125%) rotate(-14deg); } }
+.cs-ghost { z-index: 3; display: flex; flex-direction: column; pointer-events: none; animation: cs-fly 0.42s cubic-bezier(0.45, 0, 0.8, 0.4) forwards; }
+@keyframes cs-fly { from { transform: translateX(var(--dx)) rotate(var(--rot)); } 96% { opacity: 1; } to { transform: translateX(-140%) rotate(-20deg); opacity: 0; } }
+.cs-head { display: flex; align-items: center; gap: 10px; min-height: 26px; }
+.cs-no { font-size: 13px; font-weight: 800; color: var(--moss-text); }
+.cs-kind { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+.cs-opt { margin-left: auto; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: var(--r-pill); background: var(--chip); color: var(--text-secondary); }
+.cs-q { font-size: 29px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.07; margin-top: 14px; }
+.cs-hint { font-size: 13px; font-weight: 700; color: var(--text-secondary); line-height: 1.4; margin-top: 8px; }
+.cs-ctl { margin-top: 18px; }
+.cs-in { display: block; padding-bottom: 10px; border-bottom: 2px solid var(--moss-edge); }
+.cs-in input, .cs-in textarea { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; }
+.cs-sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.cs-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 13px 0 11px; border-radius: var(--r-pill); background: var(--control); font-size: 13px; font-weight: 800; color: var(--text-dim); }
+.cs-chip .ff-icon { color: var(--text-tertiary); flex: none; }
+.cs-chip.on { background: var(--moss-fill); color: var(--moss-on); }
+.cs-chip.on .ff-icon { color: var(--moss-on); }
+.cs-durs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-d { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 66px; padding: 12px 14px; border-radius: 16px; background: var(--control); color: var(--text); text-align: left; }
+.cs-d b { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.cs-d small { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.cs-d.on { background: var(--moss-fill); color: var(--moss-on); }
+.cs-d.on small { color: var(--moss-on); }
+.cs-tl { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin: 14px 0 8px; }
+.cs-crew { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.cs-p { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 0 0 8px; border-radius: 16px; background: var(--control); font-size: 15px; font-weight: 800; }
+.cs-p span { flex: 1; }
+.cs-p .nf-x { width: 44px; height: 44px; background: transparent; }
+.cs-deal { display: flex; flex-direction: column; }
+.cs-row { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 44px; padding: 10px 0; border-top: 1px solid var(--hairline); text-align: left; color: var(--text); }
+.cs-row small { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+.cs-row b { font-size: 15px; font-weight: 800; line-height: 1.3; }
+.cs-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.cs-art { position: absolute; right: 4px; bottom: 44px; pointer-events: none; }
+.cs-foot { position: relative; margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 4px; padding-top: 10px; font-size: 12px; font-weight: 800; color: var(--text-faint); }
+.cs-pips { display: flex; justify-content: center; align-items: center; gap: 6px; }
+.cs-pips i { width: 8px; height: 8px; border-radius: 4px; background: var(--dot-idle); }
+.cs-pips i.done { background: var(--moss-edge); }
+.cs-pips i.cur { width: 26px; background: var(--moss-fill); }
+.cs-cta { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+.cs-cta .nf-btn[disabled] { opacity: 0.4; }
+.cs-done { position: relative; margin-top: 8px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--line); overflow: hidden; }
+.cs-done.go-f { animation: cs-deal 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+@keyframes cs-deal { from { transform: translateY(13px) scale(0.95) rotate(-3deg); opacity: 0.4; } }
+.cs-cast { display: block; width: 100%; height: 190px; object-fit: cover; object-position: 50% 58%; }
+.cs-cast.fl-line { display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
+.cs-done-b { padding: 16px 20px 20px; }
+.cs-done-eye { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--moss-text); }
+.cs-done-t { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; margin-top: 8px; }
+.cs-done-s { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-top: 6px; }
+.cs-done-who { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 14px; font-weight: 800; }
+.cs-done-who .nf-stack { display: flex; flex: none; }
+.cs-done-who .ff-avatar { border: 2px solid var(--card); border-radius: 50%; }
+.cs-done-who .ff-avatar + .ff-avatar { margin-left: -9px; }
+.cs-done-stake { margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: var(--ember-wash); font-size: 15px; font-weight: 800; line-height: 1.35; }
+.cs-done-stake b { color: var(--ember-text); }
+`,
+        render: (ctx) => {
+            const s = fl("card-stack");
+            const go = flGo(s, ctx);
+            const n = FLOW.length;
+            const d = LOCAL.dur(s.dur);
+            if (s.i >= n) {
+                const action = s.action.trim();
+                return {
+                    html: `
+<div class="nf-wrap cs">
+  <div class="cs-top"><span class="cs-back"></span><span class="cs-title">Dealt</span><span class="cs-count"></span></div>
+  <div class="cs-done${go}">
+    ${flCast(s, ctx, "cs-cast", 120)}
+    <div class="cs-done-b">
+      <div class="cs-done-eye">${icon("check", 13, { stroke: 3 })}Fight on</div>
+      <div class="cs-done-t">${esc(fightName(s))}</div>
+      <div class="cs-done-s">${d.left} · ends ${d.ends}</div>
+      <div class="cs-done-who">${stack(["marc", ...s.crew], 30)}<span>${flInvited(s)}</span></div>
+      ${action ? `<div class="cs-done-stake"><b>Loser</b> ${esc(LOCAL.lc(action))}.</div>` : ""}
+    </div>
+  </div>
+</div>`,
+                    dock: `<div class="nf-cta cs-cta"><button type="button" class="nf-btn nf-btn-lg nf-btn-secondary" data-act="fl-again">Again</button><button type="button" class="nf-btn nf-btn-lg nf-btn-primary" data-act="fl-none">Open the fight</button></div>${tabBar("new")}`,
+                };
+            }
+            const face = (j) => {
+                const k = FLOW[j];
+                const q = FL[k];
+                let body = "";
+                if (k === "name") body = `<label class="cs-in"><input data-field="title" value="${esc(s.title)}" placeholder="${q.ph}" maxlength="120" enterkeyhint="next" aria-label="Name"></label><div class="cs-art">${companionArt("badger", 188)}</div>`;
+                else if (k === "action") body = `<label class="cs-in"><textarea data-field="action" rows="1" maxlength="120" placeholder="${q.ph}" aria-label="What the loser does">${esc(s.action)}</textarea></label><div class="cs-sugg">${flSuggest(s, "cs-chip", 14)}</div>`;
+                else if (k === "dur") body = `<div class="cs-durs">${MAIN.map((id) => `<button type="button" class="cs-d${s.dur === id ? " on" : ""}" data-act="dur" data-val="${id}"><b>${LOCAL.dur(id).label}</b><small>ends ${LOCAL.dur(id).endsShort}</small></button>`).join("")}</div><div class="cs-tl">For testing</div><div class="nf-durgrid three">${durChips(s, TEST, "test")}</div>`;
+                else if (k === "who") body = `${adder(s)}<div class="cs-crew">${s.crew.map((id) => `<div class="cs-p">${avatar(id, 34)}<span>${esc(LOCAL.P(id).handle)}</span><button type="button" class="nf-x" data-act="remove" data-val="${id}" aria-label="Remove ${esc(LOCAL.P(id).handle)}">${icon("x", 12, { stroke: 3 })}</button></div>`).join("")}</div>`;
+                else {
+                    const f = flFacts(s);
+                    body = `<div class="cs-deal">${FLOW.slice(0, 4).map((x, m) => `<button type="button" class="cs-row" data-act="fl-to" data-val="${m}"><small>${f[x].label}</small><b>${f[x].val}</b></button>`).join("")}</div><div class="cs-terms">${terms(s)}</div>`;
+                }
+                return `<div class="cs-head"><span class="cs-no num">0${j + 1}</span><span class="cs-kind">${q.label}</span>${q.key ? '<span class="cs-opt">Optional</span>' : ""}</div><div class="cs-q">${k === "review" ? esc(fightName(s)) : q.ask}</div>${k === "review" ? "" : `<div class="cs-hint">${q.hint}</div>`}<div class="cs-ctl">${body}</div>${k === "review" ? "" : `<div class="cs-foot">${icon("chevronLeft", 14, { stroke: 2.6 })}Swipe for the next card</div>`}`;
+            };
+            // The card that just left flies off as an inert copy, from wherever the finger let go.
+            const from = go === " go-f" && s.csFrom != null && s.csFrom < s.i ? s.csFrom : null;
+            const ghost = from == null ? "" : `<div class="cs-card cs-ghost" aria-hidden="true" style="--dx:${s.csDx || 0}px;--rot:${((s.csDx || 0) / 18).toFixed(1)}deg">${face(from).replace(/ data-(act|field|val|count|bind|skip)="[^"]*"/g, "")}</div>`;
+            s.csFrom = null;
+            s.csDx = 0;
+            const left = n - 1 - s.i;
+            const k = FLOW[s.i];
+            const next = k === "review" ? `${icon("bolt", 18, { stroke: 2.4 })}Start the fight` : flLabel(s, k);
+            return {
+                html: `
+<div class="nf-wrap cs">
+  <div class="cs-top"><button type="button" class="cs-back" data-act="fl-back" aria-label="Back" ${s.i ? "" : "disabled"}>${icon("chevronLeft", 22, { stroke: 2.6 })}</button><span class="cs-title">New fight</span><span class="cs-count num"><b>${s.i + 1}</b> / ${n}</span></div>
+  <div class="cs-deck${go}">
+    ${left > 1 ? '<div class="cs-card cs-peek p2"></div>' : ""}
+    ${left > 0 ? '<div class="cs-card cs-peek p1"></div>' : ""}
+    <div class="cs-card cs-cur${go}" data-card>${face(s.i)}</div>
+    ${ghost}
+  </div>
+  <div class="cs-pips" aria-label="Card ${s.i + 1} of ${n}">${FLOW.map((x, j) => `<i class="${j < s.i ? "done" : j === s.i ? "cur" : ""}"></i>`).join("")}</div>
+</div>`,
+                dock: `<div class="nf-cta cs-cta"><button type="button" class="nf-btn nf-btn-lg nf-btn-secondary" data-act="fl-back" ${s.i ? "" : "disabled"}>Back</button><button type="button" class="nf-btn nf-btn-lg nf-btn-primary" data-act="fl-next">${next}</button></div>${tabBar("new")}`,
+            };
+        },
+        mount: (root, ctx) => {
+            const w = flMount("card-stack", ctx, FLOW, (act, val, s) => {
+                if (act === "fl-next") { s.csFrom = s.i; s.csDx = 0; }
+                return false;
+            });
+            const s = w.s;
+            const phone = ctx.phone;
+            let drag = null;
+            const down = (e) => {
+                const card = e.target.closest("[data-card]");
+                if (!card || e.target.closest("input, textarea")) return;
+                drag = { card, x0: e.clientX, dx: 0, on: false, id: e.pointerId };
+            };
+            const move = (e) => {
+                if (!drag) return;
+                const dx = e.clientX - drag.x0;
+                if (!drag.on) {
+                    if (Math.abs(dx) < 8) return;
+                    drag.on = true;
+                    drag.card.classList.add("dragging");
+                    try { drag.card.setPointerCapture(drag.id); } catch (err) { /* synthetic pointer */ }
+                }
+                // Back only exists after the first card, so the first card resists a right swipe.
+                drag.dx = dx > 0 && !s.i ? dx * 0.25 : dx;
+                drag.card.style.transform = `translateX(${drag.dx}px) rotate(${drag.dx / 18}deg)`;
+            };
+            const up = () => {
+                if (!drag) return;
+                const { card, dx, on } = drag;
+                drag = null;
+                if (!on) return;
+                card.classList.remove("dragging");
+                if (dx < -90) {
+                    s.csFrom = s.i;
+                    s.csDx = Math.round(dx);
+                    if (flNext(s, FLOW)) w.draw();
+                    else { card.style.transform = ""; w.draw(); }
+                } else if (dx > 90 && s.i) {
+                    s.i -= 1;
+                    s.go = -1;
+                    s.top = true;
+                    w.draw();
+                } else card.style.transform = "";
+            };
+            phone.addEventListener("pointerdown", down);
+            phone.addEventListener("pointermove", move);
+            phone.addEventListener("pointerup", up);
+            phone.addEventListener("pointercancel", up);
+            return () => {
+                phone.removeEventListener("pointerdown", down);
+                phone.removeEventListener("pointermove", move);
+                phone.removeEventListener("pointerup", up);
+                phone.removeEventListener("pointercancel", up);
+                w.cleanup();
+            };
+        },
+    },
+
+    // 18 -------------------------------------------------------------
+    {
+        id: "big-type",
+        name: "Big type",
+        when: "The bold one: every question fills the screen in huge type, like a title card, so there is nothing else to look at.",
+        changes: [
+            "One giant question per screen and a giant answer. Runs full screen over the tab bar, like writing a new message.",
+            "Story-style bars at the top fill one per question, and the screen colour shifts with the topic: warm for the stakes, green for the review.",
+            "Lengths are four huge words you tap, with the three testing lengths as small pills below.",
+            "Next is one big button in the corner; Start turns the whole screen green.",
+        ],
+        css: `
+.phone[data-bt] .ff-screen { transition: background-color 0.5s ease; }
+.phone[data-bt="action"] .ff-screen { background-color: color-mix(in srgb, var(--ember-fill) 11%, var(--bg)); }
+.phone[data-bt="dur"] .ff-screen { background-color: var(--canvas); }
+.phone[data-bt="review"] .ff-screen { background-color: color-mix(in srgb, var(--moss-fill) 12%, var(--bg)); }
+.phone[data-bt="done"] .ff-screen { background-color: color-mix(in srgb, var(--moss-fill) 30%, var(--bg)); }
+.bt { display: flex; flex-direction: column; min-height: 798px; box-sizing: border-box; padding: 6px 24px 130px; }
+.bt-segs { display: flex; gap: 4px; }
+.bt-segs i { flex: 1; height: 3px; border-radius: 2px; background: var(--dash); overflow: hidden; }
+.bt-segs i.done, .bt-segs i.cur::after { background: var(--text); }
+.bt-segs i.cur::after { content: ""; display: block; height: 100%; transform-origin: 0 50%; }
+.bt.go-f .bt-segs i.cur::after { animation: bt-seg 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes bt-seg { from { transform: scaleX(0); } }
+.bt-top { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 6px; }
+.bt-no { font-size: 15px; font-weight: 800; color: var(--text); }
+.bt-no em { font-style: normal; color: var(--text-faint); }
+.bt-lab { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+.bt-x { margin-left: auto; margin-right: -12px; width: 44px; height: 44px; display: grid; place-items: center; color: var(--text-secondary); }
+.bt-q { font-size: 46px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.02; margin-top: 26px; color: var(--text); }
+.bt-w { display: inline-block; }
+.bt.go-f .bt-w, .bt.go-b .bt-w { animation: bt-rise 0.55s var(--d) cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes bt-rise { from { opacity: 0; transform: translateY(0.45em); } }
+.bt-hint { font-size: 15px; font-weight: 700; color: var(--text-secondary); line-height: 1.4; margin-top: 12px; }
+.bt-ctl { margin-top: 26px; }
+.bt.go-f .bt-hint, .bt.go-f .bt-ctl, .bt.go-b .bt-hint, .bt.go-b .bt-ctl { animation: fl-up 0.45s 0.22s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.bt-in { display: block; border-bottom: 3px solid var(--text); padding-bottom: 8px; }
+.bt-in input, .bt-in textarea { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; }
+.phone[data-bt="action"] .bt-in { border-color: var(--ember-text); }
+.bt-sugg { display: flex; flex-direction: column; margin-top: 16px; }
+.bt-s { display: flex; align-items: center; gap: 12px; min-height: 46px; border-bottom: 1px solid var(--hairline); font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-secondary); text-align: left; }
+.bt-s .ff-icon { display: none; }
+.bt-s span { flex: 1; }
+.bt-s.on { color: var(--text); }
+.bt-s.on::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--ember-fill); flex: none; }
+.bt-durs { display: flex; flex-direction: column; }
+.bt-d { display: flex; align-items: baseline; gap: 12px; min-height: 62px; font-size: 44px; font-weight: 800; letter-spacing: -0.045em; color: var(--text-tertiary); text-align: left; transition: color 0.2s; }
+.bt-d.on { color: var(--text); }
+.bt-d small { font-size: 14px; font-weight: 800; letter-spacing: 0; color: var(--moss-text); }
+.bt-tests { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+.bt-tests > span { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-right: 2px; }
+.bt-t { min-height: 44px; padding: 0 15px; border-radius: var(--r-pill); border: 1.5px dashed var(--dash); font-size: 14px; font-weight: 800; color: var(--text-secondary); }
+.bt-t.on { background: var(--text); border: 1.5px solid var(--text); color: var(--bg); }
+.bt-ends { font-size: 14px; font-weight: 800; color: var(--moss-text); margin-top: 14px; }
+.bt-crew { display: flex; flex-direction: column; }
+.bt-p { display: flex; align-items: center; gap: 12px; min-height: 60px; border-bottom: 1px solid var(--hairline); }
+.bt-p b { flex: 1; font-size: 30px; font-weight: 800; letter-spacing: -0.035em; }
+.bt-p .nf-x { width: 44px; height: 44px; margin-right: -10px; background: transparent; }
+.bt-add { margin-top: 18px; }
+.bt-lines { display: flex; flex-direction: column; margin-top: 22px; }
+.bt-line { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; padding: 12px 0; border-top: 1px solid var(--line); text-align: left; color: var(--text); }
+.bt-line small { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+.bt-line b { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+.bt-dock { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 24px 40px; }
+.bt-back { min-height: 44px; min-width: 44px; font-size: 16px; font-weight: 800; color: var(--text-secondary); }
+.bt-back[disabled] { visibility: hidden; }
+.bt-go { display: inline-flex; align-items: center; gap: 10px; height: 64px; padding: 0 22px 0 28px; border-radius: var(--r-pill); background: var(--moss-fill); color: var(--moss-on); font-size: 18px; font-weight: 800; }
+.bt-go .ff-icon { transform: rotate(90deg); }
+.bt-big { font-size: 104px; font-weight: 800; letter-spacing: -0.065em; line-height: 0.88; margin-top: 34px; color: var(--text); }
+.bt-done-t { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; margin-top: 22px; }
+.bt-done-s { font-size: 15px; font-weight: 700; color: var(--text-secondary); margin-top: 10px; line-height: 1.4; }
+.bt-cast { display: flex; justify-content: space-between; align-items: flex-end; margin: auto -10px 0; padding-top: 20px; }
+.bt.go-f .bt-cast > * { animation: fl-up 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.bt.go-f .bt-cast > *:nth-child(2) { animation-delay: 0.08s; }
+.bt.go-f .bt-cast > *:nth-child(3) { animation-delay: 0.16s; }
+.bt.go-f .bt-cast > *:nth-child(4) { animation-delay: 0.24s; }
+.bt.go-f .bt-cast > *:nth-child(5) { animation-delay: 0.32s; }
+.phone .ff-overlay .bt-burst { position: absolute; right: 60px; bottom: 72px; width: 40px; height: 40px; border-radius: 50%; background: var(--moss-fill); pointer-events: none; animation: bt-burst 0.7s cubic-bezier(0.3, 0.6, 0.3, 1) forwards; }
+@keyframes bt-burst { from { transform: scale(0.5); opacity: 1; } 55% { opacity: 1; } to { transform: scale(48); opacity: 0; } }
+`,
+        render: (ctx) => {
+            const s = fl("big-type");
+            const go = flGo(s, ctx);
+            const n = FLOW.length;
+            const d = LOCAL.dur(s.dur);
+            const k = FLOW[s.i] || "done";
+            ctx.phone.dataset.bt = k;
+            const words = (t) => t.split(" ").map((w, j) => `<span class="bt-w" style="--d:${j * 50}ms">${w}</span>`).join(" ");
+            const segs = `<div class="bt-segs" aria-label="Question ${Math.min(s.i + 1, n)} of ${n}">${FLOW.map((x, j) => `<i class="${j < s.i ? "done" : j === s.i ? "cur" : ""}"></i>`).join("")}</div>`;
+            if (k === "done") {
+                return {
+                    html: `
+<div class="bt${go}">
+  ${segs}
+  <div class="bt-top"><span class="bt-lab">Started</span><button type="button" class="bt-x" data-act="fl-none" aria-label="Close">${icon("x", 20, { stroke: 2.6 })}</button></div>
+  <div class="bt-big">${words("Fight on.")}</div>
+  <div class="bt-done-t">${esc(fightName(s))} started. Ends ${d.ends}.</div>
+  <div class="bt-done-s">${flInvited(s)}${s.action.trim() ? ` Loser ${esc(LOCAL.lc(s.action.trim()))}.` : ""}</div>
+  <div class="bt-cast">${["marc", ...s.crew].map((id) => companionArt(LOCAL.P(id).animal, s.crew.length > 3 ? 84 : 104)).join("")}</div>
+</div>`,
+                    dock: `<div class="bt-dock"><button type="button" class="bt-back" data-act="fl-again">Set up another</button><button type="button" class="bt-go" data-act="fl-none">Open it${icon("arrowUp", 20, { stroke: 2.8 })}</button></div>`,
+                    overlay: go ? '<div class="bt-burst" aria-hidden="true"></div>' : "",
+                };
+            }
+            const q = FL[k];
+            let ctl = "";
+            let ask = q.ask;
+            if (k === "name") ctl = `<label class="bt-in"><input data-field="title" value="${esc(s.title)}" placeholder="${q.ph}" maxlength="120" enterkeyhint="next" aria-label="Name"></label>`;
+            else if (k === "action") ctl = `<label class="bt-in"><textarea data-field="action" rows="2" maxlength="120" placeholder="${q.ph}" aria-label="What the loser does">${esc(s.action)}</textarea></label><div class="bt-sugg">${flSuggest(s, "bt-s")}</div>`;
+            else if (k === "dur") ctl = `<div class="bt-durs">${MAIN.map((id) => `<button type="button" class="bt-d${s.dur === id ? " on" : ""}" data-act="dur" data-val="${id}" aria-pressed="${s.dur === id}">${LOCAL.dur(id).label}</button>`).join("")}</div><div class="bt-tests"><span>Testing</span>${TEST.map((id) => `<button type="button" class="bt-t${s.dur === id ? " on" : ""}" data-act="dur" data-val="${id}" aria-pressed="${s.dur === id}">${LOCAL.dur(id).label}</button>`).join("")}</div><div class="bt-ends">Ends ${d.ends}</div>`;
+            else if (k === "who") ctl = `<div class="bt-crew">${s.crew.map((id) => `<div class="bt-p">${avatar(id, 40)}<b>${esc(LOCAL.P(id).handle)}</b><button type="button" class="nf-x" data-act="remove" data-val="${id}" aria-label="Remove ${esc(LOCAL.P(id).handle)}">${icon("x", 16, { stroke: 2.8 })}</button></div>`).join("")}</div><div class="bt-add">${adder(s)}</div>`;
+            else {
+                const f = flFacts(s);
+                ask = `${fightName(s)}.`;
+                ctl = `<div class="bt-lines">${FLOW.slice(0, 4).map((x, j) => `<button type="button" class="bt-line" data-act="fl-to" data-val="${j}"><small>${f[x].label}</small><b>${f[x].val}</b></button>`).join("")}</div>`;
+            }
+            return {
+                html: `
+<div class="bt${go}">
+  ${segs}
+  <div class="bt-top"><span class="bt-no num">0${s.i + 1}<em> / 0${n}</em></span><span class="bt-lab">${q.label}</span><button type="button" class="bt-x" data-act="fl-none" aria-label="Close">${icon("x", 20, { stroke: 2.6 })}</button></div>
+  <div class="bt-q">${words(esc(ask))}</div>
+  <div class="bt-hint">${q.hint}</div>
+  <div class="bt-ctl">${ctl}</div>
+</div>`,
+                dock: `<div class="bt-dock"><button type="button" class="bt-back" data-act="fl-back" ${s.i ? "" : "disabled"}>Back</button><button type="button" class="bt-go" data-act="fl-next">${k === "review" ? "Start the fight" : flLabel(s, k)}${icon("arrowUp", 20, { stroke: 2.8 })}</button></div>`,
+            };
+        },
+        mount: (root, ctx) => {
+            const w = flMount("big-type", ctx, FLOW);
+            return () => {
+                delete ctx.phone.dataset.bt;
+                w.cleanup();
+            };
+        },
+    },
+
+    // 19 -------------------------------------------------------------
+    {
+        id: "grow-sheet",
+        name: "Growing sheet",
+        when: "When New should stay a light layer over the app: a sheet that starts small and grows with each answer.",
+        changes: [
+            "Create opens a short sheet with one question. Every Next grows the sheet a notch, so its height is the progress bar.",
+            "Answers collect as small tokens at the top of the sheet; tap one to go back to that question.",
+            "The review is the tallest detent, and Start grows the sheet to full height as the started screen.",
+        ],
+        css: `
+.gs-bg-t { min-height: 44px; display: flex; align-items: center; }
+.gs-bg-hero { display: flex; align-items: flex-end; justify-content: space-between; height: 200px; margin: 6px 0 16px; }
+.gs-bg-copy { display: flex; flex-direction: column; gap: 6px; padding-bottom: 60px; font-size: 24px; font-weight: 800; line-height: 1.2; }
+.gs-bg-copy span { color: var(--moss-text); }
+.gs-mini { display: flex; flex: none; }
+.gs-mini .ff-avatar { border: 1.5px solid var(--control); border-radius: 50%; }
+.gs-mini .ff-avatar + .ff-avatar { margin-left: -7px; }
+.gs-scrim { position: absolute; inset: 0; background: var(--scrim); }
+.gs-scrim.rise { animation: nf-fade 0.3s ease-out; }
+.gs-sheet { position: absolute; left: 0; right: 0; bottom: 0; height: var(--h); box-sizing: border-box; display: flex; flex-direction: column; padding: 8px 20px 34px; background: var(--overlay); border-top: 1px solid var(--overlay-line); border-radius: var(--r-shell) var(--r-shell) 0 0; }
+.gs-sheet.grow { animation: gs-grow 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.06); }
+.gs-sheet.rise { animation: nf-rise 0.45s cubic-bezier(0.2, 0.9, 0.25, 1); }
+@keyframes gs-grow { from { height: var(--from); } }
+.gs-head { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; min-height: 44px; }
+.gs-back { display: inline-flex; align-items: center; min-height: 44px; margin-left: -8px; font-size: 15px; font-weight: 800; color: var(--text); }
+.gs-back[disabled] { visibility: hidden; }
+.gs-mid { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.gs-mid b { font-size: 15px; font-weight: 800; }
+.gs-dots { display: flex; gap: 5px; }
+.gs-dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--dot-idle); }
+.gs-dots i.done { background: var(--moss-edge); }
+.gs-dots i.cur { width: 18px; background: var(--moss-fill); }
+.gs-x { justify-self: end; width: 44px; height: 44px; margin-right: -10px; display: grid; place-items: center; color: var(--text-secondary); }
+.gs-tokens { display: flex; gap: 6px; overflow-x: auto; margin: 10px -20px 0; padding: 0 20px; scrollbar-width: none; flex: none; }
+.gs-tokens::-webkit-scrollbar { display: none; }
+.gs-tok { position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; max-width: 168px; height: 36px; padding: 0 12px 0 10px; border-radius: var(--r-pill); background: var(--control); font-size: 12px; font-weight: 800; color: var(--text-dim); }
+.gs-tok::after { content: ""; position: absolute; inset: -4px 0; }
+.gs-tok span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-tok .ff-icon { color: var(--moss-text); flex: none; }
+.gs-tok.new { animation: fl-pop 0.35s 0.25s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.gs-body { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -20px; padding: 18px 20px 12px; scrollbar-width: none; }
+.gs-body::-webkit-scrollbar { display: none; }
+.gs-body.go-f, .gs-body.go-b { animation: fl-up 0.4s 0.08s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.gs-q { font-size: 25px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.12; }
+.gs-hint { font-size: 13px; font-weight: 700; color: var(--text-secondary); line-height: 1.4; margin-top: 6px; }
+.gs-ctl { margin-top: 16px; }
+.gs-ctl .nf-field input { font-size: 18px; font-weight: 800; }
+.gs-sugg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.gs-s { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--hairline); font-size: 13px; font-weight: 800; line-height: 1.2; color: var(--text-dim); text-align: left; }
+.gs-s .ff-icon { color: var(--text-tertiary); flex: none; }
+.gs-s.on { border-color: var(--moss-edge); background: var(--moss-wash); color: var(--moss-text); }
+.gs-s.on .ff-icon { color: var(--moss-text); }
+.gs-durs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gs-d { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 62px; padding: 11px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--hairline); text-align: left; color: var(--text); }
+.gs-d b { font-size: 18px; font-weight: 800; }
+.gs-d small { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.gs-d.on { background: var(--moss-fill); border-color: var(--moss-edge); color: var(--moss-on); }
+.gs-d.on small { color: var(--moss-on); }
+.gs-tl { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin: 14px 0 8px; }
+.gs-sum { margin-top: 2px; }
+.gs-sum .nf-row { text-align: left; }
+.gs-chev { color: var(--text-faint); display: grid; flex: none; }
+.gs-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.gs-foot { flex: none; padding-top: 10px; }
+.gs-again { display: block; width: 100%; min-height: 44px; margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--text-secondary); text-align: center; }
+.gs-done { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 12px; }
+.gs-done-art { width: calc(100% + 40px); margin: 0 -20px; height: 210px; object-fit: cover; object-position: 50% 58%; display: block; }
+.gs-done-art.fl-line { display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
+.gs-done-eye { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--moss-text); }
+.gs-done-t { font-size: 32px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; margin-top: 8px; }
+.gs-done-s { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-top: 8px; line-height: 1.45; }
+.gs-done-stake { margin-top: 16px; padding: 12px 16px; border-radius: 16px; background: var(--ember-wash); font-size: 15px; font-weight: 800; }
+.gs-done-stake b { color: var(--ember-text); }
+.gs-done.go-f > * { animation: fl-up 0.45s 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+`,
+        render: (ctx) => {
+            const s = fl("grow-sheet");
+            const go = flGo(s, ctx);
+            const n = FLOW.length;
+            const d = LOCAL.dur(s.dur);
+            const k = FLOW[s.i] || "done";
+            const H = [356, 540, 572, 612, 680, 798];
+            const h = H[Math.min(s.i, n)];
+            const from = s.gsH == null ? h : s.gsH;
+            const rise = s.gsH == null && !ctx.reduced;
+            s.gsH = h;
+            const f = flFacts(s);
+            const tok = {
+                name: [icon("pencil", 12, { stroke: 2.4 }), esc(s.title.trim() || "No name")],
+                action: [icon("flag", 12, { stroke: 2.4 }), esc(s.action.trim() || "No stakes")],
+                dur: [icon("clock", 12, { stroke: 2.4 }), d.label],
+                who: [stack(s.crew.slice(0, 3), 20, "gs-mini"), s.crew.length ? `${s.crew.length} ${s.crew.length === 1 ? "rival" : "rivals"}` : "Open to join"],
+            };
+            const tokens = k === "done" || k === "review" || !s.i ? "" : `<div class="gs-tokens">${FLOW.slice(0, Math.min(s.i, 4)).map((x, j) => `<button type="button" class="gs-tok${go === " go-f" && j === s.i - 1 ? " new" : ""}" data-act="fl-to" data-val="${j}" aria-label="Change ${FL[x].label}">${tok[x][0]}<span>${tok[x][1]}</span></button>`).join("")}</div>`;
+            let body = "";
+            let foot = "";
+            if (k === "done") {
+                const action = s.action.trim();
+                body = `<div class="gs-done${go}">${flCast(s, ctx, "gs-done-art", 118)}<div class="gs-done-eye">${icon("check", 13, { stroke: 3 })}Fight on</div><div class="gs-done-t">${esc(fightName(s))}</div><div class="gs-done-s">${d.label} · ends ${d.ends}<br>${flInvited(s)}</div>${action ? `<div class="gs-done-stake"><b>Loser</b> ${esc(LOCAL.lc(action))}.</div>` : ""}</div>`;
+                foot = `<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-none">Open the fight</button><button type="button" class="gs-again" data-act="fl-again">Set up another</button>`;
+            } else {
+                const q = FL[k];
+                let ctl = "";
+                if (k === "name") ctl = `<label class="nf-field"><input data-field="title" value="${esc(s.title)}" placeholder="${q.ph}" maxlength="120" enterkeyhint="next" aria-label="Name"></label>`;
+                else if (k === "action") ctl = `<label class="nf-field"><input data-field="action" value="${esc(s.action)}" placeholder="${q.ph}" maxlength="120" enterkeyhint="next" aria-label="What the loser does"></label><div class="gs-sugg">${flSuggest(s, "gs-s", 14)}</div>`;
+                else if (k === "dur") ctl = `<div class="gs-durs">${MAIN.map((id) => `<button type="button" class="gs-d${s.dur === id ? " on" : ""}" data-act="dur" data-val="${id}"><b>${LOCAL.dur(id).label}</b><small>ends ${LOCAL.dur(id).endsShort}</small></button>`).join("")}</div><div class="gs-tl">For testing</div><div class="nf-durgrid three">${durChips(s, TEST, "test")}</div>`;
+                else if (k === "who") ctl = `${adder(s)}${s.crew.length ? group(s.crew.map(personRow), "nf-mt") : ""}`;
+                else ctl = `${group(FLOW.slice(0, 4).map((x, j) => `<button type="button" class="nf-row" data-act="fl-to" data-val="${j}"><span class="nf-glyph">${icon(f[x].icon, 16)}</span><span class="nf-row-mid"><span class="nf-sub">${f[x].label}</span><span class="nf-row-title">${f[x].val}</span></span><span class="gs-chev">${icon("chevronRight", 16, { stroke: 2.4 })}</span></button>`), "gs-sum")}<div class="gs-terms">${terms(s)}</div>`;
+                body = `<div class="gs-body${go}"><div class="gs-q">${k === "review" ? esc(fightName(s)) : q.ask}</div><div class="gs-hint">${q.hint}</div><div class="gs-ctl">${ctl}</div></div>`;
+                foot = `<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-next">${k === "review" ? `${icon("bolt", 18, { stroke: 2.4 })}Start the fight` : flLabel(s, k)}</button>`;
+            }
+            return {
+                html: `
+<div class="nf-wrap gs-bg" aria-hidden="true">
+  <div class="t-title gs-bg-t">New</div>
+  <div class="gs-bg-hero"><div class="gs-bg-copy">Good company.<span>A good excuse to walk.</span></div>${companionArt("badger", 176)}</div>
+  ${group([
+      gRow({ glyph: icon("plus", 17), title: "Create", sub: "Start a new fight" }),
+      gRow({ glyph: icon("users", 16), title: "Join", sub: "Code, invite link, or a public fight" }),
+      gRow({ glyph: icon("pencil", 15), title: "Post", sub: "Share a note, photo, or video on the Feed" }),
+  ])}
+</div>`,
+                overlay: `
+<div class="gs-scrim${rise ? " rise" : ""}"></div>
+<div class="gs-sheet${rise ? " rise" : go && from !== h ? " grow" : ""}" role="dialog" aria-label="New fight" style="--h:${h}px;--from:${from}px">
+  <div class="nf-handle"></div>
+  <div class="gs-head">
+    <button type="button" class="gs-back" data-act="fl-back" ${s.i && k !== "done" ? "" : "disabled"}>${icon("chevronLeft", 20, { stroke: 2.6 })}Back</button>
+    <span class="gs-mid"><b>${k === "done" ? "Started" : "New fight"}</b><span class="gs-dots" aria-label="Step ${Math.min(s.i + 1, n)} of ${n}">${FLOW.map((x, j) => `<i class="${j < s.i ? "done" : j === s.i ? "cur" : ""}"></i>`).join("")}</span></span>
+    <button type="button" class="gs-x" data-act="fl-none" aria-label="Close">${icon("x", 18, { stroke: 2.6 })}</button>
+  </div>
+  ${tokens}
+  ${body}
+  <div class="gs-foot">${foot}</div>
+</div>`,
+            };
+        },
+        mount: (root, ctx) => flMount("grow-sheet", ctx, FLOW).cleanup,
+    },
+
+    // 20 -------------------------------------------------------------
+    {
+        id: "sentence",
+        name: "Sentence builder",
+        when: "When the fight should read like one sentence you'd say out loud, filled in one blank at a time.",
+        changes: [
+            "The top of the screen is one sentence with four blanks. Each step fills one blank, and the blank you're on blinks.",
+            "The answer tray under it only ever holds one question, with Back and Next side by side.",
+            "The review is the finished sentence: read it once, tap any part to change it, then slide to start.",
+        ],
+        css: `
+.sb { padding-bottom: 20px; }
+.sb-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.sb-back { width: 44px; height: 44px; margin-left: -12px; display: grid; place-items: center; color: var(--text); }
+.sb-back[disabled] { visibility: hidden; }
+.sb-count { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--text-secondary); }
+.sb-pips { display: flex; gap: 4px; }
+.sb-pips i { width: 14px; height: 4px; border-radius: 2px; background: var(--dash); }
+.sb-pips i.done { background: var(--moss-edge); }
+.sb-sent { font-size: 29px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.38; color: var(--text-tertiary); margin: 20px 0 0; }
+.sb-sent.big { font-size: 32px; margin-top: 26px; }
+.sb-b { padding: 0 4px; margin: 0 -1px; border-radius: 9px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.sb-b.done { color: var(--text); text-decoration: underline; text-decoration-color: var(--moss-edge); text-decoration-thickness: 2px; text-underline-offset: 7px; cursor: pointer; }
+.sb-b.cur { color: var(--moss-text); background: var(--moss-wash); }
+.sb-b.cur::after { content: ""; display: inline-block; width: 3px; height: 0.86em; margin-left: 3px; vertical-align: -0.08em; border-radius: 2px; background: var(--moss-text); animation: sb-caret 1.1s steps(1) infinite; }
+@keyframes sb-caret { 50% { opacity: 0; } }
+.sb-b.todo { color: var(--text-faint); text-decoration: underline dashed; text-decoration-color: var(--dash); text-decoration-thickness: 2px; text-underline-offset: 7px; }
+.sb-b.stamp { animation: sb-stamp 0.7s ease-out; }
+@keyframes sb-stamp { from { background-color: var(--moss-fill); color: var(--moss-on); } }
+.sb-sent.go-f .sb-b.cur, .sb-sent.go-b .sb-b.cur { animation: fl-fade 0.4s 0.15s both; }
+.sb-em { font-weight: 800; color: var(--text); }
+.sb-tap { display: flex; align-items: center; gap: 6px; margin-top: 18px; font-size: 12px; font-weight: 700; color: var(--text-tertiary); }
+.sb-tray { margin: 0 10px 10px; padding: 16px 16px 14px; border-radius: var(--r-shell); background: var(--overlay); border: 1px solid var(--overlay-line); }
+.sb-tray.go-f, .sb-tray.go-b { animation: fl-up 0.42s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.sb-lab { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.sb-lab em { font-style: normal; color: var(--text-faint); }
+.sb-chips { display: flex; gap: 6px; overflow-x: auto; margin: 10px -16px 0; padding: 0 16px; scrollbar-width: none; }
+.sb-chips::-webkit-scrollbar { display: none; }
+.sb-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px 0 12px; border-radius: var(--r-pill); background: var(--card); border: 1px solid var(--hairline); font-size: 13px; font-weight: 800; color: var(--text-dim); }
+.sb-chip .ff-icon { color: var(--text-tertiary); }
+.sb-chip.on { background: var(--moss-wash); border-color: var(--moss-edge); color: var(--moss-text); }
+.sb-chip.on .ff-icon { color: var(--moss-text); }
+.sb-tray .nf-durgrid + .nf-durgrid { margin-top: 8px; }
+.sb-crew { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sb-p { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 2px 0 5px; border-radius: var(--r-pill); background: var(--card); border: 1px solid var(--hairline); font-size: 14px; font-weight: 800; }
+.sb-p .nf-x { width: 34px; height: 34px; background: transparent; }
+.sb-p .nf-x::after { inset: -5px; }
+.sb-nav { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 14px; }
+.sb-nav .nf-btn[disabled] { opacity: 0.4; }
+.sb-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.sb-cast { display: flex; justify-content: center; align-items: flex-end; gap: 2px; margin-top: 26px; }
+.sb-cast .ff-avatar { border: 3px solid var(--bg); border-radius: 50%; }
+.sb-cast .ff-avatar + .ff-avatar { margin-left: -14px; }
+.sb-cast.go-f .ff-avatar { animation: fl-pop 0.4s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.sb-cast.go-f .ff-avatar:nth-child(2) { animation-delay: 0.08s; }
+.sb-cast.go-f .ff-avatar:nth-child(3) { animation-delay: 0.16s; }
+.sb-cast.go-f .ff-avatar:nth-child(4) { animation-delay: 0.24s; }
+.sb-cast.go-f .ff-avatar:nth-child(5) { animation-delay: 0.32s; }
+.sb-again { display: block; width: 100%; min-height: 44px; margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--text-secondary); text-align: center; }
+`,
+        render: (ctx) => {
+            const s = fl("sentence");
+            const go = flGo(s, ctx);
+            const n = FLOW.length;
+            const d = LOCAL.dur(s.dur);
+            const k = FLOW[s.i] || "done";
+            const stamp = go === " go-f" ? s.i - 1 : -1;
+            const PH = ["name", "what they do", "how long", "who"];
+            const blank = (j, text, live) => {
+                if (j > s.i) return `<span class="sb-b todo">${PH[j]}</span>`;
+                if (j === s.i) return `<span class="sb-b cur"${live ? ` data-live="${live}"` : ""}>${text}</span>`;
+                return `<span class="sb-b done${j === stamp ? " stamp" : ""}" role="button" tabindex="0" data-act="fl-to" data-val="${j}">${text}</span>`;
+            };
+            const who = s.crew.length ? esc(LOCAL.names(s.crew)) : "whoever joins";
+            if (k === "done") {
+                return {
+                    html: `
+<div class="nf-wrap sb">
+  <div class="sb-top"><span></span><span class="sb-count">${icon("check", 14, { stroke: 3 })}Started</span><span></span></div>
+  <p class="sb-sent big"><b class="sb-em">${esc(fightName(s))}</b> is on. Whoever has the fewest steps by ${d.endsShort} <b class="sb-em">${esc(FL_LIVE["action-lc"](s))}</b>.</p>
+  <div class="sb-cast${go}">${["marc", ...s.crew].map((id) => avatar(id, 64)).join("")}</div>
+</div>`,
+                    dock: `<div class="sb-tray${go}"><div class="sb-lab"><span>${flInvited(s)}</span></div><button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-none">Open the fight</button><button type="button" class="sb-again" data-act="fl-again">Set up another</button></div>${tabBar("new")}`,
+                };
+            }
+            const sentence = `We're calling it ${blank(0, esc(FL_LIVE.title(s)), "title")}. Whoever has the fewest steps ${blank(1, esc(FL_LIVE["action-lc"](s)), "action-lc")}. We've got ${blank(2, d.label)}, and it's me against ${blank(3, who)}.`;
+            let tray = "";
+            if (k === "name") tray = `<label class="nf-field"><input data-field="title" value="${esc(s.title)}" placeholder="${FL.name.ph}" maxlength="120" enterkeyhint="next" aria-label="Name"></label>`;
+            else if (k === "action") tray = `<label class="nf-field"><input data-field="action" value="${esc(s.action)}" placeholder="${FL.action.ph}" maxlength="120" enterkeyhint="next" aria-label="What the loser does"></label><div class="sb-chips">${flSuggest(s, "sb-chip", 14)}</div>`;
+            else if (k === "dur") tray = `<div class="nf-durgrid">${durChips(s, MAIN)}</div><div class="nf-durgrid three">${durChips(s, TEST, "test")}</div><div class="nf-ends">${icon("clock", 14)}Starts now, ends ${d.ends}</div>`;
+            else if (k === "who") tray = `${adder(s)}<div class="sb-crew">${s.crew.map((id) => `<span class="sb-p">${avatar(id, 32)}${esc(LOCAL.P(id).handle)}<button type="button" class="nf-x" data-act="remove" data-val="${id}" aria-label="Remove ${esc(LOCAL.P(id).handle)}">${icon("x", 12, { stroke: 3 })}</button></span>`).join("")}</div>`;
+            else tray = `<div class="sb-terms">${terms(s)}</div>${slide("Slide to start")}`;
+            const lab = k === "review"
+                ? `<span>Read it out loud. Fair?</span>`
+                : `<span>Blank ${s.i + 1} of 4 · ${FL[k].label}</span>${FL[k].key ? "<em>Optional</em>" : ""}`;
+            const nav = k === "review" ? "" : `<div class="sb-nav"><button type="button" class="nf-btn nf-btn-secondary" data-act="fl-back" ${s.i ? "" : "disabled"}>Back</button><button type="button" class="nf-btn nf-btn-primary" data-act="fl-next">${flLabel(s, k)}</button></div>`;
+            return {
+                html: `
+<div class="nf-wrap sb">
+  <div class="sb-top"><button type="button" class="sb-back" data-act="fl-back" aria-label="Back" ${s.i ? "" : "disabled"}>${icon("chevronLeft", 22, { stroke: 2.6 })}</button><span class="sb-count"><span class="sb-pips">${[0, 1, 2, 3].map((j) => `<i class="${j < s.i ? "done" : ""}"></i>`).join("")}</span>${Math.min(s.i, 4)} of 4 filled</span><span style="width:44px"></span></div>
+  <p class="sb-sent${k === "review" ? " big" : ""}${go}">${sentence}</p>
+  ${k === "review" ? `<div class="sb-tap">${icon("pencil", 13, { stroke: 2.2 })}Tap any underlined part to change it.</div>` : ""}
+</div>`,
+                dock: `<div class="sb-tray${go}"><div class="sb-lab">${lab}</div>${tray}${nav}</div>${tabBar("new")}`,
+            };
+        },
+        mount: (root, ctx) => {
+            const w = flMount("sentence", ctx, FLOW);
+            const s = w.s;
+            let timer = null;
+            // Slide to start is the Start button here: when the knob lands, show the started screen.
+            const up = () => {
+                const track = ctx.phone.querySelector(".nf-slide.done");
+                if (!track || FLOW[s.i] !== "review") return;
+                s.i = FLOW.length;
+                s.go = 1;
+                s.top = true;
+                if (ctx.reduced) w.draw();
+                else timer = setTimeout(w.draw, 450);
+            };
+            ctx.phone.addEventListener("pointerup", up);
+            return () => {
+                clearTimeout(timer);
+                ctx.phone.removeEventListener("pointerup", up);
+                w.cleanup();
+            };
+        },
+    },
+
+    // 21 -------------------------------------------------------------
+    {
+        id: "fast-path",
+        name: "Fast path",
+        when: "When most fights are a rematch: one screen to confirm, and the steps only if you want to change something.",
+        changes: [
+            "Needs a backlog item: prefill a new fight from your last one with the same crew (name, length, people and stakes).",
+            "New opens on a ready fight and a big Start. Four ticks show every answer is already in, so the review is the first screen.",
+            "Change details walks the four questions one per screen, then comes back here. Tap a tick to jump straight to one.",
+        ],
+        css: `
+.fp { padding-bottom: 250px; }
+.fp-card { margin-top: 18px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--line); overflow: hidden; }
+.fp-cast { display: block; width: 100%; height: 170px; object-fit: cover; object-position: 50% 58%; }
+.fp-cast.fl-line { display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
+.fp-body { padding: 16px 20px 20px; }
+.fp-tag { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: var(--r-pill); background: var(--chip); font-size: 12px; font-weight: 800; color: var(--text-secondary); }
+.fp-title { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.07; margin-top: 12px; }
+.fp-meta { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-top: 8px; }
+.fp-meta b { color: var(--text); font-weight: 800; }
+.fp-who { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; font-weight: 800; }
+.fp-who .nf-stack { display: flex; flex: none; }
+.fp-who .ff-avatar { border: 2px solid var(--card); border-radius: 50%; }
+.fp-who .ff-avatar + .ff-avatar { margin-left: -9px; }
+.fp-stake { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: var(--ember-wash); font-size: 15px; font-weight: 800; line-height: 1.35; }
+.fp-stake .ff-icon { color: var(--ember-text); flex: none; margin-top: 2px; }
+.fp-checks { margin-top: 14px; }
+.fp-checks-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.fp-checks-h b { color: var(--moss-text); }
+.fp-ticks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.fp-tick { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 58px; border-radius: 14px; background: var(--card); border: 1px solid var(--hairline); font-size: 12px; font-weight: 800; color: var(--text-dim); }
+.fp-tick i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--moss-fill); color: var(--moss-on); }
+.fp-tick.skip i { background: transparent; border: 2px solid var(--line); color: var(--text-faint); }
+.fp.go-b .fp-tick i { animation: fl-pop 0.35s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+.fp.go-b .fp-tick:nth-child(2) i { animation-delay: 0.06s; }
+.fp.go-b .fp-tick:nth-child(3) i { animation-delay: 0.12s; }
+.fp.go-b .fp-tick:nth-child(4) i { animation-delay: 0.18s; }
+.fp.go-b .fp-card { animation: fl-in-l 0.38s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.fp-edit { display: block; width: 100%; min-height: 44px; margin-top: 6px; font-size: 14px; font-weight: 800; color: var(--moss-text); text-align: center; }
+.fp-bar { display: grid; grid-template-columns: 80px 1fr 80px; align-items: center; min-height: 44px; }
+.fp-cancel { justify-self: start; min-height: 44px; font-size: 15px; font-weight: 800; color: var(--text-secondary); }
+.fp-mid { text-align: center; font-size: 15px; font-weight: 800; }
+.fp-mid small { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.fp-done-btn { justify-self: end; min-height: 44px; min-width: 44px; text-align: right; font-size: 15px; font-weight: 800; color: var(--moss-text); }
+.fp-segs { display: flex; gap: 5px; margin-top: 8px; }
+.fp-segs i { flex: 1; height: 4px; border-radius: 2px; background: var(--dash); }
+.fp-segs i.on { background: var(--moss-fill); }
+.fp-step { margin-top: 26px; }
+.fp-step.go-f { animation: fl-in-r 0.38s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.fp-step.go-b { animation: fl-in-l 0.38s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.fp-q { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.fp-hint { font-size: 14px; font-weight: 700; color: var(--text-secondary); line-height: 1.4; margin-top: 8px; }
+.fp-ctl { margin-top: 20px; }
+.fp-ctl .nf-field input { font-size: 18px; font-weight: 800; }
+.fp-sugg { margin-top: 14px; }
+.fp-sugg .nf-row { text-align: left; min-height: 50px; padding-top: 8px; padding-bottom: 8px; }
+.fp-sugg .nf-glyph { width: 32px; height: 32px; }
+.fp-sugg .on .nf-glyph { background: var(--moss-fill); color: var(--moss-on); }
+.fp-sugg .on .nf-row-title { color: var(--moss-text); }
+.fp-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
+.on > .fp-radio { border: 7px solid var(--moss-fill); }
+.fp-nav { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+.fp-nav .nf-btn[disabled] { opacity: 0.4; }
+.fp-ok { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 40px; }
+.fp-ok svg { display: block; }
+.fp-ok .ring { fill: var(--moss-fill); }
+.fp-ok .mark { fill: none; stroke: var(--moss-on); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 80; }
+.fp-ok.go-f .ring { animation: fl-pop 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) both; transform-origin: 50% 50%; transform-box: fill-box; }
+.fp-ok.go-f .mark { animation: fp-draw 0.45s 0.3s ease-out both; }
+@keyframes fp-draw { from { stroke-dashoffset: 80; } }
+.fp-ok-t { font-size: 32px; font-weight: 800; letter-spacing: -0.035em; margin-top: 20px; }
+.fp-ok-s { font-size: 15px; font-weight: 700; color: var(--text-secondary); line-height: 1.45; margin-top: 8px; max-width: 300px; }
+.fp-ok .fp-card { width: 100%; text-align: left; margin-top: 26px; }
+.fp-ok.go-f .fp-ok-t, .fp-ok.go-f .fp-ok-s, .fp-ok.go-f .fp-card { animation: fl-up 0.45s 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.fp-again { display: block; width: 100%; min-height: 44px; margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--text-secondary); text-align: center; }
+`,
+        render: (ctx) => {
+            const s = fl("fast-path", 4);
+            const go = flGo(s, ctx);
+            const d = LOCAL.dur(s.dur);
+            const action = s.action.trim();
+            const card = (small) => `
+<div class="fp-card">
+  ${small ? "" : flCast(s, ctx, "fp-cast", 110)}
+  <div class="fp-body">
+    ${small ? "" : `<span class="fp-tag">${icon("refresh", 12, { stroke: 2.4 })}Same crew as your last fight</span>`}
+    <div class="fp-title">${esc(fightName(s))}</div>
+    <div class="fp-meta">${icon("clock", 14, { stroke: 2.4 })}<b>${d.label}</b> · ends ${d.ends}</div>
+    <div class="fp-who">${stack(["marc", ...s.crew], 30)}<span>${s.crew.length ? `You, ${esc(LOCAL.names(s.crew))}` : "You, and whoever joins"}</span></div>
+    ${action ? `<div class="fp-stake">${icon("flag", 15, { stroke: 2.4 })}<span>Loser ${esc(LOCAL.lc(action))}</span></div>` : ""}
+  </div>
+</div>`;
+            if (s.i >= 5) {
+                return {
+                    html: `
+<div class="nf-wrap fp fp-ok${go}">
+  <svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true"><circle class="ring" cx="48" cy="48" r="48"/><path class="mark" d="M29 49 L42 62 L68 35"/></svg>
+  <div class="fp-ok-t">Started</div>
+  <div class="fp-ok-s">${flInvited(s)} Steps count from now.</div>
+  ${card(true)}
+</div>`,
+                    dock: ctaDock(`<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-none">Open the fight</button><button type="button" class="fp-again" data-act="fl-again">Set up another</button>`),
+                };
+            }
+            if (s.i === 4) {
+                const f = flFacts(s);
+                const set = { name: !!s.title.trim(), action: !!action, dur: true, who: s.crew.length > 0 };
+                return {
+                    html: `
+<div class="nf-wrap fp${go}">
+  ${head("Ready in one tap")}
+  ${card(false)}
+  <div class="fp-checks">
+    <div class="fp-checks-h"><span>Everything's in</span><b>4 of 4</b></div>
+    <div class="fp-ticks">${FLOW.slice(0, 4).map((x, j) => `<button type="button" class="fp-tick${set[x] ? "" : " skip"}" data-act="fl-to" data-val="${j}" aria-label="Change ${f[x].label}"><i>${set[x] ? icon("check", 12, { stroke: 3.4 }) : ""}</i>${["Name", "Loser", "Length", "Who"][j]}</button>`).join("")}</div>
+  </div>
+</div>`,
+                    dock: ctaDock(`<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-next">${icon("bolt", 18, { stroke: 2.4 })}Start the fight</button><button type="button" class="fp-edit" data-act="fl-to" data-val="0">Change details, one at a time</button>`),
+                };
+            }
+            const k = FLOW[s.i];
+            const q = FL[k];
+            let ctl = "";
+            if (k === "name") ctl = `<label class="nf-field"><input data-field="title" value="${esc(s.title)}" placeholder="${q.ph}" maxlength="120" enterkeyhint="next" aria-label="Name"></label>`;
+            else if (k === "action") ctl = `<label class="nf-field"><input data-field="action" value="${esc(s.action)}" placeholder="${q.ph}" maxlength="120" enterkeyhint="next" aria-label="What the loser does"></label><div class="nf-group fp-sugg">${SUGGEST.map(([t, ic], j) => `<button type="button" class="nf-row${action === t ? " on" : ""}" data-act="fl-pick" data-val="${j}"><span class="nf-glyph">${icon(ic, 15)}</span><span class="nf-row-mid"><span class="nf-row-title">${t}</span></span></button>`).join(DIV)}</div>`;
+            else if (k === "dur") ctl = `<div class="nf-group">${[...MAIN, ...TEST].map((id) => { const x = LOCAL.dur(id); return `<button type="button" class="nf-row${s.dur === id ? " on" : ""}" data-act="dur" data-val="${id}" style="min-height:48px;padding-top:6px;padding-bottom:6px"><span class="nf-row-mid"><span class="nf-row-title">${x.label}${x.test ? ' <span class="nf-sub" style="display:inline">· testing</span>' : ""}</span></span><span class="nf-sub">ends ${x.endsShort}</span><span class="fp-radio"></span></button>`; }).join(DIV)}</div>`;
+            else ctl = `${adder(s)}${s.crew.length ? group(s.crew.map(personRow), "nf-mt") : ""}`;
+            return {
+                html: `
+<div class="nf-wrap fp">
+  <div class="fp-bar"><button type="button" class="fp-cancel" data-act="fp-cancel">Cancel</button><span class="fp-mid">Change details<small>${s.i + 1} of 4</small></span><button type="button" class="fp-done-btn" data-act="fp-home">Done</button></div>
+  <div class="fp-segs">${[0, 1, 2, 3].map((j) => `<i class="${j <= s.i ? "on" : ""}"></i>`).join("")}</div>
+  <div class="fp-step${go}">
+    <div class="fp-q">${q.ask}</div>
+    <div class="fp-hint">${q.hint}</div>
+    <div class="fp-ctl">${ctl}</div>
+  </div>
+</div>`,
+                dock: `<div class="nf-cta fp-nav"><button type="button" class="nf-btn nf-btn-lg nf-btn-secondary" data-act="fl-back">Back</button><button type="button" class="nf-btn nf-btn-lg nf-btn-primary" data-act="fl-next">${s.i === 3 ? "Review" : flLabel(s, k)}</button></div>${tabBar("new")}`,
+            };
+        },
+        mount: (root, ctx) =>
+            flMount("fast-path", ctx, FLOW, (act, val, s) => {
+                if (act === "fp-cancel" && s.fpSnap) Object.assign(s, s.fpSnap, { crew: [...s.fpSnap.crew], typed: "", err: "" });
+                if (act === "fp-home" || act === "fp-cancel" || (act === "fl-back" && !s.i)) { s.i = 4; s.go = -1; s.top = true; return true; }
+                if (act === "fl-next" && s.i === 3) { if (flNext(s, FLOW)) s.go = -1; return true; }
+                if (act === "fl-to" && s.i === 4) { s.fpSnap = { title: s.title, action: s.action, dur: s.dur, crew: [...s.crew] }; s.i = Number(val); s.go = 1; s.top = true; return true; }
+                if (act === "fl-again") { Object.assign(s, { i: 4, go: -1, top: true, dur: "1w", crew: [...LOCAL.crew], title: LOCAL.title, action: LOCAL.action, typed: "", err: "" }); return true; }
+                return false;
+            }).cleanup,
+    },
+
+    // 22 -------------------------------------------------------------
+    {
+        id: "stakes-first",
+        name: "Stakes first",
+        when: "When the dare is the reason people start a fight: ask what the loser does first, and keep it on screen the whole way.",
+        changes: [
+            "Question one is the stakes, with six ready-made ones to steal. Then who, how long, and the name last, because by then it names itself.",
+            "Once set, the stakes ride along as a warm banner at the top of every step. Tap it to change them.",
+            "A numbered stepper shows where you are; finished numbers turn into checks you can tap.",
+            "The review leads with the stakes in big type, then Start.",
+        ],
+        css: `
+.sk { padding-bottom: 190px; }
+.sk-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.sk-back { width: 44px; height: 44px; margin-left: -12px; display: grid; place-items: center; color: var(--text); }
+.sk-back[disabled] { visibility: hidden; }
+.sk-steps { display: flex; align-items: center; }
+.sk-dot { position: relative; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--dash); color: var(--text-secondary); }
+.sk-dot.cur { background: var(--text); color: var(--bg); }
+.sk-dot.done { background: var(--moss-fill); color: var(--moss-on); }
+.sk-dot::after { content: ""; position: absolute; inset: -9px -4px; }
+.sk-line { width: 16px; height: 2px; background: var(--dash); }
+.sk-line.done { background: var(--moss-edge); }
+.sk-banner { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; margin-top: 12px; padding: 8px 14px; border-radius: 16px; background: var(--ember-wash); border: 1px solid color-mix(in srgb, var(--ember-text) 22%, transparent); text-align: left; color: var(--text); }
+.sk-banner .ff-icon { color: var(--ember-text); flex: none; }
+.sk-banner span { flex: 1; min-width: 0; font-size: 14px; font-weight: 800; line-height: 1.3; }
+.sk-banner small { display: block; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ember-text); }
+.sk-banner.drop { animation: sk-drop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+@keyframes sk-drop { from { opacity: 0; transform: translateY(40px) scale(1.12); } }
+.sk-body { margin-top: 22px; }
+.sk-body.go-f { animation: fl-up 0.42s 0.06s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.sk-body.go-b { animation: fl-fade 0.3s both; }
+.sk-eye { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); }
+.sk-eye.hot { color: var(--ember-text); }
+.sk-q { font-size: 31px; font-weight: 800; letter-spacing: -0.032em; line-height: 1.07; margin-top: 8px; }
+.sk-hint { font-size: 14px; font-weight: 700; color: var(--text-secondary); line-height: 1.4; margin-top: 8px; }
+.sk-ctl { margin-top: 20px; }
+.sk-card { display: block; padding: 14px 16px 12px; border-radius: var(--r-card); background: var(--ember-wash); border: 1px solid color-mix(in srgb, var(--ember-text) 26%, transparent); }
+.sk-card-l { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ember-text); }
+.sk-card textarea { margin-top: 6px; font-size: 23px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.22; }
+.sk-lab { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin: 20px 0 10px; }
+.sk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sk-tile { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 10px; min-height: 84px; padding: 12px 13px; border-radius: 18px; background: var(--card); border: 1px solid var(--hairline); font-size: 14px; font-weight: 800; line-height: 1.22; color: var(--text); text-align: left; }
+.sk-tile .ff-icon { color: var(--text-tertiary); }
+.sk-tile.on { background: var(--ember-wash); border-color: color-mix(in srgb, var(--ember-text) 45%, transparent); }
+.sk-tile.on .ff-icon { color: var(--ember-text); }
+.sk-big { font-size: 44px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; }
+.sk-ends { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-top: 8px; }
+.sk-ends b { color: var(--text); font-weight: 800; }
+.sk-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 18px; padding: 4px; border-radius: 16px; background: var(--control); }
+.sk-seg button { min-height: 44px; text-align: center; border-radius: 12px; font-size: 14px; font-weight: 800; color: var(--text-dim); }
+.sk-seg button.on { background: var(--card); color: var(--text); border: 1px solid var(--line); }
+.sk-tests { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.sk-tests > span { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-right: 2px; }
+.sk-tests .nf-chip { flex: 1; }
+.sk-deal { padding: 18px 18px 16px; border-radius: var(--r-card); background: var(--ember-wash); border: 1px solid color-mix(in srgb, var(--ember-text) 26%, transparent); text-align: left; width: 100%; color: var(--text); display: block; }
+.sk-deal-t { font-size: 27px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.12; margin-top: 8px; }
+.sk-deal-t em { font-style: normal; color: var(--ember-text); }
+.sk-sum { margin-top: 12px; }
+.sk-sum .nf-row { text-align: left; }
+.sk-chev { color: var(--text-faint); display: grid; flex: none; }
+.sk-terms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sk-done { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 18px; padding-bottom: 240px; }
+.sk-cast { display: flex; justify-content: center; align-items: flex-end; margin: 0 -20px; }
+.sk-cast img { margin: 0 -6px; }
+.sk-done.go-f .sk-cast img { animation: fl-up 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.sk-done.go-f .sk-cast img:nth-child(2) { animation-delay: 0.08s; }
+.sk-done.go-f .sk-cast img:nth-child(3) { animation-delay: 0.16s; }
+.sk-done.go-f .sk-cast img:nth-child(4) { animation-delay: 0.24s; }
+.sk-done.go-f .sk-cast img:nth-child(5) { animation-delay: 0.32s; }
+.sk-done-eye { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--moss-text); }
+.sk-done-t { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-top: 8px; }
+.sk-done-s { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-top: 8px; line-height: 1.45; }
+.sk-done.go-f .sk-done-eye, .sk-done.go-f .sk-done-t, .sk-done.go-f .sk-done-s { animation: fl-up 0.45s 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.sk-again { display: block; width: 100%; min-height: 44px; margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--text-secondary); text-align: center; }
+`,
+        render: (ctx) => {
+            const SK = ["action", "who", "dur", "name", "review"];
+            const s = fl("stakes-first");
+            const go = flGo(s, ctx);
+            const n = SK.length;
+            const d = LOCAL.dur(s.dur);
+            const action = s.action.trim();
+            if (s.i >= n) {
+                return {
+                    html: `
+<div class="nf-wrap sk-done${go}">
+  <div class="sk-cast">${["marc", ...s.crew].map((id) => companionArt(LOCAL.P(id).animal, s.crew.length > 3 ? 92 : 112)).join("")}</div>
+  <div class="sk-done-eye">${icon("check", 13, { stroke: 3 })}It's on</div>
+  <div class="sk-done-t">${action ? `Someone ${esc(LOCAL.lc(action))}.` : `${esc(fightName(s))} is on.`}</div>
+  <div class="sk-done-s">${esc(fightName(s))} ends ${d.ends}.<br>${flInvited(s)}</div>
+</div>`,
+                    dock: ctaDock(`<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-none">Open the fight</button><button type="button" class="sk-again" data-act="fl-again">Set up another</button>`),
+                };
+            }
+            const k = SK[s.i];
+            const at = (x) => SK.indexOf(x);
+            let eye = `Step ${s.i + 1} of ${n}`;
+            let ask = FL[k].ask;
+            let hint = FL[k].hint;
+            let ctl = "";
+            if (k === "action") {
+                eye = "Step 1 · The stakes";
+                ask = "What does the loser have to do?";
+                ctl = `<label class="sk-card"><span class="sk-card-l">${icon("flag", 12, { stroke: 2.6 })}The loser</span><textarea data-field="action" rows="2" maxlength="120" placeholder="${FL.action.ph}" aria-label="What the loser does">${esc(s.action)}</textarea></label><div class="sk-lab">Or steal one</div><div class="sk-grid">${flSuggest(s, "sk-tile", 18)}</div>`;
+            } else if (k === "who") {
+                ask = "Who's on the hook?";
+                ctl = `${adder(s)}${s.crew.length ? group(s.crew.map(personRow), "nf-mt") : ""}`;
+            } else if (k === "dur") {
+                ask = "How long do they have?";
+                ctl = `<div class="sk-big num">${d.label}</div><div class="sk-ends">${icon("flag", 14, { stroke: 2.4 })}Ends <b>${d.ends}</b></div><div class="sk-seg">${MAIN.map((id) => `<button type="button" class="${s.dur === id ? "on" : ""}" data-act="dur" data-val="${id}" aria-pressed="${s.dur === id}">${LOCAL.dur(id).label}</button>`).join("")}</div><div class="sk-tests"><span>Testing</span>${durChips(s, TEST, "test")}</div>`;
+            } else if (k === "name") {
+                ask = "Last one. Give it a name?";
+                hint = action ? `Optional. Skip it and it's called "${esc(action)}".` : FL.name.hint;
+                ctl = `<label class="nf-field"><input data-field="title" value="${esc(s.title)}" placeholder="${FL.name.ph}" maxlength="120" enterkeyhint="next" aria-label="Name" style="font-size:18px;font-weight:800"></label>`;
+            } else {
+                const f = flFacts(s);
+                eye = "Review";
+                ask = "Here's the deal.";
+                hint = "";
+                ctl = `<button type="button" class="sk-deal" data-act="fl-to" data-val="0"><span class="sk-card-l">${icon("flag", 12, { stroke: 2.6 })}The stakes</span><div class="sk-deal-t">${action ? `<em>Loser</em> ${esc(LOCAL.lc(action))}.` : "No stakes. Just glory."}</div></button>${group(["who", "dur", "name"].map((x) => `<button type="button" class="nf-row" data-act="fl-to" data-val="${at(x)}"><span class="nf-glyph">${icon(f[x].icon, 16)}</span><span class="nf-row-mid"><span class="nf-sub">${f[x].label}</span><span class="nf-row-title">${f[x].val}</span></span><span class="sk-chev">${icon("chevronRight", 16, { stroke: 2.4 })}</span></button>`), "sk-sum")}<div class="sk-terms">${terms(s)}</div>`;
+            }
+            const banner = s.i > 0 && k !== "review"
+                ? `<button type="button" class="sk-banner${go === " go-f" && s.i === 1 ? " drop" : ""}" data-act="fl-to" data-val="0">${icon("flag", 16, { stroke: 2.4 })}<span><small>At stake</small>${action ? `Loser ${esc(LOCAL.lc(action))}` : "Nothing yet. Tap to add stakes"}</span>${icon("pencil", 14, { stroke: 2.2 })}</button>`
+                : "";
+            const steps = SK.map((x, j) => `${j ? `<i class="sk-line${j <= s.i ? " done" : ""}"></i>` : ""}${j < s.i ? `<button type="button" class="sk-dot done" data-act="fl-to" data-val="${j}" aria-label="Back to step ${j + 1}">${icon("check", 12, { stroke: 3.4 })}</button>` : `<span class="sk-dot${j === s.i ? " cur" : ""}">${j + 1}</span>`}`).join("");
+            const cta = k === "review"
+                ? `<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-next">${icon("bolt", 18, { stroke: 2.4 })}Start the fight</button>`
+                : `<button type="button" class="nf-btn nf-btn-lg nf-btn-primary nf-full" data-act="fl-next">${flLabel(s, k)}</button>`;
+            return {
+                html: `
+<div class="nf-wrap sk">
+  <div class="sk-top"><button type="button" class="sk-back" data-act="fl-back" aria-label="Back" ${s.i ? "" : "disabled"}>${icon("chevronLeft", 22, { stroke: 2.6 })}</button><div class="sk-steps">${steps}</div><span style="width:44px"></span></div>
+  ${banner}
+  <div class="sk-body${go}">
+    <div class="sk-eye${k === "action" ? " hot" : ""}">${eye}</div>
+    <div class="sk-q">${ask}</div>
+    ${hint ? `<div class="sk-hint">${hint}</div>` : ""}
+    <div class="sk-ctl">${ctl}</div>
+  </div>
+</div>`,
+                dock: ctaDock(cta),
+            };
+        },
+        mount: (root, ctx) => flMount("stakes-first", ctx, ["action", "who", "dur", "name", "review"]).cleanup,
     },
 ];
 

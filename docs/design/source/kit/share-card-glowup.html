@@ -410,7 +410,7 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 /* ===== options 16 to 23: card slideshows ===== */
 .xs-fit { position: relative; flex: none; width: calc(300px * var(--k)); height: calc(533px * var(--k)); }
 .xs-fit > .sc-card { position: absolute; left: 0; top: 0; margin: 0; transform: scale(var(--k)); transform-origin: 0 0; animation: none; }
-.xs-track { position: relative; display: flex; align-items: center; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: pan-x; }
+.xs-track { position: relative; display: flex; align-items: center; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 .xs-track::-webkit-scrollbar { display: none; }
 .xs-track.dragging { scroll-snap-type: none; cursor: grabbing; }
 .xs-track img { -webkit-user-drag: none; }
@@ -495,7 +495,8 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 .gc-hours i.later { height: 10px; border: 1.5px dashed var(--gc-line); border-bottom: 0; background: none; }
 .gc-hours i span { position: absolute; right: -4px; bottom: 100%; margin-bottom: 4px; font-size: 11px; font-weight: 800; font-style: normal; color: var(--gc-hero); }
 .gc-hours i span { white-space: nowrap; }
-.gc-hx { display: flex; justify-content: space-between; margin-top: 5px; padding-right: 20%; font-size: 10px; font-weight: 800; color: var(--gc-dim); }
+.gc-hx { position: relative; height: 13px; margin-top: 5px; font-size: 10px; font-weight: 800; color: var(--gc-dim); }
+.gc-hx span { position: absolute; top: 0; }
 .gc-others { display: flex; align-items: center; gap: 10px; margin: 14px 0 14px; font-size: 11px; font-weight: 800; }
 .gc-others > span { display: inline-flex; align-items: center; gap: 5px; }
 .gc-others em { font-style: normal; }
@@ -507,7 +508,7 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
 .gc-days-hero span { padding-bottom: 6px; font-size: 48px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
 .gc-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 24px; }
 .gc-week div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; color: var(--gc-dim); }
-.gc-week i { align-self: stretch; height: 8px; border-radius: var(--r-pill); background: var(--gc-track); overflow: hidden; }
+.gc-week i { align-self: stretch; height: 8px; border-radius: var(--r-pill); background: var(--gc-bar-dim); overflow: hidden; }
 .gc-week .full i { background: var(--gold); }
 .gc-week .part i::before { content: ""; display: block; width: 70%; height: 100%; background: var(--gold); }
 .gc-week .part { color: var(--gc-ink); }
@@ -1053,7 +1054,7 @@ const PAGE = {
     id: "share-card",
     title: "Share card",
     tab: "fights",
-    intro: "What a player sends to Instagram Stories or iMessage about The croissant run. Today Share only hands iOS a bare invite link. Every other option previews a story-size image (1080 x 1920) inside a share composer. Same fight, people and numbers everywhere. Tap Close to see the Details pane underneath, and Share fight to reopen.",
+    intro: "What a player sends to Instagram Stories or iMessage about The croissant run. Today Share only hands iOS a bare invite link. Every other option previews a story-size image (1080 x 1920) inside a share composer. Same fight, people and numbers everywhere. Tap Close to see the Details pane underneath, and Share fight to reopen. From option 16 on, Share opens a slideshow: swipe through many card designs, giant numbers first, and share the one you stop on.",
 };
 
 // ===== Shared data for this page =====
@@ -1278,6 +1279,9 @@ const gcCard = (kind, look, inner) => `<div class="sc-card gc gc-${kind} l-${loo
 const gcTop = (right) => `<div class="gc-top">${brand(20)}<span>${right}</span></div>`;
 const gcFoot = (left) => `<div class="gc-foot"><span>${left}</span><span>Code <b>${F.code}</b></span></div>`;
 const LAST = S[S.length - 1];
+const DAYS_LEFT = Math.floor(F.hoursLeft / 24);
+const WORD = ["no", "one", "two", "three", "four", "five", "six", "seven"];
+const BELL = F.endsLabel.replace("Ends ", "");
 const GC = {
     lead: (look) => gcCard("lead", look, `
         ${gcTop(`Day ${LOCAL.day} of ${LOCAL.len} · ${F.timeLeft}`)}
@@ -1308,17 +1312,17 @@ const GC = {
             if (v === undefined) return `<i class="later"></i>`;
             return `<i style="height:${Math.max(3, Math.round((v / peak) * 92))}px"${v === peak ? ' class="peak"' : ""}>${v === peak ? `<span class="num">${fmt(v)}</span>` : ""}</i>`;
         }).join("")}</div>
-        <div class="gc-hx"><span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span></div>
+        <div class="gc-hx">${[0, 6, 12, 18].map((h) => `<span style="left:${(h / 24) * 100}%">${h}:00</span>`).join("")}</div>
         <div class="gc-others">${S.filter((r) => r.id !== "marc").sort((a, b) => b.today - a.today).map((r) => `<span>${avatar(r.person, 18)}<em class="num">${short(r.today)}</em></span>`).join("")}<span class="gc-ol">the others today</span></div>
         ${gcFoot(`Day ${LOCAL.day} of ${LOCAL.len} · ${esc(F.name)}`)}`);
     },
     days: (look) => gcCard("days", look, `
         ${gcTop(`Round ${F.round}`)}
         <div class="gc-k">${esc(F.name)} ends in</div>
-        <div class="gc-days-hero"><b class="num">2</b><span>days</span></div>
+        <div class="gc-days-hero"><b class="num">${DAYS_LEFT}</b><span>days</span></div>
         <div class="gc-week">${Array.from({ length: LOCAL.len }, (_, i) => `<div class="${i < LOCAL.day - 1 ? "full" : i === LOCAL.day - 1 ? "part" : ""}"><i></i><span class="num">${i + 1}</span></div>`).join("")}</div>
-        <div class="gc-bell">${icon("flag", 14, { stroke: 2.4 })}Final bell Sat 26 Sep, 20:00</div>
-        <div class="gc-dare">${esc(RIVAL.person.name)} has two days to find <b class="num">${fmt(F.gap + 1)}</b> steps.</div>
+        <div class="gc-bell">${icon("flag", 14, { stroke: 2.4 })}Final bell ${BELL}</div>
+        <div class="gc-dare">${esc(RIVAL.person.name)} has ${WORD[DAYS_LEFT]} days to find <b class="num">${fmt(F.gap + 1)}</b> steps.</div>
         ${gcFoot(LOCAL.stakes)}`),
     action: (look) => gcCard("action", look, `
         ${gcTop(`Day ${LOCAL.day} of ${LOCAL.len}`)}
@@ -1331,7 +1335,7 @@ const GC = {
         const top = Math.max(...days);
         return gcCard("total", look, `
         ${gcTop(`Day ${LOCAL.day} of ${LOCAL.len}`)}
-        <div class="gc-k">In five days Marc walked</div>
+        <div class="gc-k">In ${WORD[LOCAL.day]} days Marc walked</div>
         <div class="gc-total-n num">${fmt(ME.total)}</div>
         <div class="gc-total-u">steps · ${LOCAL.ords[ME.rank - 1]} of ${F.of}</div>
         <div class="gc-cols">${Array.from({ length: LOCAL.len }, (_, i) => {
@@ -1537,7 +1541,7 @@ const carousel = (sc, ui, ctx, hooks = {}) => {
     };
 };
 
-// Close and reopen, copy, Save to Photos, and Share. `pick()` returns the chosen { card, name }; `opened` runs after Share fight reopens the flow.
+// Close and reopen, copy, Save to Photos, and Share. `pick()` returns the chosen { card, name }, plus an optional share-sheet `sub` and `thumb`; `opened` runs after Share fight reopens the flow.
 const flowWire = (root, ctx, pick, { extra, opened } = {}) => {
     const ov = ctx.overlay;
     let timer = 0;
@@ -1562,8 +1566,9 @@ const flowWire = (root, ctx, pick, { extra, opened } = {}) => {
         } else if (el.hasAttribute("data-save")) say(`${pick().name} saved to Photos`);
         else if (el.hasAttribute("data-share")) {
             const p = pick();
-            sys.querySelector("[data-sys-thumb]").innerHTML = fit(p.card, 0.084);
+            sys.querySelector("[data-sys-thumb]").innerHTML = p.thumb || fit(p.card, 0.084);
             sys.querySelector("[data-sys-name]").textContent = `${F.name} · ${p.name}`;
+            sys.querySelector(".sc-sys-t2").textContent = p.sub || "Story image · 1080 × 1920 · with join link";
             sys.hidden = false;
         } else if (el.hasAttribute("data-sys-close")) sys.hidden = true;
         else {
@@ -1583,19 +1588,60 @@ const slidesOf = (cards, k) => cards.map((c) => `<div class="xs-slide" data-slid
 // Option 23: the deck ranked by what just happened in the fight, with the reason shown under each card.
 const BEST = [
     { id: "g-lead", icon: "crown", chip: "Lead back", title: "Best right now", why: "Marc took the lead back today. Post it before Bertille answers." },
-    { id: "g-today", icon: "flame", chip: "Best day", title: "Your best day", why: "8,432 steps today, the most of anyone in the fight." },
-    { id: "g-days", icon: "clock", chip: "2 days left", title: "Build the hype", why: "Two days to go. A countdown gets replies." },
+    { id: "g-today", icon: "flame", chip: "Best day", title: "Your best day", why: `${fmt(ME.today)} steps today, the most of anyone in the fight.` },
+    { id: "g-days", icon: "clock", chip: F.timeLeft, title: "Build the hype", why: `${WORD[DAYS_LEFT][0].toUpperCase() + WORD[DAYS_LEFT].slice(1)} days to go. A countdown gets replies.` },
     { id: "magazine", icon: "medal", chip: "Cover star", title: "Main character", why: "The badger breaks the masthead. Big week, big cover." },
     { id: "g-rank", icon: "trophy", chip: "1st of 4", title: "Simple flex", why: "First place, no maths needed." },
     { id: "g-action", icon: "flag", chip: "Croissant duty", title: "Stir the group", why: "Léa is on croissant duty right now. She will want to reply." },
-    { id: "giant", icon: "trendUp", chip: "The gap", title: "The gap, to scale", why: "+2,840 over Bertille, drawn on one line." },
+    { id: "giant", icon: "trendUp", chip: "The gap", title: "The gap, to scale", why: `${signed(F.gap)} over ${RIVAL.person.name}, drawn on one line.` },
     { id: "names-off", icon: "lock", chip: "Private", title: "Only your side", why: "Friends' names and steps stay in the app." },
     { id: "poster", icon: "swords", chip: "Main event", title: "Fight night", why: "Badger versus fox, like a boxing poster." },
-    { id: "g-total", icon: "steps", chip: "Week total", title: "The week so far", why: "28,430 steps in five days, day by day." },
+    { id: "g-total", icon: "steps", chip: "Week total", title: "The week so far", why: `${fmt(ME.total)} steps in ${WORD[LOCAL.day]} days, day by day.` },
     { id: "standings", icon: "users", chip: "Standings", title: "Everyone's in it", why: "All four of you, in the app's own look." },
     { id: "race", icon: "flag", chip: "Race", title: "The race scene", why: "Four runners, already in finishing order." },
 ];
 const sheetHead = (title) => `<div class="sc-grab"></div><div class="sc-head"><h3>${title}</h3><button type="button" class="sc-close" data-close>Close</button></div>`;
+
+// ===== Option 24: one live card whose giant number rolls between the fight's headline numbers =====
+// Each mode borrows its evidence strip from the matching giant-number card above, so the numbers always agree.
+const CAM = (() => {
+    const part = (html, sels) => {
+        const t = document.createElement("template");
+        t.innerHTML = html;
+        return sels.map((sel) => t.content.querySelector(sel).outerHTML).join("");
+    };
+    const toSafety = S[S.length - 2].total - LAST.total;
+    return [
+        { dial: "Lead", k: "Marc is ahead by", n: signed(F.gap), u: "steps", s: `over ${RIVAL.person.name} in ${F.name}.`, art: ME.person.animal, ev: part(GC.lead("base"), [".gc-tug"]) },
+        { dial: "Place", k: `In ${F.name} Marc is`, n: String(ME.rank), suf: LOCAL.ords[ME.rank - 1].slice(1), size: "big", u: `of ${F.of}`, s: `Back on top on day ${LOCAL.day}.`, art: ME.person.animal, ev: part(GC.rank("base"), [".gc-rank-rest"]) },
+        { dial: "Today", k: "Today Marc walked", n: fmt(ME.today), u: "steps", s: "The most of anyone in the fight today.", art: ME.person.animal, ev: part(GC.today("base"), [".gc-hours", ".gc-hx"]) },
+        { dial: "Days left", k: `${F.name} ends in`, n: String(DAYS_LEFT), size: "big", tone: "urgent", u: "days", s: `${RIVAL.person.name} needs ${fmt(F.gap + 1)} steps to catch Marc.`, art: RIVAL.person.animal, ev: part(GC.days("base"), [".gc-week", ".gc-bell"]) },
+        { dial: "Week", k: `In ${WORD[LOCAL.day]} days Marc walked`, n: fmt(ME.total), u: "steps", s: `${LOCAL.ords[ME.rank - 1]} of ${F.of}. His best day was today.`, art: ME.person.animal, ev: part(GC.total("base"), [".gc-cols"]) },
+        { dial: "Duty", k: "On croissant duty right now", n: LAST.person.name, size: "mid", tone: "urgent", u: `${fmt(toSafety)} steps from safety`, s: "Whoever finishes last brings croissants for everyone.", art: LAST.person.animal, ev: `<div class="gc-rank-rest v24-rows">${S.map((r, i) => `<div class="gc-rr${i === S.length - 1 ? " last" : ""}"><span class="num">${r.rank}</span>${avatar(r.person, 20)}<b>${esc(r.person.name)}</b><em class="num">${fmt(r.total)}</em></div>`).join("")}</div>` },
+    ];
+})();
+const DIGITS = "0123456789".split("").map((d) => `<i>${d}</i>`).join("");
+// Odometer: every digit is a 0 to 9 strip. With `prev`, each strip starts on the digit that sat in the same place (counted from the right) and rolls to its new one.
+const rollHTML = (m, prev) => [...m.n].map((ch, i) => {
+    if (!/\d/.test(ch)) return `<span class="v24-c${prev ? " in" : ""}" style="animation-delay:${i * 35}ms">${esc(ch)}</span>`;
+    const was = prev ? prev[prev.length - m.n.length + i] : ch;
+    const from = /\d/.test(was || "") ? was : String((Number(ch) + 5) % 10);
+    return `<span class="v24-d" aria-hidden="true"><span data-to="${ch}" style="transform:translateY(-${from}em);transition-delay:${i * 45}ms">${DIGITS}</span></span>`;
+}).join("") + (m.suf ? `<span class="v24-suf">${m.suf}</span>` : "");
+const camCard = (i, look) => {
+    const m = CAM[i];
+    return gcCard("cam", look, `
+        ${gcTop(`Day ${LOCAL.day} of ${LOCAL.len} · ${F.timeLeft}`)}
+        <div class="gc-k v24-k" data-k>${esc(m.k)}</div>
+        <div class="v24-n num ${m.tone || ""} ${m.size || ""}" data-n role="img" aria-label="${esc(m.n + (m.suf || ""))}">${rollHTML(m, null)}</div>
+        <div class="v24-mid"><div><div class="v24-u" data-u>${esc(m.u)}</div><div class="v24-s" data-s>${esc(m.s)}</div></div><div class="v24-art" data-art>${companionArt(m.art, 124)}</div></div>
+        <div class="v24-ev" data-ev>${m.ev}</div>
+        ${gcFoot(LOCAL.stakes)}`);
+};
+const swatch = (id) => `<b${id === "night" ? ' data-theme="night" style="background:var(--bg)"' : id === "day" ? ' data-theme="day" style="background:var(--bg)"' : id === "moss" ? ' style="background:var(--moss-fill)"' : ' data-theme="day" style="background:var(--moss-soft)"'}></b>`;
+const PLAY = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l10.9-6.8a1 1 0 0 0 0-1.72L9.5 4.34A1 1 0 0 0 8 5.2z"/></svg>`;
+// Option 25: FitFight's opening three-frame story, in posting order.
+const STARTER = ["g-lead", "g-days", "g-action"];
 
 const VARIANTS = [
     // 1: faithful replica
@@ -2780,41 +2826,35 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
         get css() {
             return reusedCss() + `
 .v16 { background: var(--canvas); }
-.v16-track { position: absolute; left: 0; right: 0; top: 54px; height: 699px; gap: 10px; }
-.v16-track .xs-slide { scroll-snap-stop: always; }
-.v16-top { position: absolute; left: 0; right: 0; top: 54px; z-index: 2; padding: 9px 12px 30px; border-radius: 29px 29px 0 0; background: linear-gradient(color-mix(in srgb, var(--canvas) 74%, transparent), transparent); pointer-events: none; }
-.v16-segs { height: 6px; padding: 0 2px; gap: 3px; cursor: default; }
-.v16-segs i { flex: 1; width: auto; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--text) 28%, transparent); }
+.v16-head { flex: none; margin-top: 54px; padding: 4px 6px 0 4px; }
+.v16-segs { height: 8px; padding: 0 10px 0 12px; gap: 3px; cursor: default; }
+.v16-segs i { flex: 1; width: auto; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--text) 24%, transparent); }
 .v16-segs i.done, .v16-segs i.on { width: auto; background: var(--text); }
-.v16-bar { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
-.v16-x { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; pointer-events: auto; }
-.v16-who b { display: block; font-size: 14px; font-weight: 800; letter-spacing: -0.01em; }
-.v16-who span { display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
-.v16-bar .xs-count { margin-left: auto; margin-right: 4px; background: color-mix(in srgb, var(--canvas) 60%, transparent); }
-.v16-side { position: absolute; top: 382px; z-index: 2; }
-.v16-side.l { left: 8px; }
-.v16-side.r { right: 8px; }
-.v16-side .xs-arrow { background: color-mix(in srgb, var(--canvas) 66%, transparent); border: 1px solid var(--overlay-line); }
-.v16-side .xs-arrow:disabled { opacity: 0; }
-.v16-bot { position: absolute; left: 0; right: 0; bottom: 34px; }
+.v16-bar { display: flex; align-items: center; gap: 2px; }
+.v16-x { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; }
+.v16-who { flex: 1; min-width: 0; }
+.v16-who b { display: block; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
+.v16-who span { display: block; margin-top: 1px; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v16-bar .xs-arrow { background: none; }
+.v16-track { flex: none; height: 646px; margin-top: 2px; }
+.v16-track .xs-slide { width: 100%; scroll-snap-stop: always; }
+.v16 .xs-acts { margin: auto 0 34px; }
 `;
         },
         render: (ctx) => ({
             html: base(),
             overlay: `<div class="sc-ov" data-ov>
     <div class="xs-full v16" role="dialog" aria-label="Choose a card" data-ui>
-        <div class="xs-track v16-track" data-track>${slidesOf(DECK.map((d) => deckCard(d, ctx)), 1.31)}</div>
-        <div class="v16-top">
-            ${dotsFor(DECK.length, "v16-segs").replace("data-dots", "data-dots data-static aria-hidden=\"true\"")}
+        <div class="v16-head">
+            ${dotsFor(DECK.length, "v16-segs").replace("data-dots", 'data-dots data-static aria-hidden="true"')}
             <div class="v16-bar">
                 <button type="button" class="v16-x" data-close aria-label="Close">${icon("x", 20, { stroke: 2.6 })}</button>
                 <div class="v16-who"><b data-name>${DECK[0].name}</b><span>Story preview · swipe for more</span></div>
-                ${counter(DECK.length)}
+                ${arrow("prev")}${counter(DECK.length)}${arrow("next")}
             </div>
         </div>
-        <div class="v16-side l">${arrow("prev")}</div>
-        <div class="v16-side r">${arrow("next")}</div>
-        <div class="v16-bot">${saveShare()}</div>
+        <div class="xs-track v16-track" data-track>${slidesOf(DECK.map((d) => deckCard(d, ctx)), 1.21)}</div>
+        ${saveShare()}
     </div>
     ${sysLayer()}
 </div>`,
@@ -2842,14 +2882,14 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
         ],
         get css() {
             return reusedCss() + `
-.v17-track { flex: none; align-self: stretch; height: 492px; margin-top: 4px; gap: 12px; }
-.v17-track::before, .v17-track::after { content: ""; flex: none; width: calc(50% - 147px); }
+.v17-track { flex: none; align-self: stretch; height: 470px; margin-top: 10px; gap: 14px; }
+.v17-track::before, .v17-track::after { content: ""; flex: none; width: calc(50% - 134px); }
 .v17-track .xs-fit { will-change: transform; }
 .v17-nav { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-top: 6px; }
 .v17-mid { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .v17-mid b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
 .v17 .xs-dots { margin-top: 2px; }
-.v17 .xs-acts { margin-top: 8px; }
+.v17 .xs-acts { margin: auto 0 34px; }
 `;
         },
         render: (ctx) => ({
@@ -2858,7 +2898,7 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
     <div class="sc-scrim" data-close></div>
     <div class="sc-sheet v17" role="dialog" aria-label="Choose a card" data-ui>
         ${sheetHead("Choose a card")}
-        <div class="xs-track v17-track" data-track>${slidesOf(DECK.map((d) => deckCard(d, ctx)), 0.9)}</div>
+        <div class="xs-track v17-track" data-track>${slidesOf(DECK.map((d) => deckCard(d, ctx)), 0.8)}</div>
         <div class="v17-nav">${arrow("prev")}<div class="v17-mid"><b data-name>${DECK[0].name}</b>${counter(DECK.length)}</div>${arrow("next")}</div>
         ${dotsFor(DECK.length)}
         ${saveShare()}
@@ -2871,13 +2911,13 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
             const sc = ov.querySelector("[data-track]");
             const car = carousel(sc, ov.querySelector("[data-ui]"), ctx, {
                 change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
-                // Neighbours shrink to 86% and fade to half as they leave the centre.
+                // Neighbours shrink to 88% and fade to 60% as they leave the centre, so both edges show what is next.
                 scroll: (x, slides) => {
                     const c = x + sc.clientWidth / 2;
                     slides.forEach((el) => {
-                        const d = Math.min(1, Math.abs(el.offsetLeft + el.offsetWidth / 2 - c) / (el.offsetWidth + 12));
-                        el.firstElementChild.style.transform = `scale(${(1 - 0.14 * d).toFixed(4)})`;
-                        el.firstElementChild.style.opacity = (1 - 0.5 * d).toFixed(3);
+                        const d = Math.min(1, Math.abs(el.offsetLeft + el.offsetWidth / 2 - c) / (el.offsetWidth + 14));
+                        el.firstElementChild.style.transform = `scale(${(1 - 0.12 * d).toFixed(4)})`;
+                        el.firstElementChild.style.opacity = (1 - 0.4 * d).toFixed(3);
                     });
                 },
             });
@@ -2903,11 +2943,11 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
 .v18-track .xs-slide { width: 100%; }
 .v18-row { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 20px; margin-top: 8px; }
 .v18-row b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
-.v18-strip { position: relative; flex: none; display: flex; align-items: center; gap: 8px; height: 104px; margin-top: 4px; overflow-x: auto; scrollbar-width: none; }
+.v18-strip { position: relative; flex: none; display: flex; align-items: center; gap: 8px; height: 100px; margin-top: 4px; overflow-x: auto; scrollbar-width: none; }
 .v18-strip::-webkit-scrollbar { display: none; }
-.v18-strip::before, .v18-strip::after { content: ""; flex: none; width: calc(50% - 30px); }
+.v18-strip::before, .v18-strip::after { content: ""; flex: none; width: calc(50% - 31px); }
 .v18-th { position: relative; flex: none; padding: 0; border: 0; background: none; border-radius: 7px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.9, 0.25, 1); }
-.v18-th .sc-card { border-radius: 30px; }
+.v18-th .sc-card { border-radius: 36px; }
 .v18-th[aria-current="true"] { opacity: 1; transform: scale(1.12); }
 .v18-th[aria-current="true"]::after { content: ""; position: absolute; inset: -4px; border-radius: 10px; border: 2px solid var(--text); }
 .v18 .xs-acts { margin: auto 0 34px; }
@@ -2922,7 +2962,7 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
         <div class="xs-nav"><button type="button" class="xs-navbtn" data-close>Cancel</button><div class="xs-navt">Pick a card</div>${counter(cards.length)}</div>
         <div class="xs-track v18-track" data-track>${slidesOf(cards, 0.87)}</div>
         <div class="v18-row">${arrow("prev")}<b data-name>${DECK[0].name}</b>${arrow("next")}</div>
-        <div class="v18-strip" data-strip>${cards.map((c, i) => `<button type="button" class="v18-th" data-go="${i}" aria-label="${DECK[i].name}">${fit(c, 0.2)}</button>`).join("")}</div>
+        <div class="v18-strip" data-strip>${cards.map((c, i) => `<button type="button" class="v18-th" data-go="${i}" aria-label="${DECK[i].name}">${fit(c, 0.15)}</button>`).join("")}</div>
         ${saveShare()}
     </div>
     ${sysLayer()}
@@ -2994,6 +3034,8 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
             const ov = ctx.overlay;
             const sc = ov.querySelector("[data-track]");
             const pile = [...ov.querySelectorAll("[data-pc]")];
+            // Each card behind the top one keeps its own tilt, so the pile reads as loose cards, not one slab.
+            const TILT = [-3.4, 2.8, -1.6];
             const car = carousel(sc, ov.querySelector("[data-ui]"), ctx, {
                 change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
                 // Scroll progress drives the pile: cards behind step down and shrink, swiped cards fly off to the left, turning.
@@ -3007,7 +3049,7 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
                             el.style.opacity = d < -1.2 ? "0" : "1";
                         } else {
                             const t = Math.min(d, 3);
-                            el.style.transform = `translateY(${(t * 14).toFixed(1)}px) scale(${(1 - t * 0.055).toFixed(4)}) rotate(${((i % 2 ? 1 : -1) * Math.min(d, 1) * 2.4).toFixed(2)}deg)`;
+                            el.style.transform = `translate(${(TILT[i % 3] * Math.min(d, 1) * 2.2).toFixed(1)}px, ${(t * 13).toFixed(1)}px) scale(${(1 - t * 0.045).toFixed(4)}) rotate(${(TILT[i % 3] * Math.min(d, 1)).toFixed(2)}deg)`;
                             el.style.opacity = d > 3.2 ? "0" : "1";
                         }
                     });
@@ -3083,7 +3125,7 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
             const car = carousel(ov.querySelector("[data-track]"), pager, ctx, {
                 change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
             });
-            const ease = "cubic-bezier(0.2, 0.9, 0.25, 1)";
+            const ease = "cubic-bezier(0.32, 0.72, 0, 1)";
             // Move the big card between its slot in the pager and a grid cell, measured in the phone's own pixels.
             const flip = (cell, reverse) => {
                 const k = ctx.phone.getBoundingClientRect().width / ctx.phone.offsetWidth || 1;
@@ -3092,8 +3134,8 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
                 const from = { transformOrigin: "0 0", transform: `translate(${(a.left - b.left) / k}px, ${(a.top - b.top) / k}px) scale(${a.width / b.width})` };
                 const to = { transformOrigin: "0 0", transform: "none" };
                 const fade = [{ opacity: 0 }, { opacity: 1 }];
-                const o = { duration: 380, easing: ease };
-                pager.querySelectorAll("[data-pchrome],[data-pbg]").forEach((el) => el.animate(reverse ? fade.slice().reverse() : fade, { ...o, duration: 260, fill: "both" }));
+                const o = { duration: 440, easing: ease };
+                pager.querySelectorAll("[data-pchrome],[data-pbg]").forEach((el) => el.animate(reverse ? fade.slice().reverse() : fade, { ...o, duration: 300, fill: "both" }));
                 return big.animate(reverse ? [to, from] : [from, to], o);
             };
             const open = (i) => {
@@ -3151,14 +3193,15 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
 .v21-rail { flex: none; align-self: stretch; display: flex; width: 200%; transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.25, 1); }
 .v21[data-step="2"] .v21-rail { transform: translateX(-50%); }
 .v21-pane { width: 50%; display: flex; flex-direction: column; align-items: center; }
-.v21-track { flex: none; align-self: stretch; height: 438px; margin-top: 6px; gap: 12px; }
-.v21-track::before, .v21-track::after { content: ""; flex: none; width: calc(50% - 132px); }
+.v21-track { flex: none; align-self: stretch; height: 474px; margin-top: 8px; gap: 12px; }
+.v21-track::before, .v21-track::after { content: ""; flex: none; width: calc(50% - 138px); }
 .v21-track .xs-fit { transition: opacity 0.2s ease; }
 .v21-nav { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; margin-top: 8px; }
 .v21-mid { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .v21-mid b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
 .v21-sw { gap: 14px; height: 52px; }
-.v21-sw i { position: relative; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); }
+.v21-sw i { position: relative; width: 34px; height: 34px; border-radius: 50%; background: none; }
+.v21-sw b { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--text-faint); }
 .v21-sw i::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid transparent; transition: border-color 0.2s ease; }
 .v21-sw i.on { width: 34px; }
 .v21-sw i.on::after { border-color: var(--text); }
@@ -3177,14 +3220,14 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
         <div class="v21-steps"><span><b class="num">1</b>Layout</span><i></i><span><b class="num">2</b>Colour</span></div>
         <div class="v21-rail">
             <div class="v21-pane" data-pane="1">
-                <div class="xs-track v21-track" data-track="1">${slidesOf(GIANTS.map((d) => deckCard(d, ctx)), 0.78)}</div>
+                <div class="xs-track v21-track" data-track="1">${slidesOf(GIANTS.map((d) => deckCard(d, ctx)), 0.84)}</div>
                 <div class="v21-nav">${arrow("prev")}<div class="v21-mid"><b data-name>${GIANTS[0].name}</b>${counter(GIANTS.length)}</div>${arrow("next")}</div>
                 ${dotsFor(GIANTS.length)}
             </div>
             <div class="v21-pane" data-pane="2">
                 <div class="xs-track v21-track" data-track="2"></div>
                 <div class="v21-nav">${arrow("prev")}<div class="v21-mid"><b data-look>Moss</b>${counter(LOOKS.length)}</div>${arrow("next")}</div>
-                <div class="xs-dots v21-sw" data-dots role="slider" aria-label="Colour" aria-valuemin="1" aria-valuemax="${LOOKS.length}">${LOOKS.map(([id]) => `<i${id === "night" ? ' data-theme="night" style="background:var(--bg)"' : id === "day" ? ' data-theme="day" style="background:var(--bg)"' : id === "moss" ? ' style="background:var(--moss-fill)"' : ' data-theme="day" style="background:var(--moss-soft)"'}></i>`).join("")}</div>
+                <div class="xs-dots v21-sw" data-dots role="slider" aria-label="Colour" aria-valuemin="1" aria-valuemax="${LOOKS.length}">${LOOKS.map(([id, t]) => `<i title="${t}">${swatch(id)}</i>`).join("")}</div>
             </div>
         </div>
         <div class="v21-foot">
@@ -3212,7 +3255,7 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
                 if (car2 && chosen === car1.at) return;
                 chosen = car1.at;
                 if (car2) car2.stop();
-                track2.innerHTML = slidesOf(LOOKS.map(([id]) => deckCard(g, ctx, id)), 0.78);
+                track2.innerHTML = slidesOf(LOOKS.map(([id]) => deckCard(g, ctx, id)), 0.84);
                 car2 = carousel(track2, pane2, ctx, { change: (i) => { ov.querySelector("[data-look]").textContent = LOOKS[i][1]; } });
                 const own = g.look === "moss" || g.look === "soft" ? g.look : ctx.theme;
                 car2.go(LOOKS.findIndex(([id]) => id === own), false);
@@ -3236,12 +3279,12 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
     {
         id: "shuffle",
         name: "Shuffle",
-        when: "When Marc cannot decide. One tap deals a random card, like pulling from a deck.",
+        when: "When Marc cannot decide. One tap deals a random design in a random colour, like pulling from a deck.",
         changes: [
             "Needs a backlog item: a share flow with a dozen story-size card designs to swipe through before sharing.",
             "One big card at a time, arrows on its sides. Swipe for the next, or hit Shuffle to deal a random one.",
-            "Shuffle riffles through a few cards before it lands, so it feels like a deal, not a jump cut.",
-            "The counter and dots follow every deal. The card showing is the one Share sends.",
+            "A deal also repaints giant-number cards in Night, Day, Moss or Soft moss: 30 combinations Marc would never find by swiping.",
+            "Shuffle riffles through a few cards before it lands. The name under the card says what was dealt, and that exact card is what Share sends.",
         ],
         get css() {
             return reusedCss() + `
@@ -3278,26 +3321,41 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
         }),
         mount: (root, ctx) => {
             const ov = ctx.overlay;
+            // Giant-number cards can be dealt in any of the four grounds; the others keep their own look.
+            const looks = DECK.map((d) => d.look || "base");
+            const label = (i) => DECK[i].id.startsWith("g-") ? `${DECK[i].name} · ${LOOKS.find(([id]) => id === (looks[i] === "base" ? ctx.theme : looks[i]))[1]}` : DECK[i].name;
             const car = carousel(ov.querySelector("[data-track]"), ov.querySelector("[data-ui]"), ctx, {
-                change: (i) => { ov.querySelector("[data-name]").textContent = DECK[i].name; },
+                change: (i) => { ov.querySelector("[data-name]").textContent = label(i); },
             });
             const R = rng(7);
             let timers = [];
-            // Five quick hops that slow down, then the card it lands on.
+            // Five quick hops that slow down, then the card it lands on, repainted if it is a giant number.
             const deal = () => {
                 timers.forEach(clearTimeout);
                 let j = car.at;
                 while (j === car.at) j = Math.floor(R() * car.n);
-                if (ctx.reduced) return car.go(j, false);
+                if (DECK[j].id.startsWith("g-")) {
+                    const now = looks[j] === "base" ? ctx.theme : looks[j];
+                    const pool = LOOKS.map(([id]) => id).filter((id) => id !== now);
+                    looks[j] = pool[Math.floor(R() * pool.length)];
+                    car.slides[j].innerHTML = fit(deckCard(DECK[j], ctx, looks[j]), 0.86);
+                    if (j === car.at) ov.querySelector("[data-name]").textContent = label(j);
+                }
+                if (ctx.reduced) {
+                    car.go(j, false);
+                    ov.querySelector("[data-name]").textContent = label(j);
+                    return;
+                }
                 const hops = [0, 1, 2, 3, 4].map(() => Math.floor(R() * car.n)).concat(j);
                 ov.querySelector("[data-shuffle] svg").animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: 700, easing: "cubic-bezier(0.3, 0.7, 0.3, 1)" });
                 [0, 70, 150, 250, 380, 560].forEach((ms, k) => timers.push(setTimeout(() => {
                     car.go(hops[k], false);
                     const last = k === hops.length - 1;
                     car.slides[hops[k]].firstElementChild.animate([{ transform: `scale(${last ? 0.9 : 0.96})`, opacity: last ? 0.4 : 0.7 }, { transform: "scale(1)", opacity: 1 }], { duration: last ? 420 : 150, easing: "cubic-bezier(0.2, 0.9, 0.25, 1)" });
+                    if (last) ov.querySelector("[data-name]").textContent = label(j);
                 }, ms)));
             };
-            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name }), {
+            const stop = flowWire(root, ctx, () => ({ card: deckCard(DECK[car.at], ctx, looks[car.at]), name: label(car.at) }), {
                 opened: () => car.go(car.at, false),
                 extra: (e) => { if (e.target.closest("[data-shuffle]")) deal(); },
             });
@@ -3324,12 +3382,12 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
 .v23-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--chip-edge); background: var(--chip); color: var(--text-secondary); font-size: 12px; font-weight: 800; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
 .v23-chip { white-space: nowrap; }
 .v23-chip[aria-current="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
-.v23-track { flex: none; align-self: stretch; height: 438px; gap: 12px; }
+.v23-track { flex: none; align-self: stretch; height: 448px; align-items: flex-end; gap: 12px; }
 .v23-track::before, .v23-track::after { content: ""; flex: none; width: calc(50% - 132px); }
 .v23-track .xs-slide { position: relative; }
 .v23-track .xs-fit { transition: opacity 0.25s ease; }
 .v23-track .xs-slide:not(.on) .xs-fit { opacity: 0.45; }
-.v23-badge { position: absolute; left: 50%; top: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; transform: translateX(-50%); border-radius: var(--r-pill); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 800; }
+.v23-badge { position: absolute; left: 50%; top: -28px; z-index: 2; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 11px; transform: translateX(-50%); border-radius: var(--r-pill); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 800; }
 .v23-badge { white-space: nowrap; }
 .v23-why { flex: none; align-self: stretch; display: flex; align-items: center; gap: 12px; min-height: 58px; margin: 8px 20px 0; padding: 8px 14px; border-radius: var(--r-field); background: var(--card); border: 1px solid var(--hairline); }
 .v23-why .ic { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-glyph); background: var(--control); color: var(--text-dim); }
@@ -3348,7 +3406,7 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
     <div class="sc-sheet v23" role="dialog" aria-label="Suggested cards" data-ui>
         ${sheetHead("Picked for you")}
         <div class="v23-chips" data-chips>${BEST.map((b, i) => `<button type="button" class="v23-chip" data-go="${i}">${icon(b.icon, 14, { stroke: 2.4 })}${b.chip}</button>`).join("")}</div>
-        <div class="xs-track v23-track" data-track>${BEST.map((b, i) => `<div class="xs-slide" data-slide>${i === 0 ? `<span class="v23-badge">${icon("check", 12, { stroke: 3 })}Best right now</span>` : ""}${fit(deckCard(DECK.find((d) => d.id === b.id), ctx), 0.78)}</div>`).join("")}</div>
+        <div class="xs-track v23-track" data-track>${BEST.map((b, i) => `<div class="xs-slide" data-slide>${i === 0 ? `<span class="v23-badge">${icon("check", 12, { stroke: 3 })}Top pick</span>` : ""}${fit(deckCard(DECK.find((d) => d.id === b.id), ctx), 0.78)}</div>`).join("")}</div>
         <div class="v23-why"><span class="ic" data-why-ic>${icon(BEST[0].icon, 17, { stroke: 2.4 })}</span><div><b data-why-t>${BEST[0].title}</b><span data-why>${BEST[0].why}</span></div>${counter(BEST.length)}</div>
         <div class="v23-nav">${arrow("prev")}${dotsFor(BEST.length)}${arrow("next")}</div>
         ${saveShare()}
@@ -3375,6 +3433,329 @@ button.v13-ic > span { background: var(--bg); border: 1px solid var(--line); }
                 return { card: deckCard(d, ctx), name: d.name };
             }, { opened: () => car.go(car.at, false) });
             return () => { car.stop(); stop(); };
+        },
+    },
+    // 24: camera mode dial, one live card
+    {
+        id: "mode-dial",
+        name: "Mode dial",
+        when: "The boldest pick flow. Like the iPhone camera: one live card, swipe the dial and the giant number rolls to the next stat.",
+        changes: [
+            "Needs a backlog item: a camera-style share screen where one live card rolls between the fight's headline numbers.",
+            "Swipe the card or the dial (Lead, Place, Today, Days left, Week, Duty). Digits roll like an odometer and the companion swaps to whoever the number is about: the fox for days left, the rabbit on croissant duty.",
+            "The shutter is Share. Save to Photos drops the card into the camera-roll square. The right button flips the ground: Night, Day, Moss, Soft moss.",
+            "No template picking at all: it is one card that already knows the six numbers worth posting.",
+        ],
+        css: `
+.v24 { background: var(--bg); }
+.v24-bar { flex: none; display: flex; align-items: center; justify-content: space-between; height: 44px; margin-top: 54px; padding: 0 18px 0 6px; }
+.v24-x { width: 44px; height: 44px; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; }
+.v24-bar .sc-live { width: 88px; justify-content: flex-end; }
+.v24-stage { position: relative; flex: none; height: 501px; margin-top: 6px; }
+.v24-view { position: absolute; left: calc(50% - 141px); top: 0; }
+.v24-track { position: absolute; inset: 0; z-index: 2; }
+.v24-track .xs-slide { width: 100%; height: 100%; scroll-snap-stop: always; }
+.v24 .xs-dots { height: 44px; margin-top: 2px; }
+.v24-dialrow { flex: none; display: flex; align-items: center; padding: 0 8px; }
+.v24-dialrow .xs-arrow { background: none; }
+.v24-dial { position: relative; flex: 1; min-width: 0; height: 44px; overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, var(--text) 24%, var(--text) 76%, transparent); mask: linear-gradient(90deg, transparent, var(--text) 24%, var(--text) 76%, transparent); }
+.v24-strip { position: absolute; left: 0; top: 0; display: flex; gap: 20px; transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.25, 1); }
+.v24-strip button { min-height: 44px; padding: 0 2px; border: 0; background: none; color: var(--text-secondary); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: color 0.2s ease; }
+.v24-strip button { white-space: nowrap; }
+.v24-strip button[aria-current="true"] { color: var(--moss-text); }
+.v24-ctl { flex: none; align-self: stretch; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; margin: auto 0 28px; padding: 0 26px; }
+.v24-ctl button { display: flex; flex-direction: column; align-items: center; gap: 7px; border: 0; padding: 0; background: none; color: var(--text-secondary); font-size: 11px; font-weight: 800; cursor: pointer; }
+.v24-ctl em { font-style: normal; white-space: nowrap; }
+.v24-save { justify-self: start; }
+.v24-look { justify-self: end; }
+.v24-roll { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 15px; background: var(--control); color: var(--text); overflow: hidden; }
+.v24-roll .sc-card { border-radius: 60px; }
+.v24-roll > .xs-fit { animation: sc-pop 0.35s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.v24-ring { width: 76px; height: 76px; display: grid; place-items: center; border-radius: 50%; border: 4px solid var(--text); transition: transform 0.15s ease; }
+.v24-ring i { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 50%; background: var(--moss-fill); color: var(--moss-on); font-style: normal; }
+.v24-ctl .v24-shutter { color: var(--text); }
+.v24-shutter:active .v24-ring { transform: scale(0.93); }
+.v24-sw { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: var(--control); }
+.v24-sw b { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--text-faint); }
+
+.gc-cam .v24-k { margin-top: 22px; }
+.v24-n { display: flex; align-items: flex-start; height: 1em; margin: 4px 0 0 -4px; font-size: 92px; font-weight: 800; letter-spacing: -0.06em; line-height: 1; color: var(--gc-hero); transition: font-size 0.45s cubic-bezier(0.2, 0.9, 0.25, 1); }
+.v24-n.big { font-size: 150px; }
+.v24-n.mid { font-size: 118px; }
+.v24-n.urgent { color: var(--gc-urgent); }
+.v24-d { display: block; height: 1em; overflow: hidden; }
+.v24-d > span { display: block; transition: transform 0.8s cubic-bezier(0.2, 0.9, 0.25, 1); }
+.v24-d i, .v24-c { display: block; height: 1em; font-style: normal; }
+.v24-c.in { animation: v24-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+@keyframes v24-in { from { transform: translateY(0.35em); opacity: 0; } }
+.v24-suf { margin: 0.1em 0 0 0.03em; font-size: 0.34em; letter-spacing: -0.03em; line-height: 1; }
+.v24-mid { display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; height: 124px; margin-top: 6px; }
+.v24-u { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.v24-s { max-width: 164px; margin-top: 6px; font-size: 13px; font-weight: 700; line-height: 1.35; color: var(--gc-dim); }
+.v24-art { flex: none; align-self: flex-end; margin-right: -14px; }
+.v24-ev { margin-top: auto; padding-top: 8px; }
+.v24-ev .gc-tug { margin: 0 0 14px; }
+.v24-ev .gc-hours { height: 104px; margin-top: 0; }
+.v24-ev .gc-others { display: none; }
+.v24-ev .gc-hx { margin-bottom: 12px; }
+.v24-ev .gc-cols { height: 136px; margin: 0 0 12px; }
+.v24-ev .gc-rank-rest { margin: 0 0 10px; }
+.v24-ev .gc-week { margin-top: 0; }
+.v24-ev .gc-bell { margin: 14px 0 12px; }
+.v24-rows .gc-rr.last, .v24-rows .gc-rr.last > span, .v24-rows .gc-rr.last em { color: var(--gc-urgent); }
+`,
+        render: (ctx) => ({
+            html: base(),
+            overlay: `<div class="sc-ov" data-ov>
+    <div class="xs-full v24" role="dialog" aria-label="Choose a number to share" data-ui>
+        <div class="v24-bar"><button type="button" class="v24-x" data-close aria-label="Close">${icon("x", 20, { stroke: 2.6 })}</button>${counter(CAM.length)}<span class="sc-live">Live</span></div>
+        <div class="v24-stage">
+            <div class="v24-view" data-view>${fit(camCard(0, ctx.theme), 0.94)}</div>
+            <div class="xs-track v24-track" data-track aria-label="Swipe to change the number">${CAM.map(() => `<div class="xs-slide" data-slide></div>`).join("")}</div>
+        </div>
+        ${dotsFor(CAM.length)}
+        <div class="v24-dialrow">${arrow("prev")}<div class="v24-dial" data-dial><div class="v24-strip" data-strip>${CAM.map((m, i) => `<button type="button" data-go="${i}">${m.dial}</button>`).join("")}</div></div>${arrow("next")}</div>
+        <div class="v24-ctl">
+            <button type="button" class="v24-save" data-save><span class="v24-roll" data-roll>${icon("arrowDown", 22, { stroke: 2.4 })}</span><em>Save to Photos</em></button>
+            <button type="button" class="v24-shutter" data-share><span class="v24-ring"><i>${icon("share", 24, { stroke: 2.4 })}</i></span><em>Share</em></button>
+            <button type="button" class="v24-look" data-flip aria-label="Change the card colour"><span class="v24-sw" data-sw>${swatch(ctx.theme)}</span><em data-lookname>${LOOKS.find(([id]) => id === ctx.theme)[1]}</em></button>
+        </div>
+    </div>
+    ${sysLayer()}
+</div>`,
+        }),
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const view = ov.querySelector("[data-view]");
+            const strip = ov.querySelector("[data-strip]");
+            const dial = ov.querySelector("[data-dial]");
+            const $ = (k) => view.querySelector(`[data-${k}]`);
+            const ease = "cubic-bezier(0.2, 0.9, 0.25, 1)";
+            let shown = 0, ready = false, look = ctx.theme;
+            // Change what the one card says. Text fades up, digits roll, the companion walks in only when it changes.
+            const set = (i) => {
+                const m = CAM[i], was = CAM[shown], anim = ready && !ctx.reduced && i !== shown;
+                const n = $("n");
+                n.className = `v24-n num ${m.tone || ""} ${m.size || ""}`;
+                n.setAttribute("aria-label", m.n + (m.suf || ""));
+                n.innerHTML = rollHTML(m, anim ? was.n : null);
+                if (anim) {
+                    void n.offsetWidth;
+                    n.querySelectorAll("[data-to]").forEach((el) => { el.style.transform = `translateY(-${el.dataset.to}em)`; });
+                }
+                $("k").textContent = m.k;
+                $("u").textContent = m.u;
+                $("s").textContent = m.s;
+                $("ev").innerHTML = m.ev;
+                if (m.art !== was.art || !ready) $("art").innerHTML = companionArt(m.art, 124);
+                if (anim) {
+                    [$("k"), $("u"), $("s"), $("ev")].forEach((el, j) => el.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 360, delay: j * 40, easing: ease, fill: "backwards" }));
+                    if (m.art !== was.art) $("art").animate([{ opacity: 0, transform: "translateX(28px)" }, { opacity: 1, transform: "none" }], { duration: 480, easing: ease });
+                }
+                const b = strip.children[i];
+                strip.style.transform = `translateX(${(dial.clientWidth / 2 - b.offsetLeft - b.offsetWidth / 2).toFixed(1)}px)`;
+                shown = i;
+            };
+            const car = carousel(ov.querySelector("[data-track]"), ov.querySelector("[data-ui]"), ctx, {
+                change: (i) => set(i),
+                // The card leans with the finger, so the swipe feels attached before the number changes.
+                scroll: (x, slides) => {
+                    const off = x / slides[0].offsetWidth - Math.round(x / slides[0].offsetWidth);
+                    view.style.transform = `translateX(${(-off * 44).toFixed(1)}px)`;
+                    view.style.opacity = (1 - Math.abs(off) * 0.5).toFixed(3);
+                },
+            });
+            ready = true;
+            const onClick = (e) => {
+                if (e.target.closest("[data-flip]")) {
+                    look = LOOKS[(LOOKS.findIndex(([id]) => id === look) + 1) % LOOKS.length][0];
+                    const card = view.querySelector(".sc-card");
+                    card.className = card.className.replace(/\bl-\S+/, `l-${look}`);
+                    if (look === "moss") card.removeAttribute("data-theme");
+                    else card.setAttribute("data-theme", look === "night" ? "night" : "day");
+                    ov.querySelector("[data-sw]").innerHTML = swatch(look);
+                    ov.querySelector("[data-lookname]").textContent = LOOKS.find(([id]) => id === look)[1];
+                } else if (e.target.closest("[data-save]")) {
+                    ov.querySelector("[data-roll]").innerHTML = fit(camCard(car.at, look), 0.1);
+                    if (!ctx.reduced) view.animate([{ opacity: 0.15 }, { opacity: 1 }], { duration: 320, easing: "ease-out" });
+                }
+            };
+            ov.addEventListener("click", onClick);
+            const stop = flowWire(root, ctx, () => ({ card: camCard(car.at, look), name: `${CAM[car.at].dial} card` }), { opened: () => car.go(car.at, false) });
+            return () => { ov.removeEventListener("click", onClick); car.stop(); stop(); };
+        },
+    },
+
+    // 25: build a multi-frame story from the deck
+    {
+        id: "story-builder",
+        name: "Story builder",
+        when: "When one card is not enough. Pick up to four, in order, and post them as one Story friends tap through.",
+        changes: [
+            "Needs a backlog item: post several share cards as one multi-frame Instagram Story.",
+            "Swipe the deck and tap Add on the cards you want. Each gets its frame number, and the tray keeps them in posting order.",
+            "FitFight starts you with a three-frame story that builds suspense: The lead, Days left, Croissant duty.",
+            "Play previews the whole Story full screen with tap-through bars, exactly as friends will see it. Share sends every frame at once.",
+        ],
+        get css() {
+            return reusedCss() + `
+.v25-title { flex: none; display: flex; align-items: center; gap: 10px; height: 28px; margin-top: 2px; }
+.v25-title b { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.v25-track { flex: none; align-self: stretch; height: 392px; margin-top: 4px; gap: 14px; }
+.v25-track::before, .v25-track::after { content: ""; flex: none; width: calc(50% - 119px); }
+.v25-track .xs-slide { position: relative; }
+.v25-track .xs-fit { transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.9, 0.25, 1); }
+.v25-track .xs-slide:not(.on) .xs-fit { opacity: 0.5; transform: scale(0.92); }
+.v25-track .xs-slide.picked .xs-fit::after { content: ""; position: absolute; inset: -5px; border-radius: 26px; border: 2px solid var(--moss-edge); }
+.v25-badge { position: absolute; left: 50%; top: -4px; z-index: 2; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; transform: translateX(-50%); border-radius: var(--r-pill); background: var(--moss-fill); color: var(--moss-on); border: 2px solid var(--overlay); font-size: 11px; font-weight: 800; animation: sc-pop 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.v25-badge { white-space: nowrap; }
+.v25-badge[hidden] { display: none; }
+.v25-row { flex: none; align-self: stretch; display: flex; align-items: center; gap: 10px; padding: 0 20px; }
+.v25-add { flex: 1; height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--chip-edge); border-radius: var(--r-pill); background: var(--chip); color: var(--text); font-size: 14px; font-weight: 800; cursor: pointer; transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+.v25-add[aria-pressed="true"] { background: var(--moss-wash); border-color: var(--moss-edge); color: var(--moss-text); }
+.v25-tray { flex: none; align-self: stretch; display: flex; align-items: center; gap: 10px; margin: 10px 20px 0; padding: 9px 10px 9px 14px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--hairline); }
+.v25-tl { flex: 1; min-width: 0; }
+.v25-tl b { display: block; font-size: 14px; font-weight: 800; }
+.v25-tl span { display: block; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+.v25-slots { display: flex; gap: 6px; }
+.v25-th, .v25-slot { position: relative; width: 36px; height: 64px; flex: none; border-radius: 8px; }
+.v25-th { padding: 0; border: 0; background: none; cursor: pointer; }
+.v25-th .sc-card { border-radius: 70px; }
+.v25-th[aria-current="true"]::after { content: ""; position: absolute; inset: -3px; border-radius: 10px; border: 2px solid var(--text); }
+.v25-th > b { position: absolute; left: 50%; bottom: -6px; z-index: 1; min-width: 17px; height: 17px; padding: 0 4px; transform: translateX(-50%); border-radius: var(--r-pill); background: var(--moss-fill); color: var(--moss-on); border: 1.5px solid var(--card); font-size: 10px; font-weight: 800; line-height: 14px; text-align: center; }
+.v25-slot { border: 1.5px dashed var(--dash); }
+.v25-playbtn { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; padding: 0 0 0 2px; border-radius: 50%; background: var(--text); color: var(--bg); cursor: pointer; }
+.v25-playbtn:disabled { opacity: 0.3; cursor: default; }
+.v25 .xs-acts { margin: 12px 0 0; }
+.v25-fan { position: relative; width: 48px; height: 48px; }
+.v25-fan .xs-fit { position: absolute; left: 13px; top: 6px; transform-origin: 50% 100%; }
+.v25-fan .xs-fit:nth-child(1) { transform: rotate(-12deg) translateX(-5px); }
+.v25-fan .xs-fit:nth-child(3) { transform: rotate(12deg) translateX(5px); }
+.v25-fan .sc-card { border-radius: 90px; }
+
+.v25-play { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--bg); animation: sc-up 0.35s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.v25-play[hidden] { display: none; }
+.v25-segs { flex: none; display: flex; gap: 4px; margin: 58px 14px 0; }
+.v25-segs i { flex: 1; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--text) 24%, transparent); overflow: hidden; }
+.v25-segs i b { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--text); }
+.v25-segs i.done b, .v25-segs i.on b { width: 100%; }
+.v25-segs i.on b { animation: v25-fill 3s linear both; }
+@keyframes v25-fill { from { width: 0; } }
+.v25-ph { flex: none; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 6px 0 14px; }
+.v25-ph .ff-avatar { border-radius: 50%; border: 2px solid var(--moss-edge); }
+.v25-ph b { font-size: 14px; font-weight: 800; }
+.v25-ph span { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v25-ph button { width: 44px; height: 44px; margin-left: auto; display: grid; place-items: center; border: 0; padding: 0; background: none; color: var(--text); cursor: pointer; }
+.v25-frame { flex: none; align-self: center; cursor: pointer; }
+.v25-frame > .xs-fit { animation: v25-in 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+@keyframes v25-in { from { opacity: 0.4; transform: translateX(14px); } }
+.v25-tip { flex: none; margin-top: 8px; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.v25-play .xs-acts { margin: auto 0 32px; }
+`;
+        },
+        render: (ctx) => ({
+            html: base(),
+            overlay: `<div class="sc-ov" data-ov>
+    <div class="sc-scrim" data-close></div>
+    <div class="sc-sheet v25" role="dialog" aria-label="Build your story" data-ui>
+        ${sheetHead("Build your story")}
+        <div class="v25-title"><b data-name>${DECK[0].name}</b>${counter(DECK.length)}</div>
+        <div class="xs-track v25-track" data-track>${DECK.map((d, i) => `<div class="xs-slide" data-slide><span class="v25-badge" data-badge="${i}" hidden></span>${fit(deckCard(d, ctx), 0.7)}</div>`).join("")}</div>
+        ${dotsFor(DECK.length)}
+        <div class="v25-row">${arrow("prev")}<button type="button" class="v25-add" data-add aria-pressed="false"></button>${arrow("next")}</div>
+        <div class="v25-tray"><div class="v25-tl"><b>Your story</b><span data-tray-say></span></div><div class="v25-slots" data-slots></div><button type="button" class="v25-playbtn" data-playset aria-label="Play the story">${PLAY}</button></div>
+        ${saveShare()}
+    </div>
+    <div class="v25-play" data-player role="dialog" aria-label="Story preview" hidden>
+        <div class="v25-segs" data-segs aria-hidden="true"></div>
+        <div class="v25-ph">${avatar(ME.person, 32)}<b>Your story</b><span data-pwhen>Preview</span><button type="button" data-pclose aria-label="Close preview">${icon("x", 20, { stroke: 2.6 })}</button></div>
+        <div class="v25-frame" data-frame></div>
+        <div class="v25-tip">Tap the right side for the next frame, the left to go back</div>
+        <div class="xs-acts"><button type="button" class="xs-btn" data-pclose>${icon("pencil", 17, { stroke: 2.4 })}Edit</button><button type="button" class="xs-btn go" data-share>${icon("share", 18, { stroke: 2.4 })}Share story</button></div>
+    </div>
+    ${sysLayer()}
+</div>`,
+        }),
+        mount: (root, ctx) => {
+            const ov = ctx.overlay;
+            const byId = (id) => DECK.find((d) => d.id === id);
+            const player = ov.querySelector("[data-player]");
+            const picks = STARTER.slice();
+            let timer = 0, toastT = 0, frame = 0;
+            // Badges, rings, the Add button and the tray all follow `picks` and the card in the middle.
+            const paint = (i) => {
+                ov.querySelectorAll("[data-badge]").forEach((b) => {
+                    const at = picks.indexOf(DECK[Number(b.dataset.badge)].id);
+                    b.hidden = at < 0;
+                    b.textContent = `Frame ${at + 1}`;
+                    b.parentElement.classList.toggle("picked", at >= 0);
+                });
+                const at = picks.indexOf(DECK[i].id);
+                const add = ov.querySelector("[data-add]");
+                add.setAttribute("aria-pressed", String(at >= 0));
+                add.innerHTML = at >= 0 ? `${icon("check", 17, { stroke: 2.8 })}Frame ${at + 1} · tap to remove` : `${icon("plus", 17, { stroke: 2.8 })}Add to story`;
+                ov.querySelector("[data-slots]").innerHTML = picks.map((id, j) => {
+                    const k = DECK.indexOf(byId(id));
+                    return `<button type="button" class="v25-th" data-go="${k}" aria-current="${k === i}" aria-label="Frame ${j + 1}: ${byId(id).name}">${fit(deckCard(byId(id), ctx), 0.12)}<b class="num">${j + 1}</b></button>`;
+                }).join("") + `<span class="v25-slot"></span>`.repeat(4 - picks.length);
+                ov.querySelector("[data-tray-say]").textContent = picks.length ? `${picks.length} frame${picks.length > 1 ? "s" : ""} · ${picks.length * 3}s` : "Add a card to start";
+                ov.querySelector("[data-playset]").disabled = !picks.length;
+            };
+            const car = carousel(ov.querySelector("[data-track]"), ov.querySelector("[data-ui]"), ctx, {
+                change: (i, slides) => {
+                    slides.forEach((s, j) => s.classList.toggle("on", j === i));
+                    ov.querySelector("[data-name]").textContent = DECK[i].name;
+                    paint(i);
+                },
+            });
+            const toast = (msg) => {
+                const t = ov.querySelector("[data-xtoast]");
+                t.innerHTML = `${icon("info", 14, { stroke: 2.6 })}${esc(msg)}`;
+                t.classList.add("on");
+                clearTimeout(toastT);
+                toastT = setTimeout(() => t.classList.remove("on"), 1800);
+            };
+            // The preview plays like Instagram: three seconds a frame, holding on the last one.
+            const show = (k) => {
+                frame = Math.max(0, Math.min(picks.length - 1, k));
+                ov.querySelector("[data-frame]").innerHTML = fit(deckCard(byId(picks[frame]), ctx), 1.1);
+                ov.querySelector("[data-segs]").innerHTML = picks.map((_, j) => `<i class="${j < frame ? "done" : j === frame ? "on" : ""}"><b></b></i>`).join("");
+                ov.querySelector("[data-pwhen]").textContent = `${frame + 1} of ${picks.length} · preview`;
+                clearTimeout(timer);
+                if (!ctx.reduced && frame < picks.length - 1) timer = setTimeout(() => show(frame + 1), 3000);
+            };
+            const pick = () => {
+                if (!picks.length) return { card: deckCard(DECK[car.at], ctx), name: DECK[car.at].name };
+                const n = picks.length;
+                return {
+                    card: deckCard(byId(picks[0]), ctx),
+                    name: `${n} frame${n > 1 ? "s" : ""}`,
+                    sub: `Story · ${n} image${n > 1 ? "s" : ""} · 1080 × 1920`,
+                    thumb: `<span class="v25-fan">${picks.slice(0, 3).map((id) => fit(deckCard(byId(id), ctx), 0.075)).join("")}</span>`,
+                };
+            };
+            const stop = flowWire(root, ctx, pick, {
+                opened: () => car.go(car.at, false),
+                extra: (e) => {
+                    if (e.target.closest("[data-add]")) {
+                        const id = DECK[car.at].id, at = picks.indexOf(id);
+                        if (at >= 0) picks.splice(at, 1);
+                        else if (picks.length >= 4) return toast("Four frames at most. Remove one first.");
+                        else picks.push(id);
+                        paint(car.at);
+                    } else if (e.target.closest("[data-playset]")) {
+                        player.hidden = false;
+                        show(0);
+                    } else if (e.target.closest("[data-pclose]")) {
+                        clearTimeout(timer);
+                        player.hidden = true;
+                    } else if (e.target.closest("[data-frame]")) {
+                        const r = ov.querySelector("[data-frame]").getBoundingClientRect();
+                        show(e.clientX - r.left < r.width / 3 ? frame - 1 : frame + 1);
+                    }
+                },
+            });
+            return () => { clearTimeout(timer); clearTimeout(toastT); car.stop(); stop(); };
         },
     },
 ];

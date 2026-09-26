@@ -75,12 +75,23 @@ sample/workout deletions. A bounded TypeScript resolver publishes
 active-minutes, distance, and energy rows, plus Fight scores/charts and the legacy
 Steps mirror. Profile Steps reads the newest legacy or new row during rollout.
 Personal history can be corrected; finalized Fight results stay frozen. The phone
-keeps per-type anchors locally, registers all supported types for background
-observation, imports accessible sample and merged-total history in acknowledged
+keeps a workout anchor and per-type history cursors locally, registers only the
+merged-total and workout types it reads for background observation, imports
+accessible merged-total history in acknowledged
 pages, and distinguishes durable receipt awaiting processing from partial
 activity failure after a successful Steps upload. The new `POST /api/v1/healthkit/activity` is additive. Existing
 `POST /api/v1/healthkit/steps` requests and decoded response fields remain valid;
 its optional `processing` response field is ignored by older Swift decoders.
+
+**Raw samples, 26 Sep 2026:** New builds no longer upload individual Apple Health
+samples or sample deletions. That import cost tens of thousands of requests per
+Watch user and nothing read the stored `scope = 'sample'` rows. New builds omit
+`samples` and `deleted_samples`; the server still defaults both to empty and keeps
+accepting them from older builds that already upload them. After the one-time
+history import, new builds refresh only the latest 40 days of merged totals, so a
+Health edit to an older day is not re-sent. The three effort types stay in the read
+permissions for workout effort, and new builds disable their old background
+delivery at launch. No backend or database change was needed.
 
 **Supported builds checked:** Read-only `/api/app-release` checks on 23 Sep UTC
 returned staging `latest` **1.1.1 (201)**, `review`/`internal` **1.1.2 (205)**,
@@ -107,7 +118,7 @@ native build reaches staging TestFlight. Keep `/api/v1`, the old tables, and old
 client behavior during overlap. None of those steps has happened from this
 branch: no merge, hosted migration, backend/privacy deployment, TestFlight upload,
 production promotion, or PR. A later authorized rollout must check both
-staging and production separately. Sample anchors have no date predicate;
+staging and production separately. Older builds' sample anchors have no date predicate;
 temporary HealthKit deletion history and empty reads after permission revocation
 remain known limits. The daily worker resumes persisted rows
 until a more frequent hosted cron is activated.

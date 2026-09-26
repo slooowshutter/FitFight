@@ -2,8 +2,6 @@ import Foundation
 import HealthKit
 
 enum HealthKitActivityAggregates {
-    enum SampleReadError: Error { case invalidSample }
-
     struct QuantityKind {
         let metric: String
         let unitName: String
@@ -93,37 +91,6 @@ enum HealthKitActivityAggregates {
         var types = Set<HKObjectType>(sampleKinds.map { $0.type as HKObjectType })
         types.insert(HKObjectType.workoutType())
         return types
-    }
-
-    static func sampleRecord(
-        _ sample: HKSample, kind: TotalKind
-    ) throws -> FitFightHealthKitActivityBatch.Sample {
-        let value: Double
-        if let quantity = sample as? HKQuantitySample, let unit = kind.unit,
-           let converted = quantityValue(quantity.quantity, unit: unit) {
-            value = converted
-        } else if let category = sample as? HKCategorySample,
-                  kind.metric == "stand_hours", [0, 1].contains(category.value) {
-            value = Double(category.value)
-        } else {
-            throw SampleReadError.invalidSample
-        }
-        guard sample.endDate >= sample.startDate else { throw SampleReadError.invalidSample }
-        return FitFightHealthKitActivityBatch.Sample(
-            healthkitUuid: sample.uuid.uuidString.lowercased(),
-            metric: kind.metric,
-            startedAt: HealthKitStepAggregates.iso8601(sample.startDate),
-            endedAt: HealthKitStepAggregates.iso8601(sample.endDate),
-            value: value,
-            unit: kind.unitName,
-            sourceBundleId: sample.sourceRevision.source.bundleIdentifier,
-            sourceName: sample.sourceRevision.source.name,
-            sourceVersion: sample.sourceRevision.version,
-            deviceModel: sample.device?.model,
-            externalUuid: sample.metadata?[HKMetadataKeyExternalUUID] as? String,
-            syncIdentifier: sample.metadata?[HKMetadataKeySyncIdentifier] as? String,
-            syncVersion: sample.metadata?[HKMetadataKeySyncVersion] as? Int
-        )
     }
 
     static var quantityKinds: [QuantityKind] {

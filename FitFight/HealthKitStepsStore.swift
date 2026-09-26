@@ -143,7 +143,12 @@ final class HealthKitStepsStore: ObservableObject {
             updateDiagnostics { $0.errorCode = .healthKitUnavailable }
             return
         }
-        let sampleTypes = HealthKitActivityAggregates.readTypes.compactMap { $0 as? HKSampleType }
+        // Only types the sync reads may wake the app. Older builds also registered raw-sample types.
+        let sampleTypes = HealthKitActivityAggregates.totalKinds.map(\.type) + [HKObjectType.workoutType()]
+        for sampleType in HealthKitActivityAggregates.readTypes.compactMap({ $0 as? HKSampleType })
+            where !sampleTypes.contains(sampleType) {
+            store.disableBackgroundDelivery(for: sampleType) { _, _ in }
+        }
         if observerQueries.isEmpty {
             for sampleType in sampleTypes {
                 let query = HKObserverQuery(sampleType: sampleType, predicate: nil) { [weak self] _, completion, _ in
@@ -445,7 +450,7 @@ final class HealthKitStepsStore: ObservableObject {
         }
     }
 
-    /// Other activity, including the first full history import, can take thousands of requests.
+    /// Other activity, including the first full history import, can take many requests.
     /// It runs on its own so Steps and fights never wait for it; progress is saved page by page.
     private func startActivitySync(
         session: SessionStore,

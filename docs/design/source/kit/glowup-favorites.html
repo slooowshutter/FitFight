@@ -173,6 +173,7 @@ h1 { margin: 2px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em
 .lede { margin: 8px 0 14px; color: var(--text-secondary); font-size: 13px; font-weight: 700; line-height: 1.5; }
 .filters { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .frow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.frow[hidden] { display: none; }
 .frow .lab { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); width: 58px; }
 .chip { border: 1px solid var(--hairline); background: var(--chip); color: var(--text-secondary); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--moss-fill); border-color: var(--moss-fill); color: var(--moss-on); }
@@ -237,6 +238,7 @@ kbd { font: 800 10px "Nunito", sans-serif; padding: 1px 5px; border-radius: 5px;
             <p class="lede" id="lede"></p>
             <div class="filters">
                 <div class="frow" id="whose" role="group" aria-label="Whose"></div>
+                <div class="frow" id="albums" role="group" aria-label="Albums"></div>
                 <div class="frow" id="where" role="group" aria-label="Where"></div>
             </div>
             <div class="stage">
@@ -267,6 +269,7 @@ const GX = (() => {
         ["like", "Like", "l"],
         ["dislike", "Dislike (hides it for you)", "d"],
         ["comment", "Write a comment", "c"],
+        ["album", "Add to an album", "a"],
         ["open", "Open the selected favorite", "Enter"],
         ["theme", "Switch Night and Day", "t"],
         ["replay", "Replay the animation", "r"],
@@ -292,15 +295,15 @@ const GX = (() => {
         return clean;
     };
 
-    let state = { choices: {}, comments: {} };
+    let state = { choices: {}, comments: {}, albums: {} };
     let synced = false;
     let status = () => {};
     // Version 1 files were { page: { option: "keep" | "hide" } } with no names.
     const normalize = (raw) => {
-        if (raw && (raw.choices || raw.comments)) return { choices: raw.choices || {}, comments: raw.comments || {} };
+        if (raw && (raw.choices || raw.comments || raw.albums)) return { choices: raw.choices || {}, comments: raw.comments || {}, albums: raw.albums || {} };
         const choices = {};
         for (const [page, map] of Object.entries(raw || {})) for (const [id, v] of Object.entries(map || {})) ((choices[page] ||= {})[id] ||= {}).Marc = v;
-        return { choices, comments: {} };
+        return { choices, comments: {}, albums: {} };
     };
     // Same rules as apply() in glowup-serve.py.
     const apply = (s, op) => {
@@ -312,6 +315,11 @@ const GX = (() => {
             if (!Object.keys(s.choices[op.page]).length) delete s.choices[op.page];
         } else if (op.op === "comment") {
             ((s.comments[op.page] ||= {})[op.id] ||= []).push({ who: op.who, text: op.text, at: op.at });
+        } else if (op.op === "album") {
+            // Albums are shared by everyone: a named list of "page/option" keys.
+            const key = op.page + "/" + op.id, list = s.albums[op.album] || [];
+            s.albums[op.album] = op.value ? (list.includes(key) ? list : [...list, key]) : list.filter((k) => k !== key);
+            if (!s.albums[op.album].length) delete s.albums[op.album];
         } else if (op.op === "uncomment") {
             const left = ((s.comments[op.page] || {})[op.id] || []).filter((c) => !(c.at === op.at && c.who === op.who));
             if (left.length) s.comments[op.page][op.id] = left;
@@ -388,6 +396,13 @@ const GX = (() => {
     const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
     const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
     const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
+    const albumNames = () => Object.keys(state.albums).sort((a, b) => a.localeCompare(b));
+    const albumsOf = (page, id) => albumNames().filter((a) => state.albums[a].includes(page + "/" + id));
+    const album = (page, id, name, value) => {
+        const clean = String(name).replace(/[\u0000-\u001f]/g, "").trim().slice(0, 30);
+        if (clean) send({ op: "album", page, id, who: who(), album: clean, value: !!value });
+        return clean;
+    };
     // htmlpreview sets <base> to the raw file, so preview links must be absolute or they open raw text.
     const fileHref = (file) => preview && location.search.length > 1 ? location.origin + location.pathname + "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
     const open = (file) => { location.href = fileHref(file); };
@@ -402,7 +417,7 @@ const GX = (() => {
 
     return {
         ACTIONS, keys, keyLabel, actionFor, who, hasName, setWho, load, send, choice, reactions, comments, people,
-        toggle, comment, uncomment, fileHref, open, ago, reactionChips, statusText, get, set,
+        toggle, comment, uncomment, albumNames, albumsOf, album, fileHref, open, ago, reactionChips, statusText, get, set,
         onStatus: (fn) => { status = fn; },
         get state() { return state; },
         get synced() { return synced; },
@@ -429,7 +444,7 @@ const GX = (() => {
     let sel = 0, start = 0;
 
     const k = GX.keys();
-    $("lede").innerHTML = `Everything liked, side by side. <kbd>${GX.keyLabel(k.prev)}</kbd> <kbd>${GX.keyLabel(k.next)}</kbd> move · <kbd>${GX.keyLabel(k.prevPage)}</kbd> <kbd>${GX.keyLabel(k.nextPage)}</kbd> change area · <kbd>${GX.keyLabel(k.like)}</kbd> like · <kbd>${GX.keyLabel(k.dislike)}</kbd> dislike · <kbd>${GX.keyLabel(k.comment)}</kbd> comment · <kbd>${GX.keyLabel(k.open)}</kbd> open full size. Click a phone to open it.`;
+    $("lede").innerHTML = `Everything liked, side by side. Albums collect options you add with <kbd>${GX.keyLabel(k.album)}</kbd> on any page. <kbd>${GX.keyLabel(k.prev)}</kbd> <kbd>${GX.keyLabel(k.next)}</kbd> move · <kbd>${GX.keyLabel(k.prevPage)}</kbd> <kbd>${GX.keyLabel(k.nextPage)}</kbd> change area · <kbd>${GX.keyLabel(k.like)}</kbd> like · <kbd>${GX.keyLabel(k.dislike)}</kbd> dislike · <kbd>${GX.keyLabel(k.comment)}</kbd> comment · <kbd>${GX.keyLabel(k.open)}</kbd> open full size. Click a phone to open it.`;
 
     const test = (it, w) => {
         const r = GX.reactions(it.page, it.id), vals = Object.values(r);
@@ -439,6 +454,7 @@ const GX = (() => {
         if (w === "disagree") return vals.includes("keep") && vals.includes("hide");
         if (w === "commented") return GX.comments(it.page, it.id).length > 0;
         if (w === "mydislikes") return r[GX.who()] === "hide";
+        if (w.startsWith("album:")) return (GX.state.albums[w.slice(6)] || []).includes(it.page + "/" + it.id);
         return r[w.slice(7)] === "keep"; // "person:<name>"
     };
     const inArea = (it, a) => a === "all" || it.group === a || it.page === a;
@@ -447,9 +463,12 @@ const GX = (() => {
     const renderFilters = () => {
         const me = GX.who(), others = GX.people().filter((p) => p !== me);
         const opts = [["mine", `My likes`], ...others.map((p) => [`person:${p}`, `${p}'s likes`]), ["everyone", "Everyone"], ...(others.length ? [["agree", "We agree"], ["disagree", "We disagree"]] : []), ["commented", "Commented"], ["mydislikes", "My dislikes"]];
-        if (!opts.some(([v]) => v === whose)) whose = "mine";
+        if (!opts.some(([v]) => v === whose) && !(whose.startsWith("album:") && GX.albumNames().includes(whose.slice(6)))) whose = "mine";
         const n = (w) => ALL.filter((it) => test(it, w) && inArea(it, where)).length;
         $("whose").innerHTML = `<span class="lab">Whose</span>` + opts.map(([v, label]) => `<button type="button" class="chip" data-whose="${esc(v)}" aria-pressed="${v === whose}">${esc(label)}<span class="n">${n(v)}</span></button>`).join("");
+        const albums = GX.albumNames();
+        $("albums").hidden = !albums.length;
+        $("albums").innerHTML = `<span class="lab">Albums</span>` + albums.map((a) => `<button type="button" class="chip" data-whose="album:${esc(a)}" aria-pressed="${whose === "album:" + a}">${esc(a)}<span class="n">${n("album:" + a)}</span></button>`).join("");
         const groups = [...new Set(GX_PAGES.map((p) => p.group))];
         const m = (a) => ALL.filter((it) => test(it, whose) && inArea(it, a)).length;
         $("where").innerHTML = `<span class="lab">Where</span>` + [["all", "All areas"], ...groups.map((g) => [g, g])].map(([v, label]) => `<button type="button" class="chip" data-where="${esc(v)}" aria-pressed="${v === where}">${esc(label)}<span class="n">${m(v)}</span></button>`).join("")
@@ -460,6 +479,7 @@ const GX = (() => {
     const setWhose = (w) => { whose = w; GX.set("glowup.fav.whose", w); sel = 0; start = 0; renderAll(); };
     const setWhere = (a) => { where = a; GX.set("glowup.fav.where", a); sel = 0; start = 0; renderAll(); };
     $("whose").addEventListener("click", (e) => { const b = e.target.closest("[data-whose]"); if (b) setWhose(b.dataset.whose); });
+    $("albums").addEventListener("click", (e) => { const b = e.target.closest("[data-whose]"); if (b) setWhose(b.dataset.whose); });
     $("where").addEventListener("click", (e) => { const b = e.target.closest("[data-where]"); if (b) setWhere(b.dataset.where); });
 
     // How many phones fit side by side, and how big.
@@ -476,7 +496,7 @@ const GX = (() => {
         const me = GX.who(), c = GX.choice(it.page, it.id);
         const mineChip = c ? `<span class="gx-chip ${c}">You ${c === "keep" ? "like it" : "disliked it"}</span>` : "";
         return `<div class="where">${esc(it.group)} · ${esc(it.pageTitle)}</div><h3>${esc(it.name)}</h3>
-<div class="reacts">${mineChip}${GX.reactionChips(it.page, it.id, me)}</div>
+<div class="reacts">${mineChip}${GX.reactionChips(it.page, it.id, me)}${GX.albumsOf(it.page, it.id).map((a) => `<span class="gx-chip">${esc(a)}</span>`).join("")}</div>
 <div class="acts"><button type="button" class="act like" data-act="keep" aria-pressed="${c === "keep"}">${c === "keep" ? "Liked" : "Like"}</button><button type="button" class="act dislike" data-act="hide" aria-pressed="${c === "hide"}">${c === "hide" ? "Undo dislike" : "Dislike"}</button><button type="button" class="act" data-act="open">Open full size</button></div>
 <div class="comments">${GX.comments(it.page, it.id).map((x) => `<div class="comment"><b>${esc(x.who)}</b><span class="ago">${GX.ago(x.at)}</span>${x.who === me ? `<button type="button" data-at="${esc(x.at)}">Delete</button>` : ""}<div>${esc(x.text)}</div></div>`).join("")}</div>
 <form><input maxlength="2000" placeholder="Comment as ${esc(me)}" aria-label="Comment" /></form>`;

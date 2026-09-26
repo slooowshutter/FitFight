@@ -240,6 +240,7 @@ const GX = (() => {
         ["like", "Like", "l"],
         ["dislike", "Dislike (hides it for you)", "d"],
         ["comment", "Write a comment", "c"],
+        ["album", "Add to an album", "a"],
         ["open", "Open the selected favorite", "Enter"],
         ["theme", "Switch Night and Day", "t"],
         ["replay", "Replay the animation", "r"],
@@ -265,15 +266,15 @@ const GX = (() => {
         return clean;
     };
 
-    let state = { choices: {}, comments: {} };
+    let state = { choices: {}, comments: {}, albums: {} };
     let synced = false;
     let status = () => {};
     // Version 1 files were { page: { option: "keep" | "hide" } } with no names.
     const normalize = (raw) => {
-        if (raw && (raw.choices || raw.comments)) return { choices: raw.choices || {}, comments: raw.comments || {} };
+        if (raw && (raw.choices || raw.comments || raw.albums)) return { choices: raw.choices || {}, comments: raw.comments || {}, albums: raw.albums || {} };
         const choices = {};
         for (const [page, map] of Object.entries(raw || {})) for (const [id, v] of Object.entries(map || {})) ((choices[page] ||= {})[id] ||= {}).Marc = v;
-        return { choices, comments: {} };
+        return { choices, comments: {}, albums: {} };
     };
     // Same rules as apply() in glowup-serve.py.
     const apply = (s, op) => {
@@ -285,6 +286,11 @@ const GX = (() => {
             if (!Object.keys(s.choices[op.page]).length) delete s.choices[op.page];
         } else if (op.op === "comment") {
             ((s.comments[op.page] ||= {})[op.id] ||= []).push({ who: op.who, text: op.text, at: op.at });
+        } else if (op.op === "album") {
+            // Albums are shared by everyone: a named list of "page/option" keys.
+            const key = op.page + "/" + op.id, list = s.albums[op.album] || [];
+            s.albums[op.album] = op.value ? (list.includes(key) ? list : [...list, key]) : list.filter((k) => k !== key);
+            if (!s.albums[op.album].length) delete s.albums[op.album];
         } else if (op.op === "uncomment") {
             const left = ((s.comments[op.page] || {})[op.id] || []).filter((c) => !(c.at === op.at && c.who === op.who));
             if (left.length) s.comments[op.page][op.id] = left;
@@ -361,6 +367,13 @@ const GX = (() => {
     const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
     const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
     const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
+    const albumNames = () => Object.keys(state.albums).sort((a, b) => a.localeCompare(b));
+    const albumsOf = (page, id) => albumNames().filter((a) => state.albums[a].includes(page + "/" + id));
+    const album = (page, id, name, value) => {
+        const clean = String(name).replace(/[\u0000-\u001f]/g, "").trim().slice(0, 30);
+        if (clean) send({ op: "album", page, id, who: who(), album: clean, value: !!value });
+        return clean;
+    };
     // htmlpreview sets <base> to the raw file, so preview links must be absolute or they open raw text.
     const fileHref = (file) => preview && location.search.length > 1 ? location.origin + location.pathname + "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
     const open = (file) => { location.href = fileHref(file); };
@@ -375,7 +388,7 @@ const GX = (() => {
 
     return {
         ACTIONS, keys, keyLabel, actionFor, who, hasName, setWho, load, send, choice, reactions, comments, people,
-        toggle, comment, uncomment, fileHref, open, ago, reactionChips, statusText, get, set,
+        toggle, comment, uncomment, albumNames, albumsOf, album, fileHref, open, ago, reactionChips, statusText, get, set,
         onStatus: (fn) => { status = fn; },
         get state() { return state; },
         get synced() { return synced; },

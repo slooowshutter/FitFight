@@ -205,6 +205,14 @@ button { font: inherit; color: inherit; }
 .gx-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; background: var(--chip); color: var(--text-secondary); }
 .gx-chip.keep { background: var(--moss-wash); color: var(--moss-text); }
 .gx-chip.hide { background: var(--ember-wash); color: var(--ember-text); }
+.gx-albums { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+.gx-albums .gx-alb { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px 4px 10px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); font-size: 12px; font-weight: 800; }
+.gx-albums .gx-alb button { border: 0; background: none; color: var(--text-faint); cursor: pointer; padding: 0 4px; font: 800 13px "Nunito", sans-serif; }
+.gx-albums .gx-addalb { border: 1px dashed var(--dash); background: none; color: var(--text-secondary); border-radius: 999px; padding: 4px 10px; font: 800 12px "Nunito", sans-serif; cursor: pointer; }
+.gx-albumpick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.gx-albumpick[hidden] { display: none; }
+.gx-albumpick button { border: 1px solid var(--line); background: var(--chip); color: var(--text); border-radius: 999px; padding: 5px 12px; font: 800 12px "Nunito", sans-serif; cursor: pointer; }
+.gx-albumpick input { height: 30px; width: 150px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: 700 12px "Nunito", sans-serif; }
 .gx-comments { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 .gx-comments:empty { display: none; }
 .gx-comment { padding: 9px 12px; border-radius: 14px; background: var(--chip); font-size: 13px; font-weight: 700; line-height: 1.4; }
@@ -398,6 +406,8 @@ html.shot *, html.shot *::before, html.shot *::after { animation-duration: 0.001
                         <button type="button" class="gx-btn" id="gx-replay"></button>
                     </div>
                     <div class="gx-reacts" id="gx-reacts"></div>
+                    <div class="gx-albums" id="gx-albums"></div>
+                    <div class="gx-albumpick" id="gx-albumpick" hidden></div>
                     <div class="gx-comments" id="gx-clist"></div>
                     <form class="gx-cform" id="gx-cform" autocomplete="off"><input id="gx-cinput" maxlength="2000" placeholder="Add a comment" aria-label="Add a comment" /><button type="submit" class="gx-btn">Send</button></form>
                     <div class="gx-foot">
@@ -438,6 +448,7 @@ const GX = (() => {
         ["like", "Like", "l"],
         ["dislike", "Dislike (hides it for you)", "d"],
         ["comment", "Write a comment", "c"],
+        ["album", "Add to an album", "a"],
         ["open", "Open the selected favorite", "Enter"],
         ["theme", "Switch Night and Day", "t"],
         ["replay", "Replay the animation", "r"],
@@ -463,15 +474,15 @@ const GX = (() => {
         return clean;
     };
 
-    let state = { choices: {}, comments: {} };
+    let state = { choices: {}, comments: {}, albums: {} };
     let synced = false;
     let status = () => {};
     // Version 1 files were { page: { option: "keep" | "hide" } } with no names.
     const normalize = (raw) => {
-        if (raw && (raw.choices || raw.comments)) return { choices: raw.choices || {}, comments: raw.comments || {} };
+        if (raw && (raw.choices || raw.comments || raw.albums)) return { choices: raw.choices || {}, comments: raw.comments || {}, albums: raw.albums || {} };
         const choices = {};
         for (const [page, map] of Object.entries(raw || {})) for (const [id, v] of Object.entries(map || {})) ((choices[page] ||= {})[id] ||= {}).Marc = v;
-        return { choices, comments: {} };
+        return { choices, comments: {}, albums: {} };
     };
     // Same rules as apply() in glowup-serve.py.
     const apply = (s, op) => {
@@ -483,6 +494,11 @@ const GX = (() => {
             if (!Object.keys(s.choices[op.page]).length) delete s.choices[op.page];
         } else if (op.op === "comment") {
             ((s.comments[op.page] ||= {})[op.id] ||= []).push({ who: op.who, text: op.text, at: op.at });
+        } else if (op.op === "album") {
+            // Albums are shared by everyone: a named list of "page/option" keys.
+            const key = op.page + "/" + op.id, list = s.albums[op.album] || [];
+            s.albums[op.album] = op.value ? (list.includes(key) ? list : [...list, key]) : list.filter((k) => k !== key);
+            if (!s.albums[op.album].length) delete s.albums[op.album];
         } else if (op.op === "uncomment") {
             const left = ((s.comments[op.page] || {})[op.id] || []).filter((c) => !(c.at === op.at && c.who === op.who));
             if (left.length) s.comments[op.page][op.id] = left;
@@ -559,6 +575,13 @@ const GX = (() => {
     const toggle = (page, id, value) => send({ op: "choice", page, id, who: who(), value: choice(page, id) === value ? null : value });
     const comment = (page, id, text) => send({ op: "comment", page, id, who: who(), text: String(text).trim().slice(0, 2000), at: new Date().toISOString() });
     const uncomment = (page, id, at) => send({ op: "uncomment", page, id, who: who(), at });
+    const albumNames = () => Object.keys(state.albums).sort((a, b) => a.localeCompare(b));
+    const albumsOf = (page, id) => albumNames().filter((a) => state.albums[a].includes(page + "/" + id));
+    const album = (page, id, name, value) => {
+        const clean = String(name).replace(/[\u0000-\u001f]/g, "").trim().slice(0, 30);
+        if (clean) send({ op: "album", page, id, who: who(), album: clean, value: !!value });
+        return clean;
+    };
     // htmlpreview sets <base> to the raw file, so preview links must be absolute or they open raw text.
     const fileHref = (file) => preview && location.search.length > 1 ? location.origin + location.pathname + "?" + location.search.slice(1).replace(/[^/]+\.html.*$/, file) : file;
     const open = (file) => { location.href = fileHref(file); };
@@ -573,7 +596,7 @@ const GX = (() => {
 
     return {
         ACTIONS, keys, keyLabel, actionFor, who, hasName, setWho, load, send, choice, reactions, comments, people,
-        toggle, comment, uncomment, fileHref, open, ago, reactionChips, statusText, get, set,
+        toggle, comment, uncomment, albumNames, albumsOf, album, fileHref, open, ago, reactionChips, statusText, get, set,
         onStatus: (fn) => { status = fn; },
         get state() { return state; },
         get synced() { return synced; },
@@ -2516,6 +2539,7 @@ ${rsNav()}
         $("gx-hidden-note").hidden = c !== "hide";
         $("gx-hidden-note").textContent = `${me}, you disliked this, so the arrows skip it. Undo dislike brings it back.`;
         $("gx-reacts").innerHTML = GX.reactionChips(PAGE.id, v.id, me);
+        $("gx-albums").innerHTML = GX.albumsOf(PAGE.id, v.id).map((a) => `<span class="gx-alb">${esc(a)}<button type="button" data-unalbum="${esc(a)}" aria-label="Remove from ${esc(a)}">×</button></span>`).join("") + `<button type="button" class="gx-addalb" id="gx-addalb">+ Album ${kbd("album")}</button>`;
         $("gx-clist").innerHTML = GX.comments(PAGE.id, v.id).map((x) => `<div class="gx-comment"><b>${esc(x.who)}</b><span class="gx-meta">${GX.ago(x.at)}</span>${x.who === me ? `<button type="button" data-at="${esc(x.at)}" aria-label="Delete comment">Delete</button>` : ""}<div>${esc(x.text)}</div></div>`).join("");
         $("gx-cinput").placeholder = `Add a comment as ${me} (${GX.keyLabel(GX.keys().comment)})`;
         $("gx-who").textContent = me;
@@ -2594,6 +2618,30 @@ ${rsNav()}
         renderMeta();
     });
 
+    // albums: shared named collections, for example "Homepage"
+    const albumPick = (show) => {
+        const box = $("gx-albumpick");
+        box.hidden = !show;
+        if (!show) return;
+        const v = VARIANTS[index], inIt = GX.albumsOf(PAGE.id, v.id);
+        box.innerHTML = GX.albumNames().filter((a) => !inIt.includes(a)).map((a) => `<button type="button" data-album="${esc(a)}">${esc(a)}</button>`).join("") + `<input id="gx-newalbum" placeholder="New album, e.g. Homepage" maxlength="30" aria-label="New album" /><button type="button" data-newalbum="1">Add</button>`;
+        $("gx-newalbum").focus();
+    };
+    $("gx-albums").addEventListener("click", (e) => {
+        const rm = e.target.closest("[data-unalbum]");
+        if (rm) { GX.album(PAGE.id, VARIANTS[index].id, rm.dataset.unalbum, false); return renderMeta(); }
+        if (e.target.closest("#gx-addalb")) albumPick($("gx-albumpick").hidden);
+    });
+    $("gx-albumpick").addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        if (GX.album(PAGE.id, VARIANTS[index].id, b.dataset.newalbum ? $("gx-newalbum").value : b.dataset.album, true)) { albumPick(false); renderMeta(); }
+    });
+    $("gx-albumpick").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.target.id === "gx-newalbum") { e.preventDefault(); $("gx-albumpick").querySelector("[data-newalbum]").click(); }
+        if (e.key === "Escape") albumPick(false);
+    });
+
     // who is looking: quick switch between people on a shared computer
     $("gx-who").addEventListener("click", () => {
         const box = $("gx-whopick");
@@ -2636,6 +2684,7 @@ ${rsNav()}
             prevPage: () => openPage(-1), nextPage: () => openPage(1),
             like: () => toggle(index, "keep"), dislike: () => toggle(index, "hide"),
             comment: () => $("gx-cinput").focus(),
+            album: () => albumPick(true),
             theme: () => setTheme(theme === "night" ? "day" : "night"),
             replay: renderPhone,
             favorites: () => GX.open("glowup-favorites.html"), home: () => GX.open("glowup-index.html"), settings: () => GX.open("glowup-settings.html"),

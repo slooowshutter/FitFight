@@ -6,7 +6,8 @@
 Then open http://localhost:8765/glowup-index.html (or the Wi-Fi address it prints, on the phone).
 glowup-state.json holds everyone's choices and comments; agents read it to know what people like:
     {"choices": {page: {option: {person: "keep" | "hide"}}},
-     "comments": {page: {option: [{"who", "text", "at"}]}}}
+     "comments": {page: {option: [{"who", "text", "at"}]}},
+     "albums": {album name: ["page/option", ...]}}
 """
 import http.server
 import json
@@ -27,10 +28,10 @@ def load():
             raw = json.load(f)
     except FileNotFoundError:
         raw = {}
-    if "choices" in raw or "comments" in raw:
-        return {"choices": raw.get("choices", {}), "comments": raw.get("comments", {})}
+    if "choices" in raw or "comments" in raw or "albums" in raw:
+        return {"choices": raw.get("choices", {}), "comments": raw.get("comments", {}), "albums": raw.get("albums", {})}
     # First version: {page: {option: "keep" | "hide"}}, all Marc's.
-    return {"choices": {pg: {o: {"Marc": v} for o, v in opts.items()} for pg, opts in raw.items()}, "comments": {}}
+    return {"choices": {pg: {o: {"Marc": v} for o, v in opts.items()} for pg, opts in raw.items()}, "comments": {}, "albums": {}}
 
 
 def apply(state, op):
@@ -46,6 +47,13 @@ def apply(state, op):
             del state["choices"][page][option]
         if not state["choices"][page]:
             del state["choices"][page]
+    elif op["op"] == "album":
+        key, items = f"{page}/{option}", state["albums"].get(op["album"], [])
+        items = items + [key] if op["value"] and key not in items else [k for k in items if op["value"] or k != key]
+        if items:
+            state["albums"][op["album"]] = items
+        else:
+            state["albums"].pop(op["album"], None)
     elif op["op"] == "comment":
         state["comments"].setdefault(page, {}).setdefault(option, []).append({"who": op["who"], "text": op["text"], "at": op["at"]})
     else:
@@ -67,6 +75,9 @@ def valid(op):
         return op.get("value") in ("keep", "hide", None)
     if op.get("op") == "comment":
         return isinstance(op.get("text"), str) and 0 < len(op["text"]) <= 2000 and isinstance(op.get("at"), str) and len(op["at"]) <= 40
+    if op.get("op") == "album":
+        a = op.get("album")
+        return isinstance(a, str) and 0 < len(a) <= 30 and a == a.strip() and a.isprintable() and isinstance(op.get("value"), bool)
     return op.get("op") == "uncomment" and isinstance(op.get("at"), str)
 
 

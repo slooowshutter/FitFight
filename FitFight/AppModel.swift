@@ -544,6 +544,11 @@ final class AppModel: ObservableObject {
         await work.value
     }
 
+    /// Lets a screen read server data after a launch or foreground upload without starting another one.
+    func waitForRefresh() async {
+        await refreshTask?.value
+    }
+
     private func performRefreshFights(
         session: SessionStore,
         steps: HealthKitStepsStore,

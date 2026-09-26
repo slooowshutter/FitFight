@@ -2115,10 +2115,21 @@ components:
                 {
                     "type": "object",
                     "required": [
+                        "draws",
+                        "losses",
                         "categories",
                         "excluded"
                     ],
                     "properties": {
+                        "draws": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "losses": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Counted Fights that were not wins or draws, including withdrawals and incomplete finishes. Backends deployed before this field omit draws and losses."
+                        },
                         "categories": {
                             "type": "object",
                             "required": [

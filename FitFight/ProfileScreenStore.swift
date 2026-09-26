@@ -65,10 +65,11 @@ final class ProfileScreenStore: ObservableObject {
             guard requestGeneration == generation, accountID == session.authSession?.user.id else { return }
             history.append(contentsOf: page.results)
             nextCursor = page.nextCursor
+            error = nil
         } catch is CancellationError {
         } catch {
-            guard requestGeneration == generation else { return }
-            clear()
+            // Keep the loaded rows and cursor so Load more can retry.
+            guard requestGeneration == generation, accountID == session.authSession?.user.id else { return }
             self.error = error.localizedDescription
         }
     }

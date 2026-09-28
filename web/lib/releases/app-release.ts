@@ -58,11 +58,8 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
     const parsed = appReleaseManifestSchema.safeParse(payload);
     let policy: AppReleasePolicy;
     if (parsed.success) {
-        // TestFlight availability can differ per tester, so its updates are advisory.
-        policy =
-            channel === "staging"
-                ? { ...parsed.data.staging, enforced: false }
-                : parsed.data.prod;
+        // Updates are optional on every channel. Released apps still decode the flag.
+        policy = { ...parsed.data[channel], enforced: false };
     } else {
         const selected =
             payload &&
@@ -83,10 +80,7 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
                 "Could not read the latest app release",
             );
         }
-        policy =
-            channel === "staging"
-                ? { ...salvaged.data, enforced: false }
-                : salvaged.data;
+        policy = { ...salvaged.data, enforced: false };
     }
     cachedPolicy = {
         project: project.data,
@@ -98,40 +92,4 @@ export async function appReleasePolicy(): Promise<AppReleasePolicy> {
 
 export function resetAppReleasePolicyCacheForTests(): void {
     cachedPolicy = null;
-}
-
-export async function requireLatestAppRelease(request: Request): Promise<void> {
-    // Staging policies are never enforced, so their requests skip the manifest.
-    if (
-        process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ===
-        STAGING_PROJECT
-    ) {
-        return;
-    }
-    let policy: AppReleasePolicy;
-    try {
-        policy = await appReleasePolicy();
-    } catch (error) {
-        if (error instanceof ApiError && error.status === 503) {
-            return;
-        }
-        throw error;
-    }
-    if (!policy.enforced) return;
-    const version = request.headers.get("x-fitfight-version");
-    const build = request.headers.get("x-fitfight-build");
-    if (
-        ![policy.latest, policy.review, policy.internal].some(
-            (release) =>
-                release &&
-                version === release.version &&
-                build === String(release.build),
-        )
-    ) {
-        throw new ApiError(
-            426,
-            "update_required",
-            "Update FitFight to continue",
-        );
-    }
 }

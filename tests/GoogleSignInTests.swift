@@ -60,12 +60,6 @@ enum CompanionPreview {
 enum SupabaseConfig {
     static var projectURL = URL(string: "https://zstzbfocunthczzubggz.supabase.co")!
 }
-@MainActor
-final class AppUpdateChecker {
-    static let shared = AppUpdateChecker()
-    var allowsUse = true
-    func permitsRequests() async -> Bool { allowsUse }
-}
 extension String {
     init(appLocalized value: String) { self = value }
 }
@@ -166,10 +160,6 @@ struct GoogleSignInTests {
         precondition(google.signOuts == 3, "Cancellation, missing token, and rejected exchange clear Google state")
 
         let calls = google.calls
-        AppUpdateChecker.shared.allowsUse = false
-        await store.signInWithGoogle(presenting: presenter)
-        precondition(!store.isBusy && google.calls == calls, "Update gate blocks the provider")
-        AppUpdateChecker.shared.allowsUse = true
         CompanionPreview.isEnabled = true
         await store.signInWithGoogle(presenting: presenter)
         precondition(google.calls == calls, "Fixtures cannot open Google")
@@ -177,6 +167,6 @@ struct GoogleSignInTests {
         SupabaseConfig.projectURL = URL(string: "https://unknown.supabase.co")!
         await store.signInWithGoogle(presenting: presenter)
         precondition(!store.isBusy && google.calls == calls && store.authError != nil)
-        print("Google sign-in passed: environment, callbacks, nonce, exchange, cancellation, failures, busy state, update gate")
+        print("Google sign-in passed: environment, callbacks, nonce, exchange, cancellation, failures, busy state")
     }
 }

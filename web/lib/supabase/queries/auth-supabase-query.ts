@@ -5,7 +5,6 @@ import {
     fitFightAdminProfileSchema,
     type FitFightAdminViewer,
 } from "@/lib/types/admin/fitfight-admin";
-import { requireLatestAppRelease } from "@/lib/releases/app-release";
 
 export type AuthedUser = {
     userId: string;
@@ -69,7 +68,6 @@ async function requireActiveProfile(
 
 export async function verifyUser(request: Request): Promise<AuthedUser> {
     const jwt = bearerToken(request);
-    await requireLatestAppRelease(request);
     const admin = createAdminClient();
 
     const claimsResult = await admin.auth.getClaims(jwt);

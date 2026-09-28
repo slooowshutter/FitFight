@@ -44,8 +44,6 @@ struct AppReleasePolicy: Codable, Equatable {
     func allows(version: String, build: String) -> Bool {
         [latest, review, internalLatest].compactMap { $0 }.contains { $0.matches(version: version, build: build) }
     }
-
-    var offeredRelease: AppRelease? { internalLatest ?? latest ?? review }
 }
 
 extension AppRelease {
@@ -69,16 +67,12 @@ extension AppRelease {
 
 @MainActor
 final class AppUpdateChecker: ObservableObject {
-    enum Status: Equatable { case checking, current, updateAvailable, updateRequired, unavailable }
+    enum Status: Equatable { case checking, current, updateAvailable, unavailable }
 
     @Published private(set) var status: Status = .checking
     @Published private(set) var policy: AppReleasePolicy?
-    @Published private(set) var isChecking = false
     @Published private(set) var pendingToastRelease: AppRelease?
 
-    var allowsUse: Bool { status != .updateRequired }
-    var requiresUpdate: Bool { status == .updateRequired }
-    var offeredRelease: AppRelease? { isTestFlight ? policy?.latest : policy?.offeredRelease }
     let isTestFlight: Bool
 
     private let version: String
@@ -88,10 +82,9 @@ final class AppUpdateChecker: ObservableObject {
     private let session: URLSession
     private let now: () -> Date
     private let cacheKey: String
-    private let requiredKey: String
     private let reminderDateKey: String
     private var lastNotifiedAt: Date?
-    private var inFlight: Task<Bool, Never>?
+    private var inFlight: Task<Void, Never>?
 
     init(version: String, build: String, releaseURL: URL, isTestFlight: Bool = false,
          defaults: UserDefaults = .standard,
@@ -105,32 +98,21 @@ final class AppUpdateChecker: ObservableObject {
         self.session = session
         self.now = now
         cacheKey = "fitfight.release-policy.\(releaseURL.absoluteString)"
-        requiredKey = "fitfight.release-required.\(releaseURL.absoluteString).\(version).\(build)"
         reminderDateKey = "fitfight.release-reminded.\(releaseURL.absoluteString).\(version).\(build).date"
         if let data = defaults.data(forKey: cacheKey),
            let cached = try? JSONDecoder().decode(AppReleasePolicy.self, from: data) {
             policy = cached
         }
-        if isTestFlight {
-            defaults.removeObject(forKey: requiredKey)
-            lastNotifiedAt = defaults.object(forKey: reminderDateKey) as? Date
-        }
-        if !isTestFlight && defaults.bool(forKey: requiredKey) {
-            status = .updateRequired
-        } else if let policy, policy.allows(version: version, build: build) {
+        lastNotifiedAt = defaults.object(forKey: reminderDateKey) as? Date
+        if let policy, policy.allows(version: version, build: build) {
             status = .current
         }
     }
 
-    @discardableResult
-    func check() async -> Bool {
+    func check() async {
         if let inFlight { return await inFlight.value }
-        isChecking = true
         let task = Task { @MainActor in
-            defer {
-                self.inFlight = nil
-                self.isChecking = false
-            }
+            defer { self.inFlight = nil }
             do {
                 var request = URLRequest(url: self.releaseURL)
                 request.cachePolicy = .reloadIgnoringLocalCacheData
@@ -141,80 +123,42 @@ final class AppUpdateChecker: ObservableObject {
                     throw URLError(.badServerResponse)
                 }
                 let policy = try JSONDecoder().decode(AppReleasePolicy.self, from: data)
-                if self.isTestFlight {
-                    self.policy = policy
-                    self.defaults.set(data, forKey: self.cacheKey)
-                    self.defaults.removeObject(forKey: self.requiredKey)
-                    if policy.allows(version: self.version, build: self.build) {
-                        self.status = .current
-                        self.pendingToastRelease = nil
-                    } else if let latest = policy.latest {
-                        // Internal/review membership does not prove what this tester can install.
-                        let isNewer = latest.isNewer(thanVersion: self.version, build: self.build)
-                        self.status = isNewer ? .updateAvailable : .current
-                        if isNewer {
-                            let notifiedAt = self.now()
-                            let remindedRecently = self.lastNotifiedAt.map {
-                                notifiedAt.timeIntervalSince($0) < 3 * 24 * 60 * 60
-                            } ?? false
-                            if !remindedRecently {
-                                self.lastNotifiedAt = notifiedAt
-                                self.defaults.set(notifiedAt, forKey: self.reminderDateKey)
-                                self.pendingToastRelease = latest
-                            }
-                        } else {
-                            self.pendingToastRelease = nil
+                self.policy = policy
+                self.defaults.set(data, forKey: self.cacheKey)
+                if policy.allows(version: self.version, build: self.build) {
+                    self.status = .current
+                    self.pendingToastRelease = nil
+                } else if let latest = policy.latest {
+                    // Internal/review membership does not prove what this user can install.
+                    let isNewer = latest.isNewer(thanVersion: self.version, build: self.build)
+                    self.status = isNewer ? .updateAvailable : .current
+                    if isNewer {
+                        let notifiedAt = self.now()
+                        let remindedRecently = self.lastNotifiedAt.map {
+                            notifiedAt.timeIntervalSince($0) < 3 * 24 * 60 * 60
+                        } ?? false
+                        if !remindedRecently {
+                            self.lastNotifiedAt = notifiedAt
+                            self.defaults.set(notifiedAt, forKey: self.reminderDateKey)
+                            self.pendingToastRelease = latest
                         }
                     } else {
-                        self.status = .unavailable
                         self.pendingToastRelease = nil
                     }
-                } else if policy.allows(version: self.version, build: self.build) {
-                    self.policy = policy
-                    self.defaults.set(data, forKey: self.cacheKey)
-                    self.defaults.removeObject(forKey: self.requiredKey)
-                    self.status = .current
-                } else if policy.latest != nil {
-                    self.policy = policy
-                    self.defaults.set(data, forKey: self.cacheKey)
-                    self.defaults.set(true, forKey: self.requiredKey)
-                    self.status = .updateRequired
-                } else if self.status == .updateRequired {
-                    self.defaults.set(true, forKey: self.requiredKey)
                 } else {
-                    self.policy = policy
-                    self.defaults.set(data, forKey: self.cacheKey)
                     self.status = .unavailable
+                    self.pendingToastRelease = nil
                 }
             } catch {
-                if self.isTestFlight || self.status != .updateRequired { self.status = .unavailable }
-                if self.isTestFlight { self.pendingToastRelease = nil }
+                self.status = .unavailable
+                self.pendingToastRelease = nil
             }
-            return self.allowsUse
         }
         inFlight = task
-        return await task.value
-    }
-
-    func permitsRequests() async -> Bool {
-        allowsUse
+        await task.value
     }
 
     func dismissToast() {
         pendingToastRelease = nil
-    }
-
-    func rejectRequest(updateRequired: Bool) {
-        if isTestFlight {
-            // An older backend may still send 426 during deployment; it must not lock the app.
-            status = .unavailable
-            pendingToastRelease = nil
-            defaults.removeObject(forKey: requiredKey)
-        } else if updateRequired {
-            status = .updateRequired
-            defaults.set(true, forKey: requiredKey)
-        } else if status != .updateRequired {
-            status = .unavailable
-        }
     }
 }

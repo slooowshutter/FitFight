@@ -15113,6 +15113,181 @@
                     }
                 }
             }
+        },
+        "Tap your companion on Fights to see its five levels: each pose, the steps it starts at, and how many more steps you need today for the next one.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touche ton compagnon dans Défis pour voir ses cinq niveaux : chaque pose, le nombre de pas pour l’atteindre et combien de pas il te faut encore aujourd’hui pour le suivant."
+                    }
+                }
+            }
+        },
+        "Rest": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Repos"
+                    }
+                }
+            }
+        },
+        "Heading out": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En route"
+                    }
+                }
+            }
+        },
+        "On the move": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En mouvement"
+                    }
+                }
+            }
+        },
+        "Pushing": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En plein effort"
+                    }
+                }
+            }
+        },
+        "Peak": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Au sommet"
+                    }
+                }
+            }
+        },
+        "Companion levels": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Niveaux du compagnon"
+                    }
+                }
+            }
+        },
+        "Levels": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Niveaux"
+                    }
+                }
+            }
+        },
+        "Your companion changes with today’s steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton compagnon change avec tes pas du jour."
+                    }
+                }
+            }
+        },
+        "Next level": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Niveau suivant"
+                    }
+                }
+            }
+        },
+        "companion.level-remaining": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld more step today"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld more steps today"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Encore %lld pas aujourd’hui"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Encore %lld pas aujourd’hui"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "companion.level-minimum": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld+ steps"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld pas et plus"
+                    }
+                }
+            }
+        },
+        "companion.level-under": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Under %lld steps"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moins de %lld pas"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

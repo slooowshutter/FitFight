@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 28,
+            notes: "Tap your companion on Fights to see its five levels: each pose, the steps it starts at, and how many more steps you need today for the next one."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 26,
             notes: "Fight charts now show the top four plus you. Tap a name under Line, Bars, Histogram or Pace to add or hide that person. Oval still shows everyone."
         ),

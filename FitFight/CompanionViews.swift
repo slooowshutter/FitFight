@@ -198,6 +198,26 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
 
     var id: Int { rawValue }
 
+    var name: String {
+        switch self {
+        case .rest: String(appLocalized: "Rest")
+        case .headingOut: String(appLocalized: "Heading out")
+        case .onTheMove: String(appLocalized: "On the move")
+        case .pushing: String(appLocalized: "Pushing")
+        case .peak: String(appLocalized: "Peak")
+        }
+    }
+
+    var minimumSteps: Int {
+        switch self {
+        case .rest: 0
+        case .headingOut: 3_000
+        case .onTheMove: 6_000
+        case .pushing: 10_000
+        case .peak: 15_000
+        }
+    }
+
     var fitnessImageStage: String {
         switch self {
         case .rest: "resting"
@@ -210,13 +230,7 @@ enum CompanionEffortStage: Int, CaseIterable, Identifiable {
 
     static func matching(todaySteps: Int?) -> CompanionEffortStage {
         guard let todaySteps else { return .rest }
-        switch todaySteps {
-        case ..<3_000: return .rest
-        case ..<6_000: return .headingOut
-        case ..<10_000: return .onTheMove
-        case ..<15_000: return .pushing
-        default: return .peak
-        }
+        return allCases.last { todaySteps >= $0.minimumSteps } ?? .rest
     }
 
     static func matchingDaily(_ status: HealthKitStepsStore.Status) -> CompanionEffortStage {
@@ -579,6 +593,7 @@ struct CompanionIntroduction: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.ffStaticRender) private var staticRender
     @State private var fitnessImages: [String: URL] = [:]
+    @State private var showingLevels = false
 
     var body: some View {
         Group {
@@ -665,6 +680,14 @@ struct CompanionIntroduction: View {
                 return
             }
         }
+        .sheet(isPresented: $showingLevels) {
+            CompanionLevelsSheet(status: steps.status) { levelArt($0) }
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium, .large])
+        }
     }
 
     private var height: CGFloat {
@@ -729,10 +752,27 @@ struct CompanionIntroduction: View {
 
     @ViewBuilder
     private var youCharacter: some View {
-        if companions.isCustom {
+        // Specials have no effort forms yet, and a custom animal needs all five fitness images.
+        if surface == .fights && (companions.isCustom ? !fitnessImages.isEmpty : !companions.selection.isLimited) {
+            Button { showingLevels = true } label: { levelArt(youEffort) }
+                .buttonStyle(FFPressStyle())
+                .accessibilityLabel(String(appLocalized: "Companion levels"))
+        } else if companions.isCustom {
             RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, effort: youEffort)
+        }
+    }
+
+    @ViewBuilder
+    private func levelArt(_ stage: CompanionEffortStage) -> some View {
+        if companions.isCustom {
+            RemotePhoto(url: fitnessImages[stage.fitnessImageStage], contentMode: .fit) { Color.clear }
+        } else {
+            Image(companions.selection.effortImage(stage: stage))
+                .resizable()
+                .scaledToFit()
+                .padding(4)
         }
     }
 
@@ -766,6 +806,92 @@ struct CompanionIntroduction: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Opened from the companion on Fights: every effort form, the steps it starts at, and what today's next one needs.
+struct CompanionLevelsSheet<Art: View>: View {
+    let status: HealthKitStepsStore.Status
+    @ViewBuilder var art: (CompanionEffortStage) -> Art
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        let current = CompanionEffortStage.matchingDaily(status)
+        VStack(alignment: .leading, spacing: 16) {
+            FFSheetHeader(title: String(appLocalized: "Levels")) { dismiss() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(String(appLocalized: "Your companion changes with today’s steps."))
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let next = CompanionEffortStage(rawValue: current.rawValue + 1) {
+                        FFCard {
+                            HStack(spacing: 14) {
+                                art(next)
+                                    .frame(width: 88, height: 100)
+                                    .accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(String(appLocalized: "Next level"))
+                                        .ffType(.eyebrow)
+                                        .foregroundStyle(theme.textSecondary)
+                                    Text(next.name)
+                                        .ffType(.heading)
+                                        .foregroundStyle(theme.text)
+                                    // Unknown steps leave the companion resting, but the gap can't be counted.
+                                    if case .steps(let count) = status {
+                                        Text(String(appLocalized: "companion.level-remaining", defaultValue: "\(next.minimumSteps - count) more steps today"))
+                                            .ffType(.label)
+                                            .foregroundStyle(theme.gold)
+                                    } else {
+                                        Text(String(appLocalized: "companion.level-minimum", defaultValue: "\(next.minimumSteps)+ steps"))
+                                            .ffType(.caption)
+                                            .foregroundStyle(theme.textSecondary)
+                                    }
+                                }
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                    FFGroupedRows {
+                        ForEach(CompanionEffortStage.allCases) { stage in
+                            if stage != .rest { FFDivider() }
+                            HStack(spacing: 14) {
+                                art(stage)
+                                    .frame(width: 56, height: 64)
+                                    .accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(stage.name)
+                                        .ffType(.rowTitle)
+                                        .foregroundStyle(theme.text)
+                                    Text(stage == .rest
+                                         ? String(appLocalized: "companion.level-under", defaultValue: "Under \(CompanionEffortStage.headingOut.minimumSteps) steps")
+                                         : String(appLocalized: "companion.level-minimum", defaultValue: "\(stage.minimumSteps)+ steps"))
+                                        .ffType(.caption)
+                                        .foregroundStyle(theme.textSecondary)
+                                }
+                                Spacer(minLength: 8)
+                                if stage == current {
+                                    Text(String(appLocalized: "Today"))
+                                        .ffType(.label)
+                                        .foregroundStyle(theme.mossText)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(stage == current ? .isSelected : [])
+                        }
+                    }
+                }
+                .padding(.bottom, 24)
+            }
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
     }
 }
 

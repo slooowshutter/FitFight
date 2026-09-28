@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.2",
             year: 2026,
             month: 9,
+            day: 28,
+            notes: "When a new FitFight version is out, a notice at the top offers the update, at most once every three days. Close it to keep using your current version. The app no longer locks until you update."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
             day: 26,
             notes: "Fight charts now show the top four plus you. Tap a name under Line, Bars, Histogram or Pace to add or hide that person. Oval still shows everyone."
         ),

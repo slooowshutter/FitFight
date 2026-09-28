@@ -11,8 +11,6 @@ enum FitFightAPIError: LocalizedError {
             return String(appLocalized: "FitFight API is not configured. Set FFAPIBaseURL.")
         case .http(let status, let code, let message):
             switch code {
-            case "update_required":
-                return String(appLocalized: "Update FitFight to continue")
             case "release_unavailable":
                 return String(appLocalized: "Couldn’t check for updates")
             case "handle_not_found":
@@ -1510,13 +1508,6 @@ struct FitFightAPI {
         }
         do {
             try Task.checkCancellation()
-            guard await AppUpdateChecker.shared.permitsRequests() else {
-                throw FitFightAPIError.http(
-                    status: 426,
-                    code: "update_required",
-                    message: nil
-                )
-            }
             guard let requestURL = endpoint(path) else {
                 throw FitFightAPIError.notConfigured
             }
@@ -1560,9 +1551,6 @@ struct FitFightAPI {
             let status = http?.statusCode ?? -1
             guard expected.contains(status) else {
                 let payload = try? Self.decoder.decode(APIErrorResponse.self, from: data)
-                if payload?.code == "update_required" || payload?.code == "release_unavailable" {
-                    await AppUpdateChecker.shared.rejectRequest(updateRequired: payload?.code == "update_required")
-                }
                 if payload?.code.hasPrefix("ai_") == true,
                    let aiError = try? Self.decoder.decode(FitFightAIError.self, from: data) {
                     throw aiError

@@ -1,10 +1,60 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **26 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **28 Sep 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Update toast, no forced update: prepared 28 Sep 2026
+
+Marc's P0 backlog item (27 Sep): never force an update. When a newer version is
+out, show a dismissible toast and keep the installed version usable.
+
+**Code:** App Store builds now get the same toast as TestFlight: "New FitFight
+version", "Ready in the App Store.", Update (opens the App Store page) and
+Close. It appears at most once every three days and closes after 10 seconds
+unless VoiceOver is running. The required-update screen, its saved lock, the
+native request blocking and the `update_required` handling are removed, and a
+lock saved by an older binary is ignored. The backend no longer returns
+`426 update_required` in production, and `/api/app-release` reports
+`enforced: false` on both channels whatever the publisher records. English and
+French copy and a 1.1.2 release note are included. Fastlane and the release
+publisher are unchanged.
+
+**Contract:** `/api/app-release` keeps every field; `enforced` is now always
+false. Released apps decode it but their lock logic ignores it (checked in the
+1.1.1 source at `e2783be`). No `/api/v1` request or response shape changes:
+older builds that production used to reject with 426 now reach normal
+authentication. The 426 responses are removed from `contracts/openapi.yaml`.
+No database migration.
+
+**Supported builds checked:** read-only `/api/app-release` at 09:09 UTC on
+28 Sep returned staging latest 1.1.1 (201), review/internal 1.1.2 (209),
+enforcement off; production latest **1.1.2 (210)**, no review/internal,
+enforcement **on**. So production 1.1.1 (202) installs are locked right now, by
+their own saved lock and by the backend 426. Deploying this backend removes the
+426, but a 202 lock only clears when that phone updates. Builds up to 210 keep
+their built-in lock, so 210 installs will be locked once when the next App Store
+version becomes `latest`. Builds with this change never lock.
+
+**Deploy order:** backend first (staging on `develop`, production on `main`),
+then the native build through `preview` and the App Store. Production keeps
+returning 426 until the `main` promotion.
+
+**Verification:** a Linux Swift 6.4 run of `tests/AppUpdateCheckerTests.swift`
+(Combine shim, FoundationNetworking) passed. The same harness passed the old
+tests on the old code, and a mutation that disabled App Store toasts failed the
+new tests. The Google sign-in harness passed with a local CryptoKit stand-in.
+Web typecheck and all 426 backend tests passed; with the old backend, the new
+authentication test failed on 426. Localization and native API boundary checks
+passed, and the contract YAML parses. Not run: the GitHub-hosted macOS simulator
+build (GitHub login was unavailable in this session) and a device check on
+TestFlight and App Store builds. No PR, push, merge, deployment or upload.
+
+AGENTS.md still says API behavior can be retired once a replacement is
+"installable and required". Updates can no longer be required, so any
+retirement now needs Marc's explicit compatibility cutoff.
 
 ## Preview sync fixes and faster You: prepared 26 Sep 2026
 
@@ -2791,7 +2841,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ## Before this branch ships
 
-The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The deployed native app still uses the blocking overlay. The [prepared cancellation fix](#cancellable-testflight-updates-prepared-15-sep-2026) makes TestFlight updates optional and stops staging API version blocks. No database migration is part of the update check itself. See [update policy and database rollout](shipping.md#mandatory-updates-and-database-rollout).
+The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The deployed native app still uses the blocking overlay. The [prepared cancellation fix](#cancellable-testflight-updates-prepared-15-sep-2026) makes TestFlight updates optional and stops staging API version blocks. No database migration is part of the update check itself. See [update policy and database rollout](shipping.md#optional-updates-and-database-rollout).
 
 The 7 Sep referral changes require the referral migration, `POST /api/v1/referrals`,
 and updated Universal Link association before the native build. You → Settings →

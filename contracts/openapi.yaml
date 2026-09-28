@@ -8,12 +8,10 @@ info:
         Database columns are not a client contract. Clients must tolerate additional response fields.
         Apple Health Steps use merged exact-window aggregates. The older signed
         Storage-object routes remain temporarily available to legacy clients.
-        TestFlight updates are advisory: staging does not reject version/build mismatches.
-        Production requires X-FitFight-Version and X-FitFight-Build when enforcement is on;
-        a mismatch returns 426 with code update_required before business logic runs unless
-        the build matches latest, review, or internal. The public release endpoint returns
-        503 with code release_unavailable for missing metadata; authenticated commands
-        continue to authentication when release metadata is unavailable.
+        App updates are optional on every channel: no version or build is rejected.
+        Clients still send X-FitFight-Version and X-FitFight-Build for diagnostics.
+        The public release endpoint returns 503 with code release_unavailable for
+        missing metadata.
 servers:
     - url: /api/v1
 paths:
@@ -82,9 +80,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -177,9 +172,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -237,9 +229,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -288,9 +277,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -349,9 +335,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -403,9 +386,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -490,9 +470,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -550,9 +527,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -622,9 +596,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -682,9 +653,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -751,9 +719,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -831,9 +796,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -910,9 +872,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -970,9 +929,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -1021,9 +977,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -1092,9 +1045,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -1244,7 +1194,6 @@ paths:
                                 { $ref: "#/components/schemas/FightSnapshot" }
                 "401": { description: Invalid session or deleted account }
                 "400": { description: Invalid time zone or request body }
-                "426": { description: App update required }
     /posts/{postID}/comments/{commentID}/like:
         put:
             operationId: setFightPostCommentLike
@@ -1291,7 +1240,6 @@ paths:
                 "401": { description: Invalid session or deleted account }
                 "403": { description: The viewer cannot access the post }
                 "404": { description: Post or comment unavailable }
-                "426": { description: App update required }
     /posts/{postID}/reactions:
         get:
             operationId: listFightPostReactionPeople
@@ -3054,7 +3002,7 @@ components:
                         - { type: "null" }
                 enforced:
                     type: boolean
-                    description: Always false on staging, where TestFlight updates are optional. Production follows the published mandatory-update policy.
+                    description: Always false. Updates are optional on every channel; released apps still decode this field.
         SpecialClaimResult:
             type: object
             required: [outcome, transaction_id, companion_id]

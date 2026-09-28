@@ -41,7 +41,6 @@ export const ERROR_CODES = {
     storage_error: "storage_error",
     db_error: "db_error",
     config: "config",
-    update_required: "update_required",
     release_unavailable: "release_unavailable",
     internal: "internal",
 } as const;

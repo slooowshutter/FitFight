@@ -25,14 +25,14 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
-            version: "1.1.2",
+            version: "1.1.3",
             year: 2026,
             month: 9,
             day: 28,
             notes: "When a new FitFight version is out, a notice at the top offers the update, at most once every three days. Close it to keep using your current version. The app no longer locks until you update."
         ),
         ReleaseNote(
-            version: "1.1.2",
+            version: "1.1.3",
             year: 2026,
             month: 9,
             day: 28,

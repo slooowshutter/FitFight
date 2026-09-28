@@ -24,7 +24,7 @@ The iOS workflows **must** stay GitHub-hosted. Never `self-hosted`. Apple requir
 
 Fastlane: `fastlane/Fastfile` lane `beta` uploads staging TestFlight builds. Lane `app_store_candidate` is CI- and `main`-only, archives Release with production configuration, and uploads the binary to App Store Connect without selecting it or submitting it for review. Both use automatic signing + App Store Connect API key (`-allowProvisioningUpdates`) and share one non-cancelling concurrency group so signing and build-number allocation cannot race. The production lane does not revoke team certificates; it fails safely if automatic signing cannot create one. Do **not** also set `export_xcargs` to the same `-authenticationKeyPath` flags — gym passes `xcargs` into export and duplicates the flag.
 
-Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). The next prepared marketing version is **1.1.2**, requested by Marc on 17 Sep 2026 for the App Store description update. See `status.md` for uploaded builds. Apple closed the 1.0.0 train, so do not upload 1.0.0.
+Build number is not committed; CI sets `CURRENT_PROJECT_VERSION` at archive time from TestFlight (`latest + 1`). The TestFlight marketing version is **1.1.3**, approved by Marc on 28 Sep 2026: Apple closed the 1.1.2 train when 1.1.2 (210) was approved, and later 1.1.2 uploads fail with altool 90062. See `status.md` for uploaded builds. Do not upload 1.1.2 or earlier.
 
 ## Selective Cursor Bugbot reviews
 
@@ -86,23 +86,23 @@ Current activation evidence is recorded in [status](status.md#selective-bugbot-r
 
 ## Versions vs builds (why friends wait)
 
-External TestFlight builds must be submitted for beta review and distributed to their tester groups. Apple fully reviews the first submitted build; later builds of the same marketing version may receive a shorter review, but approval is not guaranteed or immediate. Stay on **1.1.2** for follow-up builds. See [Apple's external testing rules](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers).
+External TestFlight builds must be submitted for beta review and distributed to their tester groups. Apple fully reviews the first submitted build; later builds of the same marketing version may receive a shorter review, but approval is not guaranteed or immediate. Stay on **1.1.3** for follow-up builds. See [Apple's external testing rules](https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers).
 
-We used to bump 0.4.1, 0.4.2, 0.5.0 on every feature, so friends waited every time. Stay on **1.1.2** until Marc asks or Apple closes that train.
+We used to bump 0.4.1, 0.4.2, 0.5.0 on every feature, so friends waited every time. Stay on **1.1.3** until Marc asks or Apple closes that train.
 
 | What                        | Who sets it                              | When it changes                                               |
 | --------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| Marketing version (`1.1.2`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked         |
+| Marketing version (`1.1.3`) | `MARKETING_VERSION` in `project.pbxproj` | App Store ship, Apple closed the train, or Marc asked         |
 | Build number (`105`)        | CI / Fastlane at archive time            | Every distribution upload                                     |
 | Versions list               | `FitFight/Changelog.swift`               | Every user-facing change; reuse the current marketing version |
 
-The next version label is `1.1.2 · build N · staging`. Testers tap Update after upload and availability; ordinary follow-up builds keep `1.1.2` and only increment the build number.
+The next version label is `1.1.3 · build N · staging`. Testers tap Update after upload and availability; ordinary follow-up builds keep `1.1.3` and only increment the build number.
 
 ### Everyone: Internal, External, Friends Beta
 
 The beta lane waits for build processing, then assigns **every** TestFlight group: Internal testers (automatic after processing; Apple rejects assigning them by hand), every External group, and **Friends Beta** (`https://testflight.apple.com/join/wcZKdwVZ`). Missing Internal testers, missing Friends Beta, or missing all External groups fails CI. Uploaded builds are registered separately from the latest _installable_ (external) release. The advertised public release advances only after a build is `IN_BETA_TESTING` on every external group. TestFlight update prompts are optional in the prepared 1.1.1 app, so Friends can keep using their installed build.
 
-Marc must be on **Internal Testing** in App Store Connect (Users and Access) to see new preview uploads. External testers and Friends wait for Apple beta review on the first 1.1.2 build, then later 1.1.2 builds of the same version.
+Marc must be on **Internal Testing** in App Store Connect (Users and Access) to see new preview uploads. External testers and Friends wait for Apple beta review on the first 1.1.3 build, then later 1.1.3 builds of the same version.
 
 Apple allows only one build per version in beta review at a time and up to six beta review submissions in 24 hours. Upload limits are separate: the 5 Sep runs failed with `Upload limit reached` after build **153** uploaded successfully. Creating more builds does not release one already waiting for external review.
 

@@ -407,17 +407,14 @@ function definitions(
                     },
                     {
                         id: "sign_in_methods", title: "Sign-in method", kind: "bar", unit: "count", x: "label",
+                        note: "Apple means an Apple sign-in is on file. Older Apple logins without one count as other.",
                         query: sql`
-                            select coalesce(method, 'Other') as x, count(*)::float8 as y from (
-                                select p.user_id, case
-                                    when bool_or(i.provider = 'apple') and bool_or(i.provider = 'google') then 'Apple + Google'
-                                    when bool_or(i.provider = 'apple') then 'Apple'
-                                    when bool_or(i.provider = 'google') then 'Google'
-                                end as method
-                                from public.profiles as p
-                                left join auth.identities as i on i.user_id = p.user_id
-                                where p.deleted_at is null group by p.user_id
-                            ) as methods group by 1 order by 2 desc
+                            select case when exists (
+                                    select 1 from private.apple_sign_in_tokens as apple where apple.user_id = p.user_id
+                                ) then 'Apple' else 'Google or other' end as x,
+                                count(*)::float8 as y
+                            from public.profiles as p
+                            where p.deleted_at is null group by 1 order by 2 desc
                         `,
                     },
                     {

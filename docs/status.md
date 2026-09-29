@@ -63,6 +63,9 @@ on Production" (or Staging); other errors show the server's message. The old
    transactions. Supabase refuses it the `auth` schema ("permission denied for
    schema auth" on 29 Sep), so the production admin check matches the same
    account ID or the Apple ID in `private.apple_sign_in_tokens` instead.
+   Marc's accounts differ (staging `87434630…`, production `854ed9b9…`, no
+   Apple sign-in on file in production), so production reads also accept the
+   preview server's `FITFIGHT_ADMIN_USER_ID`, set to his staging account.
 2. In Vercel, add `PRODUCTION_ANALYTICS_DATABASE_URL` for Preview, branch
    `preview` only: the Supavisor pooler URL whose user is
    `fitfight_analytics.pvqntpteehdvhqyctwum`, never the `postgres` user.

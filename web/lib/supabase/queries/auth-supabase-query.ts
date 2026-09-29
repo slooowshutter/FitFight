@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
 import { z } from "zod";
+import { canAdministerFights } from "@/lib/admin/can-administer-fights";
 import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -217,15 +218,17 @@ export async function verifyDashboardAdmin(request: Request): Promise<AdminDashb
 }
 
 /**
- * Production data read by another project's server also needs the admin to own an admin
- * profile in production: the same account ID (beta accounts copied to production kept
- * theirs) or the same Apple ID on file. Supabase keeps the auth schema out of reach of the
- * read-only analytics user, so this reads only public and private tables.
+ * Production data read by another project's server needs one more proof: this server's fixed
+ * admin account ID (`FITFIGHT_ADMIN_USER_ID`), or an admin profile in production with the same
+ * account ID (beta accounts copied to production kept theirs) or the same Apple ID on file.
+ * Supabase keeps the auth schema out of reach of the read-only analytics user, so the
+ * production lookup reads only public and private tables.
  */
 export async function verifyProductionDashboardAdmin(
     admin: AdminDashboardAdmin,
     production: Sql,
 ): Promise<void> {
+    if (canAdministerFights(admin.userId)) return;
     const appleSubjects = admin.identities
         .filter((identity) => identity.provider === "apple")
         .map((identity) => identity.subject);

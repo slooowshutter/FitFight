@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 23 September 2026</p>
+                <p className="legal-updated">Effective 29 September 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -107,9 +107,11 @@ export default function PrivacyPage() {
                             request time, IP address, device or browser
                             information, and error details needed to keep the
                             service secure and working. Private sync diagnostics
-                            also record how long Apple Health reads and network
-                            requests take, their success or failure, app
-                            version, and request sizes. These timing records
+                            also record when each sync ran, whether it started
+                            when you opened the app or in the background, how
+                            long Apple Health reads and network requests take,
+                            their success or failure, app version, and request
+                            sizes. These timing records
                             contain no Steps values or raw Health samples and
                             are not shared with other participants.
                         </li>
@@ -162,7 +164,7 @@ export default function PrivacyPage() {
                         members are not revealed through a public profile.
                     </p>
                     <p>
-                        Daily Steps sharing is off by default. In You → Edit
+                        Daily Steps sharing is off by default. In Profile → Edit
                         profile, you may separately choose friends, friends and
                         current opponents, or all signed-in users for a Public
                         profile, and a period of 7 or 30 days. This uses stored
@@ -202,14 +204,12 @@ export default function PrivacyPage() {
                         These internal measurements help assess whether profiles
                         lead to connections. Users do not receive named visitor
                         lists or visit counts. Events contain no Health values,
-                        photos or companion descriptions. Raw events are deleted
-                        after 30 days by a daily cleanup, including for inactive
-                        accounts, and when either account is deleted. Exact
-                        username lookup attempts expire after one hour and are
-                        used to limit abuse. Only aggregate measurement reports
-                        are available to the FitFight operator. Anonymous event
-                        totals are retained after the identifiable events
-                        expire.
+                        photos or companion descriptions. Events and exact
+                        username lookup attempts are kept while the accounts
+                        involved exist and are deleted when either account is
+                        deleted. Lookup attempts are also used to limit abuse.
+                        Only aggregate measurement reports are available to the
+                        FitFight operator.
                     </p>
                     <p>
                         Pair artwork generation is currently unavailable. No
@@ -262,6 +262,14 @@ export default function PrivacyPage() {
                         </li>
                         <li>deliver enabled notifications;</li>
                         <li>run the in-app bugs and feature-request board;</li>
+                        <li>
+                            produce internal, aggregate statistics about how
+                            FitFight is used, such as how many people open the
+                            app, Fight activity, and average daily Steps, to
+                            learn whether FitFight helps people move more and
+                            to improve it. Only the FitFight operator sees
+                            them;
+                        </li>
                         <li>answer support requests; and</li>
                         <li>detect errors, abuse, and security problems.</li>
                     </ul>
@@ -322,7 +330,7 @@ export default function PrivacyPage() {
                         Fight.
                     </p>
                     <p>
-                        You can manage notification categories under You →
+                        You can manage notification categories under Profile →
                         Settings → Notifications and remove push permission in
                         iOS Settings.
                     </p>
@@ -337,11 +345,8 @@ export default function PrivacyPage() {
                         expire, or longer when required by law.
                     </p>
                     <p>
-                        We keep at most the 100 most recent sync timing reports
-                        for your account. Reports older than seven days are
-                        removed the next time your app sends a diagnostic
-                        report. Deleting your account removes its timing
-                        history.
+                        We keep sync timing reports while your account exists.
+                        Deleting your account removes its timing history.
                     </p>
                 </section>
 
@@ -349,7 +354,7 @@ export default function PrivacyPage() {
                     <h2>Account deletion</h2>
                     <p>
                         You can permanently delete your account under{" "}
-                        <strong>You → Settings → Delete account</strong>. You do
+                        <strong>Profile → Settings → Delete account</strong>. You do
                         not need to contact support. Deletion removes your
                         profile, username, uploaded photos, videos, files, Fight
                         posts and comments, uploaded Apple Health Fight and

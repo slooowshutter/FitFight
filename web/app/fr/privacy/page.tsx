@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 23 septembre 2026</p>
+                <p className="legal-updated">En vigueur le 29 septembre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -114,8 +114,10 @@ export default function PrivacyPage() {
                             l’adresse IP, les informations sur l’appareil ou le
                             navigateur et les détails d’erreur nécessaires à la
                             sécurité et au fonctionnement du service. Des
-                            diagnostics privés enregistrent aussi la durée des
-                            lectures de Santé et des requêtes réseau, leur
+                            diagnostics privés enregistrent aussi l’heure de
+                            chaque synchronisation, si elle a démarré à
+                            l’ouverture de l’app ou en arrière-plan, la durée
+                            des lectures de Santé et des requêtes réseau, leur
                             réussite ou leur échec, la version de l’app et la
                             taille des requêtes. Ces mesures ne contiennent ni
                             nombre de pas ni échantillons Santé bruts et ne sont
@@ -173,7 +175,7 @@ export default function PrivacyPage() {
                     </p>
                     <p>
                         Le partage des pas quotidiens est désactivé par défaut.
-                        Dans Vous → Modifier le profil, vous pouvez choisir
+                        Dans Profil → Modifier le profil, vous pouvez choisir
                         séparément les amis, les amis et adversaires actuels, ou tous les
                         utilisateurs connectés avec un profil public, sur 7 ou
                         30 jours. Ce partage utilise les pas déjà enregistrés,
@@ -213,16 +215,12 @@ export default function PrivacyPage() {
                         permises par les profils. Les utilisateurs ne reçoivent
                         ni liste nominative de visiteurs ni compteur de visites.
                         Ces événements ne contiennent ni valeurs Santé, ni photos,
-                        ni descriptions de compagnons. Un nettoyage quotidien
-                        supprime les événements de plus de 30 jours, même pour
-                        les comptes inactifs. La suppression de l’un des comptes
-                        efface les événements associés. Les tentatives de recherche
-                        de pseudo expirent après une heure et limitent les abus.
-                        Seuls des rapports agrégés sont accessibles à l’opérateur.
-                    </p>
-                    <p>
-                        Des totaux anonymes sont conservés après la suppression
-                        des événements identifiants.
+                        ni descriptions de compagnons. Les événements et les
+                        tentatives de recherche de pseudo sont conservés tant que
+                        les comptes concernés existent et sont effacés à la
+                        suppression de l’un d’eux. Les tentatives de recherche
+                        servent aussi à limiter les abus. Seuls des rapports
+                        agrégés sont accessibles à l’opérateur.
                     </p>
                     <p>
                         La génération d’illustrations de rivalité est indisponible.
@@ -282,6 +280,14 @@ export default function PrivacyPage() {
                         <li>
                             faire fonctionner le tableau de bugs et de demandes
                             dans l’app ;
+                        </li>
+                        <li>
+                            produire des statistiques internes et agrégées sur
+                            l’utilisation de FitFight, comme le nombre de
+                            personnes qui ouvrent l’app, l’activité des défis et
+                            la moyenne de pas par jour, pour savoir si FitFight
+                            aide à bouger plus et pour l’améliorer. Seul
+                            l’opérateur de FitFight les voit ;
                         </li>
                         <li>répondre aux demandes d’assistance ;</li>
                         <li>
@@ -353,7 +359,7 @@ export default function PrivacyPage() {
                     </p>
                     <p>
                         Vous pouvez gérer les catégories de notifications sous
-                        Vous → Réglages → Notifications, et retirer
+                        Profil → Réglages → Notifications, et retirer
                         l’autorisation dans les Réglages iOS.
                     </p>
                     <p>
@@ -369,11 +375,9 @@ export default function PrivacyPage() {
                         plus longtemps lorsque la loi l’exige.
                     </p>
                     <p>
-                        Nous conservons au maximum les 100 rapports de durée de
-                        synchronisation les plus récents de votre compte. Les
-                        rapports de plus de sept jours sont supprimés lors du
-                        prochain envoi de diagnostics par votre app. La
-                        suppression du compte efface cet historique.
+                        Nous conservons les rapports de durée de synchronisation
+                        tant que votre compte existe. La suppression du compte
+                        efface cet historique.
                     </p>
                 </section>
 
@@ -381,7 +385,7 @@ export default function PrivacyPage() {
                     <h2>Suppression du compte</h2>
                     <p>
                         Vous pouvez supprimer définitivement votre compte sous{" "}
-                        <strong>Vous → Réglages → Supprimer le compte</strong>,
+                        <strong>Profil → Réglages → Supprimer le compte</strong>,
                         sans contacter l’assistance. La suppression efface votre
                         profil et votre nom d’utilisateur, les photos, vidéos et
                         fichiers envoyés, les publications et commentaires, les

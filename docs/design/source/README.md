@@ -45,9 +45,9 @@ When archived material conflicts with the current HTML or `tokens.json`, the cur
 
 ## Native rules
 
-- Four fixed tabs: Fights, New, You, Feedback.
-- The version label stays at the top of You only. Do not show it on Fights, New, Feed, or Feedback.
-- Versions remains permanently available under You → Settings.
+- Four fixed tabs: Fights, New, Profile, Feedback.
+- The version label stays at the top of Profile only. Do not show it on Fights, New, Feed, or Feedback.
+- Versions remains permanently available under Profile → Settings.
 - Every number uses tabular figures.
 - Rows use hairline dividers; selected fills use concentric corners and hide adjacent dividers without shifting layout.
 - One primary full-width pill button per screen.

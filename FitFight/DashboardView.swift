@@ -16,22 +16,24 @@ struct DashboardView: View {
     @State private var filter = Filter.all
     @State private var selectedDay: Int?
 
-    enum Tab: CaseIterable { case steps, fights, sports }
+    enum Tab: CaseIterable { case steps, fights, sports, admin }
     enum Filter: CaseIterable { case all, won, lost, drew }
 
     var body: some View {
         FFScreen {
-            FFSegmented(items: Tab.allCases, selection: $tab) { item in
+            FFSegmented(items: Tab.allCases.filter { $0 != .admin || session.isFitFightAdmin }, selection: $tab) { item in
                 switch item {
                 case .steps: String(appLocalized: "Steps")
                 case .fights: String(appLocalized: "Fights")
                 case .sports: String(appLocalized: "Sports")
+                case .admin: "Admin"
                 }
             }
             switch tab {
             case .steps: stepsTab
             case .fights: fightsTab
             case .sports: sportsTab
+            case .admin: AdminDashboardView()
             }
         }
         .navigationTitle(String(appLocalized: "Dashboard"))

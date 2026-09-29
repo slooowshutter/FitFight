@@ -1,6 +1,26 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "The You tab is now called Profile.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Vous s’appelle désormais Profil."
+                    }
+                }
+            }
+        },
+        "Connect later from Profile → Settings → Apple Health.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi plus tard dans Profil → Réglages → Santé d’Apple."
+                    }
+                }
+            }
+        },
         "When a new FitFight version is out, a notice at the top offers the update, at most once every three days. Close it to keep using your current version. The app no longer locks until you update.": {
             "localizations": {
                 "fr": {
@@ -14154,16 +14174,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Connecte Apple Santé pour compter tes pas dans les Fights."
-                    }
-                }
-            }
-        },
-        "Connect later from You → Apple Health.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Connecte-toi plus tard dans Toi → Apple Santé."
                     }
                 }
             }

@@ -878,6 +878,144 @@ paths:
             }
         }
     }
+    "/admin/dashboard": {
+        "get": {
+            "operationId": "readAdminDashboard",
+            "summary": "Marc-only aggregate analytics for one section and a trailing window of days.",
+            "description": "Every card and chart is computed live from Postgres. A token from the other FitFight Supabase project is accepted when X-FitFight-Auth-Project names that project and the same Apple or Google account owns an admin profile in this one.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "X-FitFight-Auth-Project",
+                    "in": "header",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": ["pvqntpteehdvhqyctwum", "zstzbfocunthczzubggz"]
+                    }
+                },
+                {
+                    "name": "section",
+                    "in": "query",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "enum": ["overview", "users", "engagement", "steps", "fights", "social", "app"]
+                    }
+                },
+                {
+                    "name": "days",
+                    "in": "query",
+                    "required": true,
+                    "schema": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3650
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Cards compare the window with the one before it. Chart series marked previous are shifted onto the current dates. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["section", "days", "environment", "generated_at", "cards", "charts"],
+                                "properties": {
+                                    "section": { "type": "string" },
+                                    "days": { "type": "integer" },
+                                    "environment": { "type": "string", "enum": ["production", "staging"] },
+                                    "generated_at": { "type": "string", "format": "date-time" },
+                                    "cards": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id", "title", "value", "previous", "unit", "higher_is_better", "note"],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "title": { "type": "string" },
+                                                "value": { "type": ["number", "null"] },
+                                                "previous": { "type": ["number", "null"] },
+                                                "unit": { "type": "string", "enum": ["count", "steps", "percent", "days", "hours", "minutes", "seconds"] },
+                                                "higher_is_better": { "type": ["boolean", "null"] },
+                                                "note": { "type": ["string", "null"] }
+                                            }
+                                        }
+                                    },
+                                    "charts": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id", "title", "kind", "unit", "x_kind", "note", "series", "cells"],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "title": { "type": "string" },
+                                                "kind": { "type": "string", "enum": ["line", "bar", "heatmap"] },
+                                                "unit": { "type": "string" },
+                                                "x_kind": { "type": "string", "enum": ["date", "label"] },
+                                                "note": { "type": ["string", "null"] },
+                                                "series": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": ["name", "previous", "points"],
+                                                        "properties": {
+                                                            "name": { "type": "string" },
+                                                            "previous": { "type": "boolean" },
+                                                            "points": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["x", "y"],
+                                                                    "properties": { "x": { "type": "string" }, "y": { "type": "number" } }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "cells": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": ["x", "y", "value"],
+                                                        "properties": {
+                                                            "x": { "type": "string" },
+                                                            "y": { "type": "string" },
+                                                            "value": { "type": "number" }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid section or days"
+                },
+                "401": {
+                    "description": "Missing or invalid session, or an unknown sign-in project"
+                },
+                "403": {
+                    "description": "Not the FitFight admin"
+                }
+            }
+        }
+    }
     "/me/capabilities": {
         "get": {
             "operationId": "readFightCapabilities",

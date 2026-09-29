@@ -12,7 +12,7 @@ export default function PrivacyPage() {
     return (
         <main className="legal-page" lang="fr">
             <header className="legal-header">
-                <Link className="brand" href="/" aria-label="Accueil FitFight">
+                <Link className="brand" href="/fr" aria-label="Accueil FitFight">
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </Link>
@@ -447,6 +447,9 @@ export default function PrivacyPage() {
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>
                 <Link href="/fr/support">Assistance</Link>
+                <a href="/privacy?lang=en" hrefLang="en" lang="en">
+                    English
+                </a>
             </footer>
         </main>
     );

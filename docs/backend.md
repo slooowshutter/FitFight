@@ -54,8 +54,11 @@ query only marks its own tile with `Query failed: ...`.
   read-only `fitfight_analytics` user (SELECT only, BYPASSRLS, 20 s statement
   timeout, read-only transactions), scoped in Vercel to Preview on branch
   `preview`. A production read requires the admin check on the server's own
-  project and an admin profile in production with the same account ID or the
-  same Apple ID in `private.apple_sign_in_tokens` (`verifyProductionDashboardAdmin`).
+  project plus one more proof (`verifyProductionDashboardAdmin`): the account is
+  this server's `FITFIGHT_ADMIN_USER_ID` (on Preview, Marc's staging account
+  `87434630-dd64-4465-b79b-fd99e35368be`; his production account is
+  `854ed9b9-5de9-4d85-b10e-e201deb999de`), or an admin profile in production has
+  the same account ID or the same Apple ID in `private.apple_sign_in_tokens`.
   Supabase does not let the analytics user into the `auth` schema, so production
   reads use only `public` and `private`. `createProductionAnalyticsClient` refuses a
   `postgres.` user and any user outside the production project, and answers 503

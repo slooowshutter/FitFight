@@ -173,6 +173,9 @@ export default function SupportPage() {
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>
                 <Link href="/privacy">Privacy Policy</Link>
+                <a href="/support?lang=fr" hrefLang="fr" lang="fr">
+                    Français
+                </a>
             </footer>
         </main>
     );

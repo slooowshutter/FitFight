@@ -28,9 +28,11 @@ on Production" (or Staging); other errors show the server's message. The old
 **Marc's setup:**
 
 1. In the production Supabase project (`pvqntpteehdvhqyctwum`), create the
-   Postgres role `fitfight_analytics`: login, SELECT only (the `public` and
-   `private` tables, plus `auth.identities` and `auth.users` for the admin
-   check), BYPASSRLS, `statement_timeout` 20 s, read-only transactions.
+   Postgres role `fitfight_analytics`: login, SELECT only on the `public` and
+   `private` tables, BYPASSRLS, `statement_timeout` 20 s, read-only
+   transactions. Supabase refuses it the `auth` schema ("permission denied for
+   schema auth" on 29 Sep), so the production admin check matches the same
+   account ID or the Apple ID in `private.apple_sign_in_tokens` instead.
 2. In Vercel, add `PRODUCTION_ANALYTICS_DATABASE_URL` for Preview, branch
    `preview` only: the Supavisor pooler URL whose user is
    `fitfight_analytics.pvqntpteehdvhqyctwum`, never the `postgres` user.

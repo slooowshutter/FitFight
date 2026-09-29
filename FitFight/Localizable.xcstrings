@@ -1,6 +1,26 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Fights shows today's steps as soon as you open the app instead of a dash, then updates them from Apple Health. Before the first read of the day, it shows Synchronizing your steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défis affiche tes pas du jour dès l’ouverture de l’app au lieu d’un tiret, puis les met à jour depuis Santé d’Apple. Avant la première lecture de la journée, tu vois Synchronisation de tes pas."
+                    }
+                }
+            }
+        },
+        "Synchronizing your steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Synchronisation de tes pas."
+                    }
+                }
+            }
+        },
         "The You tab is now called Profile.": {
             "localizations": {
                 "fr": {
@@ -3665,16 +3685,6 @@
                 }
             }
         },
-        "Reading today’s steps…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lecture des pas du jour…"
-                    }
-                }
-            }
-        },
         "Red Panda": {
             "localizations": {
                 "fr": {
@@ -6623,16 +6633,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les pas et les défis se mettent à jour dès l’ouverture de l’app, sans attendre l’envoi de tout ton historique Santé d’Apple, et Défis affiche Synchronisation… jusqu’à l’arrivée des pas du jour. L’onglet Vous s’ouvre tout de suite avec tes derniers chiffres, et le tableau de bord affiche tes pas tout de suite. Modifier le profil retrouve Visibilité du profil et Partager l’historique des pas, pour que les amis avec qui tu partages voient tes stats et ton combattant."
-                    }
-                }
-            }
-        },
-        "Syncing…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Synchronisation…"
                     }
                 }
             }

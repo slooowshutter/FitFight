@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { SiteLanguage } from "@/lib/types/marketing/site-language";
 
-export function TotalStepsCount({ totalSteps }: { totalSteps: number }) {
+export function TotalStepsCount({
+    totalSteps,
+    language,
+}: {
+    totalSteps: number;
+    language: SiteLanguage;
+}) {
     const [shown, setShown] = useState(0);
 
     useEffect(() => {
@@ -26,5 +33,5 @@ export function TotalStepsCount({ totalSteps }: { totalSteps: number }) {
         return () => window.cancelAnimationFrame(frame);
     }, [totalSteps]);
 
-    return <>{shown.toLocaleString("en-US")}</>;
+    return <>{shown.toLocaleString(language === "fr" ? "fr-FR" : "en-US")}</>;
 }

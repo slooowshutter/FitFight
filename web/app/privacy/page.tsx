@@ -414,6 +414,9 @@ export default function PrivacyPage() {
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>
                 <Link href="/support">Support</Link>
+                <a href="/privacy?lang=fr" hrefLang="fr" lang="fr">
+                    Français
+                </a>
             </footer>
         </main>
     );

@@ -15,7 +15,7 @@ export default function SupportPage() {
     return (
         <main className="legal-page" lang="fr">
             <header className="legal-header">
-                <Link className="brand" href="/" aria-label="Accueil FitFight">
+                <Link className="brand" href="/fr" aria-label="Accueil FitFight">
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </Link>
@@ -187,6 +187,9 @@ export default function SupportPage() {
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>
                 <Link href="/fr/privacy">Politique de confidentialité</Link>
+                <a href="/support?lang=en" hrefLang="en" lang="en">
+                    English
+                </a>
             </footer>
         </main>
     );

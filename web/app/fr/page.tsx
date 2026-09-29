@@ -1,127 +1,135 @@
+import type { Metadata } from "next";
 import { TestflightInvite } from "@/components/testflight-invite";
 import { TotalStepsCount } from "@/components/total-steps-count";
 import { appDownload } from "@/lib/releases/app-download";
 import { readCachedTotalSteps } from "@/lib/supabase/queries/total-steps-supabase-query";
 
-import "./total-steps.css";
+import "../total-steps.css";
 
 export const revalidate = 3600;
 
-export default async function HomePage() {
+export const metadata: Metadata = {
+    title: "FitFight : Défiez vos amis. Bougez pour gagner",
+    description:
+        "Le compteur de vos défis de pas. Connectez Santé d’Apple, lancez un défi privé en groupe et découvrez qui fait le plus de pas.",
+};
+
+export default async function FrenchHomePage() {
     const { isStaging, url } = appDownload();
     const { totalSteps } = await readCachedTotalSteps();
 
     return (
-        <main>
+        <main lang="fr">
             <header className="site-header">
-                <a className="brand" href="#top" aria-label="FitFight home">
+                <a className="brand" href="#top" aria-label="Accueil FitFight">
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </a>
                 {isStaging ? (
                     <TestflightInvite
-                        label="Get the app"
+                        label="Obtenir l’app"
                         kind="header"
-                        language="en"
+                        language="fr"
                     />
                 ) : (
                     <a className="header-action" href={url}>
-                        Download on the App Store
+                        Télécharger dans l’App Store
                     </a>
                 )}
             </header>
 
             <section className="hero" id="top">
                 <div className="hero-copy">
-                    <p className="eyebrow">YOUR STEP COMPETITION SCOREKEEPER</p>
+                    <p className="eyebrow">LE COMPTEUR DE VOS DÉFIS DE PAS</p>
                     <h1>
-                        Let friendly competition
+                        Bougez plus grâce aux défis
                         <br />
-                        <span>move you.</span>
+                        <span>entre amis.</span>
                     </h1>
                     <p className="lede">
-                        Connect Apple Health, start a private group challenge,
-                        and see who records the most steps.
+                        Connectez Santé d’Apple, lancez un défi privé en groupe
+                        et découvrez qui fait le plus de pas.
                     </p>
                     <div className="hero-actions">
                         {isStaging ? (
                             <TestflightInvite
-                                label="Get the app"
+                                label="Obtenir l’app"
                                 kind="hero"
-                                language="en"
+                                language="fr"
                             />
                         ) : (
                             <a className="primary-action" href={url}>
-                                Download on the App Store
+                                Télécharger dans l’App Store
                             </a>
                         )}
                         <a className="text-action" href="#how-it-works">
-                            See how it works <span aria-hidden="true">↓</span>
+                            Voir comment ça marche{" "}
+                            <span aria-hidden="true">↓</span>
                         </a>
                     </div>
                     <p className="platform-note">
                         {isStaging
-                            ? "iPhone · Tap the TestFlight link twice · Apple Health"
-                            : "iPhone · Apple Health"}
+                            ? "iPhone · Ouvrez le lien TestFlight deux fois · Santé d’Apple"
+                            : "iPhone · Santé d’Apple"}
                     </p>
                 </div>
 
                 <div
                     className="fight-stage"
-                    aria-label="Example FitFight leaderboard"
+                    aria-label="Exemple de classement FitFight"
                 >
                     <div className="orbit orbit-one" />
                     <div className="orbit orbit-two" />
                     <article className="fight-card">
                         <div className="card-topline">
                             <span className="status">
-                                <span className="live-dot" /> LIVE FIGHT
+                                <span className="live-dot" /> DÉFI EN COURS
                             </span>
-                            <span>2d left</span>
+                            <span>Encore 2 j</span>
                         </div>
                         <div className="fight-title-row">
                             <div>
-                                <p className="card-label">STEPS TOTAL</p>
-                                <h2>Weekly Step Challenge</h2>
+                                <p className="card-label">TOTAL DES PAS</p>
+                                <h2>Défi de la semaine</h2>
                             </div>
                             <div className="rank">
                                 <strong>#1</strong>
-                                <span>OF 2</span>
+                                <span>SUR 2</span>
                             </div>
                         </div>
 
                         <div className="competitors">
                             <div className="competitor winner">
                                 <div className="person">
-                                    <span className="avatar">Y</span>
+                                    <span className="avatar">V</span>
                                     <div>
-                                        <strong>You</strong>
-                                        <small>8,420 steps</small>
+                                        <strong>Vous</strong>
+                                        <small>8 420 pas</small>
                                     </div>
                                 </div>
                                 <div className="bar">
                                     <span />
                                 </div>
-                                <strong className="score">8.4k</strong>
+                                <strong className="score">8,4 k</strong>
                             </div>
                             <div className="competitor behind">
                                 <div className="person">
                                     <span className="avatar">L</span>
                                     <div>
                                         <strong>Leo</strong>
-                                        <small>7,180 steps</small>
+                                        <small>7 180 pas</small>
                                     </div>
                                 </div>
                                 <div className="bar">
                                     <span />
                                 </div>
-                                <strong className="score">7.1k</strong>
+                                <strong className="score">7,1 k</strong>
                             </div>
                         </div>
 
                         <div className="card-footer">
-                            <span>Keep moving</span>
-                            <strong>+1,240 ahead</strong>
+                            <span>Continuez à bouger</span>
+                            <strong>+1 240 d’avance</strong>
                         </div>
                     </article>
                     <div className="step-badge">
@@ -134,43 +142,46 @@ export default async function HomePage() {
 
             <section
                 className="total-steps"
-                aria-label={`${totalSteps.toLocaleString("en-US")} steps recorded since people joined FitFight`}
+                aria-label={`${totalSteps.toLocaleString("fr-FR")} pas enregistrés depuis que chacun a rejoint FitFight`}
             >
-                <p className="eyebrow">STEPS RECORDED</p>
+                <p className="eyebrow">PAS ENREGISTRÉS</p>
                 <p className="total-steps-value" aria-hidden="true">
-                    <TotalStepsCount totalSteps={totalSteps} language="en" />
+                    <TotalStepsCount totalSteps={totalSteps} language="fr" />
                 </p>
                 <p className="total-steps-caption">
-                    since people joined FitFight
+                    depuis que chacun a rejoint FitFight
                 </p>
             </section>
 
             <section className="how" id="how-it-works">
-                <p className="eyebrow">HOW IT WORKS</p>
+                <p className="eyebrow">COMMENT ÇA MARCHE</p>
                 <h2>
-                    Three <span>steps</span> to start. One <span>winner</span>{" "}
-                    to finish.
+                    Trois <span>étapes</span> pour se lancer. Un seul{" "}
+                    <span>gagnant</span> à l’arrivée.
                 </h2>
                 <div className="steps">
                     <article>
                         <span>01</span>
-                        <h3>Add your friends</h3>
-                        <p>Search by username and add to any fight.</p>
+                        <h3>Ajoutez vos amis</h3>
+                        <p>
+                            Recherchez-les par nom d’utilisateur et invitez-les
+                            à un défi.
+                        </p>
                     </article>
                     <article>
                         <span>02</span>
-                        <h3>Move to win</h3>
+                        <h3>Bougez pour gagner</h3>
                         <p>
-                            Apple Health securely keeps the score while you live
-                            your day.
+                            Santé d’Apple comptabilise vos pas en toute sécurité
+                            pendant que vous vivez votre journée.
                         </p>
                     </article>
                     <article>
                         <span>03</span>
-                        <h3>Claim the win</h3>
+                        <h3>Décrochez la victoire</h3>
                         <p>
-                            Watch the standings, close the gap, and finish on
-                            top.
+                            Suivez le classement, réduisez l’écart et terminez
+                            en tête.
                         </p>
                     </article>
                 </div>
@@ -181,16 +192,16 @@ export default async function HomePage() {
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </a>
-                <p>Challenge friends. Move to win.</p>
+                <p>Défiez vos amis. Bougez pour gagner.</p>
                 <span>
                     © 2026 FitFight ·{" "}
                     <a
                         className="language-link"
-                        href="/?lang=fr"
-                        hrefLang="fr"
-                        lang="fr"
+                        href="/?lang=en"
+                        hrefLang="en"
+                        lang="en"
                     >
-                        Français
+                        English
                     </a>
                 </span>
             </footer>

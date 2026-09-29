@@ -6,6 +6,36 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Website language follows the visitor: prepared 29 Sep 2026
+
+Backlog P0 "FitFight site i18n": the website picks English or French the way
+the app does, instead of showing English to everyone who arrives outside the app.
+
+**Code:** `web/middleware.ts` runs only on `/`, `/privacy`, `/support`,
+`/j/:code` and `/r/:code`. A saved choice (`NEXT_LOCALE` cookie) wins;
+otherwise the visitor's most preferred supported browser language decides,
+else English. French visitors get the `/fr` page at the same address (a rewrite,
+not a redirect), so invite links keep working as universal links. `/fr/...`
+addresses stay French for the app's French links. Every page has an English or
+Français footer link (`?lang=`) that saves the choice and returns to the clean
+address. New French home, join and referral pages use the approved App Store
+French copy and the app's French wording; the invite and TestFlight components
+take a language. The middleware keeps the default Edge runtime because it only
+reads the request, and Node.js middleware would send every page view through
+iad1. No API, database, app or release setting changed.
+
+**Verification (local):** Web typecheck and all 431 unit tests passed, including
+5 middleware tests. A production build kept `/` and `/fr` static with hourly
+revalidation. Against `next start` and a disposable Postgres, French,
+German-then-French, English, Spanish-only and missing headers, saved choices,
+the switch links, `/fr` addresses, invalid codes (404), and the untouched API
+and apple-app-site-association routes all behaved as expected. A Chrome
+click-through confirmed the choice sticks across navigation, and the CI privacy
+disclosure check passed. A staging build showed the French TestFlight steps.
+
+**Live deployment:** none. Nothing is merged or deployed. After a `develop`
+promotion, check staging.fitfight.app with a French and an English browser.
+
 ## Admin dashboard reads production from preview: prepared 29 Sep 2026
 
 Marc asked for the Admin tab to show production data without shipping to

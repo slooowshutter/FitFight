@@ -30,7 +30,18 @@ export const GET = apiRoute(async (request) => {
         throw new ApiError(400, ERROR_CODES.validation, "This server only adds production data");
     }
     const production = createProductionAnalyticsClient();
-    await verifyProductionDashboardAdmin(identities, production);
+    try {
+        await verifyProductionDashboardAdmin(identities, production);
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        // The caller is the verified admin; the driver's message names the failing login,
+        // host or permission and never contains the connection password.
+        throw new ApiError(
+            502,
+            ERROR_CODES.db_error,
+            `Production database: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    }
     return json(await readAdminDashboard(section, days, "production", production));
 });
 

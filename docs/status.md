@@ -33,8 +33,17 @@ and apple-app-site-association routes all behaved as expected. A Chrome
 click-through confirmed the choice sticks across navigation, and the CI privacy
 disclosure check passed. A staging build showed the French TestFlight steps.
 
-**Live deployment:** none. Nothing is merged or deployed. After a `develop`
-promotion, check staging.fitfight.app with a French and an English browser.
+**Cloud checks:** [Web API](https://github.com/slooowshutter/FitFight/actions/runs/36634872223)
+passed typecheck, tests and the privacy disclosure check, and
+[Disposable Database](https://github.com/slooowshutter/FitFight/actions/runs/36634872341)
+passed. On the PR's Vercel preview, every page returned French to a French
+browser and English to an English one at the same address, including repeated
+CDN cache hits, and the switch link, saved choice and `/fr/privacy` behaved as
+above.
+
+**Live deployment:** none. PR #335 into `develop` is open, not merged or
+deployed. After a `develop` promotion, check staging.fitfight.app with a French
+and an English browser.
 
 ## Admin dashboard reads production from preview: prepared 29 Sep 2026
 

@@ -27,7 +27,11 @@ struct AdminDashboardView: View {
         }
 
         var title: String { self == .production ? "Production" : "Staging" }
-        var baseURL: URL? { URL(string: self == .production ? "https://fitfight.app" : "https://staging.fitfight.app") }
+        /// staging.fitfight.app is pinned to a hand-picked deployment in Vercel. Vercel's
+        /// preview branch address always serves the newest `preview` backend, on staging data.
+        var baseURL: URL? {
+            URL(string: self == .production ? "https://fitfight.app" : "https://fit-fight-git-preview-blendai.vercel.app")
+        }
     }
 
     enum Page: String, CaseIterable {

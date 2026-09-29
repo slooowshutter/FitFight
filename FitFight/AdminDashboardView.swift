@@ -272,12 +272,12 @@ private struct AdminChart: View {
                 heatmap
             } else if chart.kind == "line" {
                 if chart.xKind == "date" {
-                    dateLine(marks)
+                    dateLine(marks, unit: dateUnit)
                 } else {
                     labelLine(marks)
                 }
             } else if chart.xKind == "date" {
-                columns(marks)
+                columns(marks, unit: dateUnit)
             } else {
                 rows(marks)
             }
@@ -337,11 +337,18 @@ private struct AdminChart: View {
         return marks
     }
 
-    private func dateLine(_ marks: [AdminMark]) -> some View {
+    /// Long periods arrive as weekly or monthly points; each bar then spans its whole bucket.
+    private var dateUnit: Calendar.Component {
+        let days = Set(chart.series.filter { !$0.previous }.flatMap { $0.points.compactMap { adminDay($0.x) } }).sorted()
+        let gap = zip(days, days.dropFirst()).map { $1.timeIntervalSince($0) }.min() ?? 86_400
+        return gap >= 27 * 86_400 ? .month : gap >= 6 * 86_400 ? .weekOfYear : .day
+    }
+
+    private func dateLine(_ marks: [AdminMark], unit: Calendar.Component) -> some View {
         Chart {
             ForEach(marks) { mark in
                 LineMark(
-                    x: .value("Day", mark.day ?? Date.distantPast, unit: .day),
+                    x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
                     y: .value("Value", mark.value),
                     series: .value("Series", mark.series)
                 )
@@ -372,11 +379,11 @@ private struct AdminChart: View {
     }
 
     /// Vertical bars per day, several series side by side.
-    private func columns(_ marks: [AdminMark]) -> some View {
+    private func columns(_ marks: [AdminMark], unit: Calendar.Component) -> some View {
         Chart {
             ForEach(marks) { mark in
                 BarMark(
-                    x: .value("Day", mark.day ?? Date.distantPast, unit: .day),
+                    x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
                     y: .value("Value", mark.value)
                 )
                 .foregroundStyle(mark.color)

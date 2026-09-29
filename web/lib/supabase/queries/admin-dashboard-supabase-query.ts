@@ -50,7 +50,7 @@ function dayCard(
 
 /**
  * One point per bucket for the chart window and the equally long window before it.
- * Previous-period points are shifted onto the current dates so both lines overlay.
+ * The Nth previous bucket takes the Nth current bucket's date so both series overlay.
  * `complete` rows carry a civil `day` and stop yesterday; other rows carry `at`.
  */
 function perBucket(
@@ -82,14 +82,20 @@ function perBucket(
             from (${rows}) as e, bounds
             where ${day} between bounds.previous_day and bounds.last_day
             group by 1
+        ),
+        numbered as (
+            select bucket, bucket < current_bucket as previous,
+                row_number() over (partition by bucket < current_bucket order by bucket) as position
+            from buckets
         )
-        select (case when b.bucket >= b.current_bucket then b.bucket
-                else b.bucket + ${w.chartDays}::int end)::text as x,
+        select (case when not n.previous then n.bucket
+                else coalesce(current.bucket, n.bucket + ${w.chartDays}::int) end)::text as x,
             coalesce(m.y, 0)::float8 as y,
-            b.bucket < b.current_bucket as previous
-        from buckets as b
-        left join measured as m on m.bucket = b.bucket
-        order by b.bucket
+            n.previous
+        from numbered as n
+        left join numbered as current on n.previous and not current.previous and current.position = n.position
+        left join measured as m on m.bucket = n.bucket
+        order by n.bucket
     `;
 }
 

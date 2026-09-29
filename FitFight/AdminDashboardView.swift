@@ -53,6 +53,14 @@ struct AdminDashboardView: View {
         }
     }
 
+    /// Only the payload for the selected environment, section and period, so an earlier
+    /// section's cards never sit under a newly selected chip while its data loads.
+    private var shown: FitFightAdminDashboard? {
+        guard let dashboard, dashboard.section == page.rawValue, dashboard.days == days,
+              dashboard.environment == server.rawValue else { return nil }
+        return dashboard
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
             controls
@@ -61,7 +69,7 @@ struct AdminDashboardView: View {
                 FFNotice(text: failure, tone: .ember, systemImage: "exclamationmark.triangle")
                 FFButton(title: "Retry", kind: .secondary) { reloads += 1 }
             }
-            if let dashboard {
+            if let dashboard = shown {
                 LazyVGrid(
                     columns: [
                         GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -88,6 +96,10 @@ struct AdminDashboardView: View {
                         }
                     }
                 }
+            } else if loading && failure == nil {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
             }
         }
         .task(id: "\(server)-\(page.rawValue)-\(days)-\(reloads)") {
@@ -142,7 +154,7 @@ struct AdminDashboardView: View {
 
     private var statusLine: some View {
         let range = days == 1 ? "last day vs the day before" : "last \(days) days vs the \(days) before"
-        let time = dashboard.map { " · " + $0.generatedAt.formatted(date: .omitted, time: .shortened) } ?? ""
+        let time = shown.map { " · " + $0.generatedAt.formatted(date: .omitted, time: .shortened) } ?? ""
         return HStack(spacing: 8) {
             Text(verbatim: "\(server.title) · \(range)\(time)")
                 .ffType(.caption)

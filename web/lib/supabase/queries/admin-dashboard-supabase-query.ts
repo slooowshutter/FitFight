@@ -1703,7 +1703,7 @@ function definitions(
                     {
                         id: "push_permissions", title: "Push permission on devices", kind: "bar", unit: "count", x: "label",
                         query: sql`
-                            select initcap(replace(permission_status, '_', ' ')) as x, count(*)::float8 as y
+                            select initcap(replace(coalesce(permission_status, 'unknown'), '_', ' ')) as x, count(*)::float8 as y
                             from private.device_installations where revoked_at is null group by 1 order by 2 desc
                         `,
                     },

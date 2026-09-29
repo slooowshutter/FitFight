@@ -35,6 +35,17 @@ mocked cross-project check allowed Marc's matching Apple identity and refused a
 stranger (403) and an unknown project (401). Swift cannot compile here; the
 simulator build and contract tests run in CI.
 
+**Live deployment (29 Sep):** PR #327 was squash-merged to `develop` (`ffa484e`)
+and merged into `preview` (`230ebe8`). CI passed on both: iOS simulator build and
+contract tests, database tests (including `admin-dashboard.integration.ts` on the
+Supabase stack), web tests and screenshots. TestFlight **1.1.3 (212)** uploaded
+and processed; it is the staging `internal` release. Vercel skips `develop`
+builds. The `preview` deployment `fit-fight-nynycl8vv-blendai.vercel.app` serves
+the new backend and privacy page, but `staging.fitfight.app` stays on an older
+deployment until Marc points the domain at it in Vercel, as on 23 Sep. Until
+then the Staging view shows "That isn't available anymore." Production has none
+of this until `preview` is merged to `main`.
+
 **Privacy:** the English and French privacy pages (effective 29 Sep) no longer
 promise deleting sync reports, profile-measurement events or username lookups,
 say sync reports record whether a sync started on opening the app, and list

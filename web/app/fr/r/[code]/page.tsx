@@ -6,13 +6,13 @@ import { appDownload } from "@/lib/releases/app-download";
 import { referralCodeSchema } from "@/lib/types/referrals/referral";
 
 export const metadata: Metadata = {
-    title: "Your friend invited you | FitFight",
+    title: "Un ami vous invite | FitFight",
     description:
-        "Join your friend on FitFight and challenge each other to walk more.",
+        "Rejoignez votre ami sur FitFight et lancez-vous des défis pour marcher plus.",
     robots: { index: false, follow: false },
 };
 
-export default async function ReferralPage({
+export default async function FrenchReferralPage({
     params,
 }: {
     params: Promise<{ code: string }>;
@@ -21,26 +21,31 @@ export default async function ReferralPage({
     if (!parsed.success) notFound();
 
     return (
-        <main className="legal-page">
+        <main className="legal-page" lang="fr">
             <header className="legal-header">
-                <Link className="brand" href="/" aria-label="FitFight home">
+                <Link
+                    className="brand"
+                    href="/fr"
+                    aria-label="Accueil FitFight"
+                >
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </Link>
             </header>
             <article className="legal-content">
-                <p className="eyebrow">INVITED BY A FRIEND</p>
-                <h1>Walk more. Together.</h1>
+                <p className="eyebrow">INVITATION D’UN AMI</p>
+                <h1>Marchez plus. Ensemble.</h1>
                 <p className="legal-intro">
-                    Your friend invited you to FitFight. Challenge each other to
-                    walk more, compare Steps, and make every day count.
+                    Un ami vous invite sur FitFight. Lancez-vous des défis pour
+                    marcher plus, comparez vos pas et faites compter chaque
+                    journée.
                 </p>
-                <InviteDownload {...appDownload()} language="en" />
+                <InviteDownload {...appDownload()} language="fr" />
             </article>
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>
-                <a href={`/r/${parsed.data}?lang=fr`} hrefLang="fr" lang="fr">
-                    Français
+                <a href={`/r/${parsed.data}?lang=en`} hrefLang="en" lang="en">
+                    English
                 </a>
             </footer>
         </main>

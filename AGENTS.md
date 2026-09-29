@@ -14,13 +14,14 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.
 - Never use em dashes (U+2014) or en dashes (U+2013). Use a comma, period, colon, or ASCII hyphen `-`. This applies to user-facing copy, docs, comments, and agent writing.
-- Version label shows at the **top of You** only (not the nav bar), e.g. `1.1.1 · build N · staging · 15 Sep`. Do not show it on Fights, New, Feed, or Feedback.
-- Permanent **Versions** button: under You → Settings. Keep the version label on You. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
+- Version label shows at the **top of Profile** only (not the nav bar), e.g. `1.1.1 · build N · staging · 15 Sep`. Do not show it on Fights, New, Feed, or Feedback.
+- Permanent **Versions** button: under Profile → Settings. Keep the version label on Profile. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
 - Marketing version is **1.1.2**, as requested by Marc on 17 Sep 2026 for the App Store description update. Apple closed the 1.0.0 train (altool 90062 / 90186). Do not upload 1.0.0. `FITFIGHT_RELEASE_VERSION` and Fastlane must equal 1.1.2. CI still increments the **build number**. Changelog rows reuse `1.1.2` until Marc asks for the next version.
 - Every App Store version must **automatically release after Apple approves it** (`AFTER_APPROVAL`), as requested by Marc on 17 Sep 2026. Save that setting when preparing the version and verify it when submitting for review. Existing authorization requirements for PRs, merges, and review submission still apply.
 - Design tokens live in `docs/design/source/tokens.json` and are copied byte-for-byte into `FitFight/DesignSystem/tokens.json` for the app bundle. Don’t hardcode colours. The current system is **Night/Day with fixed semantic families**: Moss is you/winning, Ember is urgency/losing, and Gold is progress only. There is no accent picker.
 - Talk to Marc only for things only he can do: Apple login, GitHub secrets, TestFlight testers, legal, the hosted Supabase dashboard. Agents cannot `workflow_dispatch`. Staging TestFlight uploads only on push/merge to `preview` (plus optional manual `workflow_dispatch` on that branch). Feature-branch, `develop`, and cron do not upload. `main` never uploads to TestFlight. After a `preview` merge, tell Marc a staging build is coming; he opens TestFlight → Update. Do not ask him to Run workflow.
 - Never nuke the hosted database. No `supabase db reset` / `db push` against production or `develop`, no `DROP TABLE` / `TRUNCATE` / `DROP SCHEMA` / `DROP DATABASE` unless Marc asked in that chat and the migration starts with `-- allow-destructive`. Never put `sb_secret_...`, `service_role`, or the database password in git, chat, or iOS. Never merge to `main` unless Marc asked to ship to production. Never merge to `develop` or `preview` unless Marc asked. Production migrations apply only after `preview` is merged to `main`.
+- **Never delete data.** Marc's rule (29 Sep 2026): FitFight keeps every row it collects. Do not add retention windows, TTLs, cleanup or pruning jobs, or rollups that replace raw rows. The only deletion is a user deleting their own account, which keeps its current behavior; do not change it without Marc. Two older automatic cleanups still run and are next to remove, with their database tests: AI HTTP logs (7 days) and finished unpaid AI requests (7 days). See [retention](docs/system-design.md#retention-classes).
 - Do not create or call app-facing Postgres RPCs (`.rpc(...)`). Server-owned business logic belongs in the TypeScript backend. Small internal Postgres functions used only by RLS policies or triggers, such as signup plumbing, are allowed.
 - Every FitFight-owned table in `public` or `private` has a unique, non-null `id` and non-null `created_at` / `updated_at` timestamps. New tables use `id` as their primary key, default timestamps on insert, and maintain `updated_at` on updates. Keep relationship columns such as `user_id` and domain timestamps. Existing compound keys and compatibility aliases remain until a separate safe migration; preserve supported API contracts. See [row conventions](docs/backend.md#standard-row-columns).
 
@@ -45,9 +46,9 @@ Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-usern
 - Staging TestFlight only on push/merge to `preview` (optional manual `workflow_dispatch` on that branch). No daily cron. Feature branches and `develop` do not upload. `main` never uploads to TestFlight.
 - Simulator compile on every PR.
 - Approved design source remains in `docs/design/source/`. The app uses Night/Day and one fixed semantic palette.
-- Four tabs: **Fights, New, You, Feedback**. Requests, persistent friends, money, unsupported Metrics, and dead settings are gone.
+- Four tabs: **Fights, New, Profile, Feedback**. Requests, persistent friends, money, unsupported Metrics, and dead settings are gone.
 - A Fight is always Steps × highest total. Add exact usernames, choose 3 days / 1 week / 2 weeks / 1 month, and optionally name the fight and type the action the loser will do.
-- Public privacy and support pages are implemented at `fitfight.app/privacy` and `fitfight.app/support` and linked under You → Settings. Deploy them before App Store submission.
+- Public privacy and support pages are implemented at `fitfight.app/privacy` and `fitfight.app/support` and linked under Profile → Settings. Deploy them before App Store submission.
 
 **What works vs fake vs next:** [`docs/status.md`](docs/status.md). Read that before building.
 
@@ -65,7 +66,7 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 
 - **Never** answer with AI-generated images. A generated picture is not the product and cannot be tapped.
 - Build **one self-contained HTML page** under `docs/design/source/kit/`, named for the screen (`fights-home-proposals.html`). Plain HTML, CSS and vanilla JS in that one file. No build step, no framework, no npm.
-- Use the real kit: `tokens.json` colours, Nunito, 22pt cards, hairline borders, no shadows, and a 393×852 phone frame with the version line on You only and the Fights / New / Feed / Feedback / You tab bar.
+- Use the real kit: `tokens.json` colours, Nunito, 22pt cards, hairline borders, no shadows, and a 393×852 phone frame with the version line on Profile only and the Fights / New / Feed / Feedback / Profile tab bar.
 - Put every option in **one page** behind a picker, so he taps between them without leaving. Each option needs a short line saying when it is the right choice.
 - Feed every option the **same** fake fights, so he compares layouts and not data.
 - When Marc explicitly asks for a PR, commit, push, open it, then **give him a clickable link** in the reply:

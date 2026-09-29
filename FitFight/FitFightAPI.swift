@@ -1262,6 +1262,16 @@ struct FitFightAPI {
                           body: Self.encoder.encode(input))
     }
 
+    /// `authProject` is the Supabase project ref of this app's own sign-in, so a staging
+    /// login can read production analytics without a second sign-in.
+    func adminDashboard(section: String, days: Int, authProject: String, accessToken: String) async throws -> FitFightAdminDashboard {
+        try await get(
+            path: "admin/dashboard?section=\(section)&days=\(days)",
+            accessToken: accessToken,
+            headers: ["X-FitFight-Auth-Project": authProject]
+        )
+    }
+
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
         let list: FitFightJoinableList = try await get(
             path: "fights/suggested",
@@ -1476,7 +1486,8 @@ struct FitFightAPI {
         accessToken: String,
         expected: Set<Int> = [200],
         trace: HealthKitSyncTrace? = nil,
-        traceStage: HealthKitSyncTrace.StageName? = nil
+        traceStage: HealthKitSyncTrace.StageName? = nil,
+        headers: [String: String] = [:]
     ) async throws -> Response {
         try await request(
             path: path,
@@ -1485,7 +1496,8 @@ struct FitFightAPI {
             body: nil,
             expected: expected,
             trace: trace,
-            traceStage: traceStage
+            traceStage: traceStage,
+            headers: headers
         )
     }
 
@@ -1497,7 +1509,8 @@ struct FitFightAPI {
         idempotencyKey: String? = nil,
         expected: Set<Int> = [200],
         trace: HealthKitSyncTrace? = nil,
-        traceStage: HealthKitSyncTrace.StageName? = nil
+        traceStage: HealthKitSyncTrace.StageName? = nil,
+        headers: [String: String] = [:]
     ) async throws -> Response {
         let span = traceStage.flatMap { trace?.begin($0) }
         var succeeded = false
@@ -1531,6 +1544,9 @@ struct FitFightAPI {
             }
             if let idempotencyKey {
                 request.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
+            }
+            for (field, value) in headers {
+                request.setValue(value, forHTTPHeaderField: field)
             }
             request.httpBody = body
 

@@ -75,7 +75,7 @@ is outside this scope.
 
 ## Native generation and durable images
 
-You -> Make it yours -> Create character opens the paid portrait plus fitness
+Profile -> Make it yours -> Create character opens the paid portrait plus fitness
 journey and the account's completed character library. One verified EUR 4.99
 Apple consumable funds one character, not unlimited starts. The backend saves a
 portrait action key and, after that image is validated, a fitness action key.

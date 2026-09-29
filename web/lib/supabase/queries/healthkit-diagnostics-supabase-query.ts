@@ -13,7 +13,7 @@ export async function saveHealthKitDiagnosticSnapshot(
     database: Sql = createDatabaseClient(),
 ): Promise<HealthKitDiagnosticSnapshotResponse> {
     return database.begin("read write", async (sql) => {
-        // The snapshot row serializes this user's reports before bounded history is updated.
+        // The snapshot row serializes this user's reports before their history is appended.
         const [row] = await sql`
             insert into private.healthkit_sync_diagnostics (
                 user_id, connection_route, background_refresh_status,
@@ -70,19 +70,6 @@ export async function saveHealthKitDiagnosticSnapshot(
             `;
         }
 
-        await sql`
-            delete from private.healthkit_sync_attempts
-            where user_id = ${userId}
-                and (
-                    received_at < clock_timestamp() - interval '7 days'
-                    or attempt_id in (
-                        select attempt_id from private.healthkit_sync_attempts
-                        where user_id = ${userId}
-                        order by received_at desc, attempt_id desc
-                        offset 100
-                    )
-                )
-        `;
         return healthKitDiagnosticSnapshotResponseSchema.parse(row);
     });
 }

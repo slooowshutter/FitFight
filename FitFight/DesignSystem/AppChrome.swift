@@ -287,7 +287,7 @@ struct FFTabBar: View {
             item(.newFight, "plus.circle", String(appLocalized: "New"))
             item(.feed, "text.below.photo", String(appLocalized: "Feed"))
             item(.feedback, "bubble.left.and.bubble.right", String(appLocalized: "Feedback"))
-            item(.you, "person", String(appLocalized: "You"))
+            item(.you, "person", String(appLocalized: "Profile"))
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)

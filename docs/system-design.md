@@ -914,6 +914,8 @@ Therefore:
 
 Canonical product history does **not** expire on a timer. A `purge_at` column exists only on temporary transport/cache data that is not the User's product history.
 
+**Never delete data (Marc's rule, 29 Sep 2026).** FitFight keeps every row it collects, including diagnostic and analytics rows. Do not add retention windows, TTLs, cleanup or pruning jobs, or rollups that replace raw rows. The only deletion is a user deleting their own account, which keeps its current behavior unless Marc changes it. For FitFight-owned data this overrides the 30-day, 7-day, and 12-month defaults below; a provider's terms that legally require deletion still apply if that integration is ever built. The Health sync report, profile-measurement and username-lookup cleanups were removed with the 29 Sep privacy update. Two older cleanups still run and are next to remove: AI HTTP logs (7 days) and finished unpaid AI requests (7 days).
+
 | Class                  | Default                             | Notes                                                                                          |
 | ---------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------- |
 | OAuth/provider token   | Until disconnect/revoke             | Delete immediately on disconnect                                                               |
@@ -959,7 +961,7 @@ Track:
 
 Use structured correlation IDs from webhook or aggregate sync through score revision. Sentry or another error system may receive stack traces and pseudonymous IDs only; scrub health values and credentials before transmission.
 
-The Steps implementation records permission, HealthKit-query, context, upload, and final refresh durations with a monotonic phone clock. One completed report carries the stage timings to the private diagnostics endpoint after product requests finish; context/upload/refresh responses provide correlated server authentication/database/maintenance timings. Retain at most 100 private attempts per User and prune their rows older than seven days on their next report. No health values or free-form errors enter these timing records. Delivery is best effort; see `docs/backend.md` for timing boundaries and rollout order.
+The Steps implementation records permission, HealthKit-query, context, upload, and final refresh durations with a monotonic phone clock. One completed report carries the stage timings to the private diagnostics endpoint after product requests finish; context/upload/refresh responses provide correlated server authentication/database/maintenance timings. Keep every attempt for the life of the account; only account deletion removes them. No health values or free-form errors enter these timing records. Delivery is best effort; see `docs/backend.md` for timing boundaries and rollout order.
 
 ### Initial service targets
 

@@ -43,18 +43,21 @@ Declare these collected data types:
 
 | App Privacy type      | What FitFight collects                                                                                             | Linked to the user | Purpose           |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ | -----------------: | ----------------- |
-| Health                | Apple Health Fight Steps, merged daily activity, individual samples, workout summaries, and deletion IDs        |                Yes | App Functionality |
+| Health                | Apple Health Fight Steps, merged daily activity, individual samples, workout summaries, and deletion IDs        |                Yes | App Functionality, Analytics |
 | Name                  | Name supplied by Sign in with Apple, when available                                                                |                Yes | App Functionality |
 | Email Address         | Apple email, Apple private-relay email, or Google email                                                            |                Yes | App Functionality |
-| User ID               | Apple subject, Supabase account ID, FitFight username, referral relationships, and crash-report account identifier |                Yes | App Functionality |
+| User ID               | Apple subject, Supabase account ID, FitFight username, referral relationships, and crash-report account identifier |                Yes | App Functionality, Analytics |
 | Device ID             | Encrypted APNs device token and its fingerprint for notification delivery                                          |                Yes | App Functionality |
 | Photos or Videos      | Profile photo, Fight post photos/videos, and feedback attachments                                                  |                Yes | App Functionality |
-| Gameplay Content      | Fights, invitations, membership state, standings, scores, and results                                              |                Yes | App Functionality |
+| Gameplay Content      | Fights, invitations, membership state, standings, scores, and results                                              |                Yes | App Functionality, Analytics |
 | Other User Content    | Fight titles/actions, posts, comments, reactions, companion descriptions, and uploaded feedback files              |                Yes | App Functionality |
 | Customer Support      | Support emails, in-app bug/feature reports, comments, and report device metadata                                   |                Yes | App Functionality |
-| Other Data Types      | Time zone and limited request metadata such as IP address                                                          |                Yes | App Functionality |
-| Other Diagnostic Data | Limited server errors, Health sync timing/failure reports, app version and request sizes                           |                Yes | App Functionality |
+| Other Data Types      | Time zone and limited request metadata such as IP address                                                          |                Yes | App Functionality, Analytics |
+| Other Diagnostic Data | Limited server errors, Health sync timing/failure reports, app version and request sizes                           |                Yes | App Functionality, Analytics |
+| Product Interaction   | App opens, from sync reports that say whether a sync started on opening the app or in the background               |                Yes | Analytics         |
 | Crash Data            | Stack traces and related crash diagnostics sent to PostHog                                                         |                Yes | App Functionality |
+
+Analytics (29 Sep 2026): Marc's admin dashboard shows internal aggregate statistics, such as app opens, signups, Fight activity and average daily Steps. Only Marc sees it. Sync reports are no longer deleted after seven days. Marc must add these Analytics purposes and Product Interaction in App Store Connect before the next App Store submission; the manifest already lists them.
 
 The app does not read the address book, GPS routes, or heart rate, and has no advertising identifiers or product-interaction capture in its crash integration. Review uploaded files/video audio, stored referral relationships, and diagnostic timing against Apple's exact categories rather than copying older “no photos/videos” answers.
 
@@ -101,7 +104,7 @@ The editable 1.1.1 questionnaire now declares Health or Wellness Topics, Messagi
 | Non-exempt encryption                                      | No; `ITSAppUsesNonExemptEncryption` is `NO` and the app uses ordinary platform HTTPS/TLS. Recheck the final archive.                  |
 | Third-party content rights                                 | No streamed third-party content. Nunito is bundled under the SIL Open Font License; SF Symbols are used under Apple's platform terms. |
 | Sign-in                                                    | Sign in with Apple only                                                                                                               |
-| Account deletion                                           | Available in the app under You → Settings → Delete account                                                                            |
+| Account deletion                                           | Available in the app under Profile → Settings → Delete account                                                                            |
 | Privacy URL                                                | `https://fitfight.app/privacy`                                                                                                        |
 | Support URL                                                | `https://fitfight.app/support`                                                                                                        |
 

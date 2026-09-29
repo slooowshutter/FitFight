@@ -122,3 +122,92 @@ struct MemberRow: Decodable {
         return nil
     }
 }
+
+/// `GET /api/v1/admin/dashboard`. Declared here rather than in FitFightAPI.swift because
+/// tests/APIContractTests.swift compiles this file (see .github/workflows/ios-build.yml).
+/// Cards and charts are server-defined: `kind`, `unit` and `x_kind` stay strings so new
+/// values never fail decoding.
+struct FitFightAdminDashboard: Decodable {
+    struct Card: Decodable, Identifiable {
+        let id: String
+        let title: String
+        let value: Double?
+        let previous: Double?
+        /// count, steps, percent (0-100), days, hours, minutes or seconds.
+        let unit: String
+        /// nil when neither direction is good or bad.
+        let higherIsBetter: Bool?
+        let note: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case title
+            case value
+            case previous
+            case unit
+            case higherIsBetter = "higher_is_better"
+            case note
+        }
+    }
+
+    struct Chart: Decodable, Identifiable {
+        let id: String
+        let title: String
+        /// line, bar or heatmap.
+        let kind: String
+        let unit: String
+        /// date (x is YYYY-MM-DD) or label.
+        let xKind: String
+        let note: String?
+        /// Line and bar charts. Empty for a heatmap.
+        let series: [Series]
+        /// Heatmaps only, row-major. Empty otherwise.
+        let cells: [Cell]
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case title
+            case kind
+            case unit
+            case xKind = "x_kind"
+            case note
+            case series
+            case cells
+        }
+    }
+
+    struct Series: Decodable {
+        let name: String
+        /// The previous period, already shifted onto the current dates by the server.
+        let previous: Bool
+        let points: [Point]
+    }
+
+    struct Point: Decodable {
+        let x: String
+        let y: Double
+    }
+
+    struct Cell: Decodable {
+        let x: String
+        let y: String
+        let value: Double
+    }
+
+    let section: String
+    let days: Int
+    /// production or staging.
+    let environment: String
+    let generatedAt: Date
+    let cards: [Card]
+    let charts: [Chart]
+
+    enum CodingKeys: String, CodingKey {
+        case section
+        case days
+        case environment
+        case generatedAt = "generated_at"
+        case cards
+        case charts
+    }
+}

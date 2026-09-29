@@ -14,6 +14,43 @@ Postgres RPCs.
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
 
+## Admin dashboard (prepared 29 Sep 2026)
+
+`GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>` feeds the Admin tab
+in Profile -> Dashboard. Sections: `overview`, `users`, `engagement`, `steps`,
+`fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
+request; there is no warehouse, rollup table or cron. Each card and chart is one
+query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
+chart by adding one definition, delete one by removing it. The app renders
+whatever the server returns, so chart changes need no app release. A failing
+query only marks its own tile with `Query failed: ...`.
+
+- **Windows:** cards compare the last N days with the N days before (rolling for
+  events, complete Paris calendar days for Steps). Charts use Paris calendar days
+  over max(N, 7) days, bucketed by day (up to 62), week (up to 366) or month, and
+  overlay the previous period shifted onto the current dates.
+- **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
+  (manual refreshes also count as activity). A foreground trace within 60 seconds
+  after a background `observer` sync is the post-sync refresh, not an open. Sync
+  history is kept since 29 Sep (never-delete rule), so engagement history grows
+  from that date; earlier rows were pruned after 7 days.
+- **Steps:** the profile-statistics rule (newest complete Apple Health day,
+  `activity_metrics` over legacy `metric_days`), counted from each person's signup
+  day. "Health history" cards include imported days before signup.
+- **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
+  invitations are automatic.
+- **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the
+  admin email). The app always sends `X-FitFight-Auth-Project` with its own
+  Supabase project ref. When it names the other FitFight project, the backend
+  verifies the token with that project's public Auth endpoint and accepts it only
+  if the same Apple or Google identity (`auth.identities` provider and subject)
+  owns an admin profile here. A TestFlight build therefore reads production with
+  its normal staging login. This is a read-only exception to environment
+  isolation; tokens are never exchanged or stored.
+- **Compatibility:** additive route; no existing contract, schema or migration
+  changes. `admin-dashboard.integration.ts` runs every card and chart on the
+  migrated disposable database.
+
 ## Activity pipeline (prepared 23 Sep 2026)
 
 This branch adds `private.activity_raw` for durable received totals, individual
@@ -190,6 +227,12 @@ Keep the old backend usable during the migration and rollback window. Validate
 staging separately from production; the normal authorized branch promotions
 still apply. Do not include removal of legacy identifiers or direct-client
 permissions in this migration batch.
+
+Never delete data (Marc's rule, 29 Sep 2026). New tables and writers keep every
+row: no retention windows, TTLs, pruning, or rollups that replace raw rows. Only
+a user's own account deletion removes data. The two AI log cleanups that still
+run are listed in [retention](system-design.md#retention-classes) and are next
+to remove.
 
 ## Saved companion descriptions (prepared 17 Sep 2026)
 
@@ -392,7 +435,7 @@ disconnect path.
 
 `GET /api/v1/provider-uploads/context` temporarily remains the context route and returns the server time plus exact live/awaiting-final-sync Fight windows. `POST /api/v1/healthkit/steps` accepts one strict JSON document with `complete_through`, the User's `time_zone`, `merged_days`, and `fight_aggregates`. `fight_aggregates` are Apple's merged cumulative totals from each server-authoritative `starts_at...cutoff_at` interval and are the only input to standings. `merged_days` are limited to relevant active Fight days and serve charts only. The request contains no raw sample, deletion, per-source statistic, device/source metadata, anchor, NDJSON, object path, or upload capability.
 
-`POST /api/v1/healthkit/diagnostics` retains the latest private operational snapshot and accepts an optional batch of completed timing attempts. Old native payloads that omit empty timestamp/error fields remain accepted. Attempts contain a random trace ID, trigger, outcome, elapsed stage timings, app version/build, optional counts/encoded payload size, and optional stage errors with a fixed kind and numeric system code or HTTP status. They contain no Steps values, Fight IDs, device identifier, free-form errors, or raw HealthKit data. `private.healthkit_sync_attempts` is inaccessible to app clients and Fight peers and cascades on account deletion. Reports keep at most the newest 100 attempts per User; that User's rows older than seven days are pruned on their next report. An inactive account's older rows can remain until then or account deletion.
+`POST /api/v1/healthkit/diagnostics` retains the latest private operational snapshot and accepts an optional batch of completed timing attempts. Old native payloads that omit empty timestamp/error fields remain accepted. Attempts contain a random trace ID, trigger, outcome, elapsed stage timings, app version/build, optional counts/encoded payload size, and optional stage errors with a fixed kind and numeric system code or HTTP status. They contain no Steps values, Fight IDs, device identifier, free-form errors, or raw HealthKit data. `private.healthkit_sync_attempts` is inaccessible to app clients and Fight peers and cascades on account deletion. Attempts are kept for the life of the account (never-delete rule, 29 Sep 2026) and removed only by account deletion. The admin dashboard counts app opens from `foreground` attempts.
 
 Fight peers can read only `fight_members.final_steps_complete`, which indicates an available snapshot from that member's selected source at the exact Fight end. A source-wide watermark alone cannot establish this. It describes query coverage, not a guarantee that Apple has received all delayed device data.
 
@@ -441,7 +484,7 @@ query still open the Fight. The new client persists the query across a cold laun
 handles taps while already foregrounded, and opens a dedicated post screen. Targeted
 comments load through their page before the screen scrolls to them.
 
-`GET /api/v1/feed/activity` supplies You -> Activity. It returns `{ events,
+`GET /api/v1/feed/activity` supplies Profile -> Activity. It returns `{ events,
 next_cursor }`, with a default page size of 40 and maximum of 80. The cursor preserves
 microsecond timestamps and an event ID; unknown historical timestamps sort last.
 Post and comment pagination also preserves microseconds so equal timestamps do
@@ -547,7 +590,7 @@ One immutable completed attempt is logged locally under OSLog category `HealthKi
 
 Failed stages preserve HealthKit/URL/Cocoa numeric errors, HTTP status, decoding/configuration failures, and the app's unavailable/invalid Steps errors. Unknown error domains are reduced to `unknown`; messages, URLs, query predicates and `NSError.userInfo` are never logged. The existing `stages` JSON stores these details without another migration. After authentication and validation, the diagnostics route emits `fitfight_healthkit_failure` to Vercel logs before database persistence, with trace ID, app version/build, trigger, outcome and failed stages. Legacy reports such as build 153 emit their coarse error only; discarded device errors cannot be recovered retroactively.
 
-You → Apple Health retains a per-account error reference containing the trace ID's first eight characters, stage and safe error code, including when diagnostic delivery fails. Match that prefix against `fitfight_healthkit_failure` and the full trace ID against `fitfight_request`. Delivery failures also log locally under `HealthKitDiagnostics`; the next successful Steps sync clears the phone's reference. Deploy this expanded diagnostics schema before distributing the native build.
+Profile → Apple Health retains a per-account error reference containing the trace ID's first eight characters, stage and safe error code, including when diagnostic delivery fails. Match that prefix against `fitfight_healthkit_failure` and the full trace ID against `fitfight_request`. Delivery failures also log locally under `HealthKitDiagnostics`; the next successful Steps sync clears the phone's reference. Deploy this expanded diagnostics schema before distributing the native build.
 
 Apply `20260905090813_healthkit_sync_timing_history.sql`, deploy the backend, then distribute the native build. The new app requires the refresh endpoint. Legacy diagnostics remain compatible after migration/backend deployment. This change has not been deployed from the workspace.
 

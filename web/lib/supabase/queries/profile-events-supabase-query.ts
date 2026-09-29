@@ -31,26 +31,6 @@ export async function recordProfileView(viewerId: string, targetId: string, inpu
     });
 }
 
-/** Scheduled independently of user activity, including accounts that stop opening the app. */
-export async function pruneProfileEvents(database: Sql = createDatabaseClient()) {
-    return database.begin(async (sql) => {
-        const events = await sql`
-            with expired as (
-                delete from private.profile_events where created_at < now() - interval '30 days'
-                returning kind, source, attributed_source, qualifying
-            )
-            insert into private.profile_event_totals(kind, source, events, qualifying)
-            select kind, coalesce(source, attributed_source, ''), count(*), count(*) filter (where qualifying)
-            from expired group by kind, coalesce(source, attributed_source, '')
-            on conflict (kind, source) do update set events = private.profile_event_totals.events + excluded.events,
-                qualifying = private.profile_event_totals.qualifying + excluded.qualifying
-            returning kind
-        `;
-        const lookups = await sql`delete from private.profile_lookup_attempts where created_at < now() - interval '1 hour' returning id`;
-        return { archived_groups: events.length, lookup_attempts_deleted: lookups.length };
-    });
-}
-
 /** One conversion per directed pair/round, attributed to that actor's last visible open within seven days. */
 export async function recordSharedFightParticipation(sql: TransactionSql, fightId: string, joiningUserId: string | null) {
     if (!profileFeatureConfigSchema.parse({ measurement: process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED }).measurement) return;
@@ -76,7 +56,7 @@ export async function recordSharedFightParticipation(sql: TransactionSql, fightI
     `;
 }
 
-/** Operator-only totals contain no named visitors or health data. Raw events expire after thirty days. */
+/** Operator-only totals contain no named visitors or health data. Raw events are kept; the report covers thirty days. */
 export async function readProfileMeasurements(userId: string, database: Sql = createDatabaseClient()) {
     if (!canAdministerFights(userId)) throw new ApiError(403, "forbidden", "Only Marc can read profile measurements");
     const rows = await database`

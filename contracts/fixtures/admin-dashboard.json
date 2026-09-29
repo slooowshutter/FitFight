@@ -1,0 +1,103 @@
+{
+    "section": "users",
+    "days": 7,
+    "environment": "production",
+    "generated_at": "2026-09-29T12:00:00.000Z",
+    "cards": [
+        {
+            "id": "total_users",
+            "title": "Total users",
+            "value": 123,
+            "previous": 110,
+            "unit": "count",
+            "higher_is_better": true,
+            "note": "Now vs 7 days ago"
+        },
+        {
+            "id": "median_account_age",
+            "title": "Median account age",
+            "value": 41.5,
+            "previous": null,
+            "unit": "days",
+            "higher_is_better": null,
+            "note": null
+        }
+    ],
+    "charts": [
+        {
+            "id": "new_users",
+            "title": "New users per day",
+            "kind": "line",
+            "unit": "count",
+            "x_kind": "date",
+            "note": null,
+            "series": [
+                {
+                    "name": "This period",
+                    "previous": false,
+                    "points": [
+                        { "x": "2026-09-23", "y": 3 },
+                        { "x": "2026-09-24", "y": 5 },
+                        { "x": "2026-09-25", "y": 2 },
+                        { "x": "2026-09-26", "y": 0 },
+                        { "x": "2026-09-27", "y": 4 },
+                        { "x": "2026-09-28", "y": 6 },
+                        { "x": "2026-09-29", "y": 1 }
+                    ]
+                },
+                {
+                    "name": "Previous period",
+                    "previous": true,
+                    "points": [
+                        { "x": "2026-09-23", "y": 1 },
+                        { "x": "2026-09-24", "y": 2 },
+                        { "x": "2026-09-25", "y": 2 },
+                        { "x": "2026-09-26", "y": 3 },
+                        { "x": "2026-09-27", "y": 1 },
+                        { "x": "2026-09-28", "y": 0 },
+                        { "x": "2026-09-29", "y": 4 }
+                    ]
+                }
+            ],
+            "cells": []
+        },
+        {
+            "id": "users_by_country",
+            "title": "Users by country",
+            "kind": "bar",
+            "unit": "count",
+            "x_kind": "label",
+            "note": "Top 4 countries",
+            "series": [
+                {
+                    "name": "Users",
+                    "previous": false,
+                    "points": [
+                        { "x": "United States", "y": 58 },
+                        { "x": "France", "y": 31 },
+                        { "x": "United Kingdom", "y": 12 },
+                        { "x": "Canada", "y": 7 }
+                    ]
+                }
+            ],
+            "cells": []
+        },
+        {
+            "id": "sign_ups_by_weekday",
+            "title": "Sign-ups by weekday and time of day",
+            "kind": "heatmap",
+            "unit": "count",
+            "x_kind": "label",
+            "note": "Times in UTC",
+            "series": [],
+            "cells": [
+                { "x": "Morning", "y": "Mon", "value": 4 },
+                { "x": "Afternoon", "y": "Mon", "value": 2 },
+                { "x": "Evening", "y": "Mon", "value": 7 },
+                { "x": "Morning", "y": "Tue", "value": 1 },
+                { "x": "Afternoon", "y": "Tue", "value": 0 },
+                { "x": "Evening", "y": "Tue", "value": 5 }
+            ]
+        }
+    ]
+}

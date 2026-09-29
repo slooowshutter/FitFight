@@ -25,10 +25,12 @@ export const adminDashboardEnvironmentValues = ["production", "staging"] as cons
 
 export const adminDashboardSectionSchema = z.enum(adminDashboardSectionValues);
 export const adminDashboardUnitSchema = z.enum(adminDashboardUnitValues);
+export const adminDashboardEnvironmentSchema = z.enum(adminDashboardEnvironmentValues);
 
 export const adminDashboardQuerySchema = z.object({
     section: adminDashboardSectionSchema,
     days: z.coerce.number().int().min(1).max(3650),
+    environment: adminDashboardEnvironmentSchema.optional(),
 });
 
 export const adminDashboardCardSchema = z.object({
@@ -63,7 +65,7 @@ export const adminDashboardChartSchema = z.object({
 export const adminDashboardSchema = z.object({
     section: adminDashboardSectionSchema,
     days: z.number().int(),
-    environment: z.enum(adminDashboardEnvironmentValues),
+    environment: adminDashboardEnvironmentSchema,
     generated_at: z.string(),
     cards: z.array(adminDashboardCardSchema),
     charts: z.array(adminDashboardChartSchema),
@@ -95,8 +97,22 @@ export const adminDashboardIdentitySchema = z.object({
 
 export const adminDashboardLinkedAccountSchema = z.object({ user_id: z.string().uuid() });
 
+/** `subject` is `auth.identities.provider_id`: one Apple or Google account has the same subject in both FitFight projects. */
+export const adminDashboardIdentityRowSchema = z.object({
+    provider: z.string(),
+    subject: z.string().min(1),
+});
+
+export const adminDashboardProductionAdminRowSchema = z.object({
+    handle: z.string(),
+    email: z.string().nullable(),
+    email_confirmed: z.boolean(),
+});
+
 export type AdminDashboardSection = z.infer<typeof adminDashboardSectionSchema>;
 export type AdminDashboardUnit = z.infer<typeof adminDashboardUnitSchema>;
+export type AdminDashboardEnvironment = z.infer<typeof adminDashboardEnvironmentSchema>;
+export type AdminDashboardIdentity = z.infer<typeof adminDashboardIdentityRowSchema>;
 export type AdminDashboardQuery = z.infer<typeof adminDashboardQuerySchema>;
 export type AdminDashboardCard = z.infer<typeof adminDashboardCardSchema>;
 export type AdminDashboardChart = z.infer<typeof adminDashboardChartSchema>;

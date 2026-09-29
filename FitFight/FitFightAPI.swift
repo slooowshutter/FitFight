@@ -1262,11 +1262,12 @@ struct FitFightAPI {
                           body: Self.encoder.encode(input))
     }
 
-    /// `authProject` is the Supabase project ref of this app's own sign-in, so a staging
-    /// login can read production analytics without a second sign-in.
-    func adminDashboard(section: String, days: Int, authProject: String, accessToken: String) async throws -> FitFightAdminDashboard {
+    /// `environment` is the database to read, `production` or `staging`. `authProject` is the
+    /// Supabase project ref of this app's own sign-in, so a login from either project works
+    /// without a second sign-in.
+    func adminDashboard(section: String, days: Int, environment: String, authProject: String, accessToken: String) async throws -> FitFightAdminDashboard {
         try await get(
-            path: "admin/dashboard?section=\(section)&days=\(days)",
+            path: "admin/dashboard?section=\(section)&days=\(days)&environment=\(environment)",
             accessToken: accessToken,
             headers: ["X-FitFight-Auth-Project": authProject]
         )

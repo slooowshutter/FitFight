@@ -10,6 +10,7 @@ import {
     type AdminDashboardCardDefinition,
     type AdminDashboardChart,
     type AdminDashboardChartDefinition,
+    type AdminDashboardEnvironment,
     type AdminDashboardQueryFragment,
     type AdminDashboardSection,
     type AdminDashboardWindow,
@@ -1754,6 +1755,7 @@ function definitions(
 export async function readAdminDashboard(
     section: AdminDashboardSection,
     days: number,
+    environment: AdminDashboardEnvironment,
     database: Sql = createDatabaseClient(),
 ): Promise<AdminDashboard> {
     const now = new Date();
@@ -1772,7 +1774,7 @@ export async function readAdminDashboard(
     return adminDashboardSchema.parse({
         section,
         days,
-        environment: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("pvqntpteehdvhqyctwum") ? "production" : "staging",
+        environment,
         generated_at: now.toISOString(),
         cards: await Promise.all(cards.map(async (card): Promise<AdminDashboardCard> => {
             const tile = { id: card.id, title: card.title, unit: card.unit, higher_is_better: card.better };

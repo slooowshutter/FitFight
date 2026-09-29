@@ -6,8 +6,9 @@ import SwiftUI
 struct AdminDashboardView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
-    /// Starts on this build's own backend (TestFlight reads staging) and remembers the switch.
-    @AppStorage("fitfight.admin-dashboard.server") private var server = Server.own
+    /// Starts on Production and remembers the switch. A new key, so a Staging choice saved by
+    /// an earlier build doesn't stick.
+    @AppStorage("fitfight.admin-dashboard.environment") private var server = Server.production
     @State private var page = Page.overview
     @State private var timeframe = Timeframe.week
     @State private var customDays = 14
@@ -22,15 +23,13 @@ struct AdminDashboardView: View {
     enum Server: String, CaseIterable {
         case production, staging
 
-        static var own: Server {
-            SupabaseConfig.projectURL.host?.hasPrefix("pvqntpteehdvhqyctwum") == true ? .production : .staging
-        }
-
         var title: String { self == .production ? "Production" : "Staging" }
-        /// staging.fitfight.app is pinned to a hand-picked deployment in Vercel. Vercel's
-        /// preview branch address always serves the newest `preview` backend, on staging data.
+        /// Both read through Vercel's preview branch address, which always serves the newest
+        /// `preview` backend: staging from its own database, production through its read-only
+        /// connection, so new charts reach production data without `main`. staging.fitfight.app
+        /// is pinned to a hand-picked deployment in Vercel.
         var baseURL: URL? {
-            URL(string: self == .production ? "https://fitfight.app" : "https://fit-fight-git-preview-blendai.vercel.app")
+            URL(string: "https://fit-fight-git-preview-blendai.vercel.app")
         }
     }
 
@@ -248,6 +247,7 @@ struct AdminDashboardView: View {
             let result = try await FitFightAPI(baseURL: target.baseURL).adminDashboard(
                 section: section,
                 days: window,
+                environment: target.rawValue,
                 authProject: project,
                 accessToken: token
             )
@@ -258,10 +258,8 @@ struct AdminDashboardView: View {
             // A newer selection cancelled this load. Its own run owns the spinner and the result.
             guard !Task.isCancelled else { return }
             dashboard = nil
-            if case FitFightAPIError.http(let status, _, _) = error, status == 404, target == .production {
-                failure = "Production doesn't have the dashboard yet. It goes live when this backend reaches main. Switch to Staging for now."
-            } else if case FitFightAPIError.http(let status, _, _) = error, status == 403 {
-                failure = "This account isn't a FitFight admin on \(target.title)."
+            if case FitFightAPIError.http(let status, _, _) = error, status == 403 {
+                failure = "This account isn't the FitFight admin on \(target.title)."
             } else {
                 failure = error.localizedDescription
             }

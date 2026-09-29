@@ -2,6 +2,7 @@ import postgres, { type Sql } from "postgres";
 import { ApiError, ERROR_CODES } from "../http";
 
 let cached: Sql | null = null;
+let cachedProductionAnalytics: Sql | null = null;
 
 function databaseURL(): string {
     const value = process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL;
@@ -59,6 +60,51 @@ export function createDatabaseClient(): Sql {
         connect_timeout: 10,
     });
     return cached;
+}
+
+/**
+ * The preview server's read-only path to production data for the admin dashboard.
+ * Only a production user other than the full-access `postgres` user is accepted.
+ */
+export function createProductionAnalyticsClient(): Sql {
+    if (cachedProductionAnalytics) {
+        return cachedProductionAnalytics;
+    }
+    const value = process.env.PRODUCTION_ANALYTICS_DATABASE_URL;
+    if (!value) {
+        throw new ApiError(
+            503,
+            ERROR_CODES.config,
+            "Production data isn't set up on this server yet",
+        );
+    }
+    let databaseUser: string;
+    try {
+        databaseUser = decodeURIComponent(new URL(value).username);
+    } catch {
+        throw new ApiError(
+            500,
+            ERROR_CODES.config,
+            "PRODUCTION_ANALYTICS_DATABASE_URL is invalid",
+        );
+    }
+    if (
+        !databaseUser.endsWith(".pvqntpteehdvhqyctwum") ||
+        databaseUser.startsWith("postgres.")
+    ) {
+        throw new ApiError(
+            500,
+            ERROR_CODES.config,
+            "PRODUCTION_ANALYTICS_DATABASE_URL must use a read-only production user, not postgres",
+        );
+    }
+    cachedProductionAnalytics = postgres(value, {
+        prepare: false,
+        max: 3,
+        idle_timeout: 20,
+        connect_timeout: 10,
+    });
+    return cachedProductionAnalytics;
 }
 
 export async function closeDatabaseClientForTests(): Promise<void> {

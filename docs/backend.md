@@ -44,9 +44,22 @@ query only marks its own tile with `Query failed: ...`.
   Supabase project ref. When it names the other FitFight project, the backend
   verifies the token with that project's public Auth endpoint and accepts it only
   if the same Apple or Google identity (`auth.identities` provider and subject)
-  owns an admin profile here. A TestFlight build therefore reads production with
-  its normal staging login. This is a read-only exception to environment
+  owns an admin profile here. The preview server therefore also accepts an App
+  Store build's production login. This is a read-only exception to environment
   isolation; tokens are never exchanged or stored.
+- **Production data:** both of the app's buttons call the preview server
+  (`fit-fight-git-preview-blendai.vercel.app`) with `environment=production` or
+  `staging`; without the parameter a server reads its own database. The preview
+  server reads production through `PRODUCTION_ANALYTICS_DATABASE_URL`, a
+  read-only `fitfight_analytics` user (SELECT only, BYPASSRLS, 20 s statement
+  timeout, read-only transactions), scoped in Vercel to Preview on branch
+  `preview`. A production read requires the admin check on the server's own
+  project and the same Apple or Google identity owning an admin profile in
+  production (`verifyProductionDashboardAdmin`, which reads `auth.identities`
+  and `auth.users` there). `createProductionAnalyticsClient` refuses a
+  `postgres.` user and any user outside the production project, and answers 503
+  while the variable is missing. New charts reach production data with a
+  `preview` merge; `main` is not needed.
 - **Compatibility:** additive route; no existing contract, schema or migration
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.

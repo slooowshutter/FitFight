@@ -922,6 +922,16 @@ paths:
                         "minimum": 1,
                         "maximum": 3650
                     }
+                },
+                {
+                    "name": "environment",
+                    "in": "query",
+                    "required": false,
+                    "description": "Database to read. Defaults to the server's own. A staging server reads production through its read-only analytics connection, only when the same Apple or Google account also owns an admin profile in production.",
+                    "schema": {
+                        "type": "string",
+                        "enum": ["production", "staging"]
+                    }
                 }
             ],
             "responses": {
@@ -1005,13 +1015,16 @@ paths:
                     }
                 },
                 "400": {
-                    "description": "Invalid section or days"
+                    "description": "Invalid section, days or environment, or an environment this server cannot read"
                 },
                 "401": {
                     "description": "Missing or invalid session, or an unknown sign-in project"
                 },
                 "403": {
-                    "description": "Not the FitFight admin"
+                    "description": "Not the FitFight admin, or, for production data on a staging server, no admin profile in production owns the same Apple or Google account"
+                },
+                "503": {
+                    "description": "Production data isn't set up on this server"
                 }
             }
         }

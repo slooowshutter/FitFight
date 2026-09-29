@@ -56,15 +56,16 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
 
     for (const section of adminDashboardSectionValues) {
         for (const days of [1, 30, 3650]) {
-            const dashboard = await readAdminDashboard(section, days, database);
+            const dashboard = await readAdminDashboard(section, days, "staging", database);
             const failed = [...dashboard.cards, ...dashboard.charts]
                 .filter((tile) => tile.note?.startsWith("Query failed"))
                 .map((tile) => `${tile.id}: ${tile.note}`);
             assert.deepEqual(failed, [], `${section} over ${days} days`);
             assert.ok(dashboard.cards.length > 0 && dashboard.charts.length > 0);
+            assert.equal(dashboard.environment, "staging");
         }
     }
-    const engagement = await readAdminDashboard("engagement", 30, database);
+    const engagement = await readAdminDashboard("engagement", 30, "staging", database);
     const opens = engagement.cards.find((card) => card.id === "app_opens");
     // Thirteen days of two foreground traces each; the one 20 seconds after a background sync is not an open.
     assert.ok(opens?.value !== undefined && opens.value !== null && opens.value >= 13);

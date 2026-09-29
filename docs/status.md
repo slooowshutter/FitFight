@@ -6,6 +6,63 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Admin dashboard reads production from preview: prepared 29 Sep 2026
+
+Marc asked for the Admin tab to show production data without shipping to
+`main`.
+
+**Code:** both environment buttons (Production, now the default, and Staging)
+call the preview server (`fit-fight-git-preview-blendai.vercel.app`) with
+`environment=production` or `staging`. The choice is saved under a new key, so
+an earlier Staging choice does not stick. The preview server reads staging from
+its own database and production through a new read-only connection,
+`PRODUCTION_ANALYTICS_DATABASE_URL`. A production read requires the admin check
+on the server's own project and the same Apple or Google account owning an
+admin profile in production; otherwise 403. The connection helper refuses a
+`postgres.` user and any user outside production. New charts reach production
+data with a `preview` merge. A 403 reads "This account isn't the FitFight admin
+on Production" (or Staging); other errors show the server's message. The old
+"Production doesn't have the dashboard yet" message is gone. No release note
+(admin only). See [backend](backend.md#admin-dashboard-prepared-29-sep-2026).
+
+**Marc's setup:**
+
+1. In the production Supabase project (`pvqntpteehdvhqyctwum`), create the
+   Postgres role `fitfight_analytics`: login, SELECT only (the `public` and
+   `private` tables, plus `auth.identities` and `auth.users` for the admin
+   check), BYPASSRLS, `statement_timeout` 20 s, read-only transactions.
+2. In Vercel, add `PRODUCTION_ANALYTICS_DATABASE_URL` for Preview, branch
+   `preview` only: the Supavisor pooler URL whose user is
+   `fitfight_analytics.pvqntpteehdvhqyctwum`, never the `postgres` user.
+3. The variable must exist before the `preview` deployment that uses it. Vercel
+   applies variables at deploy time, so adding it later needs a redeploy. Until
+   then Production shows "Production data isn't set up on this server yet"
+   (503).
+
+**Compatibility:** additive. `environment` is optional and defaults to the
+server's own database; the response shape is unchanged and there is no
+migration. Builds 213 and 214 are unaffected: their Staging view calls the
+preview server without `environment` and still gets staging, and their
+Production view still calls `fitfight.app`, unchanged until this backend
+reaches `main` (there, no `environment` still means production).
+
+**Verification (local):** web typecheck and all 426 unit tests passed;
+`admin-dashboard.integration.ts` passed on the migrated Postgres 16 copy. A
+throwaway script ran `verifyProductionDashboardAdmin` there: Marc's one Apple
+identity passed; a stranger's identity, no identities, Marc's subject under the
+other provider, an unconfirmed admin email and a deleted profile got 403; a
+confirmed admin email passed. Through the real route handler, with only the
+own-project admin check stubbed: no `environment` or `staging` returned
+staging; a missing variable returned 503; an invalid URL, a `postgres.` user, a
+staging user and a direct (non-pooler) user returned 500, and no error log
+carried the password; with a local SELECT-only, BYPASSRLS, read-only role,
+every section returned production data with no query failure and a stranger
+got 403; a production server asked for staging returned 400. Swift was only
+parsed here; the simulator build and contract tests run in CI.
+
+**Live deployment:** not deployed. Production data appears once this reaches
+`preview` and Marc's variable exists.
+
 ## Admin dashboard: prepared 29 Sep 2026
 
 Marc asked for a Marc-only analytics tab with sections, a timeframe picker,

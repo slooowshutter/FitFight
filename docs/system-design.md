@@ -896,6 +896,8 @@ Fitness data is sensitive. The system should be safe even if a future UI acciden
 - Use dependency scanning and secret scanning in CI.
 - Keep provider kill switches so one compromised or non-compliant integration can be stopped without an app release.
 
+The admin dashboard is the only sanctioned path from a staging deployment to production data. The preview server reads production aggregates through a read-only database user (`PRODUCTION_ANALYTICS_DATABASE_URL`, Vercel Preview on branch `preview` only), and only for an Apple or Google account that is the FitFight admin in both projects; see [backend](backend.md#admin-dashboard-prepared-29-sep-2026). No other staging code reads or writes production.
+
 ### Data minimization
 
 FitFight launches as a US product hosted in US East; EU launch/compliance work is not part of v1. US scope still requires clear consent and deletion support. Apple prohibits using HealthKit-derived data for advertising/marketing/data mining, requires disclosure of collected health data, and requires in-app account deletion when accounts can be created. US state health/privacy rules may also apply, including Washington's My Health My Data Act ([Apple App Review Guidelines §5.1](https://developer.apple.com/app-store/review/guidelines/), [Washington Attorney General](https://www.atg.wa.gov/protecting-washingtonians-personal-health-data-and-privacy)).

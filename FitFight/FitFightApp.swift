@@ -208,7 +208,8 @@ struct FitFightApp: App {
                 .task(id: session.authSession?.user.id) {
                     guard !CompanionPreview.isEnabled else { return }
                     model.pendingReferralError = nil
-                    steps.activate(userId: session.authSession?.user.id)
+                    // Like the fights cache, keep the saved user so today's steps stay on screen while sign-in is restored.
+                    steps.activate(userId: session.authSession?.user.id ?? session.client.auth.currentUser?.id)
                     model.restoreCachedFights(session: session)
                     // Before sign-in is restored this run skips Apple Health, and the real run would only join it.
                     guard session.authSession != nil else { return }

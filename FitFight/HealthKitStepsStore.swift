@@ -54,6 +54,13 @@ final class HealthKitStepsStore: ObservableObject {
         }
     }
 
+    /// Today's count from the last read, so a relaunch shows it before HealthKit answers again.
+    private struct SavedSteps: Codable {
+        let count: Int
+        let readAt: Date
+        let timeZone: TimeZone
+    }
+
     static let shared = HealthKitStepsStore()
 
     @Published private(set) var status: Status = .idle
@@ -84,6 +91,15 @@ final class HealthKitStepsStore: ObservableObject {
         return UserDefaults.standard.bool(forKey: Self.askedKey(userId: activeUserId))
     }
 
+    private var savedTodaySteps: Int? {
+        guard let activeUserId,
+              let data = UserDefaults.standard.data(forKey: Self.todayStepsKey(userId: activeUserId)),
+              let saved = try? JSONDecoder().decode(SavedSteps.self, from: data) else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = saved.timeZone
+        return calendar.isDateInToday(saved.readAt) ? saved.count : nil
+    }
+
     #if DEBUG && targetEnvironment(simulator)
     func setCompanionPreviewStatus(_ value: Status) {
         guard CompanionPreview.isEnabled else { return }
@@ -110,8 +126,6 @@ final class HealthKitStepsStore: ObservableObject {
             return diagnostics.failureDetail ?? String(appLocalized: "Sync failed. Tap to retry.")
         }
     }
-
-    var isConnected: Bool { connection != .notConnected }
 
     var backgroundRefreshText: String {
         switch diagnostics.backgroundRefreshStatus {
@@ -245,7 +259,7 @@ final class HealthKitStepsStore: ObservableObject {
         guard activeUserId != userId else { refreshBackgroundStatus(); return }
         cancelActivitySync()
         activeUserId = userId
-        status = .idle
+        status = savedTodaySteps.map { .steps(count: $0) } ?? .idle
         connection = .notConnected
         if let userId,
            let data = UserDefaults.standard.data(forKey: Self.diagnosticsKey(userId: userId)),
@@ -264,6 +278,7 @@ final class HealthKitStepsStore: ObservableObject {
         do { try HealthKitUploadState.discardLegacy(userId: userId) } catch { return false }
         HealthKitActivitySync.clear(userId: userId)
         UserDefaults.standard.removeObject(forKey: Self.askedKey(userId: userId))
+        UserDefaults.standard.removeObject(forKey: Self.todayStepsKey(userId: userId))
         UserDefaults.standard.removeObject(forKey: Self.diagnosticsKey(userId: userId))
         UserDefaults.standard.removeObject(forKey: Self.pendingSyncKey)
         UserDefaults.standard.removeObject(forKey: Self.pendingLocalDeletionKey)
@@ -321,22 +336,30 @@ final class HealthKitStepsStore: ObservableObject {
             installObserverAtLaunch()
         }
         guard requestAccess || hasAsked else { return }
-        status = .reading
+        // A count already on screen stays there while HealthKit is read again.
+        if status == .idle || status == .empty { status = .reading }
         do {
             try Task.checkCancellation()
+            let timeZone = session?.profile?.calendarTimeZone ?? .current
+            // Stamped before the read, so a read across midnight never saves yesterday's count as today's.
+            let readAt = Date()
             let count = try await trace.measure(.todayTotal) {
-                try await Self.todayTotal(store: store, type: stepsType, timeZone: session?.profile?.calendarTimeZone ?? .current)
+                try await Self.todayTotal(store: store, type: stepsType, timeZone: timeZone)
             }
             try Task.checkCancellation()
             guard activeUserId == userID else { trace.fail(.attemptExpired); return }
             if let count {
                 status = .steps(count: count)
+                if let userID, let data = try? JSONEncoder().encode(SavedSteps(count: count, readAt: readAt, timeZone: timeZone)) {
+                    UserDefaults.standard.set(data, forKey: Self.todayStepsKey(userId: userID))
+                }
             } else {
                 status = .empty
+                if let userID { UserDefaults.standard.removeObject(forKey: Self.todayStepsKey(userId: userID)) }
             }
         } catch {
             trace.fail(Self.errorCode(for: error))
-            if activeUserId == userID { status = .empty }
+            if activeUserId == userID { status = savedTodaySteps.map { .steps(count: $0) } ?? .empty }
         }
     }
 
@@ -649,6 +672,10 @@ final class HealthKitStepsStore: ObservableObject {
 
     private static func askedKey(userId: UUID) -> String {
         "ff.healthkit.stepsAsked.\(userId.uuidString.lowercased())"
+    }
+
+    private static func todayStepsKey(userId: UUID) -> String {
+        "ff.healthkit.todaySteps.\(userId.uuidString.lowercased())"
     }
 
     private static func diagnosticsKey(userId: UUID) -> String {

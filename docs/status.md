@@ -63,6 +63,38 @@ parsed here; the simulator build and contract tests run in CI.
 **Live deployment:** not deployed. Production data appears once this reaches
 `preview` and Marc's variable exists.
 
+## Steps on open: prepared 29 Sep 2026
+
+Marc's P0 backlog item (23 and 27 Sep): after a restart, the Fights header
+showed "-" and "Connect Apple Health" even though today's steps had loaded
+before.
+
+**Code:** `HealthKitStepsStore` saves today's count per account after each
+Apple Health read, with the read time and time zone, and restores it when the
+account is activated. Fights, the companion pose and Profile show it at once.
+The count stays on screen while Apple Health is read again and after a failed
+read. It is dropped after midnight in the time zone it was read in, when a read
+finds no steps, and on account deletion. The launch task keeps the saved
+account active while sign-in is restored, as the fights cache already did, so
+the first frame is not an empty account. With no count yet, the header shows a
+spinner and "Synchronizing your steps." (Nunito ExtraBold 16). It says "Connect
+Apple Health" only when Health was never connected. A dash remains only when
+Apple Health has no steps for today or Health is not connected. English and
+French copy and a 1.1.3 release note are included.
+
+**Contract:** No API, database or release-setting change. The saved count stays
+on the device (UserDefaults) and is never uploaded.
+
+**Verification:** `scripts/check_localizations.py` and
+`scripts/check_native_api_boundary.py` passed. A Linux Swift 6.4 harness
+(Swift 5 mode, like the app) compiled the new store code unchanged from
+`HealthKitStepsStore.swift` against a fake read and passed 23 checks: relaunch,
+reads, failed reads, empty reads, account separation and midnight in four time
+zones. Mutations that restore the old behavior failed it. The GitHub-hosted
+simulator build runs on the PR into `develop`; the SwiftUI changes in
+`CompanionViews.swift` and `FitFightApp.swift` are compiled only there. Not
+run: a device check. Not merged or uploaded.
+
 ## Admin dashboard: prepared 29 Sep 2026
 
 Marc asked for a Marc-only analytics tab with sections, a timeframe picker,

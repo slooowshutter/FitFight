@@ -10,7 +10,7 @@ import {
     adminDashboardIdentitySchema,
     adminDashboardLinkedAccountSchema,
     adminDashboardProductionAdminRowSchema,
-    type AdminDashboardIdentity,
+    type AdminDashboardAdmin,
 } from "@/lib/types/admin/admin-dashboard";
 import {
     fitFightAdminProfileSchema,
@@ -158,10 +158,10 @@ const authProjects: Record<string, { url: string; publishableKey: string }> = {
 /**
  * The dashboard reads aggregates only. A login from the other FitFight project (an App Store
  * build signs in to production) is accepted when the same Apple or Google account owns an
- * admin profile here, so Marc never signs in twice. Returns the admin's Apple and Google
- * accounts for `verifyProductionDashboardAdmin`.
+ * admin profile here, so Marc never signs in twice. Returns the admin's account here and its
+ * Apple and Google accounts for `verifyProductionDashboardAdmin`.
  */
-export async function verifyDashboardAdmin(request: Request): Promise<AdminDashboardIdentity[]> {
+export async function verifyDashboardAdmin(request: Request): Promise<AdminDashboardAdmin> {
     const project = request.headers.get("x-fitfight-auth-project");
     const own = new URL(z.string().url().parse(process.env.NEXT_PUBLIC_SUPABASE_URL)).hostname.split(".")[0];
     if (!project || project === own) {
@@ -172,7 +172,7 @@ export async function verifyDashboardAdmin(request: Request): Promise<AdminDashb
                 from auth.identities
                 where user_id = ${userId} and provider in ('apple', 'google')
             `;
-            return rows.map((row) => adminDashboardIdentityRowSchema.parse(row));
+            return { userId, identities: rows.map((row) => adminDashboardIdentityRowSchema.parse(row)) };
         }
     } else {
         const other = authProjects[project];
@@ -202,10 +202,13 @@ export async function verifyDashboardAdmin(request: Request): Promise<AdminDashb
             for (const row of rows) {
                 const userId = adminDashboardLinkedAccountSchema.parse(row).user_id;
                 if (isFitFightAdmin(await readAdminViewer(userId))) {
-                    return linked.map((identity) => ({
-                        provider: identity.provider,
-                        subject: identity.identity_data.sub,
-                    }));
+                    return {
+                        userId,
+                        identities: linked.map((identity) => ({
+                            provider: identity.provider,
+                            subject: identity.identity_data.sub,
+                        })),
+                    };
                 }
             }
         }
@@ -214,27 +217,33 @@ export async function verifyDashboardAdmin(request: Request): Promise<AdminDashb
 }
 
 /**
- * Production data read by another project's server also needs one of the admin's Apple or
- * Google accounts to own an admin profile in production.
+ * Production data read by another project's server also needs the admin to own an admin
+ * profile in production: the same account ID (beta accounts copied to production kept
+ * theirs) or the same Apple ID on file. Supabase keeps the auth schema out of reach of the
+ * read-only analytics user, so this reads only public and private tables.
  */
 export async function verifyProductionDashboardAdmin(
-    identities: AdminDashboardIdentity[],
+    admin: AdminDashboardAdmin,
     production: Sql,
 ): Promise<void> {
+    const appleSubjects = admin.identities
+        .filter((identity) => identity.provider === "apple")
+        .map((identity) => identity.subject);
     const rows = await production`
-        select p.handle, u.email, u.email_confirmed_at is not null as email_confirmed
-        from auth.identities as identity
-        join unnest(
-            ${identities.map((identity) => identity.provider)}::text[],
-            ${identities.map((identity) => identity.subject)}::text[]
-        ) as account(provider, subject)
-            on account.provider = identity.provider and account.subject = identity.provider_id
-        join public.profiles as p on p.user_id = identity.user_id and p.deleted_at is null
-        join auth.users as u on u.id = identity.user_id
+        select p.handle
+        from public.profiles as p
+        where p.deleted_at is null
+            and (
+                p.user_id = ${admin.userId}::uuid
+                or p.user_id in (
+                    select apple.user_id from private.apple_sign_in_tokens as apple
+                    where apple.apple_subject = any(${appleSubjects}::text[])
+                )
+            )
     `;
     for (const row of rows) {
-        const { handle, email, email_confirmed } = adminDashboardProductionAdminRowSchema.parse(row);
-        if (isFitFightAdmin({ handle, emails: email && email_confirmed ? [email] : [] })) return;
+        const { handle } = adminDashboardProductionAdminRowSchema.parse(row);
+        if (isFitFightAdmin({ handle, emails: [] })) return;
     }
     throw new ApiError(403, ERROR_CODES.forbidden, "Your account isn't the FitFight admin in production");
 }

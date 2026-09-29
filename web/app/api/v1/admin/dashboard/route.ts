@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export const GET = apiRoute(async (request) => {
-    const identities = await verifyDashboardAdmin(request);
+    const admin = await verifyDashboardAdmin(request);
     const search = new URL(request.url).searchParams;
     const query = adminDashboardQuerySchema.safeParse({
         section: search.get("section") ?? undefined,
@@ -31,7 +31,7 @@ export const GET = apiRoute(async (request) => {
     }
     const production = createProductionAnalyticsClient();
     try {
-        await verifyProductionDashboardAdmin(identities, production);
+        await verifyProductionDashboardAdmin(admin, production);
     } catch (error) {
         if (error instanceof ApiError) throw error;
         // The caller is the verified admin; the driver's message names the failing login,

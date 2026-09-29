@@ -103,16 +103,15 @@ export const adminDashboardIdentityRowSchema = z.object({
     subject: z.string().min(1),
 });
 
-export const adminDashboardProductionAdminRowSchema = z.object({
-    handle: z.string(),
-    email: z.string().nullable(),
-    email_confirmed: z.boolean(),
-});
+export const adminDashboardProductionAdminRowSchema = z.object({ handle: z.string() });
 
 export type AdminDashboardSection = z.infer<typeof adminDashboardSectionSchema>;
 export type AdminDashboardUnit = z.infer<typeof adminDashboardUnitSchema>;
 export type AdminDashboardEnvironment = z.infer<typeof adminDashboardEnvironmentSchema>;
 export type AdminDashboardIdentity = z.infer<typeof adminDashboardIdentityRowSchema>;
+
+/** The verified admin's account on this server's project and its Apple or Google accounts. */
+export type AdminDashboardAdmin = { userId: string; identities: AdminDashboardIdentity[] };
 export type AdminDashboardQuery = z.infer<typeof adminDashboardQuerySchema>;
 export type AdminDashboardCard = z.infer<typeof adminDashboardCardSchema>;
 export type AdminDashboardChart = z.infer<typeof adminDashboardChartSchema>;

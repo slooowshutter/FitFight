@@ -5,4 +5,4 @@ alwaysApply: true
 
 # Never delete data
 
-Marc's rule (29 Sep 2026): FitFight keeps every row it collects. Do not add retention windows, TTLs, cleanup or pruning jobs, or rollups that replace raw rows. The only deletion is a user deleting their own account, which keeps its current behavior; do not change it without Marc. Two older AI log cleanups still run and are next to remove. Details: `AGENTS.md` and `docs/system-design.md#retention-classes`.
+Marc's rule (29 Sep 2026): FitFight keeps every row it collects. Do not add retention windows, TTLs, cleanup or pruning jobs, or rollups that replace raw rows. The only deletion is a user deleting their own account, which keeps its current behavior; do not change it without Marc. No automatic cleanup is left in the code (30 Sep 2026). Details: `AGENTS.md` and `docs/system-design.md#retention-classes`.

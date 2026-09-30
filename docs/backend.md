@@ -256,9 +256,8 @@ permissions in this migration batch.
 
 Never delete data (Marc's rule, 29 Sep 2026). New tables and writers keep every
 row: no retention windows, TTLs, pruning, or rollups that replace raw rows. Only
-a user's own account deletion removes data. The two AI log cleanups that still
-run are listed in [retention](system-design.md#retention-classes) and are next
-to remove.
+a user's own account deletion removes data. No automatic cleanup is left in the
+code (30 Sep 2026); see [retention](system-design.md#retention-classes).
 
 ## Saved companion descriptions (prepared 17 Sep 2026)
 

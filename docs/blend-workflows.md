@@ -213,8 +213,8 @@ action was submitted, recovered, observed or rejected. Terminal HTTP 200 failure
 are recorded too. No credentials, raw descriptions, request/response bodies, image
 URLs or model traces have log fields.
 
-Logs are limited to nine summaries per invocation, seven days and 100,000 rows per
-environment. Insertion and the scheduled reconciler enforce retention. Logging
+Logs are limited to nine summaries per invocation and kept for the life of the
+account (never-delete rule): nothing prunes them. Logging
 failure emits only an operation/trace marker and does not change an already saved
 result. Existing shared 5xx diagnostics retain their existing behavior, now with
 safe AI identifiers. Platform console retention is separate from the private HTTP

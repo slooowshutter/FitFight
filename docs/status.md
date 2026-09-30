@@ -6,6 +6,36 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## No automatic deletion left in the code: prepared 30 Sep 2026
+
+Marc repeated the rule on 30 Sep: never delete data; only a user deleting their
+own account removes it.
+
+**Code:** the last two automatic cleanups are gone. AI HTTP logs are no longer
+pruned after 7 days or past 100,000 rows (the nightly reconciler no longer runs
+retention), and reserving an AI action no longer deletes finished unpaid
+requests older than 7 days. A replayed action now gets its original request back
+instead of "expired"; requests already deleted still answer "expired". The
+database tests now check that these rows are kept and that account deletion
+still removes them.
+
+**Still deleting live until the servers run this code:**
+
+- Production (`main`): Health sync reports (7 days or 100 per person), profile
+  views (30 days), username lookups (1 hour), AI logs and unpaid AI requests.
+  Needs a production ship; Marc must say so.
+- staging.fitfight.app: pinned in Vercel to an older deployment, so it still
+  prunes Health sync reports and the AI rows. Marc must set the domain to follow
+  the `preview` branch (Vercel, Settings, Domains).
+
+**Still erased by user actions (awaiting Marc):** removing one's own post,
+comment, like, vote or friend deletes the row; linking Google deletes an empty
+duplicate sign-in account.
+
+**Verification:** typecheck, all 431 unit tests and all 21 AI database tests
+passed locally on a disposable Postgres; CI's web and database checks passed on
+PR #340 (the AI library test now ages its source request instead of expecting it
+deleted).
 ## Admin dashboard Retention tab: prepared 30 Sep 2026
 
 Marc asked for a tab with just retention, by week and by month, one curve per
@@ -225,8 +255,8 @@ deletion removes data, and that flow is unchanged. The rule is in `AGENTS.md`,
 Removed with Marc's privacy approval: the 7-day/100-row Health sync report prune,
 the 30-day profile-event cleanup (its cron call and rollup) and the 1-hour
 username-lookup cleanup; the lookup rate limit still counts only the last hour.
-Two cleanups still run and are next to remove with their database tests: AI HTTP
-logs (7 days) and finished unpaid AI requests (7 days).
+The last two, AI HTTP logs and finished unpaid AI requests (7 days each), were
+removed on 30 Sep (entry above).
 
 ## You tab renamed Profile: prepared 29 Sep 2026
 

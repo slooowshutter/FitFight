@@ -28,7 +28,7 @@ after(async () => {
     await closeDatabaseClientForTests();
 });
 
-test("completion saves Blend URLs atomically without media copies, preserves ownership and survives request pruning", async (t) => {
+test("completion saves Blend URLs atomically without media copies, preserves ownership and keeps finished requests", async (t) => {
     const owner = randomUUID();
     const other = randomUUID();
     t.after(async () => {
@@ -181,7 +181,9 @@ test("completion saves Blend URLs atomically without media copies, preserves own
         await database`select available, reserved from private.ai_credit_balances where user_id = ${owner}`;
     assert.deepEqual(balance, { available: 7, reserved: 0 });
 
-    await database`update private.ai_requests set updated_at = clock_timestamp() - interval '8 days' where id = ${ids[0]}`;
+    // Finished requests are kept (never-delete rule); a week-old one still seeds a new action.
+    await database`update private.ai_requests set created_at = clock_timestamp() - interval '8 days',
+        updated_at = clock_timestamp() - interval '8 days' where id = ${ids[0]}`;
     const derived = await reserveAiRequest(
         owner,
         {
@@ -204,7 +206,7 @@ test("completion saves Blend URLs atomically without media copies, preserves own
         (
             await database`select id from private.ai_requests where id = ${ids[0]}`
         ).length,
-        0,
+        1,
     );
     assert.equal((await readAiLibrary(owner, database)).length, 3);
     assert.equal(

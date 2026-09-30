@@ -21,8 +21,10 @@ in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement
 `steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
 query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
-chart by adding one definition, delete one by removing it. The app renders
-whatever the server returns, so chart changes need no app release. A failing
+chart by adding one definition, delete one by removing it. Every payload also
+lists the sections (`sections`: id and title in chip order) and the app draws its
+chips from that list, so section, card and chart changes need no app release
+(builds from 30 Sep 2026 on; earlier builds have a fixed chip list). A failing
 query only marks its own tile with `Query failed: ...`.
 
 - **Windows:** cards compare the last N days with the N days before (rolling for

@@ -180,6 +180,8 @@ struct APIContractTests {
             from: Data(contentsOf: fixtures.appendingPathComponent("admin-dashboard.json")))
         precondition(dashboard.section == "users" && dashboard.days == 7 && dashboard.environment == "production")
         precondition(dashboard.generatedAt == parseServerDate("2026-09-29T12:00:00.000Z"))
+        precondition(dashboard.sections?.map(\.id) == ["overview", "retention", "users"]
+                     && dashboard.sections?[1].title == "Retention")
         precondition(dashboard.cards[0].higherIsBetter == true && dashboard.cards[0].previous == 110)
         precondition(dashboard.cards[1].previous == nil && dashboard.cards[1].higherIsBetter == nil,
                      "Cards without a comparison or a direction remain decodable")

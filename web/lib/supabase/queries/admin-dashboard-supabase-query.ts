@@ -5,6 +5,7 @@ import {
     adminDashboardCellRowSchema,
     adminDashboardChartRowSchema,
     adminDashboardSchema,
+    adminDashboardSectionValues,
     type AdminDashboard,
     type AdminDashboardCard,
     type AdminDashboardCardDefinition,
@@ -1881,6 +1882,7 @@ export async function readAdminDashboard(
         days,
         environment,
         generated_at: now.toISOString(),
+        sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
         cards: await Promise.all(cards.map(async (card): Promise<AdminDashboardCard> => {
             const tile = { id: card.id, title: card.title, unit: card.unit, higher_is_better: card.better };
             try {

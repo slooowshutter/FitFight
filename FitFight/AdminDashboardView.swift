@@ -1,15 +1,17 @@
 import Charts
 import SwiftUI
 
-/// Marc's analytics inside Profile > Dashboard. The server defines every card and chart, so
-/// new ones need no app update. The copy is English only, so it uses verbatim text.
+/// Marc's analytics inside Profile > Dashboard. The server defines every section, card and
+/// chart, so new ones need no app update. The copy is English only, so it uses verbatim text.
 struct AdminDashboardView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     /// Starts on Production and remembers the switch. A new key, so a Staging choice saved by
     /// an earlier build doesn't stick.
     @AppStorage("fitfight.admin-dashboard.environment") private var server = Server.production
-    @State private var page = Page.overview
+    @State private var sectionID = "overview"
+    /// The sections listed by the last payload. Empty until the first one loads.
+    @State private var sections: [FitFightAdminDashboard.Section] = []
     @State private var timeframe = Timeframe.week
     @State private var customDays = 14
     @State private var dashboard: FitFightAdminDashboard?
@@ -33,10 +35,6 @@ struct AdminDashboardView: View {
         }
     }
 
-    enum Page: String, CaseIterable {
-        case overview, retention, users, engagement, steps, fights, social, app
-    }
-
     enum Timeframe: CaseIterable {
         case day, week, month, quarter, year, custom
     }
@@ -55,7 +53,7 @@ struct AdminDashboardView: View {
     /// Only the payload for the selected environment, section and period, so an earlier
     /// section's cards never sit under a newly selected chip while its data loads.
     private var shown: FitFightAdminDashboard? {
-        guard let dashboard, dashboard.section == page.rawValue, dashboard.days == days,
+        guard let dashboard, dashboard.section == sectionID, dashboard.days == days,
               dashboard.environment == server.rawValue else { return nil }
         return dashboard
     }
@@ -101,7 +99,7 @@ struct AdminDashboardView: View {
                     .padding(.vertical, 40)
             }
         }
-        .task(id: "\(server)-\(page.rawValue)-\(days)-\(reloads)") {
+        .task(id: "\(server)-\(sectionID)-\(days)-\(reloads)") {
             await load()
         }
     }
@@ -111,12 +109,12 @@ struct AdminDashboardView: View {
         FFSegmented(items: Server.allCases, selection: $server) { $0.title }
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(Page.allCases, id: \.self) { item in
-                    let on = item == page
+                ForEach(sections, id: \.id) { item in
+                    let on = item.id == sectionID
                     Button {
-                        page = item
+                        sectionID = item.id
                     } label: {
-                        Text(verbatim: item.rawValue.capitalized)
+                        Text(verbatim: item.title)
                             .ffType(.caption)
                             .fontWeight(.heavy)
                             .foregroundStyle(on ? theme.mossOn : theme.chipInk)
@@ -238,7 +236,7 @@ struct AdminDashboardView: View {
 
     private func load() async {
         let target = server
-        let section = page.rawValue
+        let section = sectionID
         let window = days
         loading = true
         do {
@@ -253,6 +251,9 @@ struct AdminDashboardView: View {
             )
             try Task.checkCancellation()
             dashboard = result
+            if let listed = result.sections {
+                sections = listed
+            }
             failure = nil
         } catch {
             // A newer selection cancelled this load. Its own run owns the spinner and the result.

@@ -194,11 +194,19 @@ struct FitFightAdminDashboard: Decodable {
         let value: Double
     }
 
+    /// One chip. The server lists every section, so a new one needs no app update.
+    struct Section: Decodable {
+        let id: String
+        let title: String
+    }
+
     let section: String
     let days: Int
     /// production or staging.
     let environment: String
     let generatedAt: Date
+    /// nil from servers older than 30 Sep 2026.
+    let sections: [Section]?
     let cards: [Card]
     let charts: [Chart]
 
@@ -207,6 +215,7 @@ struct FitFightAdminDashboard: Decodable {
         case days
         case environment
         case generatedAt = "generated_at"
+        case sections
         case cards
         case charts
     }

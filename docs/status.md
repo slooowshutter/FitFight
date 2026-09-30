@@ -21,6 +21,12 @@ Cards: signups with Apple Health, and Week 1, 2, 4 and Month 1, 3 retention for
 signups in the period vs the period before. Additive `section` value in
 `contracts/openapi.yaml`; no migration. No release note (admin only).
 
+**Server-driven chips (Marc's ask):** every payload now lists the sections
+(`sections`: id and title) and this build draws its chips from that list, so
+adding or removing a section, card or chart is a server deploy only, with no app
+build. Additive response field in `contracts/openapi.yaml` and the fixture; the
+native contract test decodes it.
+
 **Not app opens yet:** staging.fitfight.app (a pinned older deployment) and
 production (`main`) still delete Health sync reports after 7 days or 100 per
 person, so open-based week 1 retention would read close to 0%. Add it

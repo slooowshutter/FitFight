@@ -6,6 +6,33 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Admin dashboard Retention tab: prepared 30 Sep 2026
+
+Marc asked for a tab with just retention, by week and by month, one curve per
+signup week and per signup month.
+
+**Code:** a new `retention` section (Retention chip after Overview). It follows
+people who connected Apple Health: someone is retained in week N (or 30-day
+month N) after their own signup day when their phone synced steps then.
+Background syncs run without an open until the app is deleted or Health is
+turned off. People count for a week only once it has passed. Charts: one line
+per signup week (last 8, W0 to W7) and per signup month (last 6, M0 to M5).
+Cards: signups with Apple Health, and Week 1, 2, 4 and Month 1, 3 retention for
+signups in the period vs the period before. Additive `section` value in
+`contracts/openapi.yaml`; no migration. No release note (admin only).
+
+**Not app opens yet:** staging.fitfight.app (a pinned older deployment) and
+production (`main`) still delete Health sync reports after 7 days or 100 per
+person, so open-based week 1 retention would read close to 0%. Add it
+server-side once both run the never-delete code.
+
+**Verification (local):** on a disposable Postgres, four fixture people with
+known sync days gave the expected weekly curve (75, 25, 50, 25, 25, 33.3%) and
+cards. The dashboard integration test (every section at 1, 30 and 3650 days)
+and all 431 unit tests passed. Swift was syntax-checked only; CI compiles it.
+
+**Live deployment:** pending.
+
 ## Website language follows the visitor: prepared 29 Sep 2026
 
 Backlog P0 "FitFight site i18n": the website picks English or French the way

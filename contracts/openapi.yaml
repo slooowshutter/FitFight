@@ -910,7 +910,7 @@ paths:
                     "required": true,
                     "schema": {
                         "type": "string",
-                        "enum": ["overview", "users", "engagement", "steps", "fights", "social", "app"]
+                        "enum": ["overview", "retention", "users", "engagement", "steps", "fights", "social", "app"]
                     }
                 },
                 {

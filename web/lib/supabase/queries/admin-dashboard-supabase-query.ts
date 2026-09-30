@@ -502,6 +502,114 @@ function definitions(
                     },
                 ],
             };
+        case "retention": {
+            // NOTE: retention follows people who connected Apple Health. Their phones sync steps
+            // in the background, opened or not, until the app is deleted or Health is turned off.
+            // App opens can't be used while servers still delete them after 7 days. The floor
+            // covers the last 6 signup months and both card periods.
+            const synced = sql`
+                select distinct history.user_id, history.day
+                from (${stepHistory(sql`${w.today}::date - ${Math.max(2 * w.days, 200)}::int`)}) as history
+                where history.day >= history.joined_day
+            `;
+            const withHealth = sql`
+                select p.user_id, p.joined_day from (${profiles}) as p
+                where exists (
+                    select 1 from public.data_sources as s where s.user_id = p.user_id and s.provider = 'apple_health'
+                )
+            `;
+            // Signups in the period vs the period before who synced steps `from` to `to` days
+            // after signing up. People count once day `to` has passed.
+            const rate = (from: number, to: number) => sql`
+                with active as materialized (${synced}),
+                eligible as (
+                    select c.user_id, c.joined_day, c.joined_day < ${w.today}::date - ${w.days}::int as previous
+                    from (${withHealth}) as c
+                    where c.joined_day >= ${w.today}::date - ${2 * w.days}::int
+                        and c.joined_day + ${to}::int < ${w.today}::date
+                ),
+                hits as (
+                    select distinct e.user_id from eligible as e
+                    join active as a on a.user_id = e.user_id
+                        and a.day between e.joined_day + ${from}::int and e.joined_day + ${to}::int
+                )
+                select 100.0 * count(h.user_id) filter (where not e.previous)
+                        / nullif(count(*) filter (where not e.previous), 0) as value,
+                    100.0 * count(h.user_id) filter (where e.previous)
+                        / nullif(count(*) filter (where e.previous), 0) as previous
+                from eligible as e
+                left join hits as h using (user_id)
+            `;
+            // One line per signup week (month): the share who synced steps in each week (30-day
+            // month) after their own signup day, once it has passed. A signup week (month)
+            // appears once its first people reach week (month) 1.
+            const curves = (unit: "week" | "month", cohorts: number) => {
+                const length = unit === "week" ? 7 : 30;
+                return sql`
+                    with active as materialized (${synced}),
+                    eligible as (
+                        select c.user_id, c.cohort, k, c.joined_day + k * ${length}::int as first_day
+                        from (
+                            select h.user_id, h.joined_day, date_trunc(${unit}::text, h.joined_day::timestamp)::date as cohort
+                            from (${withHealth}) as h
+                        ) as c
+                        cross join generate_series(0, ${cohorts - 1}::int) as k
+                        where c.cohort >= date_trunc(${unit}::text, ${w.today}::timestamp) - ${`${cohorts - 1} ${unit}s`}::interval
+                            and c.joined_day + (k + 1) * ${length}::int <= ${w.today}::date
+                    ),
+                    hits as (
+                        select distinct e.user_id, e.k from eligible as e
+                        join active as a on a.user_id = e.user_id
+                            and a.day >= e.first_day and a.day < e.first_day + ${length}::int
+                    )
+                    select ${unit === "week" ? "W" : "M"}::text || e.k as x,
+                        (100.0 * count(h.user_id) / count(*))::float8 as y,
+                        to_char(e.cohort::timestamp, ${unit === "week" ? '"Week of "FMDD Mon' : "FMMonth YYYY"}::text) as series
+                    from eligible as e
+                    left join hits as h on h.user_id = e.user_id and h.k = e.k
+                    where e.cohort in (select cohort from eligible where k = 1)
+                    group by e.cohort, e.k
+                    order by e.cohort desc, e.k
+                `;
+            };
+            return {
+                cards: [
+                    {
+                        id: "signups_with_health", title: "Signups with Apple Health", unit: "count", better: true,
+                        note: "The people retention follows: complete days in the period vs the period before.",
+                        query: sql`
+                            select count(*) filter (where c.joined_day >= ${w.today}::date - ${w.days}::int)::float8 as value,
+                                count(*) filter (where c.joined_day < ${w.today}::date - ${w.days}::int)::float8 as previous
+                            from (${withHealth}) as c
+                            where c.joined_day >= ${w.today}::date - ${2 * w.days}::int and c.joined_day < ${w.today}::date
+                        `,
+                    },
+                    ...[
+                        { id: "week_1", title: "Week 1 retention", from: 7, to: 13 },
+                        { id: "week_2", title: "Week 2 retention", from: 14, to: 20 },
+                        { id: "week_4", title: "Week 4 retention", from: 28, to: 34 },
+                        { id: "month_1", title: "Month 1 retention", from: 30, to: 59 },
+                        { id: "month_3", title: "Month 3 retention", from: 90, to: 119 },
+                    ].map(({ id, title, from, to }): AdminDashboardCardDefinition => ({
+                        id, title, unit: "percent", better: true,
+                        note: `Synced steps on days ${from} to ${to} after signing up. Signups in the period that got there vs the period before.`,
+                        query: rate(from, to),
+                    })),
+                ],
+                charts: [
+                    {
+                        id: "weekly_cohorts", title: "Weekly retention by signup week", kind: "line", unit: "percent", x: "label",
+                        note: "One line per signup week, the last 8. W1 is the share whose phone still synced steps 7 to 13 days after signing up.",
+                        query: curves("week", 8),
+                    },
+                    {
+                        id: "monthly_cohorts", title: "Monthly retention by signup month", kind: "line", unit: "percent", x: "label",
+                        note: "One line per signup month, the last 6. M1 is days 30 to 59 after signing up.",
+                        query: curves("month", 6),
+                    },
+                ],
+            };
+        }
         case "engagement":
             return {
                 cards: [

@@ -34,7 +34,7 @@ struct AdminDashboardView: View {
     }
 
     enum Page: String, CaseIterable {
-        case overview, users, engagement, steps, fights, social, app
+        case overview, retention, users, engagement, steps, fights, social, app
     }
 
     enum Timeframe: CaseIterable {

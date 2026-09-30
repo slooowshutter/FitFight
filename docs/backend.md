@@ -17,8 +17,8 @@ Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supaba
 ## Admin dashboard (prepared 29 Sep 2026)
 
 `GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>` feeds the Admin tab
-in Profile -> Dashboard. Sections: `overview`, `users`, `engagement`, `steps`,
-`fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
+in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement`,
+`steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
 query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
 chart by adding one definition, delete one by removing it. The app renders
@@ -37,6 +37,13 @@ query only marks its own tile with `Query failed: ...`.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
   day. "Health history" cards include imported days before signup.
+- **Retention:** follows people who connected Apple Health. Someone is retained in
+  a week (or 30-day month) counted from their own signup day when their phone
+  synced steps that week: background syncs run without an open until the app is
+  deleted or Health is turned off. A person counts for a week only once it has
+  passed. Charts draw one line per signup week (last 8) and month (last 6).
+  App opens are not used yet: the servers the app talks to still delete sync
+  reports after 7 days, which would make week 1 look close to 0%.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
   invitations are automatic.
 - **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the

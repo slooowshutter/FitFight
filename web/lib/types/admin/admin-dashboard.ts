@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const adminDashboardSectionValues = [
     "overview",
+    "retention",
     "users",
     "engagement",
     "steps",
@@ -67,6 +68,8 @@ export const adminDashboardSchema = z.object({
     days: z.number().int(),
     environment: adminDashboardEnvironmentSchema,
     generated_at: z.string(),
+    /** Every section in chip order: the app draws its chips from this list. */
+    sections: z.array(z.object({ id: adminDashboardSectionSchema, title: z.string() })),
     cards: z.array(adminDashboardCardSchema),
     charts: z.array(adminDashboardChartSchema),
 });

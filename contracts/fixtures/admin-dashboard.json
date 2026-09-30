@@ -3,6 +3,11 @@
     "days": 7,
     "environment": "production",
     "generated_at": "2026-09-29T12:00:00.000Z",
+    "sections": [
+        { "id": "overview", "title": "Overview" },
+        { "id": "retention", "title": "Retention" },
+        { "id": "users", "title": "Users" }
+    ],
     "cards": [
         {
             "id": "total_users",

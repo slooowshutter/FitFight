@@ -263,7 +263,7 @@ test("HealthKit timing boundaries reject invalid durations, counts and unknown f
     );
 });
 
-test("HealthKit diagnostics retain legacy snapshot reports and prune only their user", async () => {
+test("HealthKit diagnostics retain legacy snapshot reports and never delete sync history", async () => {
     const statements: { text: string; values: unknown[] }[] = [];
     const database = recordingDatabase(statements);
 
@@ -273,24 +273,11 @@ test("HealthKit diagnostics retain legacy snapshot reports and prune only their 
         database,
     );
 
-    assert.equal(statements.length, 2);
+    assert.equal(statements.length, 1);
     assert.match(
         statements[0].text,
         /on conflict \(user_id, connection_route\) do update/,
     );
-    assert.match(
-        statements[1].text,
-        /delete from private.healthkit_sync_attempts/,
-    );
-    assert.match(statements[1].text, /interval '7 days'/);
-    assert.match(
-        statements[1].text,
-        /order by received_at desc, attempt_id desc\s+offset 100/,
-    );
-    assert.deepEqual(statements[1].values, [
-        "5b2216f4-762d-4890-a516-63046a01df31",
-        "5b2216f4-762d-4890-a516-63046a01df31",
-    ]);
     assert.deepEqual(
         healthKitDiagnosticSnapshotResponseSchema.parse(result),
         result,
@@ -314,7 +301,7 @@ test("HealthKit diagnostics batch attempt inserts with authenticated ownership a
         database,
     );
 
-    assert.equal(statements.length, 3);
+    assert.equal(statements.length, 2);
     assert.match(
         statements[1].text,
         /insert into private.healthkit_sync_attempts/,

@@ -140,11 +140,6 @@ export async function reserveAiRequest(
             await sql`select pg_advisory_xact_lock(hashtext('fitfight:blend:admission'))`;
 
             await sql`
-            delete from private.ai_requests
-            where resource_id is null and status in ('completed', 'failed', 'cancelled')
-                and updated_at < clock_timestamp() - interval '7 days'
-        `;
-            await sql`
             update private.ai_requests set status = 'start_unconfirmed', error_code = 'ai_start_unconfirmed', updated_at = clock_timestamp()
             where user_id = ${userId} and idempotency_key = ${input.idempotencyKey}
                 and status = 'starting' and lease_expires_at <= clock_timestamp()

@@ -910,7 +910,7 @@ paths:
                     "required": true,
                     "schema": {
                         "type": "string",
-                        "enum": ["overview", "users", "engagement", "steps", "fights", "social", "app"]
+                        "enum": ["overview", "retention", "users", "engagement", "steps", "fights", "social", "app"]
                     }
                 },
                 {
@@ -941,12 +941,24 @@ paths:
                         "application/json": {
                             "schema": {
                                 "type": "object",
-                                "required": ["section", "days", "environment", "generated_at", "cards", "charts"],
+                                "required": ["section", "days", "environment", "generated_at", "sections", "cards", "charts"],
                                 "properties": {
                                     "section": { "type": "string" },
                                     "days": { "type": "integer" },
                                     "environment": { "type": "string", "enum": ["production", "staging"] },
                                     "generated_at": { "type": "string", "format": "date-time" },
+                                    "sections": {
+                                        "type": "array",
+                                        "description": "Every section in chip order. The app draws its chips from this list, so a new section needs no app update.",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id", "title"],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "title": { "type": "string" }
+                                            }
+                                        }
+                                    },
                                     "cards": {
                                         "type": "array",
                                         "items": {

@@ -1,7 +1,6 @@
 import { ApiError } from "@/lib/http";
 import { readAiRun } from "@/lib/domain/ai/workflow-requests";
 import { dueAiRequests } from "@/lib/supabase/queries/ai-requests-supabase-query";
-import { insertAiHttpLogs } from "@/lib/supabase/queries/ai-http-logs-supabase-query";
 import { dueCustomCharacterPurchases } from "@/lib/supabase/queries/custom-characters-supabase-query";
 import { advancePaidCharacter } from "@/lib/domain/ai/paid-character";
 import {
@@ -15,12 +14,10 @@ export async function reconcileAiRuns(
     deps: AiReconciliationDependencies = {
         due: dueAiRequests,
         read: readAiRun,
-        pruneLogs: insertAiHttpLogs,
         paidDue: dueCustomCharacterPurchases,
         paidAdvance: advancePaidCharacter,
     },
 ) {
-    await deps.pruneLogs([]);
     const requests = await deps.due();
     let checked = 0;
     let settled = 0;

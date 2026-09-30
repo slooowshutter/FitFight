@@ -6,6 +6,69 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## No automatic deletion left in the code: prepared 30 Sep 2026
+
+Marc repeated the rule on 30 Sep: never delete data; only a user deleting their
+own account removes it.
+
+**Code:** the last two automatic cleanups are gone. AI HTTP logs are no longer
+pruned after 7 days or past 100,000 rows (the nightly reconciler no longer runs
+retention), and reserving an AI action no longer deletes finished unpaid
+requests older than 7 days. A replayed action now gets its original request back
+instead of "expired"; requests already deleted still answer "expired". The
+database tests now check that these rows are kept and that account deletion
+still removes them.
+
+**Still deleting live until the servers run this code:**
+
+- Production (`main`): Health sync reports (7 days or 100 per person), profile
+  views (30 days), username lookups (1 hour), AI logs and unpaid AI requests.
+  Needs a production ship; Marc must say so.
+- staging.fitfight.app: pinned in Vercel to an older deployment, so it still
+  prunes Health sync reports and the AI rows. Marc must set the domain to follow
+  the `preview` branch (Vercel, Settings, Domains).
+
+**Still erased by user actions (awaiting Marc):** removing one's own post,
+comment, like, vote or friend deletes the row; linking Google deletes an empty
+duplicate sign-in account.
+
+**Verification:** typecheck, all 431 unit tests and all 21 AI database tests
+passed locally on a disposable Postgres; CI's web and database checks passed on
+PR #340 (the AI library test now ages its source request instead of expecting it
+deleted).
+## Admin dashboard Retention tab: prepared 30 Sep 2026
+
+Marc asked for a tab with just retention, by week and by month, one curve per
+signup week and per signup month.
+
+**Code:** a new `retention` section (Retention chip after Overview). It follows
+people who connected Apple Health: someone is retained in week N (or 30-day
+month N) after their own signup day when their phone synced steps then.
+Background syncs run without an open until the app is deleted or Health is
+turned off. People count for a week only once it has passed. Charts: one line
+per signup week (last 8, W0 to W7) and per signup month (last 6, M0 to M5).
+Cards: signups with Apple Health, and Week 1, 2, 4 and Month 1, 3 retention for
+signups in the period vs the period before. Additive `section` value in
+`contracts/openapi.yaml`; no migration. No release note (admin only).
+
+**Server-driven chips (Marc's ask):** every payload now lists the sections
+(`sections`: id and title) and this build draws its chips from that list, so
+adding or removing a section, card or chart is a server deploy only, with no app
+build. Additive response field in `contracts/openapi.yaml` and the fixture; the
+native contract test decodes it.
+
+**Not app opens yet:** staging.fitfight.app (a pinned older deployment) and
+production (`main`) still delete Health sync reports after 7 days or 100 per
+person, so open-based week 1 retention would read close to 0%. Add it
+server-side once both run the never-delete code.
+
+**Verification (local):** on a disposable Postgres, four fixture people with
+known sync days gave the expected weekly curve (75, 25, 50, 25, 25, 33.3%) and
+cards. The dashboard integration test (every section at 1, 30 and 3650 days)
+and all 431 unit tests passed. Swift was syntax-checked only; CI compiles it.
+
+**Live deployment:** pending.
+
 ## Website language follows the visitor: prepared 29 Sep 2026
 
 Backlog P0 "FitFight site i18n": the website picks English or French the way
@@ -192,8 +255,8 @@ deletion removes data, and that flow is unchanged. The rule is in `AGENTS.md`,
 Removed with Marc's privacy approval: the 7-day/100-row Health sync report prune,
 the 30-day profile-event cleanup (its cron call and rollup) and the 1-hour
 username-lookup cleanup; the lookup rate limit still counts only the last hour.
-Two cleanups still run and are next to remove with their database tests: AI HTTP
-logs (7 days) and finished unpaid AI requests (7 days).
+The last two, AI HTTP logs and finished unpaid AI requests (7 days each), were
+removed on 30 Sep (entry above).
 
 ## You tab renamed Profile: prepared 29 Sep 2026
 

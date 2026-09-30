@@ -21,7 +21,6 @@ export type AiRequestDependencies = {
 export type AiReconciliationDependencies = {
     due: typeof import("@/lib/supabase/queries/ai-requests-supabase-query").dueAiRequests;
     read: typeof import("@/lib/domain/ai/workflow-requests").readAiRun;
-    pruneLogs: typeof import("@/lib/supabase/queries/ai-http-logs-supabase-query").insertAiHttpLogs;
     paidDue?: typeof import("@/lib/supabase/queries/custom-characters-supabase-query").dueCustomCharacterPurchases;
     paidAdvance?: typeof import("@/lib/domain/ai/paid-character").advancePaidCharacter;
 };

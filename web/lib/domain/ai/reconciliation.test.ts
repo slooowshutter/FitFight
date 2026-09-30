@@ -117,12 +117,8 @@ test("allowance fixture and operator boundaries do not permit client-selected pr
 });
 
 test("reconciliation observes abandoned results with the server caller path and stops on provider cooldown", async () => {
-    let pruned = false;
     let count = 0;
     const result = await reconcileAiRuns({
-        pruneLogs: async () => {
-            pruned = true;
-        },
         due: async () => [
             pendingRequest(),
             pendingRequest(userId),
@@ -141,7 +137,6 @@ test("reconciliation observes abandoned results with the server caller path and 
             };
         },
     });
-    assert.equal(pruned, true);
     assert.equal(count, 2);
     assert.deepEqual(result, { checked: 1, settled: 1 });
 });
@@ -149,7 +144,6 @@ test("reconciliation observes abandoned results with the server caller path and 
 test("transient status failure is not settlement and does not block the next known run", async () => {
     let count = 0;
     const result = await reconcileAiRuns({
-        pruneLogs: async () => {},
         due: async () => [pendingRequest(), pendingRequest(userId)],
         read: async (_owner, id) => {
             if (++count === 1)

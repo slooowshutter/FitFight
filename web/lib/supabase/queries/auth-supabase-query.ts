@@ -15,6 +15,7 @@ import {
 } from "@/lib/types/admin/admin-dashboard";
 import {
     fitFightAdminProfileSchema,
+    fitFightAdminUserIdValues,
     type FitFightAdminViewer,
 } from "@/lib/types/admin/fitfight-admin";
 
@@ -218,8 +219,8 @@ export async function verifyDashboardAdmin(request: Request): Promise<AdminDashb
 }
 
 /**
- * Production data read by another project's server needs one more proof: this server's fixed
- * admin account ID (`FITFIGHT_ADMIN_USER_ID`), or an admin profile in production with the same
+ * Production data read by another project's server needs one more proof: one of Marc's fixed
+ * account IDs (in code or `FITFIGHT_ADMIN_USER_ID`), or an admin profile in production with the same
  * account ID (beta accounts copied to production kept theirs) or the same Apple ID on file.
  * Supabase keeps the auth schema out of reach of the read-only analytics user, so the
  * production lookup reads only public and private tables.
@@ -228,7 +229,8 @@ export async function verifyProductionDashboardAdmin(
     admin: AdminDashboardAdmin,
     production: Sql,
 ): Promise<void> {
-    if (canAdministerFights(admin.userId)) return;
+    const userId = admin.userId.toLowerCase();
+    if (canAdministerFights(userId) || fitFightAdminUserIdValues.some((id) => id === userId)) return;
     const appleSubjects = admin.identities
         .filter((identity) => identity.provider === "apple")
         .map((identity) => identity.subject);

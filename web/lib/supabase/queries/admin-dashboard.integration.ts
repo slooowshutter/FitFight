@@ -62,6 +62,10 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
                 .map((tile) => `${tile.id}: ${tile.note}`);
             assert.deepEqual(failed, [], `${section} over ${days} days`);
             assert.ok(dashboard.cards.length > 0 && dashboard.charts.length > 0);
+            assert.ok(
+                [...dashboard.cards, ...dashboard.charts].every((tile) => /(^| )Took \d+(\.\d)? s\.$/.test(tile.note ?? "")),
+                "Every tile reports its own query time",
+            );
             assert.equal(dashboard.environment, "staging");
         }
     }

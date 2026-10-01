@@ -1877,13 +1877,26 @@ export async function readAdminDashboard(
     };
     const { cards, charts } = definitions(database, w, section);
     const failure = (error: unknown) => `Query failed: ${error instanceof Error ? error.message : String(error)}`;
-    return adminDashboardSchema.parse({
-        section,
-        days,
-        environment,
-        generated_at: now.toISOString(),
-        sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
-        cards: await Promise.all(cards.map(async (card): Promise<AdminDashboardCard> => {
+    // NOTE: tiles take turns on the pool's connections, so each note's time is the tile's own
+    // query, not its wait for a free connection.
+    let free = database.options.max;
+    const turns: (() => void)[] = [];
+    const timed = async <T extends { note: string | null }>(tile: () => Promise<T>): Promise<T> => {
+        if (free > 0) free--;
+        else await new Promise<void>((resolve) => turns.push(resolve));
+        const started = performance.now();
+        try {
+            const result = await tile();
+            const took = `Took ${Math.floor((performance.now() - started) / 100) / 10} s.`;
+            return { ...result, note: result.note ? `${result.note} ${took}` : took };
+        } finally {
+            const next = turns.shift();
+            if (next) next();
+            else free++;
+        }
+    };
+    const [cardTiles, chartTiles] = await Promise.all([
+        Promise.all(cards.map((card) => timed(async (): Promise<AdminDashboardCard> => {
             const tile = { id: card.id, title: card.title, unit: card.unit, higher_is_better: card.better };
             try {
                 const row = adminDashboardCardRowSchema.parse((await card.query)[0]);
@@ -1891,8 +1904,8 @@ export async function readAdminDashboard(
             } catch (error) {
                 return { ...tile, value: null, previous: null, note: failure(error) };
             }
-        })),
-        charts: await Promise.all(charts.map(async (chart): Promise<AdminDashboardChart> => {
+        }))),
+        Promise.all(charts.map((chart) => timed(async (): Promise<AdminDashboardChart> => {
             const tile = { id: chart.id, title: chart.title, kind: chart.kind, unit: chart.unit, x_kind: chart.x };
             try {
                 const rows = await chart.query;
@@ -1912,6 +1925,15 @@ export async function readAdminDashboard(
             } catch (error) {
                 return { ...tile, note: failure(error), series: [], cells: [] };
             }
-        })),
+        }))),
+    ]);
+    return adminDashboardSchema.parse({
+        section,
+        days,
+        environment,
+        generated_at: now.toISOString(),
+        sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
+        cards: cardTiles,
+        charts: chartTiles,
     });
 }

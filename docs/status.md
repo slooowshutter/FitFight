@@ -71,8 +71,9 @@ pgTAP), a real tap, and the bar on a device.
 The route ships with the backend on the next `preview` deployment; the bar
 appears on TestFlight once `staging.fitfight.app` points at that deployment.
 Production gets the table and route when `preview` is merged to `main`; App Store
-builds then read `production` and show no bar. No PR, merge, deployment or
-TestFlight upload was made from this branch.
+builds then read `production` and show no bar. Marc asked for a PR on 1 Oct:
+[#343](https://github.com/slooowshutter/FitFight/pull/343) into `develop`. No
+merge, deployment or TestFlight upload has happened.
 
 ## Admin dashboard speed: prepared 1 Oct 2026
 

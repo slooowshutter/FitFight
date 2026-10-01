@@ -1505,6 +1505,24 @@ paths:
                                 }
                 "503":
                     description: Release metadata or environment configuration is unavailable.
+    /environment:
+        get:
+            operationId: getEnvironment
+            summary: Read this backend's row from the environment table. The app shows its Beta bar from this, not from its build.
+            security: []
+            responses:
+                "200":
+                    description: beta on the develop database, production on main. Cache-Control is no-store.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [environment]
+                                properties:
+                                    environment:
+                                        { type: string, enum: [beta, production] }
+                "503":
+                    description: The environment table has no row for this backend's Supabase project.
     /provider-connections/apple-health:
         post:
             operationId: connectAppleHealth

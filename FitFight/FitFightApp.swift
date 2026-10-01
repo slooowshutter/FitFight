@@ -156,6 +156,10 @@ struct FitFightApp: App {
                     await preferences.refresh(session: session)
                 }
                 .task {
+                    guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+                    await model.refreshEnvironment()
+                }
+                .task {
                     guard !CompanionPreview.isEnabled else {
                         #if DEBUG && targetEnvironment(simulator)
                         if ProcessInfo.processInfo.environment["FF_COMPANION_EXPORT"] == "1" {

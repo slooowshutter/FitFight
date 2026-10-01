@@ -146,6 +146,11 @@ struct ContentView: View {
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
+        .sheet(isPresented: $model.showingBetaTesting) {
+            BetaTestingView()
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
         .sheet(isPresented: $model.showingDebugMenu) {
             DebugMenuView()
                 .fitFightTheme(themeStore.theme)
@@ -246,19 +251,52 @@ struct ContentView: View {
     }
 
     private var signedInApp: some View {
-        ZStack {
-            tabBody
+        // The strip takes layout space: a top safeAreaInset does not reach screens inside a NavigationStack.
+        VStack(spacing: 0) {
+            if model.environment == "beta" || (model.environment == "production" && session.isFitFightAdmin) {
+                environmentStrip
+            }
+            ZStack {
+                tabBody
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                FFTabBar(tab: $model.tab, onReselect: {
+                    if model.tab == .feedback {
+                        model.feedbackRequestFilter = RequestFilter()
+                    }
+                    model.openFightID = nil
+                })
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            FFTabBar(tab: $model.tab, onReselect: {
-                if model.tab == .feedback {
-                    model.feedbackRequestFilter = RequestFilter()
-                }
-                model.openFightID = nil
-            })
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
+    }
+
+    /// Everyone on the beta sees it. The admin also sees it on the App Store version, both with the
+    /// build, to tell installs apart. It opens Profile's Beta testing setting, which links to both.
+    private var environmentStrip: some View {
+        let beta = model.environment == "beta"
+        let name = beta ? String(appLocalized: "Beta") : "App Store"
+        let version = String(appLocalized: "preferences.version", defaultValue: "\(AppVersion.marketing) · build \(AppVersion.build)")
+        return Button {
+            model.tab = .you
+            model.showingBetaTesting = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: beta ? "flask.fill" : "checkmark.seal.fill")
+                    .font(.system(size: 11, weight: .bold))
+                Text(verbatim: session.isFitFightAdmin ? "\(name) · \(version)" : name)
+                    .ffType(.label)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(beta ? theme.emberText : theme.textSecondary)
+            .frame(maxWidth: .infinity, minHeight: 32)
+            // A color background would otherwise also fill the status bar.
+            .background(beta ? theme.emberWash : theme.control, ignoresSafeAreaEdges: [])
         }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityIdentifier("environment-strip")
     }
 
     @ViewBuilder

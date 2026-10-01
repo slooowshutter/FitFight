@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 9,
             day: 29,
+            notes: "On the beta, a Beta bar now sits at the top of the app. Tap it to open Beta testing in Profile and get back to the App Store version."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 9,
+            day: 29,
             notes: "Fights shows today's steps as soon as you open the app instead of a dash, then updates them from Apple Health. Before the first read of the day, it shows Synchronizing your steps."
         ),
         ReleaseNote(

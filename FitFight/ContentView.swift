@@ -251,10 +251,10 @@ struct ContentView: View {
     }
 
     private var signedInApp: some View {
-        // The bar takes layout space: a top safeAreaInset does not reach screens inside a NavigationStack.
+        // The strip takes layout space: a top safeAreaInset does not reach screens inside a NavigationStack.
         VStack(spacing: 0) {
-            if model.isBetaEnvironment {
-                betaBar
+            if model.environment == "beta" || (model.environment == "production" && session.isFitFightAdmin) {
+                environmentStrip
             }
             ZStack {
                 tabBody
@@ -272,27 +272,31 @@ struct ContentView: View {
         }
     }
 
-    /// Opens Profile's Beta testing setting, which leads back to the App Store version.
-    private var betaBar: some View {
-        Button {
+    /// Everyone on the beta sees it. The admin also sees it on the App Store version, both with the
+    /// build, to tell installs apart. It opens Profile's Beta testing setting, which links to both.
+    private var environmentStrip: some View {
+        let beta = model.environment == "beta"
+        let name = beta ? String(appLocalized: "Beta") : "App Store"
+        let version = String(appLocalized: "preferences.version", defaultValue: "\(AppVersion.marketing) · build \(AppVersion.build)")
+        return Button {
             model.tab = .you
             model.showingBetaTesting = true
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "flask.fill")
+                Image(systemName: beta ? "flask.fill" : "checkmark.seal.fill")
                     .font(.system(size: 11, weight: .bold))
-                Text(String(appLocalized: "Beta"))
+                Text(verbatim: session.isFitFightAdmin ? "\(name) · \(version)" : name)
                     .ffType(.label)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 9, weight: .bold))
             }
-            .foregroundStyle(theme.emberText)
+            .foregroundStyle(beta ? theme.emberText : theme.textSecondary)
             .frame(maxWidth: .infinity, minHeight: 32)
             // A color background would otherwise also fill the status bar.
-            .background(theme.emberWash, ignoresSafeAreaEdges: [])
+            .background(beta ? theme.emberWash : theme.control, ignoresSafeAreaEdges: [])
         }
         .buttonStyle(FFHapticPlainStyle())
-        .accessibilityIdentifier("beta-bar")
+        .accessibilityIdentifier("environment-strip")
     }
 
     @ViewBuilder

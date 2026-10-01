@@ -214,8 +214,9 @@ final class AppModel: ObservableObject {
     @Published var showingVersions = false
     @Published var showingPreferences = false
     @Published var showingBetaTesting = false
-    /// Cached per backend: an App Store install that replaces TestFlight must not start with the Beta bar.
-    @Published private(set) var isBetaEnvironment = UserDefaults.standard.string(forKey: AppModel.environmentKey) == "beta"
+    /// `beta`, `production`, or nil before the backend first answers. Cached per backend: an App Store
+    /// install that replaces TestFlight must not start with the Beta strip.
+    @Published private(set) var environment = UserDefaults.standard.string(forKey: AppModel.environmentKey)
     @Published var showingDebugMenu = false
     @Published var showingUpdateToastPreview = false
     @Published var feedbackRequestFilter = RequestFilter()
@@ -329,7 +330,7 @@ final class AppModel: ObservableObject {
     func refreshEnvironment() async {
         guard let environment = try? await api.environment().environment else { return }
         UserDefaults.standard.set(environment, forKey: Self.environmentKey)
-        isBetaEnvironment = environment == "beta"
+        self.environment = environment
     }
 
     func fight(id: String) -> Fight? {

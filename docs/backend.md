@@ -39,6 +39,12 @@ query only marks its own tile with `Query failed: ...`.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
   day. "Health history" cards include imported days before signup.
+- **Speed:** a tab's tiles take turns on the pool's connections (10 for the
+  read-only production connection, 3 for the server's own database), and each
+  note ends with that tile's own query time (`Took 1.2 s.`). The route reuses a
+  running or under-5-minute-old result for the same environment, section and
+  period on that server instance, so Refresh can show data up to 5 minutes old.
+  A result with a failed tile is not reused.
 - **Retention:** follows people who connected Apple Health. Someone is retained in
   a week (or 30-day month) counted from their own signup day when their phone
   synced steps that week: background syncs run without an open until the app is

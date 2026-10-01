@@ -6,6 +6,25 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Admin dashboard speed: prepared 1 Oct 2026
+
+Marc reported the Fights, Social and App tabs timing out on production. Each tab
+runs 20 to 30 queries, and requests the app had already given up on kept
+running and holding the pool's 3 connections, so later tabs queued past 60
+seconds.
+
+**Code:** the route reuses a running or under-5-minute-old result for the same
+environment, section and period (not when a tile failed). The read-only
+production connection gets 10 connections instead of 3. Tiles take turns on the
+connections and every note ends with the tile's own query time (`Took 1.2 s.`),
+so slow charts on real data show up. Server only: no app build, no contract or
+database change.
+
+**Verification (local):** typecheck, all 431 unit tests and the dashboard
+database test (every tile reports a time) passed.
+
+**Live deployment:** pending.
+
 ## No automatic deletion left in the code: prepared 30 Sep 2026
 
 Marc repeated the rule on 30 Sep: never delete data; only a user deleting their

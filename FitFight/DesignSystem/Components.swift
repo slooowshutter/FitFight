@@ -801,6 +801,7 @@ struct FFGroupedRow: View {
                     Text(subtitle)
                         .ffType(.caption)
                         .foregroundStyle(enabled ? subtitleInk : theme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 0)

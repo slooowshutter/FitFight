@@ -27,6 +27,13 @@ enum Changelog {
         ReleaseNote(
             version: "1.1.3",
             year: 2026,
+            month: 10,
+            day: 1,
+            notes: "The loser action field grows with the text, so a long action stays readable."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
             month: 9,
             day: 29,
             notes: "Fights shows today's steps as soon as you open the app instead of a dash, then updates them from Apple Health. Before the first read of the day, it shows Synchronizing your steps."

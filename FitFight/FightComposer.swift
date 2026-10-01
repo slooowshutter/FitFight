@@ -383,7 +383,8 @@ struct FightComposerDetailsPage: View {
                 text: $actionText,
                 focus: actionFocused,
                 submitLabel: .done,
-                onSubmit: { actionFocused.wrappedValue = false }
+                onSubmit: { actionFocused.wrappedValue = false },
+                growsWithText: true
             )
         }
     }
@@ -396,6 +397,7 @@ struct FightComposerLimitedField: View {
     var focus: FocusState<Bool>.Binding
     var submitLabel: SubmitLabel
     var onSubmit: () -> Void
+    var growsWithText = false
 
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -409,7 +411,27 @@ struct FightComposerLimitedField: View {
                 if staticRender {
                     Text(verbatim: text.isEmpty ? placeholder : text)
                         .foregroundStyle(text.isEmpty ? theme.textFaint : theme.text)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: growsWithText ? .topLeading : .leading)
+                        .fixedSize(horizontal: false, vertical: growsWithText)
+                } else if growsWithText {
+                    TextField(placeholder, text: $text, axis: .vertical)
+                        .focused(focus)
+                        .foregroundStyle(theme.text)
+                        .lineLimit(1...)
+                        .frame(maxWidth: .infinity, minHeight: 22, alignment: .topLeading)
+                        .submitLabel(submitLabel)
+                        .onSubmit(onSubmit)
+                        .onChange(of: text) { _, value in
+                            // Return inserts a newline in a vertical field. The action is one phrase.
+                            let flattened = String(value.filter { !$0.isNewline })
+                            let limited = flattened.count > 120 ? String(flattened.prefix(120)) : flattened
+                            if limited != value {
+                                text = limited
+                            }
+                            if value.contains(where: \.isNewline) {
+                                onSubmit()
+                            }
+                        }
                 } else {
                     TextField(placeholder, text: $text)
                         .focused(focus)

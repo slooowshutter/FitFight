@@ -8,12 +8,10 @@ info:
         Database columns are not a client contract. Clients must tolerate additional response fields.
         Apple Health Steps use merged exact-window aggregates. The older signed
         Storage-object routes remain temporarily available to legacy clients.
-        TestFlight updates are advisory: staging does not reject version/build mismatches.
-        Production requires X-FitFight-Version and X-FitFight-Build when enforcement is on;
-        a mismatch returns 426 with code update_required before business logic runs unless
-        the build matches latest, review, or internal. The public release endpoint returns
-        503 with code release_unavailable for missing metadata; authenticated commands
-        continue to authentication when release metadata is unavailable.
+        App updates are optional on every channel: no version or build is rejected.
+        Clients still send X-FitFight-Version and X-FitFight-Build for diagnostics.
+        The public release endpoint returns 503 with code release_unavailable for
+        missing metadata.
 servers:
     - url: /api/v1
 paths:
@@ -82,9 +80,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -177,9 +172,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -237,9 +229,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -288,9 +277,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -349,9 +335,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -403,9 +386,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -490,9 +470,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -550,9 +527,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -622,9 +596,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -682,9 +653,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -751,9 +719,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -831,9 +796,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -910,11 +872,171 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
+                }
+            }
+        }
+    }
+    "/admin/dashboard": {
+        "get": {
+            "operationId": "readAdminDashboard",
+            "summary": "Marc-only aggregate analytics for one section and a trailing window of days.",
+            "description": "Every card and chart is computed live from Postgres. A token from the other FitFight Supabase project is accepted when X-FitFight-Auth-Project names that project and the same Apple or Google account owns an admin profile in this one.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                },
+                {
+                    "name": "X-FitFight-Auth-Project",
+                    "in": "header",
+                    "required": false,
+                    "schema": {
+                        "type": "string",
+                        "enum": ["pvqntpteehdvhqyctwum", "zstzbfocunthczzubggz"]
+                    }
+                },
+                {
+                    "name": "section",
+                    "in": "query",
+                    "required": true,
+                    "schema": {
+                        "type": "string",
+                        "enum": ["overview", "retention", "users", "engagement", "steps", "fights", "social", "app"]
+                    }
+                },
+                {
+                    "name": "days",
+                    "in": "query",
+                    "required": true,
+                    "schema": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3650
+                    }
+                },
+                {
+                    "name": "environment",
+                    "in": "query",
+                    "required": false,
+                    "description": "Database to read. Defaults to the server's own. A staging server reads production through its read-only analytics connection, only when the same Apple or Google account also owns an admin profile in production.",
+                    "schema": {
+                        "type": "string",
+                        "enum": ["production", "staging"]
+                    }
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Cards compare the window with the one before it. Chart series marked previous are shifted onto the current dates. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["section", "days", "environment", "generated_at", "sections", "cards", "charts"],
+                                "properties": {
+                                    "section": { "type": "string" },
+                                    "days": { "type": "integer" },
+                                    "environment": { "type": "string", "enum": ["production", "staging"] },
+                                    "generated_at": { "type": "string", "format": "date-time" },
+                                    "sections": {
+                                        "type": "array",
+                                        "description": "Every section in chip order. The app draws its chips from this list, so a new section needs no app update.",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id", "title"],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "title": { "type": "string" }
+                                            }
+                                        }
+                                    },
+                                    "cards": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id", "title", "value", "previous", "unit", "higher_is_better", "note"],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "title": { "type": "string" },
+                                                "value": { "type": ["number", "null"] },
+                                                "previous": { "type": ["number", "null"] },
+                                                "unit": { "type": "string", "enum": ["count", "steps", "percent", "days", "hours", "minutes", "seconds"] },
+                                                "higher_is_better": { "type": ["boolean", "null"] },
+                                                "note": { "type": ["string", "null"] }
+                                            }
+                                        }
+                                    },
+                                    "charts": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id", "title", "kind", "unit", "x_kind", "note", "series", "cells"],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "title": { "type": "string" },
+                                                "kind": { "type": "string", "enum": ["line", "bar", "heatmap"] },
+                                                "unit": { "type": "string" },
+                                                "x_kind": { "type": "string", "enum": ["date", "label"] },
+                                                "note": { "type": ["string", "null"] },
+                                                "series": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": ["name", "previous", "points"],
+                                                        "properties": {
+                                                            "name": { "type": "string" },
+                                                            "previous": { "type": "boolean" },
+                                                            "points": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "required": ["x", "y"],
+                                                                    "properties": { "x": { "type": "string" }, "y": { "type": "number" } }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "cells": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": ["x", "y", "value"],
+                                                        "properties": {
+                                                            "x": { "type": "string" },
+                                                            "y": { "type": "string" },
+                                                            "value": { "type": "number" }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "400": {
+                    "description": "Invalid section, days or environment, or an environment this server cannot read"
+                },
+                "401": {
+                    "description": "Missing or invalid session, or an unknown sign-in project"
+                },
+                "403": {
+                    "description": "Not the FitFight admin, or, for production data on a staging server, no admin profile in production owns the same Apple or Google account"
+                },
+                "503": {
+                    "description": "Production data isn't set up on this server"
                 }
             }
         }
@@ -970,9 +1092,6 @@ paths:
                 "409": {
                     "description": "Transition no longer available"
                 },
-                "426": {
-                    "description": "App update required where enforced"
-                },
                 "429": {
                     "description": "Rate limit"
                 }
@@ -1021,9 +1140,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -1092,9 +1208,6 @@ paths:
                 },
                 "409": {
                     "description": "Transition no longer available"
-                },
-                "426": {
-                    "description": "App update required where enforced"
                 },
                 "429": {
                     "description": "Rate limit"
@@ -1244,7 +1357,6 @@ paths:
                                 { $ref: "#/components/schemas/FightSnapshot" }
                 "401": { description: Invalid session or deleted account }
                 "400": { description: Invalid time zone or request body }
-                "426": { description: App update required }
     /posts/{postID}/comments/{commentID}/like:
         put:
             operationId: setFightPostCommentLike
@@ -1291,7 +1403,6 @@ paths:
                 "401": { description: Invalid session or deleted account }
                 "403": { description: The viewer cannot access the post }
                 "404": { description: Post or comment unavailable }
-                "426": { description: App update required }
     /posts/{postID}/reactions:
         get:
             operationId: listFightPostReactionPeople
@@ -3054,7 +3165,7 @@ components:
                         - { type: "null" }
                 enforced:
                     type: boolean
-                    description: Always false on staging, where TestFlight updates are optional. Production follows the published mandatory-update policy.
+                    description: Always false. Updates are optional on every channel; released apps still decode this field.
         SpecialClaimResult:
             type: object
             required: [outcome, transaction_id, companion_id]

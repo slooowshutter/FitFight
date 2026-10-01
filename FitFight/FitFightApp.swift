@@ -181,14 +181,14 @@ struct FitFightApp: App {
                     await session.devAdoptSessionIfNeeded()
                     #endif
                 }
-                .task(id: scenePhase != .background && appUpdate.allowsUse ? session.authSession?.user.id : nil) {
+                .task(id: scenePhase != .background ? session.authSession?.user.id : nil) {
                     guard !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
-                    let userID = scenePhase != .background && appUpdate.allowsUse ? session.authSession?.user.id : nil
+                    let userID = scenePhase != .background ? session.authSession?.user.id : nil
                     await fightLiveUpdates.activate(client: session.client, userID: userID) {
-                        guard session.authSession?.user.id == userID, appUpdate.allowsUse else { return }
+                        guard session.authSession?.user.id == userID else { return }
                         await model.refreshFromServer(session: session, performMaintenance: false)
                     } refreshFeed: {
-                        guard session.authSession?.user.id == userID, appUpdate.allowsUse else { return }
+                        guard session.authSession?.user.id == userID else { return }
                         model.feedRevision += 1
                     }
                 }
@@ -205,11 +205,11 @@ struct FitFightApp: App {
                     await push.refreshAuthorizationStatus()
                     await push.registerIfAuthorized()
                 }
-                .task(id: appUpdate.allowsUse ? session.authSession?.user.id : nil) {
+                .task(id: session.authSession?.user.id) {
                     guard !CompanionPreview.isEnabled else { return }
                     model.pendingReferralError = nil
-                    steps.activate(userId: appUpdate.allowsUse ? session.authSession?.user.id : nil)
-                    guard appUpdate.allowsUse else { return }
+                    // Like the fights cache, keep the saved user so today's steps stay on screen while sign-in is restored.
+                    steps.activate(userId: session.authSession?.user.id ?? session.client.auth.currentUser?.id)
                     model.restoreCachedFights(session: session)
                     // Before sign-in is restored this run skips Apple Health, and the real run would only join it.
                     guard session.authSession != nil else { return }
@@ -222,13 +222,12 @@ struct FitFightApp: App {
                         await push.considerPromptIfNeeded(fights: model.fights)
                     }
                 }
-                .task(id: appUpdate.allowsUse ? session.profile?.userId : nil) {
+                .task(id: session.profile?.userId) {
                     guard !CompanionPreview.isEnabled else { return }
-                    guard appUpdate.allowsUse else { return }
                     await model.consumePendingLinks(session: session)
                 }
-                .task(id: appUpdate.allowsUse ? session.authSession?.user.id : nil) {
-                    guard !CompanionPreview.isEnabled, appUpdate.allowsUse else { return }
+                .task(id: session.authSession?.user.id) {
+                    guard !CompanionPreview.isEnabled else { return }
                     await model.loadFightDiscovery(session: session, force: true)
                 }
                 .onOpenURL { url in
@@ -248,7 +247,6 @@ struct FitFightApp: App {
                     returnedFromBackground = false
                     model.feedRevision += 1
                     Task {
-                        guard await AppUpdateChecker.shared.permitsRequests() else { return }
                         async let discovery: Void = model.loadFightDiscovery(session: session, force: true)
                         await model.refreshFights(session: session, steps: steps)
                         await model.consumePendingLinks(session: session)

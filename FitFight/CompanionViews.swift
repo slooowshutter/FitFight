@@ -747,20 +747,21 @@ struct CompanionIntroduction: View {
                 Text("steps today")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
-            case .reading, .idle where model.isRefreshingFights, .empty where model.isRefreshingFights:
+            case .reading, .idle where steps.hasAsked, .empty where model.isRefreshingFights:
                 if staticRender {
                     Image(systemName: "arrow.clockwise").foregroundStyle(theme.gold)
                 } else {
                     ProgressView().tint(theme.gold)
                 }
-                Text(steps.status == .reading ? String(appLocalized: "Reading today’s steps…") : String(appLocalized: "Syncing…"))
-                    .ffType(.caption)
+                Text(String(appLocalized: "Synchronizing your steps."))
+                    .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
                     .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             case .idle, .empty:
                 Text("-")
                     .ffType(.metric)
                     .foregroundStyle(theme.text)
-                Text(steps.isConnected ? String(appLocalized: "Today’s steps unavailable") : String(appLocalized: "Connect Apple Health"))
+                Text(steps.hasAsked ? String(appLocalized: "Today’s steps unavailable") : String(appLocalized: "Connect Apple Health"))
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
             }

@@ -1,10 +1,351 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **26 Sep 2026**. Production release: **1.1.1 (202)**.
+Read this before building. Last updated **29 Sep 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Admin dashboard speed: prepared 1 Oct 2026
+
+Marc reported the Fights, Social and App tabs timing out on production. Each tab
+runs 20 to 30 queries, and requests the app had already given up on kept
+running and holding the pool's 3 connections, so later tabs queued past 60
+seconds.
+
+**Code:** the route reuses a running or under-5-minute-old result for the same
+environment, section and period (not when a tile failed). The read-only
+production connection gets 10 connections instead of 3. Tiles take turns on the
+connections and every note ends with the tile's own query time (`Took 1.2 s.`),
+so slow charts on real data show up. Server only: no app build, no contract or
+database change.
+
+**Verification (local):** typecheck, all 431 unit tests and the dashboard
+database test (every tile reports a time) passed.
+
+**Live deployment:** pending.
+
+## No automatic deletion left in the code: prepared 30 Sep 2026
+
+Marc repeated the rule on 30 Sep: never delete data; only a user deleting their
+own account removes it.
+
+**Code:** the last two automatic cleanups are gone. AI HTTP logs are no longer
+pruned after 7 days or past 100,000 rows (the nightly reconciler no longer runs
+retention), and reserving an AI action no longer deletes finished unpaid
+requests older than 7 days. A replayed action now gets its original request back
+instead of "expired"; requests already deleted still answer "expired". The
+database tests now check that these rows are kept and that account deletion
+still removes them.
+
+**Still deleting live until the servers run this code:**
+
+- Production (`main`): Health sync reports (7 days or 100 per person), profile
+  views (30 days), username lookups (1 hour), AI logs and unpaid AI requests.
+  Needs a production ship; Marc must say so.
+- staging.fitfight.app: pinned in Vercel to an older deployment, so it still
+  prunes Health sync reports and the AI rows. Marc must set the domain to follow
+  the `preview` branch (Vercel, Settings, Domains).
+
+**Still erased by user actions (awaiting Marc):** removing one's own post,
+comment, like, vote or friend deletes the row; linking Google deletes an empty
+duplicate sign-in account.
+
+**Verification:** typecheck, all 431 unit tests and all 21 AI database tests
+passed locally on a disposable Postgres; CI's web and database checks passed on
+PR #340 (the AI library test now ages its source request instead of expecting it
+deleted).
+## Admin dashboard Retention tab: prepared 30 Sep 2026
+
+Marc asked for a tab with just retention, by week and by month, one curve per
+signup week and per signup month.
+
+**Code:** a new `retention` section (Retention chip after Overview). It follows
+people who connected Apple Health: someone is retained in week N (or 30-day
+month N) after their own signup day when their phone synced steps then.
+Background syncs run without an open until the app is deleted or Health is
+turned off. People count for a week only once it has passed. Charts: one line
+per signup week (last 8, W0 to W7) and per signup month (last 6, M0 to M5).
+Cards: signups with Apple Health, and Week 1, 2, 4 and Month 1, 3 retention for
+signups in the period vs the period before. Additive `section` value in
+`contracts/openapi.yaml`; no migration. No release note (admin only).
+
+**Server-driven chips (Marc's ask):** every payload now lists the sections
+(`sections`: id and title) and this build draws its chips from that list, so
+adding or removing a section, card or chart is a server deploy only, with no app
+build. Additive response field in `contracts/openapi.yaml` and the fixture; the
+native contract test decodes it.
+
+**Not app opens yet:** staging.fitfight.app (a pinned older deployment) and
+production (`main`) still delete Health sync reports after 7 days or 100 per
+person, so open-based week 1 retention would read close to 0%. Add it
+server-side once both run the never-delete code.
+
+**Verification (local):** on a disposable Postgres, four fixture people with
+known sync days gave the expected weekly curve (75, 25, 50, 25, 25, 33.3%) and
+cards. The dashboard integration test (every section at 1, 30 and 3650 days)
+and all 431 unit tests passed. Swift was syntax-checked only; CI compiles it.
+
+**Live deployment:** pending.
+
+## Website language follows the visitor: prepared 29 Sep 2026
+
+Backlog P0 "FitFight site i18n": the website picks English or French the way
+the app does, instead of showing English to everyone who arrives outside the app.
+
+**Code:** `web/middleware.ts` runs only on `/`, `/privacy`, `/support`,
+`/j/:code` and `/r/:code`. A saved choice (`NEXT_LOCALE` cookie) wins;
+otherwise the visitor's most preferred supported browser language decides,
+else English. French visitors get the `/fr` page at the same address (a rewrite,
+not a redirect), so invite links keep working as universal links. `/fr/...`
+addresses stay French for the app's French links. Every page has an English or
+Français footer link (`?lang=`) that saves the choice and returns to the clean
+address. New French home, join and referral pages use the approved App Store
+French copy and the app's French wording; the invite and TestFlight components
+take a language. The middleware keeps the default Edge runtime because it only
+reads the request, and Node.js middleware would send every page view through
+iad1. No API, database, app or release setting changed.
+
+**Verification (local):** Web typecheck and all 431 unit tests passed, including
+5 middleware tests. A production build kept `/` and `/fr` static with hourly
+revalidation. Against `next start` and a disposable Postgres, French,
+German-then-French, English, Spanish-only and missing headers, saved choices,
+the switch links, `/fr` addresses, invalid codes (404), and the untouched API
+and apple-app-site-association routes all behaved as expected. A Chrome
+click-through confirmed the choice sticks across navigation, and the CI privacy
+disclosure check passed. A staging build showed the French TestFlight steps.
+
+**Live deployment:** none. Nothing is merged or deployed. After a `develop`
+promotion, check staging.fitfight.app with a French and an English browser.
+
+## Admin dashboard reads production from preview: prepared 29 Sep 2026
+
+Marc asked for the Admin tab to show production data without shipping to
+`main`.
+
+**Code:** both environment buttons (Production, now the default, and Staging)
+call the preview server (`fit-fight-git-preview-blendai.vercel.app`) with
+`environment=production` or `staging`. The choice is saved under a new key, so
+an earlier Staging choice does not stick. The preview server reads staging from
+its own database and production through a new read-only connection,
+`PRODUCTION_ANALYTICS_DATABASE_URL`. A production read requires the admin check
+on the server's own project and the same Apple or Google account owning an
+admin profile in production; otherwise 403. The connection helper refuses a
+`postgres.` user and any user outside production. New charts reach production
+data with a `preview` merge. A 403 reads "This account isn't the FitFight admin
+on Production" (or Staging); other errors show the server's message. The old
+"Production doesn't have the dashboard yet" message is gone. No release note
+(admin only). See [backend](backend.md#admin-dashboard-prepared-29-sep-2026).
+
+**Marc's setup:**
+
+1. In the production Supabase project (`pvqntpteehdvhqyctwum`), create the
+   Postgres role `fitfight_analytics`: login, SELECT only on the `public` and
+   `private` tables, BYPASSRLS, `statement_timeout` 20 s, read-only
+   transactions. Supabase refuses it the `auth` schema ("permission denied for
+   schema auth" on 29 Sep), so the production admin check matches the same
+   account ID or the Apple ID in `private.apple_sign_in_tokens` instead.
+   Marc's accounts differ (staging `87434630…`, production `854ed9b9…`, no
+   Apple sign-in on file in production), so production reads also accept the
+   preview server's `FITFIGHT_ADMIN_USER_ID`, set to his staging account.
+2. In Vercel, add `PRODUCTION_ANALYTICS_DATABASE_URL` for Preview, branch
+   `preview` only: the Supavisor pooler URL whose user is
+   `fitfight_analytics.pvqntpteehdvhqyctwum`, never the `postgres` user.
+3. The variable must exist before the `preview` deployment that uses it. Vercel
+   applies variables at deploy time, so adding it later needs a redeploy. Until
+   then Production shows "Production data isn't set up on this server yet"
+   (503).
+
+**Compatibility:** additive. `environment` is optional and defaults to the
+server's own database; the response shape is unchanged and there is no
+migration. Builds 213 and 214 are unaffected: their Staging view calls the
+preview server without `environment` and still gets staging, and their
+Production view still calls `fitfight.app`, unchanged until this backend
+reaches `main` (there, no `environment` still means production).
+
+**Verification (local):** web typecheck and all 426 unit tests passed;
+`admin-dashboard.integration.ts` passed on the migrated Postgres 16 copy. A
+throwaway script ran `verifyProductionDashboardAdmin` there: Marc's one Apple
+identity passed; a stranger's identity, no identities, Marc's subject under the
+other provider, an unconfirmed admin email and a deleted profile got 403; a
+confirmed admin email passed. Through the real route handler, with only the
+own-project admin check stubbed: no `environment` or `staging` returned
+staging; a missing variable returned 503; an invalid URL, a `postgres.` user, a
+staging user and a direct (non-pooler) user returned 500, and no error log
+carried the password; with a local SELECT-only, BYPASSRLS, read-only role,
+every section returned production data with no query failure and a stranger
+got 403; a production server asked for staging returned 400. Swift was only
+parsed here; the simulator build and contract tests run in CI.
+
+**Live deployment:** not deployed. Production data appears once this reaches
+`preview` and Marc's variable exists.
+
+## Steps on open: prepared 29 Sep 2026
+
+Marc's P0 backlog item (23 and 27 Sep): after a restart, the Fights header
+showed "-" and "Connect Apple Health" even though today's steps had loaded
+before.
+
+**Code:** `HealthKitStepsStore` saves today's count per account after each
+Apple Health read, with the read time and time zone, and restores it when the
+account is activated. Fights, the companion pose and Profile show it at once.
+The count stays on screen while Apple Health is read again and after a failed
+read. It is dropped after midnight in the time zone it was read in, when a read
+finds no steps, and on account deletion. The launch task keeps the saved
+account active while sign-in is restored, as the fights cache already did, so
+the first frame is not an empty account. With no count yet, the header shows a
+spinner and "Synchronizing your steps." (Nunito ExtraBold 16). It says "Connect
+Apple Health" only when Health was never connected. A dash remains only when
+Apple Health has no steps for today or Health is not connected. English and
+French copy and a 1.1.3 release note are included.
+
+**Contract:** No API, database or release-setting change. The saved count stays
+on the device (UserDefaults) and is never uploaded.
+
+**Verification:** `scripts/check_localizations.py` and
+`scripts/check_native_api_boundary.py` passed. A Linux Swift 6.4 harness
+(Swift 5 mode, like the app) compiled the new store code unchanged from
+`HealthKitStepsStore.swift` against a fake read and passed 23 checks: relaunch,
+reads, failed reads, empty reads, account separation and midnight in four time
+zones. Mutations that restore the old behavior failed it. The GitHub-hosted
+simulator build runs on the PR into `develop`; the SwiftUI changes in
+`CompanionViews.swift` and `FitFightApp.swift` are compiled only there. Not
+run: a device check. Not merged or uploaded.
+
+## Admin dashboard: prepared 29 Sep 2026
+
+Marc asked for a Marc-only analytics tab with sections, a timeframe picker,
+scorecards against the previous period, and as many charts as possible.
+
+**Code:** Profile -> Dashboard gains an **Admin** tab for username `marc`, with
+a Production/Staging switch, sections (Overview, Users, Engagement, Steps,
+Fights, Social, App), a 1D/7D/30D/90D/1Y/Custom timeframe, cards with the change
+against the previous period, and line, bar and heatmap charts. Numbers always
+round down (999,999 shows 999K). About 70 cards and 90 charts come from
+`GET /api/v1/admin/dashboard`, one SQL query each, computed live from Postgres;
+see [backend](backend.md#admin-dashboard-prepared-29-sep-2026). A TestFlight
+build reads production with its normal staging login: the backend matches the
+same Apple or Google account. App opens come from the existing foreground Health
+sync reports, which are now kept (see below).
+
+**Contract:** additive `GET /api/v1/admin/dashboard` in `contracts/openapi.yaml`
+and `contracts/fixtures/admin-dashboard.json`. No migration and no change to
+existing responses. Production data needs this backend on `main`; until then
+the app says so and Staging works.
+
+**Verification (local):** all 58 migrations applied to a Postgres 16 copy with
+Supabase Auth stubs; every card and chart ran for 1 to 3,650 days with no query
+failure, including a 2.2M-row stress load (Steps section about 3 s). The new
+database test passed there; web typecheck and all 426 unit tests passed; a
+mocked cross-project check allowed Marc's matching Apple identity and refused a
+stranger (403) and an unknown project (401). Swift cannot compile here; the
+simulator build and contract tests run in CI.
+
+**Live deployment (29 Sep):** PR #327 was squash-merged to `develop` (`ffa484e`)
+and merged into `preview` (`230ebe8`). CI passed on both: iOS simulator build and
+contract tests, database tests (including `admin-dashboard.integration.ts` on the
+Supabase stack), web tests and screenshots. TestFlight **1.1.3 (212)** uploaded
+and processed; it is the staging `internal` release. Vercel skips `develop`
+builds. The `preview` deployment `fit-fight-nynycl8vv-blendai.vercel.app` serves
+the new backend and privacy page, but `staging.fitfight.app` stays on an older
+deployment until Marc points the domain at it in Vercel, as on 23 Sep. Build
+212 therefore showed a 404 on its Staging view. From the next build, the
+dashboard's Staging view calls Vercel's preview branch address
+(`fit-fight-git-preview-blendai.vercel.app`), which always serves the newest
+`preview` backend on staging data; the rest of the app still uses
+`staging.fitfight.app`. Production has none of this until `preview` is merged
+to `main`.
+
+**Privacy:** the English and French privacy pages (effective 29 Sep) no longer
+promise deleting sync reports, profile-measurement events or username lookups,
+say sync reports record whether a sync started on opening the app, and list
+internal aggregate statistics as a use. The app privacy manifest adds Analytics
+purposes and Product Interaction. Marc must mirror those in App Store Connect
+before the next App Store submission.
+
+## Never delete data: recorded 29 Sep 2026
+
+Marc's rule: FitFight keeps every row it collects. Only a user's own account
+deletion removes data, and that flow is unchanged. The rule is in `AGENTS.md`,
+`.cursor/rules/never-delete-data.mdc`,
+[`system-design.md`](system-design.md#retention-classes) and
+[`backend.md`](backend.md#standard-row-columns).
+
+Removed with Marc's privacy approval: the 7-day/100-row Health sync report prune,
+the 30-day profile-event cleanup (its cron call and rollup) and the 1-hour
+username-lookup cleanup; the lookup rate limit still counts only the last hour.
+The last two, AI HTTP logs and finished unpaid AI requests (7 days each), were
+removed on 30 Sep (entry above).
+
+## You tab renamed Profile: prepared 29 Sep 2026
+
+Marc asked on 29 Sep for the You tab to be called Profile.
+
+**Code:** The tab bar label reads Profile (French: Profil). The Health
+onboarding hint now reads "Connect later from Profile → Settings → Apple
+Health.", since Apple Health moved under Settings. Swift names (`YouView`,
+`FFTab.you`) and the `you` deep link are unchanged. A 1.1.3 release note with
+English and French copy is included; 1.1.3 is the marketing version on
+`preview`. The support and privacy pages (English and French) and the living
+docs now say Profile. The privacy page's effective date is unchanged because
+only the in-app path wording changed. Dated status entries, changelog rows and
+design proposals keep their historical wording.
+
+**Contract:** No API, database or release-setting change.
+
+**Verification:** `scripts/check_localizations.py` passed. Marc asked on
+29 Sep to merge straight to `develop` and `preview` for TestFlight; the
+GitHub-hosted simulator build runs on those pushes.
+
+## Update toast, no forced update: prepared 28 Sep 2026
+
+Marc's P0 backlog item (27 Sep): never force an update. When a newer version is
+out, show a dismissible toast and keep the installed version usable.
+
+**Code:** App Store builds now get the same toast as TestFlight: "New FitFight
+version", "Ready in the App Store.", Update (opens the App Store page) and
+Close. It appears at most once every three days and closes after 10 seconds
+unless VoiceOver is running. The required-update screen, its saved lock, the
+native request blocking and the `update_required` handling are removed, and a
+lock saved by an older binary is ignored. The backend no longer returns
+`426 update_required` in production, and `/api/app-release` reports
+`enforced: false` on both channels whatever the publisher records. English and
+French copy and a 1.1.2 release note are included. Fastlane and the release
+publisher are unchanged.
+
+**Contract:** `/api/app-release` keeps every field; `enforced` is now always
+false. Released apps decode it but their lock logic ignores it (checked in the
+1.1.1 source at `e2783be`). No `/api/v1` request or response shape changes:
+older builds that production used to reject with 426 now reach normal
+authentication. The 426 responses are removed from `contracts/openapi.yaml`.
+No database migration.
+
+**Supported builds checked:** read-only `/api/app-release` at 09:09 UTC on
+28 Sep returned staging latest 1.1.1 (201), review/internal 1.1.2 (209),
+enforcement off; production latest **1.1.2 (210)**, no review/internal,
+enforcement **on**. So production 1.1.1 (202) installs are locked right now, by
+their own saved lock and by the backend 426. Deploying this backend removes the
+426, but a 202 lock only clears when that phone updates. Builds up to 210 keep
+their built-in lock, so 210 installs will be locked once when the next App Store
+version becomes `latest`. Builds with this change never lock.
+
+**Deploy order:** backend first (staging on `develop`, production on `main`),
+then the native build through `preview` and the App Store. Production keeps
+returning 426 until the `main` promotion.
+
+**Verification:** a Linux Swift 6.4 run of `tests/AppUpdateCheckerTests.swift`
+(Combine shim, FoundationNetworking) passed. The same harness passed the old
+tests on the old code, and a mutation that disabled App Store toasts failed the
+new tests. The Google sign-in harness passed with a local CryptoKit stand-in.
+Web typecheck and all 426 backend tests passed; with the old backend, the new
+authentication test failed on 426. Localization and native API boundary checks
+passed, and the contract YAML parses. Not run: the GitHub-hosted macOS simulator
+build (GitHub login was unavailable in this session) and a device check on
+TestFlight and App Store builds. No PR, push, merge, deployment or upload.
+
+AGENTS.md still says API behavior can be retired once a replacement is
+"installable and required". Updates can no longer be required, so any
+retirement now needs Marc's explicit compatibility cutoff.
 
 ## Preview sync fixes and faster You: prepared 26 Sep 2026
 
@@ -2791,7 +3132,7 @@ You still do **not** paste `sb_secret_...` anywhere.
 
 ## Before this branch ships
 
-The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The deployed native app still uses the blocking overlay. The [prepared cancellation fix](#cancellable-testflight-updates-prepared-15-sep-2026) makes TestFlight updates optional and stops staging API version blocks. No database migration is part of the update check itself. See [update policy and database rollout](shipping.md#mandatory-updates-and-database-rollout).
+The mandatory-update manifest and `GET /api/app-release` are live on staging; production still needs the endpoint before its native build, and the scheduled publisher must reach `main`. The existing server `NEXT_PUBLIC_SUPABASE_URL` selects the staging/production release channel. The deployed native app still uses the blocking overlay. The [prepared cancellation fix](#cancellable-testflight-updates-prepared-15-sep-2026) makes TestFlight updates optional and stops staging API version blocks. No database migration is part of the update check itself. See [update policy and database rollout](shipping.md#optional-updates-and-database-rollout).
 
 The 7 Sep referral changes require the referral migration, `POST /api/v1/referrals`,
 and updated Universal Link association before the native build. You → Settings →
@@ -2827,22 +3168,22 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Welcome + Apple sign-in | Works                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Languages               | English and French follow the iPhone's per-app language. Usernames, Fight names, and loser actions remain exactly as entered.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Username onboarding     | Works. Required once after sign-in. Optional profile photo on the same screen; then Connect Apple Health; then challenge reminders (pre-prompt before iPhone’s sheet); then a last screen that the Feedback tab can take a feature or a bug. Existing accounts keep You → Apple Health.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Version line            | The next prepared release-candidate TestFlight says `1.1.1 · build N · staging` at the top of You only; the App Store build says `prod`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Username onboarding     | Works. Required once after sign-in. Optional profile photo on the same screen; then Connect Apple Health; then challenge reminders (pre-prompt before iPhone’s sheet); then a last screen that the Feedback tab can take a feature or a bug. Existing accounts keep Profile → Apple Health.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Version line            | The next prepared release-candidate TestFlight says `1.1.1 · build N · staging` at the top of Profile only; the App Store build says `prod`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Create Steps challenge  | Follow a guided flow: Create, Join, or Post, then Steps × highest total, 3 / 7 / 14 / 30 days or Custom with exact future start and end dates/times, private by default (or public), optional usernames, repeat on by default, optional title and loser action, and review. Public and private fights may start with the owner alone. Every fight gets a code and a share link; people join with that code or invite link. Suggested fights that Marc flags appear on New. The person who created a live or upcoming fight can Edit it from the same last-step summary as create: Change opens that create page, then back. The owner also gets Delete at the bottom, which cancels the fight (final stays frozen) and pauses a repeating series. Finished fights stay frozen.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Accept / Join           | Invites still accept in the fight. Anyone can open the same Accept/Join screen from a code or a shared link. Public fights also appear on the live Join list with no scores. Private fights do not. Joins go through the server. If a repeating fight is past its start day, joiners choose this round (steps count from that start date) or the next round. Same-day joins, even hours later, still count as this round. People waiting for the next round are visible on the fight and do not count in this round. Leave a public, private, or repeating fight from the fight itself so the next window does not copy you in.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Invite participants     | Exact username in New is optional on public and private fights. They must have signed in and chosen a username. There is no friendship or friend-request layer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Apple Health            | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under You → Apple Health → More settings. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. The same request may also send private active and resting energy, distance, exercise, stand, flights, and workout summaries including each workout's active minutes. Extra activity is stored separately so a workout-details failure cannot roll back Steps. You shows the real server or network error on the Apple Health row instead of only "Sync failed", and a failed sync is Retry, not Connected. Extra activity is not a Fight option yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Apple Health            | Installs background delivery at launch, keeps one interrupted opportunity for foreground reconciliation, and shows private capability/sync status under Profile → Apple Health → More settings. It sends Apple's merged cumulative Steps total for each exact active/ending Fight window in one small authenticated request. The same request may also send private active and resting energy, distance, exercise, stand, flights, and workout summaries including each workout's active minutes. Extra activity is stored separately so a workout-details failure cannot roll back Steps. Profile shows the real server or network error on the Apple Health row instead of only "Sync failed", and a failed sync is Retry, not Connected. Extra activity is not a Fight option yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Daily totals            | Sends Apple's merged daily buckets only for days relevant to active Fight charts. They are display data, not the source of the Fight score.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Fights list             | Every row is titled by the fight name. If there is no title, the loser action is used; older fights still stored as `Steps Fight` show the action the same way. The right-hand number is your gap to the person you are racing, moss when ahead and ember when behind; remaining time sits under the title as months, weeks, days, hours, and minutes, with days and hours when under two days, and without the calendar end date. There is no moss hero: live Fights are all the same size. Pull to refresh on Fights, a fight, Feedback, and You stays open with the current sync sentence; opening the app shows the same while Steps are read, uploaded, and standings refresh.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Standings               | Live scoring uses exact Fight-window HealthKit aggregates, not overlapping whole-day totals. Both phones read the same serving rows. Each standing shows relative sync freshness; ended Fights distinguish exact final-window coverage from the last available Steps.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Fight end               | Exact `ends_at` is the final cutoff. The fight screen and finished list show that date and time. The live list shows remaining months, weeks, days, hours, and minutes instead of the stop date; under two days it shows days and hours. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. **Fix in PR (not on TestFlight yet):** Finished shows **P** during `awaiting_final_sync`. After 24h, people who did not submit forfeit; both miss is a draw.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Tabs                    | Fights, New, You, Feedback. Feedback holds the same fight posts Feed, Bugs & requests, Top ranking, and a Report form. The old Requests tab and Design are removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Tabs                    | Fights, New, Profile, Feedback. Feedback holds the same fight posts Feed, Bugs & requests, Top ranking, and a Report form. The old Requests tab and Design are removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Look                    | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Versions                | Works under You → Settings (the public changelog). The version label is only on You. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on You above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                           |
-| Privacy / Support       | Pages are implemented and linked under You → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Fight posts / Feed      | Marc (username `marc`, You → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. You → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Details and recurring History alongside it. Details shows the round schedule, time zone, creator, current participant count, and sharing controls. Recurring fights retain earlier posts; invited-only people gain access after joining. |
+| Versions                | Works under Profile → Settings (the public changelog). The version label is only on Profile. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on Profile above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                       |
+| Privacy / Support       | Pages are implemented and linked under Profile → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Fight posts / Feed      | Marc (username `marc`, Profile → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. Profile → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Details and recurring History alongside it. Details shows the round schedule, time zone, creator, current participant count, and sharing controls. Recurring fights retain earlier posts; invited-only people gain access after joining. |
 | Companion               | Saved on the account. Change animal opens the animal grid. Make it yours opens a description to edit and save (species, breed or race, accessories, colors, and other details). You can change animals anytime. That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

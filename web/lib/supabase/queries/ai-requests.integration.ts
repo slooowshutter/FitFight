@@ -506,7 +506,7 @@ test("durable Blend admission and poll leases", async (t) => {
     );
 
     await t.test(
-        "terminal retention and account deletion remove only their owned records",
+        "finished requests are kept, and account deletion removes only its owned records",
         async () => {
             const { request } = await reserveAiRequest(
                 owner,
@@ -526,7 +526,7 @@ test("durable Blend admission and poll leases", async (t) => {
                 (
                     await database`select id from private.ai_requests where id = ${request.id}`
                 ).length,
-                0,
+                1,
             );
             await database`delete from auth.users where id = ${other}`;
             assert.equal(
@@ -856,7 +856,7 @@ test("durable Blend admission and poll leases", async (t) => {
     );
 
     await t.test(
-        "pruning retains all credit events and prevents replay of a retired action",
+        "finished actions keep their request and credit events, and a replay does not charge again",
         async () => {
             const input = reservation();
             const { request } = await reserveAiRequest(
@@ -874,12 +874,9 @@ test("durable Blend admission and poll leases", async (t) => {
                 events.map((event) => event.kind),
                 ["reserve", "release"],
             );
-            await assert.rejects(
-                reserveAiRequest(owner, input, limits, database),
-                (error: unknown) =>
-                    error instanceof ApiError &&
-                    error.code === "ai_request_expired",
-            );
+            const replay = await reserveAiRequest(owner, input, limits, database);
+            assert.equal(replay.request.id, request.id);
+            assert.equal(replay.shouldStart, false);
             assert.equal(
                 (await readAiAllowance(owner, database)).available,
                 50,
@@ -993,7 +990,6 @@ test("durable Blend admission and poll leases", async (t) => {
             try {
                 const result = await reconcileAiRuns({
                     due: () => dueAiRequests(database),
-                    pruneLogs: async () => {},
                     read: (user, id, _deps, source) =>
                         readAiRun(
                             user,
@@ -1106,7 +1102,7 @@ test("durable Blend admission and poll leases", async (t) => {
     );
 
     await t.test(
-        "HTTP log retention is bounded, and account deletion removes its logs and ledger",
+        "HTTP logs are kept, and account deletion removes its logs and ledger",
         async () => {
             const entry = aiHttpLogSchema.parse({
                 id: randomUUID(),
@@ -1126,34 +1122,14 @@ test("durable Blend admission and poll leases", async (t) => {
                 code: null,
                 upstream_code: null,
             });
-            await insertAiHttpLogs(
-                [
-                    {
-                        ...entry,
-                        id: randomUUID(),
-                        observed_at: "2020-01-01T00:00:00.000Z",
-                    },
-                ],
-                database,
-            );
-            assert.equal(
-                (
-                    await database`select id from private.ai_http_logs where observed_at < clock_timestamp() - interval '7 days'`
-                ).length,
-                0,
-            );
-            await database`insert into private.ai_http_logs (id, observed_at, trace_id, user_id, leg, operation, elapsed_ms)
-            select gen_random_uuid(), clock_timestamp() - interval '1 day', ${entry.trace_id}, ${owner}, 'app', 'test_retention', 1
-            from generate_series(1, 100000)`;
+            const old = { ...entry, id: randomUUID(), observed_at: "2020-01-01T00:00:00.000Z" };
+            await insertAiHttpLogs([old], database);
             await insertAiHttpLogs([entry], database);
-            const [count] =
-                await database`select count(*)::int as total from private.ai_http_logs`;
-            assert.equal(count.total, 100000);
             assert.equal(
                 (
-                    await database`select id from private.ai_http_logs where id = ${entry.id}`
+                    await database`select id from private.ai_http_logs where id in (${old.id}, ${entry.id})`
                 ).length,
-                1,
+                2,
             );
             await database`delete from auth.users where id = ${owner}`;
             assert.equal(

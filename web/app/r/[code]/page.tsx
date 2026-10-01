@@ -35,8 +35,14 @@ export default async function ReferralPage({
                     Your friend invited you to FitFight. Challenge each other to
                     walk more, compare Steps, and make every day count.
                 </p>
-                <InviteDownload {...appDownload()} />
+                <InviteDownload {...appDownload()} language="en" />
             </article>
+            <footer className="legal-footer">
+                <span>© 2026 FitFight</span>
+                <a href={`/r/${parsed.data}?lang=fr`} hrefLang="fr" lang="fr">
+                    Français
+                </a>
+            </footer>
         </main>
     );
 }

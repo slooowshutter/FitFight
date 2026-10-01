@@ -91,7 +91,7 @@ export default function SupportPage() {
                 <section>
                     <h2>Apple Health Steps</h2>
                     <p>
-                        In FitFight, open <strong>You → Apple Health</strong> to
+                        In FitFight, open <strong>Profile → Apple Health</strong> to
                         grant read-only Apple Health access or retry a sync. The
                         permission sheet may list steps plus other movement
                         types. Fights still use Steps. FitFight reads aggregate
@@ -110,7 +110,7 @@ export default function SupportPage() {
                     <h2>Bugs and feature requests</h2>
                     <p>
                         Open{" "}
-                        <strong>You → Settings → Bugs &amp; requests</strong> to
+                        <strong>Profile → Settings → Bugs &amp; requests</strong> to
                         post a bug or a feature request, see what other
                         signed-in people submitted, upvote, and comment with
                         your username. You can still email support for account
@@ -142,7 +142,7 @@ export default function SupportPage() {
                 <section>
                     <h2>Delete your account</h2>
                     <p>
-                        Open <strong>You → Settings → Delete account</strong>{" "}
+                        Open <strong>Profile → Settings → Delete account</strong>{" "}
                         and confirm. This permanently removes your profile,
                         uploaded Steps, invitations and memberships, bugs and
                         feature requests you posted, removes you from Fights
@@ -173,6 +173,9 @@ export default function SupportPage() {
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>
                 <Link href="/privacy">Privacy Policy</Link>
+                <a href="/support?lang=fr" hrefLang="fr" lang="fr">
+                    Français
+                </a>
             </footer>
         </main>
     );

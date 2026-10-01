@@ -19,7 +19,11 @@ export default async function HomePage() {
                     <span>FitFight</span>
                 </a>
                 {isStaging ? (
-                    <TestflightInvite label="Get the app" kind="header" />
+                    <TestflightInvite
+                        label="Get the app"
+                        kind="header"
+                        language="en"
+                    />
                 ) : (
                     <a className="header-action" href={url}>
                         Download on the App Store
@@ -41,7 +45,11 @@ export default async function HomePage() {
                     </p>
                     <div className="hero-actions">
                         {isStaging ? (
-                            <TestflightInvite label="Get the app" kind="hero" />
+                            <TestflightInvite
+                                label="Get the app"
+                                kind="hero"
+                                language="en"
+                            />
                         ) : (
                             <a className="primary-action" href={url}>
                                 Download on the App Store
@@ -130,7 +138,7 @@ export default async function HomePage() {
             >
                 <p className="eyebrow">STEPS RECORDED</p>
                 <p className="total-steps-value" aria-hidden="true">
-                    <TotalStepsCount totalSteps={totalSteps} />
+                    <TotalStepsCount totalSteps={totalSteps} language="en" />
                 </p>
                 <p className="total-steps-caption">
                     since people joined FitFight
@@ -174,7 +182,17 @@ export default async function HomePage() {
                     <span>FitFight</span>
                 </a>
                 <p>Challenge friends. Move to win.</p>
-                <span>© 2026 FitFight</span>
+                <span>
+                    © 2026 FitFight ·{" "}
+                    <a
+                        className="language-link"
+                        href="/?lang=fr"
+                        hrefLang="fr"
+                        lang="fr"
+                    >
+                        Français
+                    </a>
+                </span>
             </footer>
         </main>
     );

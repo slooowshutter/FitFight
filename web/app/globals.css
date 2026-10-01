@@ -503,6 +503,10 @@ footer .brand-mark {
     font-size: 12px;
 }
 
+.language-link {
+    color: var(--moss-text);
+}
+
 .testflight-dialog {
     width: min(28rem, calc(100vw - 32px));
     max-height: min(90vh, 640px);

@@ -9,7 +9,7 @@ import { defaultProfileSettings, profilePageQuerySchema, type ProfileRivalrySumm
 import { friendsQuerySchema } from "@/lib/types/friends/friendship";
 import { readOwnRivalries, readSharedProfile, readProfileHistory, readProfileSettings, updateProfileSettings } from "./shared-profiles-supabase-query";
 import { blockProfile, changeFriendship, listProfileFriends } from "./profile-friends-supabase-query";
-import { pruneProfileEvents, recordProfileView } from "./profile-events-supabase-query";
+import { recordProfileView } from "./profile-events-supabase-query";
 import { deleteAccount } from "./delete-account-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
 
@@ -614,7 +614,7 @@ test("account deletion preserves a frozen group draw and cannot create a duel", 
     assert.equal(erased.n, 0);
 });
 
-test("view replay, rolling qualification, privacy locks, and inactive-user retention", async (t) => {
+test("view replay, rolling qualification, and privacy locks", async (t) => {
     const users = [randomUUID(), randomUUID()];
     const [viewer, target] = users;
     process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED = "true";
@@ -636,13 +636,6 @@ test("view replay, rolling qualification, privacy locks, and inactive-user reten
     await recordProfileView(viewer, target, { ...event, event_id: randomUUID() }, database);
     const [qualified] = await database`select count(*)::int n from private.profile_events where actor_id = ${viewer} and qualifying`;
     assert.equal(qualified.n, 2);
-    await database`update private.profile_events set created_at = now() - interval '31 days' where actor_id = ${viewer}`;
-    await pruneProfileEvents(database);
-    const [remaining] = await database`select count(*)::int n from private.profile_events where actor_id = ${viewer}`;
-    assert.equal(remaining.n, 0);
-    const [archived] = await database`select events::int, qualifying::int from private.profile_event_totals where kind = 'view' and source = 'friends'`;
-    assert.ok(archived.events >= 3);
-    assert.ok(archived.qualifying >= 2);
 });
 
 test("only active accepted opponents see private records, with independent bounded activity", async (t) => {

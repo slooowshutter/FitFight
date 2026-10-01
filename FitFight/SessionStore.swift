@@ -183,7 +183,6 @@ final class SessionStore: ObservableObject {
         authError = nil
         isBusy = true
         defer { isBusy = false }
-        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         do {
             let signedIn = try await client.auth.signInWithIdToken(
                 credentials: .init(
@@ -236,7 +235,6 @@ final class SessionStore: ObservableObject {
         authError = nil
         isBusy = true
         defer { isBusy = false }
-        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         guard let configuration = GoogleSignInConfig.configuration(for: SupabaseConfig.projectURL) else {
             authError = String(appLocalized: "Google sign-in is not configured for this build.")
             return
@@ -356,13 +354,6 @@ final class SessionStore: ObservableObject {
 
     func setHandle(_ raw: String, avatarMediaId: UUID? = nil) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
-        guard await AppUpdateChecker.shared.permitsRequests() else {
-            throw FitFightAPIError.http(
-                status: 426,
-                code: "update_required",
-                message: nil
-            )
-        }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
         }
@@ -525,7 +516,6 @@ final class SessionStore: ObservableObject {
 
     func loadProfile() async {
         guard !screenshotSignedIn else { return }
-        guard await AppUpdateChecker.shared.permitsRequests() else { return }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             profile = nil
             return

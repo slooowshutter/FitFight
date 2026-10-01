@@ -37,8 +37,14 @@ export default async function JoinPage({
                     FitFight to join, even if the fight is private. Scores stay
                     in the app.
                 </p>
-                <InviteDownload {...appDownload()} />
+                <InviteDownload {...appDownload()} language="en" />
             </article>
+            <footer className="legal-footer">
+                <span>© 2026 FitFight</span>
+                <a href={`/j/${display}?lang=fr`} hrefLang="fr" lang="fr">
+                    Français
+                </a>
+            </footer>
         </main>
     );
 }

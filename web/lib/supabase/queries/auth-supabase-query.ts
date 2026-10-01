@@ -1,11 +1,23 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Sql } from "postgres";
+import { z } from "zod";
+import { canAdministerFights } from "@/lib/admin/can-administer-fights";
+import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createDatabaseClient } from "@/lib/supabase/postgres";
+import {
+    adminDashboardIdentityRowSchema,
+    adminDashboardIdentitySchema,
+    adminDashboardLinkedAccountSchema,
+    adminDashboardProductionAdminRowSchema,
+    type AdminDashboardAdmin,
+} from "@/lib/types/admin/admin-dashboard";
 import {
     fitFightAdminProfileSchema,
+    fitFightAdminUserIdValues,
     type FitFightAdminViewer,
 } from "@/lib/types/admin/fitfight-admin";
-import { requireLatestAppRelease } from "@/lib/releases/app-release";
 
 export type AuthedUser = {
     userId: string;
@@ -69,7 +81,6 @@ async function requireActiveProfile(
 
 export async function verifyUser(request: Request): Promise<AuthedUser> {
     const jwt = bearerToken(request);
-    await requireLatestAppRelease(request);
     const admin = createAdminClient();
 
     const claimsResult = await admin.auth.getClaims(jwt);
@@ -132,4 +143,112 @@ export async function readAdminViewer(
     // User-editable metadata must never grant admin access.
     const emails = user.email && user.email_confirmed_at ? [user.email] : [];
     return { handle: profile.data.handle, emails };
+}
+
+/** Both projects' public Auth endpoints. Publishable keys are client configuration, not secrets. */
+const authProjects: Record<string, { url: string; publishableKey: string }> = {
+    pvqntpteehdvhqyctwum: {
+        url: "https://pvqntpteehdvhqyctwum.supabase.co",
+        publishableKey: "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li",
+    },
+    zstzbfocunthczzubggz: {
+        url: "https://zstzbfocunthczzubggz.supabase.co",
+        publishableKey: "sb_publishable_7lCDQ1YbMJVUyKZ6Ezq1LA_I-0rZGig",
+    },
+};
+
+/**
+ * The dashboard reads aggregates only. A login from the other FitFight project (an App Store
+ * build signs in to production) is accepted when the same Apple or Google account owns an
+ * admin profile here, so Marc never signs in twice. Returns the admin's account here and its
+ * Apple and Google accounts for `verifyProductionDashboardAdmin`.
+ */
+export async function verifyDashboardAdmin(request: Request): Promise<AdminDashboardAdmin> {
+    const project = request.headers.get("x-fitfight-auth-project");
+    const own = new URL(z.string().url().parse(process.env.NEXT_PUBLIC_SUPABASE_URL)).hostname.split(".")[0];
+    if (!project || project === own) {
+        const { userId } = await verifyUser(request);
+        if (isFitFightAdmin(await readAdminViewer(userId))) {
+            const rows = await createDatabaseClient()`
+                select provider, provider_id as subject
+                from auth.identities
+                where user_id = ${userId} and provider in ('apple', 'google')
+            `;
+            return { userId, identities: rows.map((row) => adminDashboardIdentityRowSchema.parse(row)) };
+        }
+    } else {
+        const other = authProjects[project];
+        if (!other) {
+            throw new ApiError(401, ERROR_CODES.unauthorized, "Unknown sign-in project");
+        }
+        const { data, error } = await createClient(other.url, other.publishableKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        }).auth.getUser(bearerToken(request));
+        if (error || !data.user) {
+            throw new ApiError(401, ERROR_CODES.unauthorized, "Invalid or expired token");
+        }
+        const linked = (data.user.identities ?? [])
+            .filter((identity) => identity.provider === "apple" || identity.provider === "google")
+            .map((identity) => adminDashboardIdentitySchema.parse(identity));
+        if (linked.length > 0) {
+            const sql = createDatabaseClient();
+            const rows = await sql`
+                select distinct identity.user_id::text as user_id
+                from auth.identities as identity
+                join unnest(
+                    ${linked.map((identity) => identity.provider)}::text[],
+                    ${linked.map((identity) => identity.identity_data.sub)}::text[]
+                ) as account(provider, subject)
+                    on account.provider = identity.provider and account.subject = identity.provider_id
+            `;
+            for (const row of rows) {
+                const userId = adminDashboardLinkedAccountSchema.parse(row).user_id;
+                if (isFitFightAdmin(await readAdminViewer(userId))) {
+                    return {
+                        userId,
+                        identities: linked.map((identity) => ({
+                            provider: identity.provider,
+                            subject: identity.identity_data.sub,
+                        })),
+                    };
+                }
+            }
+        }
+    }
+    throw new ApiError(403, ERROR_CODES.forbidden, "Only the FitFight admin can open the dashboard");
+}
+
+/**
+ * Production data read by another project's server needs one more proof: one of Marc's fixed
+ * account IDs (in code or `FITFIGHT_ADMIN_USER_ID`), or an admin profile in production with the same
+ * account ID (beta accounts copied to production kept theirs) or the same Apple ID on file.
+ * Supabase keeps the auth schema out of reach of the read-only analytics user, so the
+ * production lookup reads only public and private tables.
+ */
+export async function verifyProductionDashboardAdmin(
+    admin: AdminDashboardAdmin,
+    production: Sql,
+): Promise<void> {
+    const userId = admin.userId.toLowerCase();
+    if (canAdministerFights(userId) || fitFightAdminUserIdValues.some((id) => id === userId)) return;
+    const appleSubjects = admin.identities
+        .filter((identity) => identity.provider === "apple")
+        .map((identity) => identity.subject);
+    const rows = await production`
+        select p.handle
+        from public.profiles as p
+        where p.deleted_at is null
+            and (
+                p.user_id = ${admin.userId}::uuid
+                or p.user_id in (
+                    select apple.user_id from private.apple_sign_in_tokens as apple
+                    where apple.apple_subject = any(${appleSubjects}::text[])
+                )
+            )
+    `;
+    for (const row of rows) {
+        const { handle } = adminDashboardProductionAdminRowSchema.parse(row);
+        if (isFitFightAdmin({ handle, emails: [] })) return;
+    }
+    throw new ApiError(403, ERROR_CODES.forbidden, "Your account isn't the FitFight admin in production");
 }

@@ -1,6 +1,56 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Fights shows today's steps as soon as you open the app instead of a dash, then updates them from Apple Health. Before the first read of the day, it shows Synchronizing your steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défis affiche tes pas du jour dès l’ouverture de l’app au lieu d’un tiret, puis les met à jour depuis Santé d’Apple. Avant la première lecture de la journée, tu vois Synchronisation de tes pas."
+                    }
+                }
+            }
+        },
+        "Synchronizing your steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Synchronisation de tes pas."
+                    }
+                }
+            }
+        },
+        "The You tab is now called Profile.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Vous s’appelle désormais Profil."
+                    }
+                }
+            }
+        },
+        "Connect later from Profile → Settings → Apple Health.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi plus tard dans Profil → Réglages → Santé d’Apple."
+                    }
+                }
+            }
+        },
+        "When a new FitFight version is out, a notice at the top offers the update, at most once every three days. Close it to keep using your current version. The app no longer locks until you update.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand une nouvelle version de FitFight sort, un avis en haut propose la mise à jour, au maximum une fois tous les trois jours. Ferme-le pour continuer avec ta version actuelle. L’app ne se bloque plus en attendant la mise à jour."
+                    }
+                }
+            }
+        },
         "Your animal now changes with today's steps: armchair under 3k, yawning to 6k, relaxed to 10k, fit to 15k and fully muscled after that. Works for all 12 regular animals. Specials and paid characters are hidden for now.": {
             "localizations": {
                 "fr": {
@@ -3635,16 +3685,6 @@
                 }
             }
         },
-        "Reading today’s steps…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lecture des pas du jour…"
-                    }
-                }
-            }
-        },
         "Red Panda": {
             "localizations": {
                 "fr": {
@@ -4397,32 +4437,12 @@
                 }
             }
         },
-        "Update FitFight to continue": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Mettez FitFight à jour pour continuer"
-                    }
-                }
-            }
-        },
         "Couldn’t check for updates": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Impossible de vérifier les mises à jour"
-                    }
-                }
-            }
-        },
-        "You can’t use FitFight until you install the latest version.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Vous ne pouvez pas utiliser FitFight tant que vous n’avez pas installé la dernière version."
                     }
                 }
             }
@@ -4483,6 +4503,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Disponible dans TestFlight."
+                    }
+                }
+            }
+        },
+        "Ready in the App Store.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Disponible dans l’App Store."
                     }
                 }
             }
@@ -6603,16 +6633,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les pas et les défis se mettent à jour dès l’ouverture de l’app, sans attendre l’envoi de tout ton historique Santé d’Apple, et Défis affiche Synchronisation… jusqu’à l’arrivée des pas du jour. L’onglet Vous s’ouvre tout de suite avec tes derniers chiffres, et le tableau de bord affiche tes pas tout de suite. Modifier le profil retrouve Visibilité du profil et Partager l’historique des pas, pour que les amis avec qui tu partages voient tes stats et ton combattant."
-                    }
-                }
-            }
-        },
-        "Syncing…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Synchronisation…"
                     }
                 }
             }
@@ -14154,16 +14174,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Connecte Apple Santé pour compter tes pas dans les Fights."
-                    }
-                }
-            }
-        },
-        "Connect later from You → Apple Health.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Connecte-toi plus tard dans Toi → Apple Santé."
                     }
                 }
             }

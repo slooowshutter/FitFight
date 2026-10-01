@@ -11,8 +11,6 @@ enum FitFightAPIError: LocalizedError {
             return String(appLocalized: "FitFight API is not configured. Set FFAPIBaseURL.")
         case .http(let status, let code, let message):
             switch code {
-            case "update_required":
-                return String(appLocalized: "Update FitFight to continue")
             case "release_unavailable":
                 return String(appLocalized: "Couldn’t check for updates")
             case "handle_not_found":
@@ -1264,6 +1262,17 @@ struct FitFightAPI {
                           body: Self.encoder.encode(input))
     }
 
+    /// `environment` is the database to read, `production` or `staging`. `authProject` is the
+    /// Supabase project ref of this app's own sign-in, so a login from either project works
+    /// without a second sign-in.
+    func adminDashboard(section: String, days: Int, environment: String, authProject: String, accessToken: String) async throws -> FitFightAdminDashboard {
+        try await get(
+            path: "admin/dashboard?section=\(section)&days=\(days)&environment=\(environment)",
+            accessToken: accessToken,
+            headers: ["X-FitFight-Auth-Project": authProject]
+        )
+    }
+
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
         let list: FitFightJoinableList = try await get(
             path: "fights/suggested",
@@ -1478,7 +1487,8 @@ struct FitFightAPI {
         accessToken: String,
         expected: Set<Int> = [200],
         trace: HealthKitSyncTrace? = nil,
-        traceStage: HealthKitSyncTrace.StageName? = nil
+        traceStage: HealthKitSyncTrace.StageName? = nil,
+        headers: [String: String] = [:]
     ) async throws -> Response {
         try await request(
             path: path,
@@ -1487,7 +1497,8 @@ struct FitFightAPI {
             body: nil,
             expected: expected,
             trace: trace,
-            traceStage: traceStage
+            traceStage: traceStage,
+            headers: headers
         )
     }
 
@@ -1499,7 +1510,8 @@ struct FitFightAPI {
         idempotencyKey: String? = nil,
         expected: Set<Int> = [200],
         trace: HealthKitSyncTrace? = nil,
-        traceStage: HealthKitSyncTrace.StageName? = nil
+        traceStage: HealthKitSyncTrace.StageName? = nil,
+        headers: [String: String] = [:]
     ) async throws -> Response {
         let span = traceStage.flatMap { trace?.begin($0) }
         var succeeded = false
@@ -1510,13 +1522,6 @@ struct FitFightAPI {
         }
         do {
             try Task.checkCancellation()
-            guard await AppUpdateChecker.shared.permitsRequests() else {
-                throw FitFightAPIError.http(
-                    status: 426,
-                    code: "update_required",
-                    message: nil
-                )
-            }
             guard let requestURL = endpoint(path) else {
                 throw FitFightAPIError.notConfigured
             }
@@ -1541,6 +1546,9 @@ struct FitFightAPI {
             if let idempotencyKey {
                 request.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
             }
+            for (field, value) in headers {
+                request.setValue(value, forHTTPHeaderField: field)
+            }
             request.httpBody = body
 
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -1560,9 +1568,6 @@ struct FitFightAPI {
             let status = http?.statusCode ?? -1
             guard expected.contains(status) else {
                 let payload = try? Self.decoder.decode(APIErrorResponse.self, from: data)
-                if payload?.code == "update_required" || payload?.code == "release_unavailable" {
-                    await AppUpdateChecker.shared.rejectRequest(updateRequired: payload?.code == "update_required")
-                }
                 if payload?.code.hasPrefix("ai_") == true,
                    let aiError = try? Self.decoder.decode(FitFightAIError.self, from: data) {
                     throw aiError

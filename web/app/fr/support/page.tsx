@@ -15,7 +15,7 @@ export default function SupportPage() {
     return (
         <main className="legal-page" lang="fr">
             <header className="legal-header">
-                <Link className="brand" href="/" aria-label="Accueil FitFight">
+                <Link className="brand" href="/fr" aria-label="Accueil FitFight">
                     <span className="brand-mark">FF</span>
                     <span>FitFight</span>
                 </Link>
@@ -97,7 +97,7 @@ export default function SupportPage() {
                     <h2>Pas de Santé d’Apple</h2>
                     <p>
                         Dans FitFight, ouvrez{" "}
-                        <strong>Vous → Santé d’Apple</strong> pour autoriser la
+                        <strong>Profil → Santé d’Apple</strong> pour autoriser la
                         lecture du nombre de pas ou relancer une
                         synchronisation. FitFight lit les pas agrégés pendant
                         les périodes de défi actives ainsi que les totaux
@@ -116,7 +116,7 @@ export default function SupportPage() {
                     <h2>Bugs et demandes</h2>
                     <p>
                         Ouvrez{" "}
-                        <strong>Vous → Réglages → Bugs et demandes</strong> pour
+                        <strong>Profil → Réglages → Bugs et demandes</strong> pour
                         signaler un bug ou proposer une fonctionnalité, voir les
                         demandes des autres personnes connectées, voter et
                         commenter avec votre nom d’utilisateur. Vous pouvez
@@ -150,7 +150,7 @@ export default function SupportPage() {
                     <h2>Supprimer votre compte</h2>
                     <p>
                         Ouvrez{" "}
-                        <strong>Vous → Réglages → Supprimer le compte</strong>{" "}
+                        <strong>Profil → Réglages → Supprimer le compte</strong>{" "}
                         et confirmez. Cette action supprime définitivement votre
                         profil, les pas envoyés, les invitations et
                         participations, les bugs et demandes que vous avez
@@ -187,6 +187,9 @@ export default function SupportPage() {
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>
                 <Link href="/fr/privacy">Politique de confidentialité</Link>
+                <a href="/support?lang=en" hrefLang="en" lang="en">
+                    English
+                </a>
             </footer>
         </main>
     );

@@ -165,7 +165,31 @@ struct APIContractTests {
         let checkpoints = try decoder.decode(FitFightSnapshot.self, from: checkpointData)
         precondition(checkpoints.members[0].stepCheckpoints?.last?.steps == 8500)
         precondition(checkpoints.members[1].stepCheckpoints == nil)
-        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot passed")
+
+        // Same date handling as FitFightAPI.decoder: generated_at carries milliseconds.
+        let serverDecoder = JSONDecoder()
+        serverDecoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let raw = try container.decode(String.self)
+            guard let date = parseServerDate(raw) else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid ISO-8601 date \(raw)")
+            }
+            return date
+        }
+        let dashboard = try serverDecoder.decode(FitFightAdminDashboard.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("admin-dashboard.json")))
+        precondition(dashboard.section == "users" && dashboard.days == 7 && dashboard.environment == "production")
+        precondition(dashboard.generatedAt == parseServerDate("2026-09-29T12:00:00.000Z"))
+        precondition(dashboard.sections?.map(\.id) == ["overview", "retention", "users"]
+                     && dashboard.sections?[1].title == "Retention")
+        precondition(dashboard.cards[0].higherIsBetter == true && dashboard.cards[0].previous == 110)
+        precondition(dashboard.cards[1].previous == nil && dashboard.cards[1].higherIsBetter == nil,
+                     "Cards without a comparison or a direction remain decodable")
+        precondition(dashboard.charts[0].kind == "line" && dashboard.charts[0].xKind == "date")
+        precondition(!dashboard.charts[0].series[0].previous && dashboard.charts[0].series[1].previous)
+        precondition(dashboard.charts[1].xKind == "label" && dashboard.charts[1].cells.isEmpty)
+        precondition(dashboard.charts[2].kind == "heatmap" && dashboard.charts[2].cells.count == 6)
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard passed")
     }
 }
 

@@ -238,13 +238,13 @@ After a feature PR merges, CI deletes that branch. `main`, `develop`, `preview`,
 
 A push to `preview` that touches the app or Fastlane starts TestFlight. Feature-branch and `develop` pushes do not. Tell Marc only after that upload: wait for the TestFlight notification, then **Update**. Tester gets it after processing. Friends wait for Apple beta review on a new marketing version. Check the workflow result before promising a build. Do not ask him to Run workflow.
 
-Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. TestFlight only offers a newer public `latest`, never an internal/review-only update. While the installed build stays behind, the optional toast appears at most once every three days, including after Close or the 10-second timeout. A newer public release does not restart that interval. Installing another build starts a fresh interval for that installed build. Failed checks clear the toast, and saved locks from older binaries are ignored. Production keeps its mandatory update gate. The version line remains on You only.
+Both staging and production binaries check `/api/app-release` at launch, on foregrounding, and every minute while active. Every install only offers its channel's newer public `latest`, never an internal/review-only update. While the installed build stays behind, the optional toast ("Ready in TestFlight." or "Ready in the App Store.") appears at most once every three days, including after Close or the 10-second timeout. A newer public release does not restart that interval. Installing another build starts a fresh interval for that installed build. Failed checks clear the toast, and saved locks from older binaries are ignored. No build locks the app. The version line remains on Profile only.
 
 ## API compatibility for every change
 
 The app explicitly calls `/api/v1` through `FitFightAPI`. Its marketing version and
-build travel separately in `X-FitFight-Version` and `X-FitFight-Build` for update
-enforcement. Database migrations version storage independently. There is currently
+build travel separately in `X-FitFight-Version` and `X-FitFight-Build` for
+diagnostics; no build is rejected for its version. Database migrations version storage independently. There is currently
 no `/api/v2` or automatic selection of an API version from the build number.
 
 Use `/api/v1` for ordinary releases. Decide whether a change is compatible by checking
@@ -268,8 +268,8 @@ all routes in anticipation of a future change.
 For each affected contract, agents must:
 
 1. Read the affected environment's live `/api/app-release` and identify the public,
-   internal, and review builds it admits. Preserve legacy behavior too while backend
-   enforcement is off. Inspect the relevant released client code/contracts; the
+   internal, and review builds it admits. Preserve legacy behavior too: backend
+   enforcement is off on every channel. Inspect the relevant released client code/contracts; the
    manifest identifies builds but does not prove their compatibility. Staging changes
    reach Friends Beta's database on `develop`, before any new TestFlight upload.
 2. Describe how old requests and responses remain valid. For storage changes, add
@@ -282,43 +282,44 @@ For each affected contract, agents must:
    expectations, alongside the new contract. Schema changes also need those database
    paths checked against the migrated disposable cloud database. Do not overwrite
    the previous contract fixtures to bless a breaking change.
-4. Use the [rollout sequence below](#mandatory-updates-and-database-rollout). Upload,
+4. Use the [rollout sequence below](#optional-updates-and-database-rollout). Upload,
    approval, and actual installability are separate. Admit the review candidate
-   before Apple tests it. Remove behavior needed by retired clients only after
-   verifying the replacement is installable and required; include admitted candidates
-   and running backend versions in that decision. A purely internal cleanup can happen
+   before Apple tests it. Updates are optional, so an installable replacement never
+   retires a client by itself: remove behavior needed by older clients only after a
+   separately approved compatibility cutoff, and include admitted candidates and
+   running backend versions in that decision. A purely internal cleanup can happen
    sooner when all supported contracts remain intact.
 
-Existing CI checks the native database boundary, release selection, update blocking,
+Existing CI checks the native database boundary, release selection, update toasts,
 shared profile/Fight fixtures, backend tests, and disposable database migrations/RLS.
 It does **not** automatically compare every released binary against every new schema
 or detect every semantic API break. The SQL guard catches selected destructive SQL,
 not all incompatible constraints, renames, or grants. Add regression coverage for the
 actual affected contract; follow [AGENTS.md](../AGENTS.md#mobile-api-and-database-compatibility--every-agent).
 
-## Mandatory updates and database rollout
+## Optional updates and database rollout
 
-**TestFlight updates are optional; production retains mandatory updates.** This policy is prepared in the workspace on 15 Sep 2026 at Marc's request. The staging backend always serves `enforced: false` and does not return `426` for version/build mismatches, even if the publisher still records enforcement in its raw manifest. Authentication and account checks still apply. The next prepared TestFlight marketing version is `1.1.1`; build numbers distinguish follow-up releases. Production has no independently adjustable minimum.
+**Updates are optional on every channel.** TestFlight became optional on 15 Sep 2026; Marc asked on 27 Sep 2026 that App Store installs never be forced to update either. Both backends always serve `enforced: false` and never return `426` for version/build mismatches, even if the publisher still records enforcement in its raw manifest. Authentication and account checks still apply. The next prepared TestFlight marketing version is `1.1.1`; build numbers distinguish follow-up releases. No channel has a minimum supported build.
 
 `fastlane refresh_app_releases` reads Apple availability. A staging build must be valid, unexpired, in `IN_BETA_TESTING`, and assigned to every external group to become `latest` (Friends Beta / public join). The newest registered VALID staging build that is newer than that public latest is `internal` and is also copied into `review` so existing binaries stop prompting Internal testers who already installed it. Production uses only `READY_FOR_DISTRIBUTION` App Store versions and their exact build; `PROCESSING_FOR_DISTRIBUTION` is not installable yet. A registered staging build waiting for or in beta review is separately admitted. For production, the registered build selected in App Store Connect is admitted for review; uploading or submitting it never replaces the public release. The public registry contains only channel/version/build numbers, no Apple credentials.
 
-Upload workflows register binaries that contain the update dialog. For production, the first installable release containing it activates backend enforcement automatically; enforcement cannot silently revert to a binary lacking the gate. Staging overrides the publisher's flag so future uploads cannot restore the TestFlight API lock. Older TestFlight binaries ignore `enforced` in their own overlay logic: deploying the backend alone cannot add Cancel or clear every cached native lock. They need to install the new native build once.
+Upload workflows still register binaries and the publisher still records an `enforced` flag, but both backends override it, so no upload can restore an API lock. Older binaries ignore `enforced` in their own lock logic: App Store builds up to 1.1.2 (210) still lock themselves once a newer `latest` appears, and deploying the backend cannot clear a lock they already saved. They need to install a build with the toast once.
 
-`.github/workflows/app-releases.yml` refreshes availability every 15 minutes on GitHub-hosted Linux, using the existing App Store Connect secrets. Upload jobs also refresh it. All publishers share `ios-distribution` concurrency and preserve the pointer branch history. GitHub schedules only run once the workflow exists on the default branch; include it in the normal production promotion before relying on updates after Apple review. Scheduling and Apple's availability propagation can delay the requirement; the app does not pretend that upload success means installation is possible.
+`.github/workflows/app-releases.yml` refreshes availability every 15 minutes on GitHub-hosted Linux, using the existing App Store Connect secrets. Upload jobs also refresh it. All publishers share `ios-distribution` concurrency and preserve the pointer branch history. GitHub schedules only run once the workflow exists on the default branch; include it in the normal production promotion before relying on updates after Apple review. Scheduling and Apple's availability propagation can delay the toast; the app does not pretend that upload success means installation is possible.
 
 Deployment order:
 
-1. Publish `releases.json` from the cloud workflow before deploying the new version checks. It initially records the existing installable release with enforcement off if that binary predates the gate. The server selects staging or production from the existing `NEXT_PUBLIC_SUPABASE_URL`; client headers cannot choose another release channel. Deploy `/api/app-release` and the compatible backend before distributing the new native build. GET `/api/app-release` still returns `503` when this environment's channel cannot be read. Authenticated commands fail open on that failure so Feed and other tabs stay usable. Pad two-part App Store versions (`1.0` → `1.0.0`) so a production row cannot invalidate the staging policy. Never advertise a build that is not actually installable.
+1. Publish `releases.json` from the cloud workflow before deploying the new version checks. It initially records the existing installable release with enforcement off if that binary predates the gate. The server selects staging or production from the existing `NEXT_PUBLIC_SUPABASE_URL`; client headers cannot choose another release channel. Deploy `/api/app-release` and the compatible backend before distributing the new native build. GET `/api/app-release` still returns `503` when this environment's channel cannot be read. Authenticated commands never read the release metadata. Pad two-part App Store versions (`1.0` → `1.0.0`) so a production row cannot invalidate the staging policy. Never advertise a build that is not actually installable.
 2. Database changes must preserve supported API contracts and running backend versions. Internal column renames, constraints, and cleanup do not automatically wait for Apple; stage backend/database changes as needed. During review, preserve the API behavior and information required by both the live app and its candidate. New response fields must be ignored by old decoders; new request fields must not become required for supported clients.
 3. After a production build is selected for submission, verify that `/api/app-release` identifies it as `review` before Apple tests it. The live public app keeps working. This check does not submit or release anything.
-4. When Apple makes the update installable for Friends Beta (every external group), the publisher makes that exact version/build the advertised `latest` automatically. TestFlight shows an optional update toast only when this release is newer than the installed app. Internal/review builds remain recorded for older clients but are never offered to other testers. Production alone returns `426 update_required` for missing or mismatched version/build headers when enforcement is on, unless they match an admitted release.
-5. Retire API behavior needed by an older app only after a separately approved compatibility cutoff. Optional TestFlight updates do not establish that cutoff: preserve installed clients' contracts and do not apply deferred permission removals based on the published `latest`. Production still requires installability and enforcement evidence, including admitted review candidates. Internal database cleanup can happen sooner if supported APIs and running backends remain compatible. The update gate does not secure direct table access or replace RLS. Follow existing migration/merge authorization rules.
+4. When Apple makes the update installable for Friends Beta (every external group), the publisher makes that exact version/build the advertised `latest` automatically. Production's `latest` is the `READY_FOR_DISTRIBUTION` App Store version. Every install shows an optional update toast only when its channel's `latest` is newer than the installed app. Internal/review builds remain recorded for older clients but are never offered. No channel returns `426 update_required`.
+5. Retire API behavior needed by an older app only after a separately approved compatibility cutoff. Optional updates do not establish that cutoff on either channel: preserve installed clients' contracts and do not apply deferred permission removals based on the published `latest`. Older builds keep calling the API until people install a newer one. Internal database cleanup can happen sooner if supported APIs and running backends remain compatible. The release policy does not secure direct table access or replace RLS. Follow existing migration/merge authorization rules.
 
 For the initial profile migration: apply `20260909132922_backend_profile_reads.sql`, deploy
 `GET/PATCH /api/v1/me` and the backend using `fitfight_backend_reader`, verify readiness,
 then distribute the native build. Preserve old client grants during this stage. Only
 later promote the cutoff from [`supabase/deferred-migrations`](../supabase/deferred-migrations/README.md),
-after installability, enforcement, review-candidate compatibility, staging checks, and
+after installability, an approved compatibility cutoff, review-candidate compatibility, staging checks, and
 old-backend drainage are verified. CI tests both permission states on disposable Supabase.
 
-Verification: Ruby release tests cover review, group availability, expiry, the first gated rollout, internal-only TestFlight latest, and production candidates. Backend tests cover old/current/new TestFlight headers, advisory metadata, authentication, and production enforcement. The GitHub-hosted macOS simulator workflow runs `tests/AppUpdateCheckerTests.swift` for TestFlight cancellation during a check, persistence across relaunches, stale metadata/426 recovery, public-only offers, API access, and the existing production gate. Check both English and French, Cancel, launch/resume, and the store link on a real staging build before shipping. Deploy the compatible backend through an authorized `develop` promotion first, verify staging no longer rejects old headers, then distribute the native change through `preview`.
+Verification: Ruby release tests cover review, group availability, expiry, the first gated rollout, internal-only TestFlight latest, and production candidates. Backend tests cover optional metadata on both channels and older builds reaching authentication without a release check. The GitHub-hosted macOS simulator workflow runs `tests/AppUpdateCheckerTests.swift` for TestFlight and App Store toasts, the three-day reminder across relaunches, Close during a check, saved locks from older binaries, stale metadata, and public-only offers. Check both English and French, Close, launch/resume, and the store link on real staging and production builds before shipping. Deploy the compatible backend before distributing a native change.

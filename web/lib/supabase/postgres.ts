@@ -98,9 +98,10 @@ export function createProductionAnalyticsClient(): Sql {
             "PRODUCTION_ANALYTICS_DATABASE_URL must use a read-only production user, not postgres",
         );
     }
+    // Read-only and dashboard-only, so a tab's 20 to 30 queries can run ten at a time.
     cachedProductionAnalytics = postgres(value, {
         prepare: false,
-        max: 3,
+        max: 10,
         idle_timeout: 20,
         connect_timeout: 10,
     });

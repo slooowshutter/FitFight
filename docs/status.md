@@ -30,8 +30,12 @@ same sheet as Profile → Settings → Preferences → Beta testing; its Return 
 App Store link is the way back. The answer is cached per API address, so the bar
 shows at once on the next launch and an App Store install that replaces
 TestFlight never inherits it. A failed call keeps the last answer. The build's
-own backend setting is not used for the bar. English and French copy and a 1.1.3
-release note are included. Swift type names are unchanged.
+own backend setting is not used for the bar. Also on 1 Oct, Marc asked to see
+which install he is on: the admin (username `marc`) also gets the strip on the
+App Store version, neutral and reading App Store, and on both builds it adds the
+version and build. Other App Store users see nothing, and the admin strip waits
+for the backend's answer. English and French copy and a 1.1.3 release note are
+included. Swift type names are unchanged.
 
 **Contract:** Additive `GET /api/v1/environment`, no sign-in, returning
 `{ "environment": "beta" | "production" }`, in `contracts/openapi.yaml` and
@@ -60,7 +64,9 @@ iPhone 17 with the Beta answer seeded: Fights, a fight detail, New, Feed,
 Feedback, Profile, and Beta testing in Night and Day
 ([run](https://github.com/slooowshutter/FitFight/actions/runs/36638237055)), then
 the softer strip next to a slim solid alternative on 1 Oct
-([run](https://github.com/slooowshutter/FitFight/actions/runs/36838149434)). The
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36838149434)), and
+the admin strip on beta and App Store with a non-admin control
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36889502829)). The
 sheet shot comes from a preview-only launch shortcut that sets the same tab and
 sheet as the tap. The build compiled the change. Without the Beta answer, Fights
 matches the first run's capture pixel for pixel, so the layout change moves

@@ -25,7 +25,8 @@ rows into every database, and the route reads the row for the project in
 dashboard step. A project with no row returns `503 config`; a new Supabase
 project needs its row added by migration.
 
-The app shows its Beta bar only from this answer, never from its build settings.
+The app shows its environment strip only from this answer, never from its build
+settings: everyone sees it on `beta`, and the admin also sees it on `production`.
 It caches the last answer per API address and keeps it when the call fails.
 
 ## Admin dashboard (prepared 29 Sep 2026)

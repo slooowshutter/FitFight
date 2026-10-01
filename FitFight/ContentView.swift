@@ -146,6 +146,11 @@ struct ContentView: View {
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
+        .sheet(isPresented: $model.showingBetaTesting) {
+            BetaTestingView()
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
         .sheet(isPresented: $model.showingDebugMenu) {
             DebugMenuView()
                 .fitFightTheme(themeStore.theme)
@@ -246,19 +251,48 @@ struct ContentView: View {
     }
 
     private var signedInApp: some View {
-        ZStack {
-            tabBody
+        // The bar takes layout space: a top safeAreaInset does not reach screens inside a NavigationStack.
+        VStack(spacing: 0) {
+            if model.isBetaEnvironment {
+                betaBar
+            }
+            ZStack {
+                tabBody
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                FFTabBar(tab: $model.tab, onReselect: {
+                    if model.tab == .feedback {
+                        model.feedbackRequestFilter = RequestFilter()
+                    }
+                    model.openFightID = nil
+                })
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            FFTabBar(tab: $model.tab, onReselect: {
-                if model.tab == .feedback {
-                    model.feedbackRequestFilter = RequestFilter()
-                }
-                model.openFightID = nil
-            })
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
+    }
+
+    /// Opens Profile's Beta testing setting, which leads back to the App Store version.
+    private var betaBar: some View {
+        Button {
+            model.tab = .you
+            model.showingBetaTesting = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "flask.fill")
+                    .font(.system(size: 11, weight: .bold))
+                Text(String(appLocalized: "Beta"))
+                    .ffType(.label)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(theme.emberText)
+            .frame(maxWidth: .infinity, minHeight: 32)
+            // A color background would otherwise also fill the status bar.
+            .background(theme.emberWash, ignoresSafeAreaEdges: [])
         }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityIdentifier("beta-bar")
     }
 
     @ViewBuilder

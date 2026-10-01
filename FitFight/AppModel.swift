@@ -213,6 +213,9 @@ final class AppModel: ObservableObject {
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
     @Published var showingPreferences = false
+    @Published var showingBetaTesting = false
+    /// Cached per backend: an App Store install that replaces TestFlight must not start with the Beta bar.
+    @Published private(set) var isBetaEnvironment = UserDefaults.standard.string(forKey: AppModel.environmentKey) == "beta"
     @Published var showingDebugMenu = false
     @Published var showingUpdateToastPreview = false
     @Published var feedbackRequestFilter = RequestFilter()
@@ -263,6 +266,7 @@ final class AppModel: ObservableObject {
     private static let pendingReferralUserKey = "fitfight.pendingReferralUser"
     private static let pendingFightRouteKey = "fitfight.pendingFightRoute"
     private static let pendingDailyStatusKey = "fitfight.pendingDailyStatus"
+    private static let environmentKey = "fitfight.environment.\(FitFightAPI.resolvedBaseURL?.absoluteString ?? "")"
 
     static func storePendingFightRoute(_ route: String) {
         let trimmed = route.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -319,6 +323,13 @@ final class AppModel: ObservableObject {
             you = Person(id: "", name: String(appLocalized: "You"), handle: "", initials: "", isYou: true)
             fights = []
         }
+    }
+
+    /// The backend reads its environment table, so this build's own settings never decide Beta.
+    func refreshEnvironment() async {
+        guard let environment = try? await api.environment().environment else { return }
+        UserDefaults.standard.set(environment, forKey: Self.environmentKey)
+        isBetaEnvironment = environment == "beta"
     }
 
     func fight(id: String) -> Fight? {

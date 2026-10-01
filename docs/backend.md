@@ -14,6 +14,20 @@ Postgres RPCs.
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
 
+## Environment and Beta bar (prepared 29 Sep 2026)
+
+Public `GET /api/v1/environment` returns `{ "environment": "beta" }` or
+`{ "environment": "production" }` from `private.environments`. The table has one
+row per Supabase project: `zstzbfocunthczzubggz` (develop) is `beta` and
+`pvqntpteehdvhqyctwum` (production) is `production`. The migration writes both
+rows into every database, and the route reads the row for the project in
+`NEXT_PUBLIC_SUPABASE_URL`, so develop and main answer differently without a
+dashboard step. A project with no row returns `503 config`; a new Supabase
+project needs its row added by migration.
+
+The app shows its Beta bar only from this answer, never from its build settings.
+It caches the last answer per API address and keeps it when the call fails.
+
 ## Admin dashboard (prepared 29 Sep 2026)
 
 `GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>` feeds the Admin tab

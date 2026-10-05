@@ -134,7 +134,7 @@ struct YouView: View {
     private var ownProfile: SharedProfile? { profileStore.profile ?? cachedProfile }
 
     /// Won, lost and drew from your record; group places below first count as lost.
-    /// Nil when the backend predates draws and losses, so the card shows wins over played.
+    /// Nil when the backend predates draws and losses, so the card shows only won and lost.
     private var results: (won: Int, lost: Int, drew: Int)? {
         guard let record = ownProfile?.record, let drew = record.draws, let lost = record.losses else { return nil }
         return (record.wins, lost, drew)

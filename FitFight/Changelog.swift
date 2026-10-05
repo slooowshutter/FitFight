@@ -27,6 +27,13 @@ enum Changelog {
         ReleaseNote(
             version: "1.1.3",
             year: 2026,
+            month: 10,
+            day: 5,
+            notes: "Profile shows your fight record in color every time, instead of sometimes as plain wins out of fights played."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
             month: 9,
             day: 29,
             notes: "On the beta, a Beta bar now sits at the top of the app. Tap it to open Beta testing in Profile and get back to the App Store version."

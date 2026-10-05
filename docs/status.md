@@ -1,10 +1,54 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **29 Sep 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **5 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## One push per phone and local deadlines: prepared 5 Oct 2026
+
+Marc, on TestFlight, got "2 pintes: One day left" twice on 5 Oct and "Tournée à la
+félicita: Fight ended" twice on 2 Oct, both showing UTC times.
+
+**Cause:** The 16 Sep beta import copied Fights into production, so both backends
+mint the same recurring rounds with identical end times. TestFlight and App Store
+builds share one APNs token, and production still had Marc's phone. Read-only
+staging checks: each duplicate maps to a single staging intent key, and a staging
+resend would reuse its collapse ID and merge on the phone. Staging closed the
+2 Oct round and minted the next at 18:03:12 UTC, matching the first push; the
+second came about two minutes later. Production's delivery log was not readable
+from this workspace, so its send is inferred, not observed. Twelve recurring series
+from before the import still run on staging, with 23 people. All 26 staging
+profiles have no saved time zone, so push deadlines fell back to UTC.
+
+**Code:** After responding, `POST /api/v1/device-installations` sends the token to
+the other environment's new `POST /api/v1/device-installations/release`, which
+revokes the matching installation with reason `other_environment` for whichever
+account holds it. Push deadlines use the Fight's time zone, as its Details screen
+does, instead of the profile's. Saving the phone's zone on the profile was not
+used: the app splits Health days with the saved profile zone. See
+[notifications](notifications.md#one-backend-per-phone).
+
+**Contract:** Additive release endpoint with no session; body `{ "token": "<hex>" }`
+(strict), response `{ "released": true }`. Registration's request and response are
+unchanged, and a failing other backend cannot fail it. No app, schema or migration
+change. Read-only `/api/app-release` on 5 Oct: staging latest 1.1.1 (201), review
+and internal 1.1.3 (216), `enforced: false`; production latest 1.1.2 (210), no
+candidates, `enforced: false`. Every one of those builds registers through the
+unchanged route.
+
+**Verification (local):** Typecheck and all 437 unit tests passed, including new
+release, environment routing and no-wait registration tests. All 59 migrations
+applied to a scratch Postgres 16 with Supabase stubs, and
+`notification-controls.integration.ts` passed there. On that database, the real
+outbox claimed a 24-hour reminder for an account with no saved zone and produced
+"One day left. Ends Tue 6 Oct, 08:33." (French: "Fin : mar. 6 oct., 08:33."). A
+release revoked only the matching token, across accounts.
+
+**Deployment:** Both backends must run it: staging releases on production and
+production releases on staging. Each phone is fixed at its next app launch.
+Nothing has been committed, pushed, merged or deployed.
 
 ## Beta strip: prepared 29 Sep, revised 1 Oct 2026
 

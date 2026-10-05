@@ -173,8 +173,12 @@ struct YouStatsCard: View {
                         if let results {
                             cell(Text("\(results.won)").foregroundStyle(theme.mossText) + Text("-") + Text("\(results.lost)").foregroundStyle(theme.emberText)
                                 + Text("-") + Text("\(results.drew)").foregroundStyle(theme.textSecondary), String(appLocalized: "won · lost · drew"))
+                        } else if let record {
+                            // A server from before draws sends only wins and played, so every fight not won shows as lost.
+                            cell(Text("\(record.wins)").foregroundStyle(theme.mossText) + Text("-") + Text("\(record.played - record.wins)").foregroundStyle(theme.emberText),
+                                String(appLocalized: "won · lost"))
                         } else {
-                            cell(Text(record.map { "\($0.wins)/\($0.played)" } ?? "-"), String(appLocalized: "fights won"))
+                            cell(Text("-"), String(appLocalized: "won · lost · drew"))
                         }
                     }
                     Rectangle().fill(theme.hairline).frame(height: 1).gridCellColumns(3)

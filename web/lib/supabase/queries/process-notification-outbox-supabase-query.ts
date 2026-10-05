@@ -120,7 +120,8 @@ export async function processNotificationOutbox(
             member.final_steps_complete, member.state::text as member_state,
             coalesce(fight.name, '') as fight_name, owner.handle as owner_handle,
             fight.ends_at, fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' as sync_deadline,
-            coalesce(profile.time_zone, 'UTC') as time_zone,
+            -- The fight's Details screen shows its end in this zone; profiles rarely store one.
+            coalesce(fight.time_zone, 'UTC') as time_zone,
             to_jsonb(prefs) as preferences
         from claimed
         left join public.fights as fight on fight.id = claimed.fight_id

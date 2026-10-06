@@ -1318,11 +1318,11 @@ struct FitFightAPI {
         )
     }
 
-    func leaveFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {
+    func leaveFight(fightID: UUID, newOwnerID: UUID? = nil, accessToken: String) async throws -> FitFightSummary {
         try await post(
             path: "fights/leave",
             accessToken: accessToken,
-            body: LeaveFightBody(fightId: fightID)
+            body: LeaveFightBody(fightId: fightID, newOwnerId: newOwnerID)
         )
     }
 
@@ -1769,6 +1769,7 @@ private struct JoinFightBody: Encodable {
 
 private struct LeaveFightBody: Encodable {
     var fightId: UUID
+    var newOwnerId: UUID?
 }
 
 private struct AcceptBody: Encodable {

@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 6,
+            notes: "You can now leave any fight you joined. If you created it, pick who takes over first, or delete it if you are the only one in it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 5,
             notes: "Profile shows your fight record in color every time, instead of sometimes as plain wins out of fights played."
         ),

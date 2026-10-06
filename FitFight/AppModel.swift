@@ -1256,7 +1256,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func leaveFight(id: String) async {
+    func leaveFight(id: String, newOwnerID: String? = nil) async {
         guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         createError = nil
         guard let session, session.authSession != nil, api.isConfigured else {
@@ -1268,7 +1268,7 @@ final class AppModel: ObservableObject {
             return
         }
         do {
-            _ = try await api.leaveFight(fightID: fightID, accessToken: try await session.freshAccessToken())
+            _ = try await api.leaveFight(fightID: fightID, newOwnerID: newOwnerID.flatMap(UUID.init(uuidString:)), accessToken: try await session.freshAccessToken())
             invalidateFightDiscovery()
             openFightID = nil
             joined.remove(id)

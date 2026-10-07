@@ -1,10 +1,28 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **5 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **7 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Admin dashboard: user growth charts, prepared 7 Oct 2026
+
+Marc asked for week-over-week and month-over-month growth on the Users tab,
+right under the scorecards.
+
+**Code:** the Users section gets two line charts first in its chart list:
+**Week-over-week user growth** and **Month-over-month user growth**. Each point
+is the % change in total users on that date against 7 (or 30) days earlier, so
+each day is its own growth reading. Deleted accounts are not counted, and a date
+with no users 7 (or 30) days earlier is left out. Long periods use the same
+weekly or monthly points as every other chart. Server only: the app draws charts
+from the payload, so no app build, contract or database change.
+
+**Verification (local):** typecheck and all 204 query unit tests passed. The new
+queries ran through `readAdminDashboard` on a scratch Postgres with fake
+profiles for 7, 30, 90 and 400 days. The dashboard database test (every tile
+runs on the migrated schema) runs in CI.
 
 ## One push per phone and local deadlines: prepared 5 Oct 2026
 

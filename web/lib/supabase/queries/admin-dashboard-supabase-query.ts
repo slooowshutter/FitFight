@@ -372,6 +372,23 @@ function definitions(
                     },
                 ],
                 charts: [
+                    ...[
+                        { id: "user_growth_wow", title: "Week-over-week user growth", span: 7, name: "week" },
+                        { id: "user_growth_mom", title: "Month-over-month user growth", span: 30, name: "month" },
+                    ].map(({ id, title, span, name }): AdminDashboardChartDefinition => ({
+                        id, title, kind: "line", unit: "percent", x: "date",
+                        note: `Total users on each date against ${span} days earlier, so each point is that ${name}'s growth.`,
+                        query: sql`
+                            select point.day::text as x,
+                                (100.0 * count(*) filter (where p.joined_day <= point.day)
+                                    / count(*) filter (where p.joined_day <= point.day - ${span}::int) - 100)::float8 as y
+                            from (${samplePoints(sql, w)}) as point
+                            cross join (${profiles}) as p
+                            group by point.day
+                            having count(*) filter (where p.joined_day <= point.day - ${span}::int) > 0
+                            order by point.day
+                        `,
+                    })),
                     newUsersChart, totalUsersChart,
                     ...[
                         { id: "funnel_period", title: "Onboarding funnel, people who signed up in the period", scope: sql`p.created_at >= ${w.start}` },

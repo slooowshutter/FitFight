@@ -5,7 +5,7 @@ import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { departureFightSchema, departureMemberSchema } from "@/lib/types/fights/membership-departure";
 
 /** The capture trigger records the cause in the same transaction as the membership change. */
-export async function departFightMemberships(actorId: string, fightId: string, targetId: string, database: Sql = createDatabaseClient()) {
+export async function departFightMemberships(actorId: string, fightId: string, targetId: string, database: Sql = createDatabaseClient(), newOwnerId?: string) {
     return database.begin(async (sql) => {
         await lockFightSeries(sql, fightId);
         const fights = departureFightSchema.array().parse(await sql`
@@ -18,7 +18,17 @@ export async function departFightMemberships(actorId: string, fightId: string, t
         const fight = fights.find((item) => item.id === fightId);
         if (!fight) throw new ApiError(404, "not_found", "Fight not found");
         const voluntary = actorId === targetId;
-        if (voluntary && fight.owner_id === actorId) throw new ApiError(403, "forbidden", "The owner cannot leave this fight");
+        if (voluntary && fight.owner_id === actorId) {
+            if (!newOwnerId) throw new ApiError(403, "forbidden", "The owner cannot leave this fight");
+            const [successor] = await sql`
+                select 1 from public.fight_members where fight_id = ${fightId} and user_id = ${newOwnerId}
+                    and user_id <> ${actorId} and state in ('accepted', 'deferred')
+            `;
+            if (!successor) throw new ApiError(409, "conflict", "Choose another member of this fight as the new owner");
+            await sql`update public.fights set owner_id = ${newOwnerId} where owner_id = ${actorId} and series_id = ${fight.series_id}
+                and state not in ('final', 'cancelled')`;
+            await sql`update public.fight_series set owner_id = ${newOwnerId} where id = ${fight.series_id}`;
+        }
         if (!voluntary && (fight.owner_id !== actorId || targetId === fight.owner_id)) throw new ApiError(403, "forbidden", "Only the owner can remove another participant");
         if (!voluntary && ["final", "cancelled", "awaiting_final_sync"].includes(fight.state)) throw new ApiError(409, "conflict", "This fight can no longer be edited");
         const members = departureMemberSchema.array().parse(await sql`

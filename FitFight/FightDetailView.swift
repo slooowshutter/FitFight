@@ -36,6 +36,7 @@ struct FightDetailView: View {
     @State private var showingEdit = false
     @State private var canAdminister = false
     @State private var adminBusy = false
+    @State private var confirmOwnerLeave = false
     @State private var adminAction: String? = nil
     @StateObject private var fightFeed = FeedStore()
     @State private var isRefreshingFeed = false
@@ -70,8 +71,12 @@ struct FightDetailView: View {
     private var canLeave: Bool {
         !pendingJoin
             && (fight.status == .live || fight.status == .pending)
-            && fight.inviter?.isYou != true
-            && (fight.recurring || fight.joinCode != nil)
+    }
+
+    private var isOwner: Bool { fight.inviter?.isYou == true }
+
+    private var otherMembers: [Standing] {
+        fight.standings.filter { !$0.person.isYou && !$0.invited }
     }
 
     private var youDeferred: Bool {
@@ -153,6 +158,28 @@ struct FightDetailView: View {
         } message: {
             Text(String(appLocalized: "Finalized results are kept. Stopping future rounds lets the current round finish."))
         }
+        .confirmationDialog(
+            otherMembers.isEmpty ? String(appLocalized: "Delete fight?") : String(appLocalized: "Choose a new owner"),
+            isPresented: $confirmOwnerLeave,
+            titleVisibility: .visible
+        ) {
+            if otherMembers.isEmpty {
+                Button(String(appLocalized: "Delete"), role: .destructive) {
+                    Task { _ = await model.deleteFight(id: fight.id) }
+                }
+            } else {
+                ForEach(otherMembers) { member in
+                    Button(member.person.name) {
+                        Task { await model.leaveFight(id: fight.id, newOwnerID: member.person.id) }
+                    }
+                }
+            }
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(otherMembers.isEmpty
+                ? String(appLocalized: "You are the only one in this fight. Deleting it can’t be undone.")
+                : String(appLocalized: "You own this fight. Pick who takes over, then you leave."))
+        }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -197,12 +224,14 @@ struct FightDetailView: View {
 
         if canLeave {
             FFButton(
-                title: String(appLocalized: "Leave fight"),
+                title: isOwner && otherMembers.isEmpty ? String(appLocalized: "Delete fight") : String(appLocalized: "Leave fight"),
                 kind: .ghost,
                 fullWidth: true
             ) {
-                Task {
-                    await model.leaveFight(id: fight.id)
+                if isOwner {
+                    confirmOwnerLeave = true
+                } else {
+                    Task { await model.leaveFight(id: fight.id) }
                 }
             }
             .padding(.top, theme.space.lg)

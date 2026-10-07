@@ -1,10 +1,147 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **29 Sep 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **7 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Admin dashboard: user growth charts, prepared 7 Oct 2026
+
+Marc asked for week-over-week and month-over-month growth on the Users tab,
+right under the scorecards.
+
+**Code:** the Users section gets two line charts first in its chart list:
+**Week-over-week user growth** and **Month-over-month user growth**. Each point
+is the % change in total users on that date against 7 (or 30) days earlier, so
+each day is its own growth reading. Deleted accounts are not counted, and a date
+with no users 7 (or 30) days earlier is left out. Long periods use the same
+weekly or monthly points as every other chart. Server only: the app draws charts
+from the payload, so no app build, contract or database change.
+
+**Verification (local):** typecheck and all 204 query unit tests passed. The new
+queries ran through `readAdminDashboard` on a scratch Postgres with fake
+profiles for 7, 30, 90 and 400 days. The dashboard database test (every tile
+runs on the migrated schema) runs in CI.
+
+## One push per phone and local deadlines: prepared 5 Oct 2026
+
+Marc, on TestFlight, got "2 pintes: One day left" twice on 5 Oct and "Tournée à la
+félicita: Fight ended" twice on 2 Oct, both showing UTC times.
+
+**Cause:** The 16 Sep beta import copied Fights into production, so both backends
+mint the same recurring rounds with identical end times. TestFlight and App Store
+builds share one APNs token, and production still had Marc's phone. Read-only
+staging checks: each duplicate maps to a single staging intent key, and a staging
+resend would reuse its collapse ID and merge on the phone. Staging closed the
+2 Oct round and minted the next at 18:03:12 UTC, matching the first push; the
+second came about two minutes later. Production's delivery log was not readable
+from this workspace, so its send is inferred, not observed. Twelve recurring series
+from before the import still run on staging, with 23 people. All 26 staging
+profiles have no saved time zone, so push deadlines fell back to UTC.
+
+**Code:** After responding, `POST /api/v1/device-installations` sends the token to
+the other environment's new `POST /api/v1/device-installations/release`, which
+revokes the matching installation with reason `other_environment` for whichever
+account holds it. Push deadlines use the Fight's time zone, as its Details screen
+does, instead of the profile's. Saving the phone's zone on the profile was not
+used: the app splits Health days with the saved profile zone. See
+[notifications](notifications.md#one-backend-per-phone).
+
+**Contract:** Additive release endpoint with no session; body `{ "token": "<hex>" }`
+(strict), response `{ "released": true }`. Registration's request and response are
+unchanged, and a failing other backend cannot fail it. No app, schema or migration
+change. Read-only `/api/app-release` on 5 Oct: staging latest 1.1.1 (201), review
+and internal 1.1.3 (216), `enforced: false`; production latest 1.1.2 (210), no
+candidates, `enforced: false`. Every one of those builds registers through the
+unchanged route.
+
+**Verification (local):** Typecheck and all 437 unit tests passed, including new
+release, environment routing and no-wait registration tests. All 59 migrations
+applied to a scratch Postgres 16 with Supabase stubs, and
+`notification-controls.integration.ts` passed there. On that database, the real
+outbox claimed a 24-hour reminder for an account with no saved zone and produced
+"One day left. Ends Tue 6 Oct, 08:33." (French: "Fin : mar. 6 oct., 08:33."). A
+release revoked only the matching token, across accounts.
+
+**Deployment:** Both backends must run it: staging releases on production and
+production releases on staging. Each phone is fixed at its next app launch.
+Nothing has been committed, pushed, merged or deployed.
+
+## Beta strip: prepared 29 Sep, revised 1 Oct 2026
+
+Marc's P0 backlog item (24 Sep), built on his 29 Sep request: on the beta, show
+a big Beta bar at the top. Tapping it opens the setting in Profile to switch back
+to the other environment. The app learns it is on the beta from an API that reads
+an environment table, not from a build flag alone.
+
+**Code:** Migration `20260929190000_environments.sql` adds
+`private.environments` with one row per Supabase project: develop is `beta`,
+production is `production`. Both databases get both rows. Public
+`GET /api/v1/environment` returns the row for the backend's own
+`NEXT_PUBLIC_SUPABASE_URL` project, so develop answers `beta` and main answers
+`production` with no dashboard step. The app calls it at launch. When the answer
+is `beta`, a slim full-width strip reading Beta, Ember text on the Ember wash,
+sits under the status bar on every tab. On 1 Oct Marc found the first solid
+Ember block behind the status bar too loud and picked this strip over a slim
+solid one. It takes layout space above the tabs because a top `safeAreaInset`
+does not reach screens inside a `NavigationStack`: the first capture had it
+covering the Fights and Feed titles, the Profile version label and the fight
+detail's back button. Tapping it switches to Profile and opens Beta testing, the
+same sheet as Profile → Settings → Preferences → Beta testing; its Return to the
+App Store link is the way back. The answer is cached per API address, so the bar
+shows at once on the next launch and an App Store install that replaces
+TestFlight never inherits it. A failed call keeps the last answer. The build's
+own backend setting is not used for the bar. Also on 1 Oct, Marc asked to see
+which install he is on: the admin (username `marc`) also gets the strip on the
+App Store version, neutral and reading App Store, and on both builds it adds the
+version and build. Other App Store users see nothing, and the admin strip waits
+for the backend's answer. English and French copy and a 1.1.3 release note are
+included. Swift type names are unchanged.
+
+**Contract:** Additive `GET /api/v1/environment`, no sign-in, returning
+`{ "environment": "beta" | "production" }`, in `contracts/openapi.yaml` and
+`contracts/fixtures/environment.json`. A project with no row returns
+`503 config`. No existing route, response or table changes. Read-only checks on
+29 Sep: staging `/api/app-release` lists latest 1.1.1 (201), review 1.1.3 (212),
+internal 1.1.3 (213), `enforced: false`; production lists latest 1.1.2 (210), no
+candidates, `enforced: true`. None of those builds calls the new route, and it
+returns 404 on both hosts today. A new build talking to a backend without the
+route gets 404 and shows no bar.
+
+**Verification (local):** Web typecheck and all 427 unit tests passed. All 59
+migrations applied to a Postgres 16 copy with Supabase stubs. The new
+`environment.integration.ts` passed there: the query and the HTTP route answer
+`beta` and `production` for the two projects without a token, send
+`Cache-Control: no-store`, return 503 for an unknown project, enforce the name
+check, and deny reads to `anon`, `authenticated` and `fitfight_backend_reader`.
+It failed as expected when the develop row was flipped. The row-convention checks
+(id, timestamps, update trigger) found no gaps. Localization, native API boundary
+and destructive-SQL checks passed, and every native test script still extracts
+its source without the new code.
+
+**Verification (hosted simulator):** A throwaway branch, since deleted, built
+the Debug app on GitHub-hosted `macos-26` and captured the fixture preview on an
+iPhone 17 with the Beta answer seeded: Fights, a fight detail, New, Feed,
+Feedback, Profile, and Beta testing in Night and Day
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36638237055)), then
+the softer strip next to a slim solid alternative on 1 Oct
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36838149434)), and
+the admin strip on beta and App Store with a non-admin control
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36889502829)). The
+sheet shot comes from a preview-only launch shortcut that sets the same tab and
+sheet as the tap. The build compiled the change. Without the Beta answer, Fights
+matches the first run's capture pixel for pixel, so the layout change moves
+nothing when the bar is hidden. Not yet verified: the CI database suite (lint,
+pgTAP), a real tap, and the bar on a device.
+
+**Rollout:** A `develop` merge applies the migration to the develop database.
+The route ships with the backend on the next `preview` deployment; the bar
+appears on TestFlight once `staging.fitfight.app` points at that deployment.
+Production gets the table and route when `preview` is merged to `main`; App Store
+builds then read `production` and show no bar. Marc asked for a PR on 1 Oct:
+[#343](https://github.com/slooowshutter/FitFight/pull/343) into `develop`. No
+merge, deployment or TestFlight upload has happened.
 
 ## Admin dashboard speed: prepared 1 Oct 2026
 

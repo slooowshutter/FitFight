@@ -27,6 +27,27 @@ enum Changelog {
         ReleaseNote(
             version: "1.1.3",
             year: 2026,
+            month: 10,
+            day: 6,
+            notes: "You can now leave any fight you joined. If you created it, pick who takes over first, or delete it if you are the only one in it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 5,
+            notes: "Profile shows your fight record in color every time, instead of sometimes as plain wins out of fights played."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 9,
+            day: 29,
+            notes: "On the beta, a Beta bar now sits at the top of the app. Tap it to open Beta testing in Profile and get back to the App Store version."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
             month: 9,
             day: 29,
             notes: "Fights shows today's steps as soon as you open the app instead of a dash, then updates them from Apple Health. Before the first read of the day, it shows Synchronizing your steps."

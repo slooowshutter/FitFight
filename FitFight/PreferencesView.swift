@@ -43,7 +43,7 @@ struct PreferencesView: View {
                 .presentationBackground(themeStore.theme.bg)
         }
         .sheet(isPresented: $showingBeta) {
-            betaInfo
+            BetaTestingView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -131,10 +131,16 @@ struct PreferencesView: View {
         ), action: action)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
+}
 
-    private var betaInfo: some View {
+/// Preferences → Beta testing, also opened by the Beta bar at the top of the app.
+struct BetaTestingView: View {
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
         VStack(spacing: 0) {
-            FFSheetHeader(title: String(appLocalized: "Beta testing")) { showingBeta = false }
+            FFSheetHeader(title: String(appLocalized: "Beta testing")) { dismiss() }
                 .padding(.horizontal, theme.space.screenPadding)
                 .padding(.vertical, 12)
 

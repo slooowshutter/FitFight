@@ -45,10 +45,29 @@ A summary covering multiple posts opens Notifications & activity in the new app.
 Older builds recognize its existing fight route and open the first related fight.
 
 People are identified by @username. Copy includes the relevant fight, exact
-ending/sync deadline, or post/comment excerpt. Single-post alerts may carry a
+ending/sync deadline, or post/comment excerpt. Deadlines use the Fight's time zone,
+the zone its Details screen shows. Single-post alerts may carry a
 signed photo URL. The iOS notification service downloads only from the two
 FitFight media hosts, downsamples photos, and delivers the text if a photo fails.
 Related pushes use an APNs thread identifier, and retries reuse their collapse ID.
+
+## One backend per phone
+
+TestFlight builds use staging and App Store builds use production, but Apple treats
+them as one app: a phone has a single APNs token, and either backend can send to it.
+The 16 Sep beta import copied Fights into production, and both environments keep
+minting the same recurring rounds, so a phone registered with both received each
+reminder twice. Every registration now asks the other environment's backend to stop
+sending to that token. `POST /api/v1/device-installations/release` with
+`{ "token": "<hex>" }` revokes the matching installation with reason
+`other_environment`, whichever account holds it. Knowing the token proves the phone,
+so the endpoint needs no session, and it answers `{ "released": true }` whether or
+not the token was registered. A phone keeps only the backend it registered with
+last. Apps register on every launch, so no new build is needed, but both backends
+must run this code: the staging project releases on `https://fitfight.app`, the
+production project on `https://staging.fitfight.app`, and any other project
+releases nowhere. The release runs after the registration response, so an
+unreachable backend never fails registration.
 
 ## Compatibility and rollout
 

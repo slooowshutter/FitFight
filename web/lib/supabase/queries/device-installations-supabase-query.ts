@@ -84,6 +84,20 @@ export async function revokeDeviceInstallationForToken(
     `;
 }
 
+/** The phone now uses the other environment, so no account here may keep its token. */
+export async function releaseDeviceInstallationForToken(
+    input: RevokeDeviceInstallationRequest,
+    database: Sql = createDatabaseClient(),
+): Promise<void> {
+    await database`
+        update private.device_installations
+        set revoked_at = now(),
+            revoke_reason = 'other_environment'
+        where token_fingerprint = ${fingerprintApnsDeviceToken(input.token)}
+            and revoked_at is null
+    `;
+}
+
 export type ActiveDeviceInstallation = {
     id: string;
     encrypted_token: string;

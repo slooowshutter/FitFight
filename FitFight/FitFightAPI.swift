@@ -1257,6 +1257,10 @@ struct FitFightAPI {
         try await get(path: "me/capabilities", accessToken: accessToken)
     }
 
+    func environment() async throws -> FitFightEnvironment {
+        try await get(path: "environment", accessToken: "")
+    }
+
     func administerFight(fightID: UUID, input: AdministerFightRequest, accessToken: String) async throws -> FitFightSummary {
         try await request(path: "fights/\(fightID.uuidString.lowercased())/admin", method: "PATCH", accessToken: accessToken,
                           body: Self.encoder.encode(input))
@@ -1314,11 +1318,11 @@ struct FitFightAPI {
         )
     }
 
-    func leaveFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {
+    func leaveFight(fightID: UUID, newOwnerID: UUID? = nil, accessToken: String) async throws -> FitFightSummary {
         try await post(
             path: "fights/leave",
             accessToken: accessToken,
-            body: LeaveFightBody(fightId: fightID)
+            body: LeaveFightBody(fightId: fightID, newOwnerId: newOwnerID)
         )
     }
 
@@ -1765,6 +1769,7 @@ private struct JoinFightBody: Encodable {
 
 private struct LeaveFightBody: Encodable {
     var fightId: UUID
+    var newOwnerId: UUID?
 }
 
 private struct AcceptBody: Encodable {
@@ -1811,6 +1816,11 @@ struct FitFightNotificationDeliveryStatus: Decodable {
     enum CodingKeys: String, CodingKey {
         case apnsConfigured = "apns_configured"
     }
+}
+
+/// `beta` on the develop database, `production` on main. A String so a later name decodes.
+struct FitFightEnvironment: Decodable {
+    let environment: String
 }
 
 struct FitFightNotificationPreferences: Codable, Equatable {

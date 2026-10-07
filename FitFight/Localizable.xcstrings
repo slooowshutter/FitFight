@@ -1,6 +1,36 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Profile shows your fight record in color every time, instead of sometimes as plain wins out of fights played.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profil affiche toujours ton bilan de combats en couleur, au lieu de parfois montrer les victoires sur les combats joués."
+                    }
+                }
+            }
+        },
+        "On the beta, a Beta bar now sits at the top of the app. Tap it to open Beta testing in Profile and get back to the App Store version.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sur la bêta, une barre Bêta s’affiche désormais en haut de l’app. Touche-la pour ouvrir Test de la bêta dans Profil et revenir à la version App Store."
+                    }
+                }
+            }
+        },
+        "Beta": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bêta"
+                    }
+                }
+            }
+        },
         "Fights shows today's steps as soon as you open the app instead of a dash, then updates them from Apple Health. Before the first read of the day, it shows Synchronizing your steps.": {
             "localizations": {
                 "fr": {
@@ -15004,12 +15034,12 @@
                 }
             }
         },
-        "fights won": {
+        "won · lost": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "combats gagnés"
+                        "value": "gagnés · perdus"
                     }
                 }
             }

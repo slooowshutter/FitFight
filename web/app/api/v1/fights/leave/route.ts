@@ -12,7 +12,7 @@ export const POST = apiRoute(async (request) => {
     if (!parsed.success) {
         throw parsed.error;
     }
-    const fight = await leaveFight(userId, parsed.data.fightId);
+    const fight = await leaveFight(userId, parsed.data.fightId, parsed.data.newOwnerId);
     return json(fight);
 });
 

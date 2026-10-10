@@ -83,7 +83,14 @@ export const adminDashboardChartRowSchema = z.object({
     x: z.string(),
     y: z.coerce.number().finite(),
     series: z.string().nullable().optional(),
-    previous: z.boolean().nullable().optional(),
+});
+
+export const adminDashboardBucketValues = ["day", "week", "month"] as const;
+
+/** The first chart day, already at the start of its bucket. */
+export const adminDashboardRangeRowSchema = z.object({
+    start: z.string(),
+    bucket: z.enum(adminDashboardBucketValues),
 });
 
 export const adminDashboardCellRowSchema = z.object({
@@ -122,15 +129,15 @@ export type AdminDashboard = z.infer<typeof adminDashboardSchema>;
 
 export type AdminDashboardQueryFragment = PendingQuery<Row[]>;
 
-/** Rolling windows for event cards, Paris calendar days for charts and Steps. */
+/**
+ * Cards use fixed spans from `now` (rolling) or `today` (complete Paris days). Charts over time
+ * cover Paris days from `start`, a bucket start, through today.
+ */
 export type AdminDashboardWindow = {
     now: Date;
-    start: Date;
-    previousStart: Date;
     today: string;
-    days: number;
-    chartDays: number;
-    bucket: "day" | "week" | "month";
+    start: string;
+    bucket: z.infer<typeof adminDashboardRangeRowSchema>["bucket"];
 };
 
 export type AdminDashboardCardDefinition = {

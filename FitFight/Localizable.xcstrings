@@ -1,6 +1,56 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "You can now leave any fight you joined. If you created it, pick who takes over first, or delete it if you are the only one in it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux maintenant quitter n’importe quel défi rejoint. Si tu l’as créé, choisis d’abord qui prend le relais, ou supprime-le si tu es seul dedans."
+                    }
+                }
+            }
+        },
+        "Choose a new owner": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis le nouveau créateur"
+                    }
+                }
+            }
+        },
+        "Delete fight": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Supprimer le défi"
+                    }
+                }
+            }
+        },
+        "You are the only one in this fight. Deleting it can’t be undone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu es seul dans ce défi. Le supprimer est définitif."
+                    }
+                }
+            }
+        },
+        "You own this fight. Pick who takes over, then you leave.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu as créé ce défi. Choisis qui prend le relais, puis tu le quittes."
+                    }
+                }
+            }
+        },
         "Profile shows your fight record in color every time, instead of sometimes as plain wins out of fights played.": {
             "localizations": {
                 "fr": {

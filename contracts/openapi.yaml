@@ -881,7 +881,7 @@ paths:
     "/admin/dashboard": {
         "get": {
             "operationId": "readAdminDashboard",
-            "summary": "Marc-only aggregate analytics for one section and a trailing window of days.",
+            "summary": "Marc-only aggregate analytics for one section. days sets the period of the charts over time.",
             "description": "Every card and chart is computed live from Postgres. A token from the other FitFight Supabase project is accepted when X-FitFight-Auth-Project names that project and the same Apple or Google account owns an admin profile in this one.",
             "security": [
                 {
@@ -917,6 +917,7 @@ paths:
                     "name": "days",
                     "in": "query",
                     "required": true,
+                    "description": "Period of the charts over time (x_kind date), from servers of 10 Oct 2026 on. They start no earlier than the first signup and cover at least 7 days. Cards and the other charts have fixed spans named in their titles.",
                     "schema": {
                         "type": "integer",
                         "minimum": 1,
@@ -936,7 +937,7 @@ paths:
             ],
             "responses": {
                 "200": {
-                    "description": "Cards compare the window with the one before it. Chart series marked previous are shifted onto the current dates. Cache-Control no-store.",
+                    "description": "Cards compare their fixed span with the span before it, or now with 7 days ago. Chart series marked previous are shifted onto the current dates; servers of 10 Oct 2026 on send none. Cache-Control no-store.",
                     "content": {
                         "application/json": {
                             "schema": {

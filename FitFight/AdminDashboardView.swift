@@ -342,7 +342,9 @@ private struct AdminChart: View {
 
     private func lineDash(_ index: Int) -> [CGFloat] {
         if chart.series[index].previous { return [4, 3] }
-        return chart.series.count <= 3 ? [[], [6, 3], [1, 3]][index] : []
+        guard chart.series.count <= 3 else { return [] }
+        let dashes: [[CGFloat]] = [[], [6, 3], [1, 3]]
+        return dashes[index]
     }
 
     /// Every point flattened with its series style, so each chart builder holds one mark.
@@ -574,7 +576,9 @@ private struct AdminChart: View {
         AxisMarks { value in
             AxisGridLine()
             AxisValueLabel {
-                Text(verbatim: adminValue(value.as(Double.self) ?? 0, unit: chart.unit))
+                // Under 10 the ticks can fall between whole numbers, so they keep one decimal.
+                Text(verbatim: adminValue(value.as(Double.self) ?? 0, unit: chart.unit,
+                                          exact: abs(value.as(Double.self) ?? 0) < 10))
                     .font(.ff(10, 700))
                     .foregroundStyle(theme.textSecondary)
             }
@@ -682,7 +686,7 @@ private func adminTenths(_ value: Double) -> String {
     return value < 0 && tenths != 0 ? "-" + digits : digits
 }
 
-/// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead.
+/// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead, whole for steps.
 private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> String {
     let suffix: String
     switch unit {
@@ -694,7 +698,7 @@ private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> S
     default: suffix = ""
     }
     if exact {
-        return value.formatted(.number.precision(.fractionLength(0...1))) + suffix
+        return value.formatted(.number.precision(.fractionLength(unit == "steps" ? 0...0 : 0...1))) + suffix
     }
     return (unit == "percent" ? adminTenths(value) : adminNumber(value)) + suffix
 }

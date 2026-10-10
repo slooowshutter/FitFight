@@ -59,6 +59,11 @@ daily points, and that All starts at the first signup. A seeded copy (90
 people, 50 days) checked every chart's numbers, and a copy with older signups
 checked weekly and monthly buckets. Swift was parsed only; CI compiles it.
 
+**Live deployment:** Marc asked for `develop` and `preview` on 10 Oct 2026. The
+`preview` merge deploys the preview server, which serves both dashboard
+environments, and uploads a staging TestFlight build with the new app layout.
+`main` is not needed.
+
 ## Admin dashboard: user growth charts, prepared 7 Oct 2026
 
 Marc asked for week-over-week and month-over-month growth on the Users tab,

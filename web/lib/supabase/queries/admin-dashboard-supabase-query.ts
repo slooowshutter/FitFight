@@ -242,12 +242,12 @@ function definitions(
     };
     const weeklyFightsCreated: AdminDashboardCardDefinition = {
         id: "fights_started", title: "Weekly fights created", unit: "count", better: true,
-        note: "New Fights, not later rounds. App-wide and suggested Fights excluded. Last 7 days vs the 7 before.",
+        note: "New Fights, not later rounds or app-wide ones. Last 7 days vs the 7 before.",
         query: eventCard(sql, w, 7, firstRounds, count),
     };
     const weeklySteps: AdminDashboardCardDefinition = {
         id: "steps_walked", title: "Weekly steps", unit: "steps", better: true,
-        note: "Complete days since each person joined: the 7 days before today vs the 7 before.",
+        note: "The 7 complete days before today, vs the 7 before.",
         query: dayCard(sql, w, 7, recentSteps, sql`sum(e.steps)`),
     };
     const totalUsersChart: AdminDashboardChartDefinition = {
@@ -552,7 +552,7 @@ function definitions(
                 cards: [
                     {
                         id: "signups_with_health", title: "Monthly signups with Health", unit: "count", better: true,
-                        note: "The people retention follows: signed up in the 30 days before today and connected Apple Health, vs the 30 before.",
+                        note: "The people retention follows. The 30 days before today vs the 30 before.",
                         query: sql`
                             select count(*) filter (where c.joined_day >= ${w.today}::date - 30)::float8 as value,
                                 count(*) filter (where c.joined_day < ${w.today}::date - 30)::float8 as previous
@@ -568,7 +568,7 @@ function definitions(
                         { id: "month_3", title: "Month 3 retention", from: 90, to: 119, span: 30 },
                     ].map(({ id, title, from, to, span }): AdminDashboardCardDefinition => ({
                         id, title, unit: "percent", better: true,
-                        note: `Synced steps on days ${from} to ${to} after signing up. Signups of the ${span} days that just got there, vs the ${span} days before.`,
+                        note: `Phone synced steps on days ${from} to ${to} after signup. Latest ${span} days of signups to get there, vs the ${span} before.`,
                         query: rate(from, to, span),
                     })),
                 ],
@@ -628,7 +628,7 @@ function definitions(
                     weeklyActive, monthlyActive,
                     {
                         id: "stickiness", title: "Monthly stickiness", unit: "percent", better: true,
-                        note: "Average daily actives over the last 30 days divided by monthly actives, vs the 30 days before.",
+                        note: "Average daily actives divided by monthly actives, last 30 days vs the 30 before.",
                         query: sql`
                             select 100.0 * (count(distinct (e.user_id, (e.at at time zone 'Europe/Paris')::date)) filter (
                                     where e.at >= ${ago(30)}) / 30.0)
@@ -686,7 +686,7 @@ function definitions(
                     },
                     {
                         id: "active_days", title: "Monthly active days", unit: "days", better: true,
-                        note: "Days each active person opened the app in the last 30, on average, vs the 30 before.",
+                        note: "Average days each active person opened the app, last 30 days vs the 30 before.",
                         query: sql`
                             with windows as (
                                 select case when e.day > ${w.today}::date - 30 then 'value' else 'previous' end as period,
@@ -705,7 +705,9 @@ function definitions(
                 charts: [
                     {
                         id: "dau_wau_mau", title: "Daily, weekly and monthly active users", kind: "line", unit: "count", x: "date",
-                        note: `DAU is the daily average in each ${w.bucket}. WAU and MAU count the 7 and 30 days up to its end, now for the last one.`,
+                        note: w.bucket === "day"
+                            ? "WAU and MAU count the 7 and 30 days up to each day."
+                            : `DAU is the daily average in each ${w.bucket}. WAU and MAU count the 7 and 30 days up to its end, now for the last one.`,
                         query: sql`
                             with active as materialized (${activeDays}), point as (${samplePoints(sql, w)}), counted as (
                                 select point.bucket, point.day,
@@ -745,7 +747,7 @@ function definitions(
                     },
                     {
                         id: "opens_percentiles", title: "Opens per person per day: P50 and P90", kind: "line", unit: "count", x: "date",
-                        note: `Among people who opened the app that day, across each ${w.bucket}.`,
+                        note: `Among people who opened the app that day${w.bucket === "day" ? "" : `, across each ${w.bucket}`}.`,
                         query: sql`
                             with daily as (
                                 select user_id, (at at time zone 'Europe/Paris')::date as day, count(*) as opens
@@ -835,12 +837,12 @@ function definitions(
                     weeklySteps,
                     {
                         id: "average_steps", title: "Weekly avg daily steps", unit: "steps", better: true,
-                        note: "Per person-day, complete days: the 7 days before today vs the 7 before.",
+                        note: "Per person-day, the 7 complete days before today vs the 7 before.",
                         query: dayCard(sql, w, 7, recentSteps, sql`avg(e.steps)`),
                     },
                     {
                         id: "median_steps", title: "Weekly median daily steps", unit: "steps", better: true,
-                        note: "Per person-day, complete days: the 7 days before today vs the 7 before.",
+                        note: "Per person-day, the 7 complete days before today vs the 7 before.",
                         query: dayCard(sql, w, 7, recentSteps, sql`percentile_cont(0.5) within group (order by e.steps)`),
                     },
                     {
@@ -855,7 +857,7 @@ function definitions(
                     },
                     {
                         id: "fight_day_lift", title: "Monthly fight-day lift", unit: "percent", better: true,
-                        note: "How much more people walk on days they are in a live Fight than on other days. Last 30 days vs the 30 before.",
+                        note: "Extra steps on days in a live Fight vs other days. Last 30 days vs the 30 before.",
                         query: sql`
                             with windows as (
                                 select case when e.day >= ${w.today}::date - 30 then 'value' else 'previous' end as period,
@@ -872,7 +874,7 @@ function definitions(
                     },
                     {
                         id: "joining_lift", title: "Change after joining", unit: "percent", better: true,
-                        note: "All time, median: each person's 4 weeks after signup vs the 4 weeks before (7+ days of data each side).",
+                        note: "All time. Median of each person's 4 weeks after signup vs the 4 before.",
                         query: sql`
                             with compared as (
                                 select user_id,
@@ -901,7 +903,7 @@ function definitions(
                     stepsChart,
                     {
                         id: "mean_median", title: "Steps per person per day: mean and median", kind: "line", unit: "steps", x: "date",
-                        note: `Over the person-days in each ${w.bucket}. A gap means a few big walkers pull the mean up.`,
+                        note: `${w.bucket === "day" ? "" : `Over the person-days in each ${w.bucket}. `}A gap means a few big walkers pull the mean up.`,
                         query: sql`
                             with bucketed as (
                                 select date_trunc(${w.bucket}::text, s.day::timestamp)::date as bucket,
@@ -922,14 +924,14 @@ function definitions(
                     },
                     {
                         id: "ten_k_share_per_bucket", title: "Days over 10K steps", kind: "line", unit: "percent", x: "date",
-                        note: `Share of person-days with 10,000 steps or more in each ${w.bucket}.`,
+                        note: w.bucket === "day" ? "Share of people with 10,000 steps or more that day." : `Share of person-days with 10,000 steps or more in each ${w.bucket}.`,
                         query: perBucket(sql, w, recentSteps, sql`avg(case when e.steps >= 10000 then 100.0 else 0 end)`, {
                             complete: true, gaps: true,
                         }),
                     },
                     {
                         id: "fight_vs_other_days", title: "Steps on fight days vs other days", kind: "line", unit: "steps", x: "date",
-                        note: `Average steps per person-day in each ${w.bucket}, on days in a live Fight vs days without one.`,
+                        note: `Average steps per person-day${w.bucket === "day" ? "" : ` in each ${w.bucket}`}, on days in a live Fight vs days without one.`,
                         query: perBucket(sql, w, sql`
                             select d.*, case when d.in_fight then 'In a fight' else 'Other days' end as series
                             from (${fightDays}) as d
@@ -1005,7 +1007,7 @@ function definitions(
                     },
                     {
                         id: "joins", title: "Weekly fight joins", unit: "count", better: true,
-                        note: "Accepted memberships, not counting the creator. App-wide and suggested Fights excluded. Last 7 days vs the 7 before.",
+                        note: "People joining someone else's Fight, app-wide ones excluded. Last 7 days vs the 7 before.",
                         query: eventCard(sql, w, 7, joins, count),
                     },
                     {
@@ -1361,7 +1363,7 @@ function definitions(
                     },
                     {
                         id: "background_syncs", title: "Weekly background syncs", unit: "count", better: true,
-                        note: "Apple Health woke the app to sync without anyone opening it. Last 7 days vs the 7 before.",
+                        note: "Syncs Apple Health started without an open. Last 7 days vs the 7 before.",
                         query: eventCard(sql, w, 7, sql`select * from (${attempts}) as a where a.trigger = 'observer'`, count),
                     },
                     {

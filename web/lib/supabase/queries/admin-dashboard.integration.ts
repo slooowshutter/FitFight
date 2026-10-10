@@ -55,6 +55,7 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${userId}, 'accepted', now())`;
 
     for (const section of adminDashboardSectionValues) {
+        const cardValues: string[] = [];
         for (const days of [1, 30, 3650]) {
             const dashboard = await readAdminDashboard(section, days, "staging", database);
             const failed = [...dashboard.cards, ...dashboard.charts]
@@ -67,10 +68,20 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
                 "Every tile reports its own query time",
             );
             assert.equal(dashboard.environment, "staging");
+            cardValues.push(JSON.stringify(dashboard.cards.map(({ id, value, previous }) => [id, value, previous])));
         }
+        assert.equal(new Set(cardValues).size, 1, `${section} cards have fixed spans, whatever the period`);
     }
     const engagement = await readAdminDashboard("engagement", 30, "staging", database);
     const opens = engagement.cards.find((card) => card.id === "app_opens");
-    // Thirteen days of two foreground traces each; the one 20 seconds after a background sync is not an open.
-    assert.ok(opens?.value !== undefined && opens.value !== null && opens.value >= 13);
+    // Seven days of two foreground traces each; the one 20 seconds after a background sync is not an open.
+    assert.ok(opens?.value !== undefined && opens.value !== null && opens.value >= 7);
+
+    const [first] = await database`
+        select (min(created_at) at time zone 'Europe/Paris')::date::text as day from public.profiles
+    `;
+    const newUsers = async (days: number) => (await readAdminDashboard("overview", days, "staging", database))
+        .charts.find((chart) => chart.id === "new_users_per_bucket")?.series[0]?.points ?? [];
+    assert.equal((await newUsers(7)).length, 7, "Seven daily points for 7 days");
+    assert.equal((await newUsers(3650))[0]?.x, first?.day, "A long period starts at the first signup, not years before it");
 });

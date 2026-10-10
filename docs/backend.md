@@ -31,7 +31,7 @@ It caches the last answer per API address and keeps it when the call fails.
 
 ## Admin dashboard (prepared 29 Sep 2026)
 
-`GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>` feeds the Admin tab
+`GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>[&bucket=day|week|month]` feeds the Admin tab
 in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement`,
 `steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
@@ -49,8 +49,15 @@ query only marks its own tile with `Query failed: ...`.
   days ago. `days` sets only the charts over time (`x_kind` date): Paris days from
   the later of today minus `days` and the first signup, at least 7 days, in whole
   days (up to 62), weeks (up to 366) or months, with no previous-period overlay.
-  Activity charts start where sync history starts. Every other chart names its
-  own span ("last 30 days", "all time", "now").
+  `bucket` (the app's Day, Week or Month choice) overrides that bucket. Each metric
+  is computed per bucket: counts add up, people count once per bucket, averages
+  and shares use every person-day in it, and DAU is the daily average. Activity
+  charts start where sync history starts. Every other chart names its own span
+  ("last 30 days", "all time", "now").
+- **Chart pages (10 Oct 2026):** every chart carries a `definition` (what it
+  measures) and an `example` sentence that reads one current number off it: the
+  newest complete day, week or month, or now for totals and states. Both are built
+  on the server in English, so their wording changes need no app build.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
   after a background `observer` sync is the post-sync refresh, not an open. Sync

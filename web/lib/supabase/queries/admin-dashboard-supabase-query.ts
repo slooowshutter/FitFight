@@ -8,11 +8,13 @@ import {
     adminDashboardSchema,
     adminDashboardSectionValues,
     type AdminDashboard,
+    type AdminDashboardBucket,
     type AdminDashboardCard,
     type AdminDashboardCardDefinition,
     type AdminDashboardChart,
     type AdminDashboardChartDefinition,
     type AdminDashboardEnvironment,
+    type AdminDashboardExampleReader,
     type AdminDashboardQueryFragment,
     type AdminDashboardSection,
     type AdminDashboardWindow,
@@ -103,6 +105,57 @@ function samplePoints(sql: Sql, w: AdminDashboardWindow): AdminDashboardQueryFra
         from generate_series(${w.start}::timestamp, date_trunc(${w.bucket}::text, ${w.today}::timestamp),
             ('1 ' || ${w.bucket}::text)::interval) as bucket
     `;
+}
+
+/** Reads a built chart for its example sentence, in English like the rest of the dashboard. */
+function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): AdminDashboardExampleReader {
+    const points = (name?: string) => (name ? chart.series.find((line) => line.name === name) : chart.series[0])?.points ?? [];
+    // NOTE: fixed names, because English short months differ by ICU version ("Sep" or "Sept").
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const date = (x: string) => new Date(`${x}T00:00:00Z`);
+    const dayMonth = (x: string) => `${date(x).getUTCDate()} ${months[date(x).getUTCMonth()]}`;
+    const end = (x: string) => {
+        const next = new Date(`${x}T00:00:00Z`);
+        if (w.bucket === "month") next.setUTCMonth(next.getUTCMonth() + 1);
+        else next.setUTCDate(next.getUTCDate() + (w.bucket === "week" ? 7 : 1));
+        return next.toISOString().slice(0, 10);
+    };
+    const xs = chart.x_kind === "date" ? [...new Set(chart.series.flatMap((line) => line.points.map((point) => point.x)))].sort() : [];
+    const reference = xs.filter((x) => end(x) <= w.today).at(-1) ?? xs.at(-1);
+    const filling = reference !== undefined && end(reference) > w.today;
+    const day = (x: string) => `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date(x).getUTCDay()]} ${dayMonth(x)}`;
+    const format = (value: number, unit = chart.unit) => {
+        const digits = value.toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
+        if (unit === "percent") return `${digits}%`;
+        if (unit === "count" || unit === "steps") return digits;
+        return `${digits} ${value === 1 ? unit.slice(0, -1) : unit}`;
+    };
+    const share = (part: number, whole: number) => (whole > 0 ? format((100 * part) / whole, "percent") : undefined);
+    const rows = points();
+    const total = rows.reduce((sum, row) => sum + row.y, 0);
+    const top = rows.reduce<{ x: string; y: number } | undefined>((best, row) => (!best || row.y > best.y ? row : best), undefined);
+    const peak = chart.cells.reduce<AdminDashboardChart["cells"][number] | undefined>(
+        (best, cell) => (!best || cell.value > best.value ? cell : best), undefined);
+    return {
+        when: reference === undefined ? ""
+            : w.bucket === "day" ? (filling ? "today so far" : `on ${day(reference)}`)
+            : w.bucket === "week" ? (filling ? "this week so far" : `in the week of ${dayMonth(reference)}`)
+            : filling ? "this month so far"
+            : `in ${new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(date(reference))}`,
+        at: (series) => points(series).find((point) => point.x === reference)?.y,
+        latest: (series) => points(series).at(-1)?.y,
+        first: (series) => points(series)[0],
+        series: chart.series,
+        rows,
+        row: (label) => rows.find((row) => row.x === label)?.y,
+        total,
+        top: top && { ...top, share: share(top.y, total) },
+        peak,
+        format,
+        count: (value, one, many) => `${format(value, "count")} ${value === 1 ? one : many}`,
+        share,
+        day,
+    };
 }
 
 /**
@@ -252,6 +305,13 @@ function definitions(
     };
     const totalUsersChart: AdminDashboardChartDefinition = {
         id: "total_users_over_time", title: "Total users", kind: "line", unit: "count", x: "date",
+        definition: `Everyone with a FitFight account at the end of each ${w.bucket}, and now for the last point. Deleted accounts are not counted.`,
+        example: (r) => {
+            const now = r.latest();
+            const start = r.first();
+            return now === undefined || !start ? null
+                : `FitFight has ${r.count(now, "user", "users")} now, against ${r.format(start.y)} at the start of the chart.`;
+        },
         note: `At the end of each ${w.bucket}, now for the last one.`,
         query: sql`
             select point.bucket::text as x, (
@@ -263,19 +323,39 @@ function definitions(
     };
     const newUsersChart: AdminDashboardChartDefinition = {
         id: "new_users_per_bucket", title: `New users ${per}`, kind: "bar", unit: "count", x: "date",
+        definition: `Accounts created in each ${w.bucket}. Deleted accounts are not counted.`,
+        example: (r) => {
+            const n = r.at();
+            return n === undefined ? null : `${r.count(n, "person", "people")} signed up ${r.when}.`;
+        },
         query: perBucket(sql, w, profiles, count),
     };
     const opensChart: AdminDashboardChartDefinition = {
         id: "opens_per_bucket", title: `App opens ${per}`, kind: "bar", unit: "count", x: "date",
+        definition: `How many times people opened the app in each ${w.bucket}. The refresh right after a background sync is not an open.`,
+        example: (r) => {
+            const n = r.at();
+            return n === undefined ? null : `The app was opened ${r.count(n, "time", "times")} ${r.when}.`;
+        },
         query: perBucket(sql, w, opens, count, { gaps: true }),
     };
     const fightsCreatedChart: AdminDashboardChartDefinition = {
         id: "fights_created_per_bucket", title: `Fights created ${per}`, kind: "bar", unit: "count", x: "date",
+        definition: `New Fights created in each ${w.bucket}. Later rounds of a repeating Fight, the app-wide Fight and suggested Fights are not counted.`,
+        example: (r) => {
+            const n = r.at();
+            return n === undefined ? null : `${r.count(n, "new fight was", "new fights were")} created ${r.when}.`;
+        },
         note: "New Fights, not later rounds. App-wide and suggested Fights excluded.",
         query: perBucket(sql, w, firstRounds, count),
     };
     const stepsChart: AdminDashboardChartDefinition = {
         id: "steps_per_bucket", title: `Steps ${per}`, kind: "bar", unit: "steps", x: "date",
+        definition: `Steps from Apple Health in each ${w.bucket}, added up for everyone. Only complete days, from each person's signup day.`,
+        example: (r) => {
+            const n = r.at();
+            return n === undefined ? null : `FitFight people walked ${r.format(n)} steps ${r.when}.`;
+        },
         note: "Complete days since each person joined, through yesterday.",
         query: perBucket(sql, w, recentSteps, sql`sum(e.steps)`, { complete: true }),
     };
@@ -300,6 +380,11 @@ function definitions(
                     totalUsersChart, newUsersChart,
                     {
                         id: "active_users_per_bucket", title: `Active users ${per}`, kind: "line", unit: "count", x: "date",
+                        definition: `People who opened the app at least once in each ${w.bucket}. Each person counts once per ${w.bucket}. A background sync without an open does not count.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `${r.count(n, "person", "people")} opened the app ${r.when}.`;
+                        },
                         note: `Distinct people who opened the app in each ${w.bucket}.`,
                         query: perBucket(sql, w, activity, people, { gaps: true }),
                     },
@@ -365,6 +450,12 @@ function definitions(
                         { id: "user_growth_mom", title: "Month-over-month user growth", span: 30, name: "month" },
                     ].map(({ id, title, span, name }): AdminDashboardChartDefinition => ({
                         id, title, kind: "line", unit: "percent", x: "date",
+                        definition: `How much the number of users grew in the ${span} days up to the end of each ${w.bucket}: total users then against total users ${span} days earlier.`,
+                        example: (r) => {
+                            const growth = r.latest();
+                            return growth === undefined ? null
+                                : `Total users ${growth >= 0 ? "grew" : "fell"} by ${r.format(Math.abs(growth))} in the last ${span} days.`;
+                        },
                         note: `Total users at the end of each ${w.bucket} against ${span} days earlier, so each point is that ${name}'s growth.`,
                         query: sql`
                             select point.bucket::text as x,
@@ -380,6 +471,14 @@ function definitions(
                     newUsersChart, totalUsersChart,
                     {
                         id: "onboarding_by_signup", title: `Onboarding by signup ${w.bucket}`, kind: "line", unit: "percent", x: "date",
+                        definition: `For the people who signed up in each ${w.bucket}: the share who picked a username, connected Apple Health and joined a fight, as of now. Recent signups have had less time, so their shares can still grow.`,
+                        example: (r) => {
+                            const name = r.at("Picked a username");
+                            const health = r.at("Connected Apple Health");
+                            const fight = r.at("Joined a fight");
+                            if (name === undefined || health === undefined || fight === undefined) return null;
+                            return `Of the people who signed up ${r.when}, ${r.format(name)} picked a username, ${r.format(health)} connected Apple Health and ${r.format(fight)} joined a fight.`;
+                        },
                         note: `Share of each ${w.bucket}'s signups who did each step, as of now. Recent signups have had less time.`,
                         query: perBucket(sql, w, sql`
                             select p.at, step.series, step.done
@@ -399,13 +498,27 @@ function definitions(
                     },
                     {
                         id: "referrals_per_bucket", title: `Referrals ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Signups that came through someone's referral link, in each ${w.bucket}.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `${r.count(n, "person", "people")} joined through a referral ${r.when}.`;
+                        },
                         query: perBucket(sql, w, sql`select created_at as at from private.referrals`, count),
                     },
                     ...[
-                        { id: "funnel_period", title: "Onboarding funnel, last 30 days' signups", scope: sql`p.created_at >= ${ago(30)}` },
-                        { id: "funnel_all", title: "Onboarding funnel, all users", scope: sql`true` },
-                    ].map(({ id, title, scope }): AdminDashboardChartDefinition => ({
+                        { id: "funnel_period", title: "Onboarding funnel, last 30 days' signups", who: "the people who signed up in the last 30 days", scope: sql`p.created_at >= ${ago(30)}` },
+                        { id: "funnel_all", title: "Onboarding funnel, all users", who: "all users", scope: sql`true` },
+                    ].map(({ id, title, who, scope }): AdminDashboardChartDefinition => ({
                         id, title, kind: "bar", unit: "count", x: "label",
+                        definition: `How far ${who} got: picking a username, connecting Apple Health, joining a first fight, finishing one and joining a second.`,
+                        example: (r) => {
+                            const signed = r.row("Signed up");
+                            const joined = r.row("Joined a fight");
+                            const finished = r.row("Finished a fight");
+                            if (signed === undefined || joined === undefined || finished === undefined) return null;
+                            const part = r.share(joined, signed);
+                            return part ? `Of ${who} (${r.format(signed)}), ${part} joined a fight and ${r.share(finished, signed)} finished one.` : null;
+                        },
                         query: sql`
                             with cohort as (
                                 select p.user_id, p.handle_set_at,
@@ -432,6 +545,8 @@ function definitions(
                     })),
                     {
                         id: "sign_in_methods", title: "Sign-in method, all users", kind: "bar", unit: "count", x: "label",
+                        definition: "How people sign in. Apple means an Apple sign-in is on file; older Apple logins without one count as Google or other.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "user", "users")}, ${r.top.share} of everyone.` : null),
                         note: "Apple means an Apple sign-in is on file. Older Apple logins without one count as other.",
                         query: sql`
                             select case when exists (
@@ -444,6 +559,8 @@ function definitions(
                     },
                     {
                         id: "languages", title: "App language, all users", kind: "bar", unit: "count", x: "label",
+                        definition: "The language each person chose for the app. Follows iPhone means they kept the iPhone's language.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "user", "users")}, ${r.top.share} of everyone.` : null),
                         query: sql`
                             select case coalesce(pref.language, 'system')
                                     when 'en' then 'English' when 'fr' then 'French' else 'Follows iPhone' end as x,
@@ -455,6 +572,8 @@ function definitions(
                     },
                     {
                         id: "time_zones", title: "Top time zones, all users", kind: "bar", unit: "count", x: "label",
+                        definition: "Each person's saved time zone, a rough guide to where they live.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.share} of users are in ${r.top.x} (${r.format(r.top.y)}).` : null),
                         query: sql`
                             select coalesce(time_zone, 'Unknown') as x, count(*)::float8 as y
                             from public.profiles where deleted_at is null group by 1 order by 2 desc, 1 limit 12
@@ -462,13 +581,20 @@ function definitions(
                     },
                     {
                         id: "companions", title: "Companion choices, all users", kind: "bar", unit: "count", x: "label",
+                        definition: "The companion each person picked. None yet means they have not picked one.",
+                        example: (r) => {
+                            const pick = r.rows.find((row) => row.x !== "None yet" && row.y > 0);
+                            return pick ? `${pick.x} is the most picked companion: ${r.count(pick.y, "user", "users")}.` : null;
+                        },
                         query: sql`
-                            select coalesce(companion_id, 'None yet') as x, count(*)::float8 as y
+                            select coalesce(initcap(replace(companion_id, '-', ' ')), 'None yet') as x, count(*)::float8 as y
                             from public.profiles where deleted_at is null group by 1 order by 2 desc, 1 limit 15
                         `,
                     },
                     {
                         id: "top_referrers", title: "Top referrers, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "People whose referral links brought the most signups, all time.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} brought ${r.count(r.top.y, "person", "people")} to FitFight.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
                             from private.referrals as r join public.profiles as p on p.user_id = r.referrer_user_id
@@ -575,16 +701,39 @@ function definitions(
                 charts: [
                     {
                         id: "weekly_cohorts", title: "Retention curves, last 8 signup weeks", kind: "line", unit: "percent", x: "label",
+                        definition: "One line per signup week. Each point is the share of that week's signups with Apple Health whose phone still synced steps N weeks later. W0 is their first week and W1 their second.",
+                        example: (r) => {
+                            const cohort = r.series.find((line) => line.points.some((point) => point.x === "W1"));
+                            const kept = cohort?.points.find((point) => point.x === "W1");
+                            return cohort && kept
+                                ? `Of the people who signed up in the ${cohort.name.replace("Week of", "week of")}, ${r.format(kept.y)} still synced steps in their second week.`
+                                : null;
+                        },
                         note: "One line per signup week. W1 is the share whose phone still synced steps 7 to 13 days after signing up.",
                         query: curves("week", 8),
                     },
                     {
                         id: "monthly_cohorts", title: "Retention curves, last 6 signup months", kind: "line", unit: "percent", x: "label",
+                        definition: "One line per signup month. Each point is the share of that month's signups with Apple Health whose phone still synced steps N months later, in 30-day blocks. M0 is their first month.",
+                        example: (r) => {
+                            const cohort = r.series.find((line) => line.points.some((point) => point.x === "M1"));
+                            const kept = cohort?.points.find((point) => point.x === "M1");
+                            return cohort && kept
+                                ? `Of the people who signed up in ${cohort.name}, ${r.format(kept.y)} still synced steps in their second month.`
+                                : null;
+                        },
                         note: "One line per signup month. M1 is days 30 to 59 after signing up.",
                         query: curves("month", 6),
                     },
                     {
                         id: "retention_by_signup", title: `Retention by signup ${cohort}`, kind: "line", unit: "percent", x: "date",
+                        definition: `For each signup ${cohort}: the share of people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34) after signing up. It shows if newer signups stay longer.`,
+                        example: (r) => {
+                            const week = r.series.find((line) => line.name === "Week 1")?.points.at(-1);
+                            return week
+                                ? `Of the people who signed up in the ${cohort} starting ${r.day(week.x)}, ${r.format(week.y)} still synced steps in week 1.`
+                                : null;
+                        },
                         note: `Share of each signup ${cohort}'s people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34). People count once they get there.`,
                         query: sql`
                             with active as materialized (${synced}),
@@ -609,6 +758,11 @@ function definitions(
                     },
                     {
                         id: "health_signups_per_bucket", title: `Signups with Apple Health ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Signups who connected Apple Health, in each ${w.bucket}. These are the people retention follows.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `${r.count(n, "person", "people")} signed up and connected Apple Health ${r.when}.`;
+                        },
                         note: "The people retention follows.",
                         query: perBucket(sql, w, withHealth, count),
                     },
@@ -705,6 +859,19 @@ function definitions(
                 charts: [
                     {
                         id: "dau_wau_mau", title: "Daily, weekly and monthly active users", kind: "line", unit: "count", x: "date",
+                        definition: w.bucket === "day"
+                            ? "DAU: people who opened the app that day. WAU and MAU: people who opened it at least once in the 7 or 30 days up to that day."
+                            : `DAU: people who opened the app on a day, averaged over the days of each ${w.bucket}. WAU and MAU: people who opened it at least once in the 7 or 30 days up to the end of the ${w.bucket}.`,
+                        example: (r) => {
+                            const daily = r.at("DAU");
+                            const weekly = r.at("WAU");
+                            const monthly = r.at("MAU");
+                            if (daily === undefined || weekly === undefined || monthly === undefined) return null;
+                            const opened = w.bucket === "day"
+                                ? `${r.count(daily, "person", "people")} opened the app ${r.when}`
+                                : `${r.format(daily)} people opened the app on an average day ${r.when}`;
+                            return `${opened}. ${r.format(weekly)} opened it in the 7 days up to then, and ${r.format(monthly)} in the 30 days.`;
+                        },
                         note: w.bucket === "day"
                             ? "WAU and MAU count the 7 and 30 days up to each day."
                             : `DAU is the daily average in each ${w.bucket}. WAU and MAU count the 7 and 30 days up to its end, now for the last one.`,
@@ -712,7 +879,7 @@ function definitions(
                             with active as materialized (${activeDays}), point as (${samplePoints(sql, w)}), counted as (
                                 select point.bucket, point.day,
                                     count(a.user_id) filter (where a.day >= point.bucket)::float8
-                                        / (point.day - point.bucket + 1) as daily,
+                                        / (point.day - greatest(point.bucket, (select min(day) from active)) + 1) as daily,
                                     count(distinct a.user_id) filter (where a.day > point.day - 7) as weekly,
                                     count(distinct a.user_id) filter (where a.day > point.day - 30) as monthly
                                 from point left join active as a
@@ -730,6 +897,11 @@ function definitions(
                     opensChart,
                     {
                         id: "opens_per_active_person", title: `Opens per active user ${per}`, kind: "line", unit: "count", x: "date",
+                        definition: `App opens divided by the people who opened the app, in each ${w.bucket}. It shows how often an active person comes back.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `Each active person opened the app ${r.count(n, "time", "times")} on average ${r.when}.`;
+                        },
                         note: `App opens divided by people who opened the app in each ${w.bucket}.`,
                         query: perBucket(sql, w, activity, sql`
                             count(*) filter (where e.trigger = 'foreground')::float8 / nullif(count(distinct e.user_id), 0)
@@ -737,6 +909,13 @@ function definitions(
                     },
                     {
                         id: "new_vs_returning", title: `New vs returning active users ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `People who opened the app in each ${w.bucket}, split into new (signed up in that same ${w.bucket}) and returning (everyone else).`,
+                        example: (r) => {
+                            const back = r.at("Returning");
+                            const fresh = r.at("New") ?? 0;
+                            return back === undefined ? null
+                                : `${r.count(back, "returning person", "returning people")} and ${r.count(fresh, "new person", "new people")} opened the app ${r.when}.`;
+                        },
                         note: `New: signed up in the same ${w.bucket}.`,
                         query: perBucket(sql, w, sql`
                             select a.user_id, a.at, case when date_trunc(${w.bucket}::text, p.joined_day::timestamp)
@@ -747,6 +926,13 @@ function definitions(
                     },
                     {
                         id: "opens_percentiles", title: "Opens per person per day: P50 and P90", kind: "line", unit: "count", x: "date",
+                        definition: "How many times people opened the app on the days they opened it. P50 is the typical person; only 10% opened it more often than P90.",
+                        example: (r) => {
+                            const typical = r.at("P50");
+                            const top = r.at("P90");
+                            return typical === undefined || top === undefined ? null
+                                : `The typical active person opened the app ${r.count(typical, "time", "times")} a day ${r.when}, and the top 10% ${r.count(top, "time", "times")} or more.`;
+                        },
                         note: `Among people who opened the app that day${w.bucket === "day" ? "" : `, across each ${w.bucket}`}.`,
                         query: sql`
                             with daily as (
@@ -768,6 +954,13 @@ function definitions(
                     },
                     {
                         id: "power_users", title: "Active days in the last 30 days", kind: "bar", unit: "count", x: "label",
+                        definition: "People by how many of the last 30 days they opened the app. The more people in the higher groups, the stronger the habit.",
+                        example: (r) => {
+                            const regular = (r.row("15-21") ?? 0) + (r.row("22-30") ?? 0);
+                            return r.total > 0
+                                ? `${r.count(regular, "person", "people")} opened the app on 15 or more of the last 30 days, out of ${r.format(r.total)} who opened it at all.`
+                                : null;
+                        },
                         note: "People by how many of the last 30 days they opened the app.",
                         query: sql`
                             with per_person as (
@@ -784,6 +977,14 @@ function definitions(
                     },
                     {
                         id: "recency", title: "Days since last open, all users", kind: "bar", unit: "count", x: "label",
+                        definition: "Every user by the days since they last opened the app. Never means no open recorded in the last 120 days.",
+                        example: (r) => {
+                            const today = r.row("Today") ?? 0;
+                            const never = r.row("Never") ?? 0;
+                            return r.total > 0
+                                ? `${r.count(today, "person", "people")} opened the app today, and ${r.format(never)} have no open in the last 120 days.`
+                                : null;
+                        },
                         note: "Never: no open recorded in the last 120 days.",
                         query: sql`
                             with seen_days as (
@@ -803,6 +1004,10 @@ function definitions(
                     },
                     {
                         id: "opens_heatmap", title: "When people open the app, last 30 days", kind: "heatmap", unit: "count", x: "label",
+                        definition: "App opens in the last 30 days by weekday and hour, Paris time. The darker the cell, the more opens.",
+                        example: (r) => (r.peak && r.peak.value > 0
+                            ? `The busiest hour is ${r.peak.y} ${r.peak.x}:00 Paris time, with ${r.count(r.peak.value, "open", "opens")} in 30 days.`
+                            : null),
                         note: "Opens by weekday and hour, Paris time.",
                         query: sql`
                             with counted as (
@@ -821,6 +1026,8 @@ function definitions(
                     },
                     {
                         id: "top_openers", title: "Most app opens, last 30 days", kind: "bar", unit: "count", x: "label",
+                        definition: "People who opened the app the most in the last 30 days.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} opened the app ${r.count(r.top.y, "time", "times")} in the last 30 days.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
                             from (${opens}) as o join public.profiles as p on p.user_id = o.user_id
@@ -903,6 +1110,13 @@ function definitions(
                     stepsChart,
                     {
                         id: "mean_median", title: "Steps per person per day: mean and median", kind: "line", unit: "steps", x: "date",
+                        definition: "Steps per person per day. The mean is the average; the median is the middle person. When the mean is above the median, a few big walkers pull the average up.",
+                        example: (r) => {
+                            const mean = r.at("Mean");
+                            const median = r.at("Median");
+                            return mean === undefined || median === undefined ? null
+                                : `The average person walked ${r.format(mean)} steps a day ${r.when}, and the middle person ${r.format(median)}.`;
+                        },
                         note: `${w.bucket === "day" ? "" : `Over the person-days in each ${w.bucket}. `}A gap means a few big walkers pull the mean up.`,
                         query: sql`
                             with bucketed as (
@@ -920,10 +1134,25 @@ function definitions(
                     },
                     {
                         id: "walkers_per_bucket", title: `People with step data ${per}`, kind: "line", unit: "count", x: "date",
+                        definition: `People with at least one complete day of Apple Health steps in each ${w.bucket}.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `${r.count(n, "person", "people")} had step data ${r.when}.`;
+                        },
                         query: perBucket(sql, w, recentSteps, people, { complete: true }),
                     },
                     {
                         id: "ten_k_share_per_bucket", title: "Days over 10K steps", kind: "line", unit: "percent", x: "date",
+                        definition: w.bucket === "day"
+                            ? "Share of people with step data who walked 10,000 steps or more that day."
+                            : `Share of person-days with 10,000 steps or more in each ${w.bucket}.`,
+                        example: (r) => {
+                            const n = r.at();
+                            if (n === undefined) return null;
+                            return w.bucket === "day"
+                                ? `${r.format(n)} of people walked 10,000 steps or more ${r.when}.`
+                                : `${r.format(n)} of person-days reached 10,000 steps ${r.when}.`;
+                        },
                         note: w.bucket === "day" ? "Share of people with 10,000 steps or more that day." : `Share of person-days with 10,000 steps or more in each ${w.bucket}.`,
                         query: perBucket(sql, w, recentSteps, sql`avg(case when e.steps >= 10000 then 100.0 else 0 end)`, {
                             complete: true, gaps: true,
@@ -931,6 +1160,13 @@ function definitions(
                     },
                     {
                         id: "fight_vs_other_days", title: "Steps on fight days vs other days", kind: "line", unit: "steps", x: "date",
+                        definition: "Average steps per person-day on days when the person was in a live Fight, against their days without one.",
+                        example: (r) => {
+                            const fighting = r.at("In a fight");
+                            const other = r.at("Other days");
+                            return fighting === undefined || other === undefined ? null
+                                : `People in a fight walked ${r.format(fighting)} steps a day ${r.when}, against ${r.format(other)} on other days.`;
+                        },
                         note: `Average steps per person-day${w.bucket === "day" ? "" : ` in each ${w.bucket}`}, on days in a live Fight vs days without one.`,
                         query: perBucket(sql, w, sql`
                             select d.*, case when d.in_fight then 'In a fight' else 'Other days' end as series
@@ -939,6 +1175,14 @@ function definitions(
                     },
                     {
                         id: "people_by_average", title: "People by daily average, last 30 days", kind: "bar", unit: "count", x: "label",
+                        definition: "People by their average daily steps over the last 30 complete days.",
+                        example: (r) => {
+                            const active = (r.row("10K-15K") ?? 0) + (r.row("15K+") ?? 0);
+                            const part = r.share(active, r.total);
+                            return part
+                                ? `${r.count(active, "person averages", "people average")} 10,000 steps a day or more: ${part} of everyone with step data.`
+                                : null;
+                        },
                         query: sql`
                             with people as (
                                 select user_id, avg(steps) as steps from (${recentSteps}) as s
@@ -954,6 +1198,17 @@ function definitions(
                     },
                     {
                         id: "around_joining", title: "Steps around signup, all time", kind: "line", unit: "steps", x: "label",
+                        definition: "Average steps per person on each day around signup, from Apple Health history. Day 0 is the signup day; negative days are before it.",
+                        example: (r) => {
+                            const mean = (low: number, high: number) => {
+                                const days = r.rows.filter((row) => Number(row.x) >= low && Number(row.x) < high);
+                                return days.length ? days.reduce((sum, row) => sum + row.y, 0) / days.length : undefined;
+                            };
+                            const before = mean(-7, 0);
+                            const after = mean(0, 7);
+                            return before === undefined || after === undefined ? null
+                                : `People walked ${r.format(before)} steps a day in the week before signing up and ${r.format(after)} in their first week.`;
+                        },
                         note: "Day 0 is the signup day. Average across everyone with Health history on each day.",
                         query: sql`
                             select (day - joined_day)::text as x, avg(steps)::float8 as y
@@ -964,6 +1219,13 @@ function definitions(
                     },
                     {
                         id: "joining_change_distribution", title: "Change after joining, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "People by how their average steps changed: the 4 weeks after signup against the 4 weeks before. Only people with 7 or more days of data on each side.",
+                        example: (r) => {
+                            const up = (r.row("Up 5-20%") ?? 0) + (r.row("Up 20%+") ?? 0);
+                            return r.total > 0
+                                ? `${r.count(up, "person walks", "people walk")} at least 5% more since joining, out of ${r.format(r.total)}.`
+                                : null;
+                        },
                         note: "People by their 4 weeks after signup vs the 4 weeks before (7+ days of data each side).",
                         query: sql`
                             with compared as (
@@ -983,6 +1245,8 @@ function definitions(
                     },
                     {
                         id: "top_walkers", title: "Top walkers, last 7 days", kind: "bar", unit: "steps", x: "label",
+                        definition: "People with the most steps in the 7 complete days before today.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} walked the most: ${r.format(r.top.y)} steps in 7 days.` : null),
                         query: sql`
                             select '@' || handle as x, sum(steps)::float8 as y from (${recentSteps}) as s
                             where s.day >= ${w.today}::date - 7
@@ -1082,6 +1346,11 @@ function definitions(
                     fightsCreatedChart,
                     {
                         id: "live_fights_over_time", title: "Live fights", kind: "line", unit: "count", x: "date",
+                        definition: `Fights running at the end of each ${w.bucket}, and now for the last point. The app-wide Fight counts.`,
+                        example: (r) => {
+                            const n = r.latest();
+                            return n === undefined ? null : `${r.count(n, "fight is", "fights are")} live now.`;
+                        },
                         note: `At the end of each ${w.bucket}, now for the last one. App-wide Fight included.`,
                         query: sql`
                             select point.bucket::text as x, (
@@ -1093,6 +1362,11 @@ function definitions(
                     },
                     {
                         id: "people_in_fights_over_time", title: "Users in a live fight", kind: "line", unit: "percent", x: "date",
+                        definition: `Share of all users who are in a live Fight, at the end of each ${w.bucket} and now for the last point.`,
+                        example: (r) => {
+                            const n = r.latest();
+                            return n === undefined ? null : `${r.format(n)} of users are in a live fight now.`;
+                        },
                         note: `Share of all users, at the end of each ${w.bucket}, now for the last one.`,
                         query: sql`
                             select point.bucket::text as x, (100.0 * (
@@ -1111,10 +1385,22 @@ function definitions(
                     },
                     {
                         id: "rounds_finished_per_bucket", title: `Rounds finished ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Fight rounds that ended with results, in each ${w.bucket}. Every round of a repeating Fight counts.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `${r.count(n, "round", "rounds")} finished ${r.when}.`;
+                        },
                         query: perBucket(sql, w, sql`select ends_at as at from public.fights where state = 'final'`, count),
                     },
                     {
                         id: "invites_and_joins", title: `Invites and joins ${per}`, kind: "line", unit: "count", x: "date",
+                        definition: `Invitations sent to Fights, and people who joined someone else's Fight, in each ${w.bucket}. App-wide and suggested Fights are not counted.`,
+                        example: (r) => {
+                            const sent = r.at("Invites sent");
+                            const joined = r.at("People joining");
+                            return sent === undefined || joined === undefined ? null
+                                : `${r.count(sent, "invite was", "invites were")} sent ${r.when}, and ${r.count(joined, "person", "people")} joined a fight.`;
+                        },
                         note: "App-wide and suggested Fights excluded.",
                         query: perBucket(sql, w, sql`
                             select event.occurred_at as at, 'Invites sent' as series
@@ -1127,6 +1413,10 @@ function definitions(
                     },
                     {
                         id: "fight_sizes", title: "Fight sizes, last 30 days", kind: "bar", unit: "count", x: "label",
+                        definition: "Fights that started in the last 30 days, by their number of accepted fighters. Cancelled Fights are not counted.",
+                        example: (r) => (r.top && r.top.y > 0
+                            ? `${r.top.x}${/^\d/.test(r.top.x) ? " fighters" : ""} is the most common size: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.`
+                            : null),
                         note: "Fights that started in the last 30 days, by accepted fighters.",
                         query: sql`
                             with sizes as (
@@ -1144,6 +1434,8 @@ function definitions(
                     },
                     {
                         id: "durations", title: "Fight durations, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "How long Fights last, all time. App-wide and suggested Fights are not counted.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} is the most common length: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.` : null),
                         query: sql`
                             select duration.x, count(series.id)::float8 as y from (values
                                 (1, 'Up to 1 day', 0, 86400), (2, '2-3 days', 86401, 259200), (3, '4-7 days', 259201, 604800),
@@ -1156,6 +1448,13 @@ function definitions(
                     },
                     {
                         id: "margins", title: "How close fights end, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "Finished Fights with two or more fighters, by how far the winner was ahead of second place, as a share of the winner's steps.",
+                        example: (r) => {
+                            const close = r.row("Under 5%") ?? 0;
+                            return r.total > 0
+                                ? `${r.count(close, "fight was", "fights were")} won by less than 5%, out of ${r.format(r.total)} finished fights.`
+                                : null;
+                        },
                         note: "Winner's lead over second place, finished Fights.",
                         query: sql`
                             with margins as (
@@ -1178,6 +1477,14 @@ function definitions(
                     },
                     {
                         id: "time_to_first_fight", title: "Time from signup to first fight, all users", kind: "bar", unit: "count", x: "label",
+                        definition: "Every user by the time between signing up and first joining a fight. Not yet means they have not joined one.",
+                        example: (r) => {
+                            const same = r.row("Same day") ?? 0;
+                            const waiting = r.row("Not yet") ?? 0;
+                            return r.total > 0
+                                ? `${r.count(same, "person", "people")} joined a fight on the day they signed up, and ${r.format(waiting)} have not joined one yet.`
+                                : null;
+                        },
                         query: sql`
                             with waits as (
                                 select extract(epoch from (
@@ -1197,6 +1504,8 @@ function definitions(
                     },
                     {
                         id: "top_fighters", title: "Most fights joined, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "People who joined the most Fights, all time. App-wide and suggested Fights are not counted.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} joined ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
                             from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
@@ -1206,6 +1515,8 @@ function definitions(
                     },
                     {
                         id: "top_winners", title: "Most wins, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "People who won the most finished Fights that had at least two fighters, all time.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} won ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
                             from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
@@ -1218,6 +1529,8 @@ function definitions(
                     },
                     {
                         id: "loser_actions", title: "Most common loser actions, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "The actions losers most often have to do, as people typed them, all time.",
+                        example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common action, in ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
                             select left(lower(trim(action_text)), 40) as x, count(*)::float8 as y
                             from public.fight_series where action_text is not null and trim(action_text) <> ''
@@ -1227,6 +1540,8 @@ function definitions(
                     },
                     {
                         id: "app_wide_members", title: "App-wide and suggested fights, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "People in the app-wide and suggested Fights, across all their rounds.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has ${r.count(r.top.y, "fighter", "fighters")}.` : null),
                         note: "Accepted fighters in each, all rounds.",
                         query: sql`
                             select left(series.name, 40) as x, count(distinct m.user_id)::float8 as y
@@ -1279,6 +1594,14 @@ function definitions(
                 charts: [
                     {
                         id: "social_activity", title: `Posts, comments and reactions ${per}`, kind: "line", unit: "count", x: "date",
+                        definition: `Posts, comments and reactions in Fight feeds, in each ${w.bucket}.`,
+                        example: (r) => {
+                            const posts = r.at("Posts");
+                            const comments = r.at("Comments");
+                            const reactions = r.at("Reactions");
+                            if (posts === undefined || comments === undefined || reactions === undefined) return null;
+                            return `People wrote ${r.count(posts, "post", "posts")} and ${r.count(comments, "comment", "comments")} and left ${r.count(reactions, "reaction", "reactions")} ${r.when}.`;
+                        },
                         query: perBucket(sql, w, sql`
                             select at, 'Posts' as series from (${posts}) as post
                             union all select at, 'Comments' from (${comments}) as comment
@@ -1287,10 +1610,22 @@ function definitions(
                     },
                     {
                         id: "friendships_per_bucket", title: `New friendships ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Friend requests that were accepted, in each ${w.bucket}.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `${r.count(n, "new friendship", "new friendships")} started ${r.when}.`;
+                        },
                         query: perBucket(sql, w, friendships, count),
                     },
                     {
                         id: "feedback_per_bucket", title: `Bugs and requests ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `New bug reports and feature requests on the Feedback tab, in each ${w.bucket}.`,
+                        example: (r) => {
+                            const bugs = r.at("Bugs");
+                            const requests = r.at("Requests");
+                            return bugs === undefined || requests === undefined ? null
+                                : `People filed ${r.count(bugs, "bug", "bugs")} and ${r.count(requests, "request", "requests")} ${r.when}.`;
+                        },
                         query: perBucket(sql, w, sql`
                             select created_at as at, case kind when 'bug' then 'Bugs' else 'Requests' end as series
                             from public.feedback_posts
@@ -1298,6 +1633,8 @@ function definitions(
                     },
                     {
                         id: "top_emojis", title: "Top reactions, last 30 days", kind: "bar", unit: "count", x: "label",
+                        definition: "The most used reactions in the last 30 days.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} is the most used reaction: ${r.count(r.top.y, "time", "times")} in 30 days.` : null),
                         query: sql`
                             select emoji as x, count(*)::float8 as y from (${reactions}) as r
                             where r.at >= ${ago(30)} and r.at < ${w.now} group by emoji order by 2 desc, 1 limit 10
@@ -1305,6 +1642,8 @@ function definitions(
                     },
                     {
                         id: "top_posters", title: "Most posts and comments, last 30 days", kind: "bar", unit: "count", x: "label",
+                        definition: "People with the most posts and comments in the last 30 days.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} wrote ${r.count(r.top.y, "post or comment", "posts and comments")} in the last 30 days.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
                             from (${posts} union all ${comments}) as e join public.profiles as p on p.user_id = e.user_id
@@ -1314,6 +1653,8 @@ function definitions(
                     },
                     {
                         id: "top_feedback", title: "Most voted open bugs and requests", kind: "bar", unit: "count", x: "label",
+                        definition: "Open bugs and requests with the most votes.",
+                        example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" has the most votes: ${r.format(r.top.y)}.` : null),
                         query: sql`
                             select left(post.title, 40) as x, count(vote.user_id)::float8 as y
                             from public.feedback_posts as post
@@ -1323,6 +1664,8 @@ function definitions(
                     },
                     {
                         id: "posts_by_fight", title: "Fights with the most posts, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "Fights with the most posts in their feed, all time.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has ${r.count(r.top.y, "post", "posts")}.` : null),
                         query: sql`
                             select left(f.name, 40) as x, count(*)::float8 as y
                             from public.fight_posts as post join public.fights as f on f.id = post.fight_id
@@ -1420,12 +1763,26 @@ function definitions(
                 charts: [
                     {
                         id: "sync_outcomes", title: `Sync outcomes ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Apple Health syncs in each ${w.bucket}, by result.`,
+                        example: (r) => {
+                            const ok = r.at("Succeeded") ?? 0;
+                            const all = ok + (r.at("Failed") ?? 0) + (r.at("Cancelled") ?? 0);
+                            const part = r.share(ok, all);
+                            return part ? `${part} of syncs succeeded ${r.when}: ${r.format(ok)} of ${r.format(all)}.` : null;
+                        },
                         query: perBucket(sql, w, sql`select at, initcap(outcome) as series from (${attempts}) as a`, count, {
                             gaps: true, series: ["Succeeded", "Failed", "Cancelled"],
                         }),
                     },
                     {
                         id: "sync_triggers", title: `Syncs by trigger ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: "Why each sync ran: Apple Health woke the app in the background, the app opened, or someone pulled to refresh.",
+                        example: (r) => {
+                            const background = r.at("Background") ?? 0;
+                            const all = background + (r.at("App opened") ?? 0) + (r.at("Pull to refresh") ?? 0);
+                            const part = r.share(background, all);
+                            return part ? `${part} of syncs ran in the background ${r.when}: ${r.format(background)} of ${r.format(all)}.` : null;
+                        },
                         query: perBucket(sql, w, sql`
                             select at, case trigger when 'foreground' then 'App opened' when 'observer' then 'Background'
                                 else 'Pull to refresh' end as series
@@ -1434,6 +1791,13 @@ function definitions(
                     },
                     {
                         id: "sync_durations", title: "Sync time: P50 and P90", kind: "line", unit: "seconds", x: "date",
+                        definition: "How long a sync takes. P50 is the typical sync; only 10% take longer than P90.",
+                        example: (r) => {
+                            const typical = r.at("P50");
+                            const slow = r.at("P90");
+                            return typical === undefined || slow === undefined ? null
+                                : `A typical sync took ${r.format(typical)} ${r.when}, and 10% took ${r.format(slow)} or more.`;
+                        },
                         note: `Across each ${w.bucket}'s syncs.`,
                         query: sql`
                             with bucketed as (
@@ -1451,14 +1815,26 @@ function definitions(
                     },
                     {
                         id: "errors_per_bucket", title: `Server errors ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Server requests that failed with an error, in each ${w.bucket}.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `The server logged ${r.count(n, "error", "errors")} ${r.when}.`;
+                        },
                         query: perBucket(sql, w, errors, count),
                     },
                     {
                         id: "notifications_per_bucket", title: `Notifications sent ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Push notifications the server sent, in each ${w.bucket}.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `The server sent ${r.count(n, "notification", "notifications")} ${r.when}.`;
+                        },
                         query: perBucket(sql, w, sent, count),
                     },
                     {
                         id: "builds_in_use", title: "Builds in use, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "People by the newest app build they used in the last 7 days.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.count(r.top.y, "person uses", "people use")} ${r.top.x}: ${r.top.share} of people active in the last 7 days.` : null),
                         note: "People by the newest build they used.",
                         query: sql`
                             select version as x, count(*)::float8 as y from (
@@ -1470,6 +1846,8 @@ function definitions(
                     },
                     {
                         id: "sync_error_codes", title: "Sync errors by code, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "Failed syncs in the last 7 days, by error.",
+                        example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common sync error: ${r.count(r.top.y, "time", "times")} in 7 days.` : null),
                         query: sql`
                             select replace(error_code, '_', ' ') as x, count(*)::float8 as y
                             from (${attempts}) as a
@@ -1479,6 +1857,8 @@ function definitions(
                     },
                     {
                         id: "errors_by_path", title: "Server errors by route, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "Server errors in the last 7 days, by API route.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} failed the most: ${r.count(r.top.y, "error", "errors")} in 7 days.` : null),
                         query: sql`
                             select left(path, 48) as x, count(*)::float8 as y from (${errors}) as e
                             where e.at >= ${ago(7)} and e.at < ${w.now} group by 1 order by 2 desc, 1 limit 10
@@ -1486,6 +1866,8 @@ function definitions(
                     },
                     {
                         id: "notifications_by_kind", title: "Notifications sent by kind, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "Notifications sent in the last 7 days, by type.",
+                        example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" was sent the most: ${r.count(r.top.y, "time", "times")} in 7 days.` : null),
                         query: sql`
                             select replace(kind, '_', ' ') as x, count(*)::float8 as y from (${sent}) as n
                             where n.at >= ${ago(7)} and n.at < ${w.now}
@@ -1494,6 +1876,8 @@ function definitions(
                     },
                     {
                         id: "notification_outcomes", title: "Notification outcomes, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "What happened to each notification in the last 7 days: sent, or skipped and why.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "notification", "notifications")}, ${r.top.share} of all.` : null),
                         query: sql`
                             select initcap(status) || coalesce(': ' || replace(skip_reason, '_', ' '), '') as x, count(*)::float8 as y
                             from private.notification_intents
@@ -1503,6 +1887,8 @@ function definitions(
                     },
                     {
                         id: "apns_results", title: "Apple push results, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "Apple's answer to each push delivery in the last 7 days. 200 means Apple accepted it.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "delivery", "deliveries")}, ${r.top.share} of all.` : null),
                         query: sql`
                             select coalesce(apns_http_status::text, 'No response') || coalesce(' ' || apns_reason, '') as x,
                                 count(*)::float8 as y
@@ -1513,6 +1899,8 @@ function definitions(
                     },
                     {
                         id: "push_permissions", title: "Push permission on devices, now", kind: "bar", unit: "count", x: "label",
+                        definition: "Devices by notification permission, now.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "device", "devices")}, ${r.top.share} of all.` : null),
                         query: sql`
                             select initcap(replace(coalesce(permission_status, 'unknown'), '_', ' ')) as x, count(*)::float8 as y
                             from private.device_installations where revoked_at is null group by 1 order by 2 desc
@@ -1520,6 +1908,8 @@ function definitions(
                     },
                     {
                         id: "background_refresh", title: "Background App Refresh, now", kind: "bar", unit: "count", x: "label",
+                        definition: "Phones by their Background App Refresh setting, which background syncs need.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "phone", "phones")}, ${r.top.share} of all.` : null),
                         query: sql`
                             select initcap(coalesce(background_refresh_status, 'unknown')) as x, count(*)::float8 as y
                             from private.healthkit_sync_diagnostics group by 1 order by 2 desc
@@ -1527,6 +1917,14 @@ function definitions(
                     },
                     {
                         id: "last_sync_age", title: "Time since last Apple Health sync, now", kind: "bar", unit: "count", x: "label",
+                        definition: "Apple Health connections by the time since their last successful sync, now.",
+                        example: (r) => {
+                            const recent = (r.row("Under 1 hour") ?? 0) + (r.row("1-6 hours") ?? 0);
+                            const part = r.share(recent, r.total);
+                            return part
+                                ? `${part} of Apple Health connections synced in the last 6 hours: ${r.format(recent)} of ${r.format(r.total)}.`
+                                : null;
+                        },
                         query: sql`
                             with ages as (
                                 select extract(epoch from (${w.now} - max(last_success_at))) / 3600 as hours
@@ -1558,11 +1956,13 @@ export async function readAdminDashboard(
     days: number,
     environment: AdminDashboardEnvironment,
     database: Sql = createDatabaseClient(),
+    bucket?: AdminDashboardBucket,
 ): Promise<AdminDashboard> {
     const now = new Date();
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(now);
     // NOTE: charts start no earlier than the first signup, so a long period doesn't draw empty
-    // months before launch. At least 7 days; daily up to 62 days, weekly up to a year, then monthly.
+    // months before launch. At least 7 days. Without a chosen bucket: daily up to 62 days, weekly
+    // up to a year, then monthly.
     const range = adminDashboardRangeRowSchema.parse((await database`
         with first as (
             select least(${today}::date - 6, greatest(${today}::date - ${days - 1}::int,
@@ -1571,8 +1971,8 @@ export async function readAdminDashboard(
         )
         select date_trunc(bucket, day::timestamp)::date::text as start, bucket
         from first cross join lateral (
-            select case when ${today}::date - day < 62 then 'day'
-                when ${today}::date - day < 366 then 'week' else 'month' end as bucket
+            select coalesce(${bucket ?? null}::text, case when ${today}::date - day < 62 then 'day'
+                when ${today}::date - day < 366 then 'week' else 'month' end) as bucket
         ) as sized
     `)[0]);
     const w: AdminDashboardWindow = { now, today, start: range.start, bucket: range.bucket };
@@ -1607,23 +2007,25 @@ export async function readAdminDashboard(
             }
         }))),
         Promise.all(charts.map((chart) => timed(async (): Promise<AdminDashboardChart> => {
-            const tile = { id: chart.id, title: chart.title, kind: chart.kind, unit: chart.unit, x_kind: chart.x };
+            const tile = {
+                id: chart.id, title: chart.title, kind: chart.kind, unit: chart.unit, x_kind: chart.x,
+                definition: chart.definition,
+            };
             try {
                 const rows = await chart.query;
-                if (chart.kind === "heatmap") {
-                    return { ...tile, note: chart.note ?? null, series: [], cells: rows.map((row) => adminDashboardCellRowSchema.parse(row)) };
-                }
                 const series = new Map<string, AdminDashboardChart["series"][number]>();
-                for (const raw of rows) {
+                const cells = chart.kind === "heatmap" ? rows.map((row) => adminDashboardCellRowSchema.parse(row)) : [];
+                for (const raw of chart.kind === "heatmap" ? [] : rows) {
                     const row = adminDashboardChartRowSchema.parse(raw);
                     const name = row.series ?? chart.title;
                     const line = series.get(name) ?? { name, previous: false, points: [] };
                     line.points.push({ x: row.x, y: row.y });
                     series.set(name, line);
                 }
-                return { ...tile, note: chart.note ?? null, series: [...series.values()], cells: [] };
+                const built = { ...tile, note: chart.note ?? null, example: null, series: [...series.values()], cells };
+                return { ...built, example: chart.example?.(exampleReader(built, w)) ?? null };
             } catch (error) {
-                return { ...tile, note: failure(error), series: [], cells: [] };
+                return { ...tile, note: failure(error), example: null, series: [], cells: [] };
             }
         }))),
     ]);
@@ -1631,6 +2033,7 @@ export async function readAdminDashboard(
         section,
         days,
         environment,
+        bucket: w.bucket,
         generated_at: now.toISOString(),
         sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
         cards: cardTiles,

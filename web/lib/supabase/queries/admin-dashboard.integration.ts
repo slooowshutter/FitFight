@@ -68,6 +68,10 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
                 "Every tile reports its own query time",
             );
             assert.equal(dashboard.environment, "staging");
+            assert.ok(
+                dashboard.charts.every((chart) => chart.definition && !/undefined|NaN/.test(chart.example ?? "")),
+                `${section} charts explain themselves`,
+            );
             cardValues.push(JSON.stringify(dashboard.cards.map(({ id, value, previous }) => [id, value, previous])));
         }
         assert.equal(new Set(cardValues).size, 1, `${section} cards have fixed spans, whatever the period`);
@@ -84,4 +88,10 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
         .charts.find((chart) => chart.id === "new_users_per_bucket")?.series[0]?.points ?? [];
     assert.equal((await newUsers(7)).length, 7, "Seven daily points for 7 days");
     assert.equal((await newUsers(3650))[0]?.x, first?.day, "A long period starts at the first signup, not years before it");
+
+    const weekly = await readAdminDashboard("overview", 30, "staging", database, "week");
+    assert.equal(weekly.bucket, "week");
+    const weeks = weekly.charts.find((chart) => chart.id === "new_users_per_bucket")?.series[0]?.points ?? [];
+    assert.ok(weeks.length >= 3 && weeks.every((point) => new Date(`${point.x}T00:00:00Z`).getUTCDay() === 1), "A chosen week bucket starts on Mondays");
+    assert.equal((await readAdminDashboard("overview", 365, "staging", database, "day")).bucket, "day");
 });

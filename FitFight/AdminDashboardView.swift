@@ -14,6 +14,12 @@ struct AdminDashboardView: View {
     @State private var sections: [FitFightAdminDashboard.Section] = []
     /// The period of the charts over time only. Cards and breakdowns name their own fixed span.
     @State private var timeframe = Timeframe.month
+    /// The bucket of the charts over time. Auto lets the server pick by period.
+    @State private var granularity = Granularity.auto
+    /// The period and bucket of the loaded payload, so its charts over time dim while others load.
+    @State private var loaded = ""
+    /// The chart whose page is open.
+    @State private var openChartID: String?
     @State private var dashboard: FitFightAdminDashboard?
     @State private var loading = false
     @State private var failure: String?
@@ -38,6 +44,12 @@ struct AdminDashboardView: View {
     enum Timeframe: CaseIterable {
         case week, month, quarter, year, all
     }
+
+    enum Granularity: String, CaseIterable {
+        case auto, day, week, month
+    }
+
+    private var request: String { "\(days)-\(granularity.rawValue)" }
 
     private var days: Int {
         switch timeframe {
@@ -93,8 +105,13 @@ struct AdminDashboardView: View {
                     .padding(.vertical, 40)
             }
         }
-        .task(id: "\(server)-\(sectionID)-\(days)-\(reloads)") {
+        .task(id: "\(server)-\(sectionID)-\(request)-\(reloads)") {
             await load()
+        }
+        .navigationDestination(item: $openChartID) { id in
+            if let dashboard = shown, let chart = dashboard.charts.first(where: { $0.id == id }) {
+                AdminChartDetailView(chart: chart, bucket: dashboard.bucket)
+            }
         }
     }
 
@@ -169,10 +186,18 @@ struct AdminDashboardView: View {
                 case .all: "All"
                 }
             }
-            ForEach(trends) { chart in
-                chartCard(chart)
+            FFSegmented(items: Granularity.allCases, selection: $granularity) { item in
+                switch item {
+                case .auto: "Auto"
+                case .day: "Day"
+                case .week: "Week"
+                case .month: "Month"
+                }
             }
-            .opacity(dashboard.days == days ? 1 : 0.4)
+            ForEach(trends) { chart in
+                chartCard(chart, bucket: dashboard.bucket)
+            }
+            .opacity(loaded == request ? 1 : 0.4)
         }
     }
 
@@ -183,7 +208,7 @@ struct AdminDashboardView: View {
         if !breakdowns.isEmpty {
             groupTitle("Breakdowns")
             ForEach(breakdowns) { chart in
-                chartCard(chart)
+                chartCard(chart, bucket: dashboard.bucket)
             }
         }
     }
@@ -195,20 +220,34 @@ struct AdminDashboardView: View {
             .padding(.top, 8)
     }
 
-    private func chartCard(_ chart: FitFightAdminDashboard.Chart) -> some View {
-        FFCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(verbatim: chart.title)
-                    .ffType(.heading)
-                    .foregroundStyle(theme.text)
-                AdminChart(chart: chart)
-                if let note = chart.note {
-                    Text(verbatim: note)
-                        .ffType(.micro)
-                        .foregroundStyle(theme.textSecondary)
+    /// Tapping a chart opens its page, where the finger reads values off it.
+    private func chartCard(_ chart: FitFightAdminDashboard.Chart, bucket: String?) -> some View {
+        Button {
+            openChartID = chart.id
+        } label: {
+            FFCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(verbatim: chart.title)
+                            .ffType(.heading)
+                            .foregroundStyle(theme.text)
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                    AdminChart(chart: chart, bucket: bucket)
+                    if let note = chart.note {
+                        Text(verbatim: note)
+                            .ffType(.micro)
+                            .foregroundStyle(theme.textSecondary)
+                            .multilineTextAlignment(.leading)
+                    }
                 }
             }
         }
+        .buttonStyle(FFHapticPlainStyle())
     }
 
     private func cardTile(_ card: FitFightAdminDashboard.Card) -> some View {
@@ -272,6 +311,8 @@ struct AdminDashboardView: View {
         let target = server
         let section = sectionID
         let window = days
+        let bucket = granularity == .auto ? nil : granularity.rawValue
+        let requested = request
         loading = true
         do {
             let token = try await session.freshAccessToken()
@@ -279,12 +320,14 @@ struct AdminDashboardView: View {
             let result = try await FitFightAPI(baseURL: target.baseURL).adminDashboard(
                 section: section,
                 days: window,
+                bucket: bucket,
                 environment: target.rawValue,
                 authProject: project,
                 accessToken: token
             )
             try Task.checkCancellation()
             dashboard = result
+            loaded = requested
             if let listed = result.sections {
                 sections = listed
             }
@@ -304,9 +347,13 @@ struct AdminDashboardView: View {
 }
 
 /// One server chart. Unknown kinds draw as bars, unknown units read as counts. A chart over
-/// time reads out the bucket under the finger, else the latest one.
+/// time reads out the latest bucket, or on its page the bucket under the finger.
 private struct AdminChart: View {
     let chart: FitFightAdminDashboard.Chart
+    /// The payload's bucket for charts over time; nil from older servers, then read from the dates.
+    let bucket: String?
+    var interactive = false
+    var height: CGFloat = 160
     @Environment(\.ffTheme) private var theme
     /// The date under the finger on a chart over time.
     @State private var selected: Date?
@@ -388,8 +435,14 @@ private struct AdminChart: View {
         return marks
     }
 
-    /// Long periods arrive as weekly or monthly points; each bar then spans its whole bucket.
+    /// Weekly or monthly points make each bar span its whole bucket.
     private var dateUnit: Calendar.Component {
+        switch bucket {
+        case "month": return .month
+        case "week": return .weekOfYear
+        case "day": return .day
+        default: break
+        }
         let days = Set(chart.series.filter { !$0.previous }.flatMap { $0.points.compactMap { adminDay($0.x) } }).sorted()
         let gap = zip(days, days.dropFirst()).map { $1.timeIntervalSince($0) }.min() ?? 86_400
         return gap >= 27 * 86_400 ? .month : gap >= 6 * 86_400 ? .weekOfYear : .day
@@ -464,8 +517,8 @@ private struct AdminChart: View {
         }
         .chartXAxis { dayAxis }
         .chartYAxis { valueAxis }
-        .chartXSelection(value: $selected)
-        .frame(height: 160)
+        .modifier(AdminChartSelection(enabled: interactive, selected: $selected))
+        .frame(height: height)
     }
 
     private func labelLine(_ marks: [AdminMark]) -> some View {
@@ -482,7 +535,7 @@ private struct AdminChart: View {
         }
         .chartXAxis { labelAxis(leading: false) }
         .chartYAxis { valueAxis }
-        .frame(height: 160)
+        .frame(height: height)
     }
 
     /// Vertical bars per bucket; several series stack. The bucket still filling is faded.
@@ -502,8 +555,8 @@ private struct AdminChart: View {
         }
         .chartXAxis { dayAxis }
         .chartYAxis { valueAxis }
-        .chartXSelection(value: $selected)
-        .frame(height: 160)
+        .modifier(AdminChartSelection(enabled: interactive, selected: $selected))
+        .frame(height: height)
     }
 
     /// Horizontal bars so long labels read in full, with each value at the bar's end.
@@ -622,6 +675,74 @@ private struct AdminChart: View {
                     .font(.ff(10, 700))
                     .foregroundStyle(theme.textSecondary)
             }
+        }
+    }
+}
+
+/// Finger reading only where the chart is the page, so a tap on a list card opens it instead.
+private struct AdminChartSelection: ViewModifier {
+    let enabled: Bool
+    @Binding var selected: Date?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content.chartXSelection(value: $selected)
+        } else {
+            content
+        }
+    }
+}
+
+/// A chart on its own page: bigger, with the value under the finger, what it measures, and a
+/// sentence that reads its current number.
+private struct AdminChartDetailView: View {
+    let chart: FitFightAdminDashboard.Chart
+    let bucket: String?
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        FFScreen {
+            FFCard(padding: 16) {
+                AdminChart(chart: chart, bucket: bucket, interactive: true, height: 260)
+            }
+            if let definition = chart.definition {
+                FFSection(title: "What it shows") {
+                    paragraph(definition)
+                }
+            }
+            if let example = chart.example {
+                FFSection(title: "In numbers") {
+                    paragraph(example)
+                }
+            }
+            if let note = chart.note {
+                Text(verbatim: note)
+                    .ffType(.micro)
+                    .foregroundStyle(theme.textSecondary)
+            }
+        }
+        .navigationTitle(chart.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Two lines, so long chart names stay whole.
+            ToolbarItem(placement: .principal) {
+                Text(verbatim: chart.title)
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+    }
+
+    private func paragraph(_ text: String) -> some View {
+        FFCard(padding: 16) {
+            Text(verbatim: text)
+                .ffType(.body)
+                .foregroundStyle(theme.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

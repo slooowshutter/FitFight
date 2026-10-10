@@ -925,6 +925,16 @@ paths:
                     }
                 },
                 {
+                    "name": "bucket",
+                    "in": "query",
+                    "required": false,
+                    "description": "Bucket of the charts over time, from servers of 10 Oct 2026 on. Omitted: days up to 62 days, weeks up to a year, then months.",
+                    "schema": {
+                        "type": "string",
+                        "enum": ["day", "week", "month"]
+                    }
+                },
+                {
                     "name": "environment",
                     "in": "query",
                     "required": false,
@@ -947,6 +957,7 @@ paths:
                                     "section": { "type": "string" },
                                     "days": { "type": "integer" },
                                     "environment": { "type": "string", "enum": ["production", "staging"] },
+                                    "bucket": { "type": "string", "enum": ["day", "week", "month"], "description": "Bucket of the charts over time. Servers before 10 Oct 2026 omit it." },
                                     "generated_at": { "type": "string", "format": "date-time" },
                                     "sections": {
                                         "type": "array",
@@ -988,6 +999,8 @@ paths:
                                                 "unit": { "type": "string" },
                                                 "x_kind": { "type": "string", "enum": ["date", "label"] },
                                                 "note": { "type": ["string", "null"] },
+                                                "definition": { "type": ["string", "null"], "description": "What the chart measures. Servers before 10 Oct 2026 omit it." },
+                                                "example": { "type": ["string", "null"], "description": "A sentence that reads one current number off the chart. Servers before 10 Oct 2026 omit it." },
                                                 "series": {
                                                     "type": "array",
                                                     "items": {

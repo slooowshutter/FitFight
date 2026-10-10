@@ -1,5 +1,6 @@
 import HealthKit
 import SwiftUI
+import UIKit
 
 /// Your last 31 days straight from Apple Health: daily Steps plus workout minutes per sport.
 /// No targets: every number and bar is relative to your own days.
@@ -31,7 +32,9 @@ final class YouActivityStore: ObservableObject {
             return
         }
         #endif
-        guard HKHealthStore.isHealthDataAvailable() else { return }
+        // NOTE: Apple Health can't be read while the iPhone is locked, and a failed read would show
+        // every day as 0. Both keep the last numbers; You reads again when the app opens.
+        guard HKHealthStore.isHealthDataAvailable(), UIApplication.shared.isProtectedDataAvailable else { return }
         let store = HKHealthStore()
         let today = calendar.startOfDay(for: Date())
         guard let start = calendar.date(byAdding: .day, value: -30, to: today),
@@ -41,11 +44,10 @@ final class YouActivityStore: ObservableObject {
         let index = { (date: Date) in calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: date)).day ?? -1 }
 
         var longSteps = Array(repeating: 0.0, count: 56)
-        if let collection = try? await Self.dailySteps(store: store, start: eightWeeksAgo, end: end) {
-            collection.enumerateStatistics(from: eightWeeksAgo, to: end) { statistics, _ in
-                let i = (calendar.dateComponents([.day], from: eightWeeksAgo, to: statistics.startDate).day ?? -1)
-                if longSteps.indices.contains(i) { longSteps[i] = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0 }
-            }
+        guard let collection = try? await Self.dailySteps(store: store, start: eightWeeksAgo, end: end) else { return }
+        collection.enumerateStatistics(from: eightWeeksAgo, to: end) { statistics, _ in
+            let i = (calendar.dateComponents([.day], from: eightWeeksAgo, to: statistics.startDate).day ?? -1)
+            if longSteps.indices.contains(i) { longSteps[i] = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0 }
         }
         let steps = Array(longSteps.suffix(31))
         var minutes: [HKWorkoutActivityType: [Double]] = [:]

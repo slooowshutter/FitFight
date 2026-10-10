@@ -70,7 +70,10 @@ struct YouView: View {
         }
         .navigationDestination(isPresented: $showingSettings) { settingsScreen }
         .navigationDestination(isPresented: $showingDashboard) {
-            DashboardView(sports: activity.sports, days: activity.days, statistics: ownProfile?.stepStatistics, results: results)
+            DashboardView(
+                sports: activity.sports, days: activity.days, statistics: ownProfile?.stepStatistics,
+                results: results, record: ownProfile?.record
+            )
         }
         .onChange(of: session.authSession?.user.id, initial: true) { _, userID in
             cachedProfile = userID

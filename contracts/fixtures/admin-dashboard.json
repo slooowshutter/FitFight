@@ -2,6 +2,7 @@
     "section": "users",
     "days": 7,
     "environment": "production",
+    "bucket": "day",
     "generated_at": "2026-09-29T12:00:00.000Z",
     "sections": [
         { "id": "overview", "title": "Overview" },
@@ -36,6 +37,8 @@
             "unit": "count",
             "x_kind": "date",
             "note": null,
+            "definition": "Accounts created in each day. Deleted accounts are not counted.",
+            "example": "6 people signed up on Mon 28 Sep.",
             "series": [
                 {
                     "name": "This period",

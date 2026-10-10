@@ -6,6 +6,35 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Personal Dashboard empty on TestFlight, prepared 11 Oct 2026
+
+Marc's build 218, just after midnight: Profile → Dashboard showed 0 steps on
+every day, Profile's By sport showed 0, and the Fights tab showed "-" for won,
+drew and lost while Profile showed 11-4.
+
+**Causes:** (1) staging.fitfight.app, the backend of every TestFlight build,
+still serves a deployment from before 1 Oct: `/api/v1/environment` (added 1
+Oct) answers 404 there and 200 on the preview server. That old backend sends
+no draws or losses. Profile falls back to wins and played; the Dashboard waited
+for every history page instead. (2) The Steps tab and By sport read the last 56
+days from Apple Health on the phone. A failed read showed every day as 0. The
+server numbers on Profile (this week, average, best day) come from earlier
+uploads, so uploads worked. Why the read failed is not proven; reading while
+the iPhone is locked fails that way.
+
+**Code:** the Dashboard Fights tab falls back like Profile: won = wins, lost =
+played - wins, drew "-". The phone's Apple Health read does nothing while the
+iPhone is locked and keeps the last numbers when the read fails; Profile reads
+again when the app opens. No API, database or copy change.
+
+**Marc's action (open since 30 Sep):** in Vercel, set staging.fitfight.app to
+follow the `preview` branch. Until then TestFlight builds miss every backend
+change since that deployment, for example exact won, drew and lost, the
+environment strip, and the never-delete code.
+
+**Verification:** Swift parsed locally and the localization check passed. CI
+compiles the app and runs the native checks.
+
 ## Admin dashboard: chart pages and a day, week or month choice, prepared 10 Oct 2026
 
 Marc asked to tap a chart and get its own page: the chart name on top, a back

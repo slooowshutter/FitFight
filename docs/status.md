@@ -1,10 +1,63 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **7 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **10 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Admin dashboard: fixed cards, period only on charts over time, prepared 10 Oct 2026
+
+Marc saw the cards change when he moved the period. He asked for cards on a fixed
+weekly or monthly basis named in their titles, the period only on charts that
+show change over time, more of those charts, the charts fixed, and the weak ones
+removed.
+
+**Server:** every card has a fixed span. "Weekly" is the last 7 days against the
+7 before, "Monthly" the last 30 against the 30 before, and a card without either
+word (Total users, Live fights) is now against 7 days ago. `days` sets only the
+charts over time (`x_kind` date). They start no earlier than the first signup,
+so 1Y and All no longer draw empty months before launch. They use whole days,
+weeks or months and no previous-period overlay, and averages skip empty buckets
+instead of dropping to 0. Activity charts start where sync history starts.
+Every other chart names its span in its title ("last 30 days", "all time",
+"now").
+
+- Removed: duplicates (signups per week, steps per month, all-time steps over
+  time, the rolling average, regions, opens by weekday and by hour, opens by
+  version, the Engagement retention heatmap, the Social heatmap) and weak charts
+  (account age, signups by weekday and hour, best single days, steps by region
+  and weekday, Health history depth, fights by state and weekday, public vs
+  private, rounds per series, media uploads, syncs per person-day, errors by
+  status). Cards removed: best day and the two Health history cards.
+- Added over time: onboarding by signup week, retention by signup week, signups
+  with Apple Health, people with step data, steps on fight days against other
+  days, users in a live fight, invites and joins, posts with comments and
+  reactions in one chart, syncs by trigger, and notifications sent.
+
+**App:** the period picker sits under the cards, over the charts over time, with
+7D, 30D (default), 90D, 1Y and All; 1D and Custom are gone. The other charts sit
+under Breakdowns. A new period keeps the cards and dims the charts until it
+loads. A chart over time reads out the exact value under the finger, else the
+latest bucket, marked "so far" while it is still filling, with that bar faded
+and that point hollow. Several series stack as bars; lines take moss, gold and
+ember (the colour-blind-safe order) with a dash each; cohort curves share one
+moss ramp, newest strongest; heatmaps label about six columns. No release note
+(admin only).
+
+**Also fixed:** five French strings from the fight-leaving change (#347) were
+missing, which stopped the iOS check before it compiled anything.
+
+**Compatibility:** response shape unchanged, no migration. Older builds still
+work: their cards no longer follow their period picker, and charts do (1D draws
+7 days, as before).
+
+**Verification (local):** web typecheck, all 437 unit tests and the dashboard
+database test passed on Postgres 16 with every migration. The test now also
+checks that cards are identical at 1, 30 and 3650 days, that 7 days gives 7
+daily points, and that All starts at the first signup. A seeded copy (90
+people, 50 days) checked every chart's numbers, and a copy with older signups
+checked weekly and monthly buckets. Swift was parsed only; CI compiles it.
 
 ## Admin dashboard: user growth charts, prepared 7 Oct 2026
 

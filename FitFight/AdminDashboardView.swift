@@ -12,8 +12,8 @@ struct AdminDashboardView: View {
     @State private var sectionID = "overview"
     /// The sections listed by the last payload. Empty until the first one loads.
     @State private var sections: [FitFightAdminDashboard.Section] = []
-    @State private var timeframe = Timeframe.week
-    @State private var customDays = 14
+    /// The period of the charts over time only. Cards and breakdowns name their own fixed span.
+    @State private var timeframe = Timeframe.month
     @State private var dashboard: FitFightAdminDashboard?
     @State private var loading = false
     @State private var failure: String?
@@ -36,24 +36,25 @@ struct AdminDashboardView: View {
     }
 
     enum Timeframe: CaseIterable {
-        case day, week, month, quarter, year, custom
+        case week, month, quarter, year, all
     }
 
     private var days: Int {
         switch timeframe {
-        case .day: return 1
         case .week: return 7
         case .month: return 30
         case .quarter: return 90
         case .year: return 365
-        case .custom: return customDays
+        // The server starts the charts at the first signup.
+        case .all: return 3650
         }
     }
 
-    /// Only the payload for the selected environment, section and period, so an earlier
-    /// section's cards never sit under a newly selected chip while its data loads.
+    /// Only the payload for the selected environment and section, so an earlier section's cards
+    /// never sit under a newly selected chip while its data loads. Another period keeps the cards
+    /// and breakdowns, which don't depend on it, and dims the charts over time until it loads.
     private var shown: FitFightAdminDashboard? {
-        guard let dashboard, dashboard.section == sectionID, dashboard.days == days,
+        guard let dashboard, dashboard.section == sectionID,
               dashboard.environment == server.rawValue else { return nil }
         return dashboard
     }
@@ -67,6 +68,8 @@ struct AdminDashboardView: View {
                 FFButton(title: "Retry", kind: .secondary) { reloads += 1 }
             }
             if let dashboard = shown {
+                let trends = dashboard.charts.filter { $0.xKind == "date" }
+                let breakdowns = dashboard.charts.filter { $0.xKind != "date" }
                 LazyVGrid(
                     columns: [
                         GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -78,19 +81,26 @@ struct AdminDashboardView: View {
                         cardTile(card)
                     }
                 }
-                ForEach(dashboard.charts) { chart in
-                    FFCard(padding: 16) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(verbatim: chart.title)
-                                .ffType(.heading)
-                                .foregroundStyle(theme.text)
-                            AdminChart(chart: chart)
-                            if let note = chart.note {
-                                Text(verbatim: note)
-                                    .ffType(.micro)
-                                    .foregroundStyle(theme.textSecondary)
-                            }
+                if !trends.isEmpty {
+                    groupTitle("Over time")
+                    FFSegmented(items: Timeframe.allCases, selection: $timeframe) { item in
+                        switch item {
+                        case .week: "7D"
+                        case .month: "30D"
+                        case .quarter: "90D"
+                        case .year: "1Y"
+                        case .all: "All"
                         }
+                    }
+                    ForEach(trends) { chart in
+                        chartCard(chart)
+                    }
+                    .opacity(dashboard.days == days ? 1 : 0.4)
+                }
+                if !breakdowns.isEmpty {
+                    groupTitle("Breakdowns")
+                    ForEach(breakdowns) { chart in
+                        chartCard(chart)
                     }
                 }
             } else if loading && failure == nil {
@@ -130,30 +140,12 @@ struct AdminDashboardView: View {
                 }
             }
         }
-        FFSegmented(items: Timeframe.allCases, selection: $timeframe) { item in
-            switch item {
-            case .day: "1D"
-            case .week: "7D"
-            case .month: "30D"
-            case .quarter: "90D"
-            case .year: "1Y"
-            case .custom: "Custom"
-            }
-        }
-        if timeframe == .custom {
-            Stepper(value: $customDays, in: 1...3650) {
-                Text(verbatim: customDays == 1 ? "Last 1 day" : "Last \(customDays) days")
-                    .ffType(.label)
-                    .foregroundStyle(theme.text)
-            }
-        }
     }
 
     private var statusLine: some View {
-        let range = days == 1 ? "last day vs the day before" : "last \(days) days vs the \(days) before"
         let time = shown.map { " · " + $0.generatedAt.formatted(date: .omitted, time: .shortened) } ?? ""
         return HStack(spacing: 8) {
-            Text(verbatim: "\(server.title) · \(range)\(time)")
+            Text(verbatim: "\(server.title)\(time)")
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .lineLimit(1)
@@ -174,6 +166,29 @@ struct AdminDashboardView: View {
             }
             .buttonStyle(FFHapticPlainStyle())
             .accessibilityLabel(Text(verbatim: "Refresh"))
+        }
+    }
+
+    private func groupTitle(_ title: String) -> some View {
+        Text(verbatim: title)
+            .ffType(.sectionEyebrow)
+            .foregroundStyle(theme.textSecondary)
+            .padding(.top, 8)
+    }
+
+    private func chartCard(_ chart: FitFightAdminDashboard.Chart) -> some View {
+        FFCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(verbatim: chart.title)
+                    .ffType(.heading)
+                    .foregroundStyle(theme.text)
+                AdminChart(chart: chart)
+                if let note = chart.note {
+                    Text(verbatim: note)
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textSecondary)
+                }
+            }
         }
     }
 
@@ -269,15 +284,20 @@ struct AdminDashboardView: View {
     }
 }
 
-/// One server chart. Unknown kinds draw as bars, unknown units read as counts.
+/// One server chart. Unknown kinds draw as bars, unknown units read as counts. A chart over
+/// time reads out the bucket under the finger, else the latest one.
 private struct AdminChart: View {
     let chart: FitFightAdminDashboard.Chart
     @Environment(\.ffTheme) private var theme
+    /// The date under the finger on a chart over time.
+    @State private var selected: Date?
 
     var body: some View {
         let colors = seriesColors
         let marks = plottedMarks(colors: colors)
-        let hasData = chart.kind == "heatmap" ? !chart.cells.isEmpty : !marks.isEmpty
+        let hasData = chart.kind == "heatmap"
+            ? chart.cells.contains(where: { $0.value != 0 })
+            : marks.contains(where: { $0.value != 0 })
         VStack(alignment: .leading, spacing: 10) {
             if !hasData {
                 Text(verbatim: "No data yet")
@@ -285,49 +305,44 @@ private struct AdminChart: View {
                     .foregroundStyle(theme.textSecondary)
             } else if chart.kind == "heatmap" {
                 heatmap
-            } else if chart.kind == "line" {
-                if chart.xKind == "date" {
-                    dateLine(marks, unit: dateUnit)
-                } else {
-                    labelLine(marks)
-                }
             } else if chart.xKind == "date" {
-                columns(marks, unit: dateUnit)
+                let unit = dateUnit
+                let latest = marks.compactMap(\.day).max()
+                let open = inProgress(latest, unit: unit) ? latest : nil
+                let focus = focusDay(marks, unit: unit)
+                let shownDay = focus ?? latest
+                readout(marks.filter { $0.day == shownDay }, day: shownDay, unit: unit, open: shownDay == open)
+                if chart.kind == "line" {
+                    dateLine(marks, unit: unit, focus: focus, open: open)
+                } else {
+                    columns(marks, unit: unit, focus: focus, open: open)
+                }
+            } else if chart.kind == "line" {
+                labelLine(marks)
             } else {
                 rows(marks)
             }
             if hasData, chart.kind != "heatmap", chart.series.count > 1 {
-                FFFlow(spacing: 12) {
-                    ForEach(chart.series.indices, id: \.self) { index in
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(colors[index])
-                                .frame(width: 8, height: 8)
-                            Text(verbatim: chart.series[index].name)
-                        }
-                        .ffType(.micro)
-                        .foregroundStyle(theme.textSecondary)
-                    }
-                }
+                legend(colors)
             }
         }
     }
 
-    /// Current periods take gold, then moss, then ember. Previous periods and any further
-    /// series use the secondary text color.
+    /// Up to three series take moss, gold and ember, the order that keeps neighbours apart for
+    /// colour-blind eyes, and their lines differ by dash too. More series are ordered, like signup
+    /// cohorts newest first, so they share one moss ramp that fades with age. A previous period
+    /// from an older server reads secondary.
     private var seriesColors: [Color] {
-        let palette = [theme.gold, theme.mossFill, theme.emberFill]
-        var colors: [Color] = []
-        var current = 0
-        for series in chart.series {
-            if series.previous {
-                colors.append(theme.textSecondary)
-            } else {
-                colors.append(current < palette.count ? palette[current] : theme.textSecondary)
-                current += 1
-            }
+        chart.series.indices.map { index in
+            if chart.series[index].previous { return theme.textSecondary }
+            if chart.series.count <= 3 { return [theme.mossFill, theme.gold, theme.emberFill][index] }
+            return theme.mossText.opacity(1 - 0.55 * Double(index) / Double(chart.series.count - 1))
         }
-        return colors
+    }
+
+    private func lineDash(_ index: Int) -> [CGFloat] {
+        if chart.series[index].previous { return [4, 3] }
+        return chart.series.count <= 3 ? [[], [6, 3], [1, 3]][index] : []
     }
 
     /// Every point flattened with its series style, so each chart builder holds one mark.
@@ -342,7 +357,7 @@ private struct AdminChart: View {
                     id: marks.count,
                     series: series.name,
                     color: colors[index],
-                    dashed: series.previous,
+                    dash: lineDash(index),
                     label: point.x,
                     day: day,
                     value: point.y
@@ -359,8 +374,40 @@ private struct AdminChart: View {
         return gap >= 27 * 86_400 ? .month : gap >= 6 * 86_400 ? .weekOfYear : .day
     }
 
-    private func dateLine(_ marks: [AdminMark], unit: Calendar.Component) -> some View {
-        Chart {
+    /// The latest bucket is still filling while it ends after now: today, this week or this month.
+    private func inProgress(_ day: Date?, unit: Calendar.Component) -> Bool {
+        guard let day, let end = Calendar.current.date(byAdding: unit, value: 1, to: day) else { return false }
+        return end > Date()
+    }
+
+    /// The bucket whose middle is nearest the finger.
+    private func focusDay(_ marks: [AdminMark], unit: Calendar.Component) -> Date? {
+        guard let selected else { return nil }
+        func distance(_ day: Date) -> TimeInterval {
+            let end = Calendar.current.date(byAdding: unit, value: 1, to: day) ?? day
+            return abs(day.addingTimeInterval(end.timeIntervalSince(day) / 2).timeIntervalSince(selected))
+        }
+        return Set(marks.compactMap(\.day)).min { distance($0) < distance($1) }
+    }
+
+    /// "Week of 5 Oct so far  DAU 12 · WAU 40": exact values, with series names when there are several.
+    private func readout(_ values: [AdminMark], day: Date?, unit: Calendar.Component, open: Bool) -> some View {
+        let date = day.map { adminBucketLabel($0, unit: unit) } ?? ""
+        let numbers = values.map { mark in
+            let value = adminValue(mark.value, unit: chart.unit, exact: true)
+            return chart.series.count > 1 ? "\(mark.series) \(value)" : value
+        }
+        return (Text(verbatim: open ? "\(date) so far   " : "\(date)   ").foregroundStyle(theme.textSecondary)
+            + Text(verbatim: numbers.joined(separator: " · ")).foregroundStyle(theme.text))
+            .font(.ff(12, 800))
+            .lineLimit(2)
+    }
+
+    /// Lines with dots while each has few points, so a single week still shows. The bucket
+    /// still filling gets a hollow dot.
+    private func dateLine(_ marks: [AdminMark], unit: Calendar.Component, focus: Date?, open: Date?) -> some View {
+        let few = Dictionary(grouping: marks, by: \.series).values.allSatisfy { $0.count <= 14 }
+        return Chart {
             ForEach(marks) { mark in
                 LineMark(
                     x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
@@ -368,11 +415,35 @@ private struct AdminChart: View {
                     series: .value("Series", mark.series)
                 )
                 .foregroundStyle(mark.color)
-                .lineStyle(StrokeStyle(lineWidth: 2, dash: mark.dashed ? [4, 3] : []))
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: mark.dash))
+                .symbol {
+                    if few {
+                        Circle()
+                            .fill(mark.color)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+            }
+            ForEach(marks.filter { open != nil && $0.day == open }) { mark in
+                PointMark(
+                    x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
+                    y: .value("Value", mark.value)
+                )
+                .symbol {
+                    Circle()
+                        .strokeBorder(mark.color, lineWidth: 2)
+                        .background(Circle().fill(theme.card))
+                        .frame(width: 9, height: 9)
+                }
+            }
+            if let focus {
+                RuleMark(x: .value("Day", focus, unit: unit))
+                    .foregroundStyle(theme.textSecondary.opacity(0.4))
             }
         }
         .chartXAxis { dayAxis }
         .chartYAxis { valueAxis }
+        .chartXSelection(value: $selected)
         .frame(height: 160)
     }
 
@@ -385,7 +456,7 @@ private struct AdminChart: View {
                     series: .value("Series", mark.series)
                 )
                 .foregroundStyle(mark.color)
-                .lineStyle(StrokeStyle(lineWidth: 2, dash: mark.dashed ? [4, 3] : []))
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: mark.dash))
             }
         }
         .chartXAxis { labelAxis(leading: false) }
@@ -393,20 +464,24 @@ private struct AdminChart: View {
         .frame(height: 160)
     }
 
-    /// Vertical bars per day, several series side by side.
-    private func columns(_ marks: [AdminMark], unit: Calendar.Component) -> some View {
+    /// Vertical bars per bucket; several series stack. The bucket still filling is faded.
+    private func columns(_ marks: [AdminMark], unit: Calendar.Component, focus: Date?, open: Date?) -> some View {
         Chart {
             ForEach(marks) { mark in
                 BarMark(
                     x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
                     y: .value("Value", mark.value)
                 )
-                .foregroundStyle(mark.color)
-                .position(by: .value("Series", mark.series))
+                .foregroundStyle(mark.color.opacity(open != nil && mark.day == open ? 0.45 : 1))
+            }
+            if let focus {
+                RuleMark(x: .value("Day", focus, unit: unit))
+                    .foregroundStyle(theme.textSecondary.opacity(0.4))
             }
         }
         .chartXAxis { dayAxis }
         .chartYAxis { valueAxis }
+        .chartXSelection(value: $selected)
         .frame(height: 160)
     }
 
@@ -437,22 +512,62 @@ private struct AdminChart: View {
         .frame(height: CGFloat(labels) * 26)
     }
 
+    /// One moss shade per cell, darker for more. About six column labels, so hours don't overlap.
     private var heatmap: some View {
         let peak = chart.cells.map(\.value).max() ?? 0
         let shades = chart.cells.map { peak > 0 ? 0.08 + 0.92 * max($0.value / peak, 0) : 0.08 }
         let rowCount = Set(chart.cells.map(\.y)).count
+        var xLabels: [String] = []
+        for cell in chart.cells where !xLabels.contains(cell.x) {
+            xLabels.append(cell.x)
+        }
+        let step = max(1, Int((Double(xLabels.count) / 6).rounded(.up)))
+        let labelled = xLabels.indices.filter { $0 % step == 0 }.map { xLabels[$0] }
         return Chart {
             ForEach(chart.cells.indices, id: \.self) { index in
                 RectangleMark(
                     x: .value("Column", chart.cells[index].x),
                     y: .value("Row", chart.cells[index].y)
                 )
-                .foregroundStyle(theme.gold.opacity(shades[index]))
+                .foregroundStyle(theme.mossText.opacity(shades[index]))
             }
         }
-        .chartXAxis { labelAxis(leading: false) }
+        .chartXAxis {
+            AxisMarks(values: labelled) { value in
+                AxisValueLabel {
+                    Text(verbatim: value.as(String.self) ?? "")
+                        .font(.ff(10, 700))
+                        .foregroundStyle(theme.textSecondary)
+                }
+            }
+        }
         .chartYAxis { labelAxis(leading: true) }
         .frame(height: CGFloat(rowCount) * 24 + 24)
+    }
+
+    /// Line keys for lines and swatches for bars, so the legend mirrors the marks.
+    private func legend(_ colors: [Color]) -> some View {
+        FFFlow(spacing: 12) {
+            ForEach(chart.series.indices, id: \.self) { index in
+                HStack(spacing: 6) {
+                    if chart.kind == "line" {
+                        Path { path in
+                            path.move(to: CGPoint(x: 1, y: 1))
+                            path.addLine(to: CGPoint(x: 15, y: 1))
+                        }
+                        .stroke(colors[index], style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: lineDash(index)))
+                        .frame(width: 16, height: 2)
+                    } else {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(colors[index])
+                            .frame(width: 8, height: 8)
+                    }
+                    Text(verbatim: chart.series[index].name)
+                }
+                .ffType(.micro)
+                .foregroundStyle(theme.textSecondary)
+            }
+        }
     }
 
     private var valueAxis: some AxisContent {
@@ -493,7 +608,7 @@ private struct AdminMark: Identifiable {
     let id: Int
     let series: String
     let color: Color
-    let dashed: Bool
+    let dash: [CGFloat]
     let label: String
     /// Set only on date charts.
     let day: Date?
@@ -516,6 +631,31 @@ private let adminDayLabel: DateFormatter = {
     formatter.dateFormat = "d MMM"
     return formatter
 }()
+
+/// "Mon 22 Sep" whatever the phone's language.
+private let adminWeekdayLabel: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.dateFormat = "EEE d MMM"
+    return formatter
+}()
+
+/// "Sep 2026" whatever the phone's language.
+private let adminMonthLabel: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.dateFormat = "MMM yyyy"
+    return formatter
+}()
+
+/// A bucket in the readout: "Today", "Mon 22 Sep", "Week of 22 Sep" or "Sep 2026".
+private func adminBucketLabel(_ day: Date, unit: Calendar.Component) -> String {
+    switch unit {
+    case .weekOfYear: return "Week of " + adminDayLabel.string(from: day)
+    case .month: return adminMonthLabel.string(from: day)
+    default: return Calendar.current.isDateInToday(day) ? "Today" : adminWeekdayLabel.string(from: day)
+    }
+}
 
 /// Marc's rule: round down, never up. 999,999 is "999K" and 1,099,999 is "1M".
 private func adminNumber(_ value: Double) -> String {

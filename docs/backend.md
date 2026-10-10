@@ -42,10 +42,15 @@ chips from that list, so section, card and chart changes need no app release
 (builds from 30 Sep 2026 on; earlier builds have a fixed chip list). A failing
 query only marks its own tile with `Query failed: ...`.
 
-- **Windows:** cards compare the last N days with the N days before (rolling for
-  events, complete Paris calendar days for Steps). Charts use Paris calendar days
-  over max(N, 7) days, bucketed by day (up to 62), week (up to 366) or month, and
-  overlay the previous period shifted onto the current dates.
+- **Windows (10 Oct 2026):** cards have fixed spans named in their titles, so the
+  app's period never changes them. "Weekly" is the last 7 days against the 7
+  before, "Monthly" the last 30 against the 30 before (rolling for events,
+  complete Paris days for Steps); a card without either word is now against 7
+  days ago. `days` sets only the charts over time (`x_kind` date): Paris days from
+  the later of today minus `days` and the first signup, at least 7 days, in whole
+  days (up to 62), weeks (up to 366) or months, with no previous-period overlay.
+  Activity charts start where sync history starts. Every other chart names its
+  own span ("last 30 days", "all time", "now").
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
   after a background `observer` sync is the post-sync refresh, not an open. Sync
@@ -65,8 +70,10 @@ query only marks its own tile with `Query failed: ...`.
   synced steps that week: background syncs run without an open until the app is
   deleted or Health is turned off. A person counts for a week only once it has
   passed. Charts draw one line per signup week (last 8) and month (last 6).
-  App opens are not used yet: the servers the app talks to still delete sync
-  reports after 7 days, which would make week 1 look close to 0%.
+  Cards take the signups of the latest 28 days (weeks) or 30 days (months) that
+  got past that week or month, against the span before. App opens are not used
+  yet: the servers the app talks to still delete sync reports after 7 days, which
+  would make week 1 look close to 0%.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
   invitations are automatic.
 - **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the

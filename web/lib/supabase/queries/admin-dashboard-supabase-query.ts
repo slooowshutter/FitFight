@@ -124,6 +124,8 @@ function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): Adm
     const reference = xs.filter((x) => end(x) <= w.today).at(-1) ?? xs.at(-1);
     const filling = reference !== undefined && end(reference) > w.today;
     const day = (x: string) => `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date(x).getUTCDay()]} ${dayMonth(x)}`;
+    const period = (x: string) => w.bucket === "day" ? day(x) : w.bucket === "week" ? `the week of ${dayMonth(x)}`
+        : new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(date(x));
     const format = (value: number, unit = chart.unit) => {
         const digits = value.toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
         if (unit === "percent") return `${digits}%`;
@@ -138,10 +140,8 @@ function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): Adm
         (best, cell) => (!best || cell.value > best.value ? cell : best), undefined);
     return {
         when: reference === undefined ? ""
-            : w.bucket === "day" ? (filling ? "today so far" : `on ${day(reference)}`)
-            : w.bucket === "week" ? (filling ? "this week so far" : `in the week of ${dayMonth(reference)}`)
-            : filling ? "this month so far"
-            : `in ${new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(date(reference))}`,
+            : filling ? `${w.bucket === "day" ? "today" : `this ${w.bucket}`} so far`
+            : `${w.bucket === "day" ? "on" : "in"} ${period(reference)}`,
         at: (series) => points(series).find((point) => point.x === reference)?.y,
         latest: (series) => points(series).at(-1)?.y,
         first: (series) => points(series)[0],
@@ -155,6 +155,7 @@ function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): Adm
         count: (value, one, many) => `${format(value, "count")} ${value === 1 ? one : many}`,
         share,
         day,
+        period,
     };
 }
 
@@ -310,7 +311,7 @@ function definitions(
             const now = r.latest();
             const start = r.first();
             return now === undefined || !start ? null
-                : `FitFight has ${r.count(now, "user", "users")} now, against ${r.format(start.y)} at the start of the chart.`;
+                : `FitFight has ${r.count(now, "user", "users")} now, against ${r.format(start.y)} at the end of ${r.period(start.x)}.`;
         },
         note: `At the end of each ${w.bucket}, now for the last one.`,
         query: sql`

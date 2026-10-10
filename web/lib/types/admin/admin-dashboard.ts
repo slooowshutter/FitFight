@@ -198,4 +198,6 @@ export type AdminDashboardExampleReader = {
     share: (part: number, whole: number) => string | undefined;
     /** "Thu 9 Oct" for a date x. */
     day: (x: string) => string;
+    /** A date chart's bucket by its x: "Thu 9 Oct", "the week of 5 Oct" or "October 2026". */
+    period: (x: string) => string;
 };

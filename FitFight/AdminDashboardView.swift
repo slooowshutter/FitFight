@@ -68,8 +68,6 @@ struct AdminDashboardView: View {
                 FFButton(title: "Retry", kind: .secondary) { reloads += 1 }
             }
             if let dashboard = shown {
-                let trends = dashboard.charts.filter { $0.xKind == "date" }
-                let breakdowns = dashboard.charts.filter { $0.xKind != "date" }
                 LazyVGrid(
                     columns: [
                         GridItem(.flexible(), spacing: 12, alignment: .top),
@@ -81,27 +79,13 @@ struct AdminDashboardView: View {
                         cardTile(card)
                     }
                 }
-                if !trends.isEmpty {
-                    groupTitle("Over time")
-                    FFSegmented(items: Timeframe.allCases, selection: $timeframe) { item in
-                        switch item {
-                        case .week: "7D"
-                        case .month: "30D"
-                        case .quarter: "90D"
-                        case .year: "1Y"
-                        case .all: "All"
-                        }
-                    }
-                    ForEach(trends) { chart in
-                        chartCard(chart)
-                    }
-                    .opacity(dashboard.days == days ? 1 : 0.4)
-                }
-                if !breakdowns.isEmpty {
-                    groupTitle("Breakdowns")
-                    ForEach(breakdowns) { chart in
-                        chartCard(chart)
-                    }
+                // The server's first chart decides which group leads, so Retention keeps its curves on top.
+                if dashboard.charts.first?.xKind == "date" {
+                    trendGroup(dashboard)
+                    breakdownGroup(dashboard)
+                } else {
+                    breakdownGroup(dashboard)
+                    trendGroup(dashboard)
                 }
             } else if loading && failure == nil {
                 ProgressView()
@@ -166,6 +150,41 @@ struct AdminDashboardView: View {
             }
             .buttonStyle(FFHapticPlainStyle())
             .accessibilityLabel(Text(verbatim: "Refresh"))
+        }
+    }
+
+    /// Charts over time under the period picker, which scopes only them. A new period dims
+    /// them until it loads.
+    @ViewBuilder
+    private func trendGroup(_ dashboard: FitFightAdminDashboard) -> some View {
+        let trends = dashboard.charts.filter { $0.xKind == "date" }
+        if !trends.isEmpty {
+            groupTitle("Over time")
+            FFSegmented(items: Timeframe.allCases, selection: $timeframe) { item in
+                switch item {
+                case .week: "7D"
+                case .month: "30D"
+                case .quarter: "90D"
+                case .year: "1Y"
+                case .all: "All"
+                }
+            }
+            ForEach(trends) { chart in
+                chartCard(chart)
+            }
+            .opacity(dashboard.days == days ? 1 : 0.4)
+        }
+    }
+
+    /// Charts with fixed spans named in their titles.
+    @ViewBuilder
+    private func breakdownGroup(_ dashboard: FitFightAdminDashboard) -> some View {
+        let breakdowns = dashboard.charts.filter { $0.xKind != "date" }
+        if !breakdowns.isEmpty {
+            groupTitle("Breakdowns")
+            ForEach(breakdowns) { chart in
+                chartCard(chart)
+            }
         }
     }
 

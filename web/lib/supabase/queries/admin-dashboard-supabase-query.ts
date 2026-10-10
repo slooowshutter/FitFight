@@ -574,6 +574,16 @@ function definitions(
                 ],
                 charts: [
                     {
+                        id: "weekly_cohorts", title: "Retention curves, last 8 signup weeks", kind: "line", unit: "percent", x: "label",
+                        note: "One line per signup week. W1 is the share whose phone still synced steps 7 to 13 days after signing up.",
+                        query: curves("week", 8),
+                    },
+                    {
+                        id: "monthly_cohorts", title: "Retention curves, last 6 signup months", kind: "line", unit: "percent", x: "label",
+                        note: "One line per signup month. M1 is days 30 to 59 after signing up.",
+                        query: curves("month", 6),
+                    },
+                    {
                         id: "retention_by_signup", title: `Retention by signup ${cohort}`, kind: "line", unit: "percent", x: "date",
                         note: `Share of each signup ${cohort}'s people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34). People count once they get there.`,
                         query: sql`
@@ -601,16 +611,6 @@ function definitions(
                         id: "health_signups_per_bucket", title: `Signups with Apple Health ${per}`, kind: "bar", unit: "count", x: "date",
                         note: "The people retention follows.",
                         query: perBucket(sql, w, withHealth, count),
-                    },
-                    {
-                        id: "weekly_cohorts", title: "Retention curves, last 8 signup weeks", kind: "line", unit: "percent", x: "label",
-                        note: "One line per signup week. W1 is the share whose phone still synced steps 7 to 13 days after signing up.",
-                        query: curves("week", 8),
-                    },
-                    {
-                        id: "monthly_cohorts", title: "Retention curves, last 6 signup months", kind: "line", unit: "percent", x: "label",
-                        note: "One line per signup month. M1 is days 30 to 59 after signing up.",
-                        query: curves("month", 6),
                     },
                 ],
             };

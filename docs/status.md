@@ -37,7 +37,8 @@ Every other chart names its span in its title ("last 30 days", "all time",
 
 **App:** the period picker sits under the cards, over the charts over time, with
 7D, 30D (default), 90D, 1Y and All; 1D and Custom are gone. The other charts sit
-under Breakdowns. A new period keeps the cards and dims the charts until it
+under Breakdowns; the server's first chart decides which group leads, so
+Retention keeps its cohort curves on top. A new period keeps the cards and dims the charts until it
 loads. A chart over time reads out the exact value under the finger, else the
 latest bucket, marked "so far" while it is still filling, with that bar faded
 and that point hollow. Several series stack as bars; lines take moss, gold and

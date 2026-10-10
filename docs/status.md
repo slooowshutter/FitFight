@@ -6,6 +6,45 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Admin dashboard: chart pages and a day, week or month choice, prepared 10 Oct 2026
+
+Marc asked to tap a chart and get its own page: the chart name on top, a back
+arrow, a definition, and a sentence with a real number. He also asked to choose
+the granularity of the charts over time.
+
+**Server:** every chart now has a `definition` and an `example`. The example
+reads one current number off the chart, for instance "41 people opened the app
+on Fri 9 Oct. 50 opened it in the 7 days up to then, and 52 in the 30 days.", or
+"3-5 fighters is the most common size: 22 fights out of 29." Date charts read the
+newest complete day, week or month ("so far" when none is complete yet); totals
+and states read now; breakdowns read their largest row. An optional `bucket`
+(day, week or month) overrides the automatic bucket; each metric is computed per
+bucket (counts add up, people count once, averages use every person-day, DAU is
+the daily average). The response says which bucket it used. Companion names read
+"Red Panda" instead of `red-panda`, and a monthly DAU no longer divides by the days
+before sync history started.
+
+**App:** a chart card has a chevron and opens a page: the chart name in the bar
+(two lines when long), the back arrow, the chart taller, "What it shows" and "In
+numbers". Reading values with a finger moved to that page, so a tap on a list card
+always opens it. Under the period picker, Auto, Day, Week and Month choose the
+bucket; Auto keeps the server's choice. Admin only, no release note.
+
+**Compatibility:** additive. The new query parameter and response fields are
+optional in `contracts/openapi.yaml`; the fixture now has one chart with the texts
+and one without, and the native contract test decodes both. Older builds ignore
+the new fields and keep the automatic bucket.
+
+**Verification (local):** web typecheck, all 437 unit tests and the dashboard
+database test passed on Postgres 16 with every migration. The test now also
+checks that every chart has a definition, that no sentence prints `undefined` or
+`NaN`, and that a chosen week bucket starts on Mondays. Every sentence was read on
+a seeded copy at 30 days by day, 30 days by week, 90 days by month and a year by
+day. Swift was parsed only; CI compiles it.
+
+**Live deployment:** shipped like the change below, on Marc's same request:
+`develop`, then `preview` for the preview server and a staging TestFlight build.
+
 ## Admin dashboard: fixed cards, period only on charts over time, prepared 10 Oct 2026
 
 Marc saw the cards change when he moved the period. He asked for cards on a fixed

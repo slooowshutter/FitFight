@@ -1266,12 +1266,21 @@ struct FitFightAPI {
                           body: Self.encoder.encode(input))
     }
 
-    /// `environment` is the database to read, `production` or `staging`. `authProject` is the
+    /// `environment` is the database to read, `production` or `staging`. `bucket` (day, week or
+    /// month) sets the charts over time; nil lets the server pick by period. `authProject` is the
     /// Supabase project ref of this app's own sign-in, so a login from either project works
     /// without a second sign-in.
-    func adminDashboard(section: String, days: Int, environment: String, authProject: String, accessToken: String) async throws -> FitFightAdminDashboard {
+    func adminDashboard(
+        section: String,
+        days: Int,
+        bucket: String?,
+        environment: String,
+        authProject: String,
+        accessToken: String
+    ) async throws -> FitFightAdminDashboard {
         try await get(
-            path: "admin/dashboard?section=\(section)&days=\(days)&environment=\(environment)",
+            path: "admin/dashboard?section=\(section)&days=\(days)&environment=\(environment)"
+                + (bucket.map { "&bucket=\($0)" } ?? ""),
             accessToken: accessToken,
             headers: ["X-FitFight-Auth-Project": authProject]
         )

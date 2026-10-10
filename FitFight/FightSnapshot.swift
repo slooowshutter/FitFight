@@ -159,6 +159,10 @@ struct FitFightAdminDashboard: Decodable {
         /// date (x is YYYY-MM-DD) or label.
         let xKind: String
         let note: String?
+        /// What the chart measures, for its detail page. nil from servers before 10 Oct 2026.
+        let definition: String?
+        /// A sentence that reads one current number off the chart, when there is one.
+        let example: String?
         /// Line and bar charts. Empty for a heatmap.
         let series: [Series]
         /// Heatmaps only, row-major. Empty otherwise.
@@ -171,6 +175,8 @@ struct FitFightAdminDashboard: Decodable {
             case unit
             case xKind = "x_kind"
             case note
+            case definition
+            case example
             case series
             case cells
         }
@@ -204,6 +210,8 @@ struct FitFightAdminDashboard: Decodable {
     let days: Int
     /// production or staging.
     let environment: String
+    /// day, week or month: the bucket of the charts over time. nil from servers before 10 Oct 2026.
+    let bucket: String?
     let generatedAt: Date
     /// nil from servers older than 30 Sep 2026.
     let sections: [Section]?
@@ -214,6 +222,7 @@ struct FitFightAdminDashboard: Decodable {
         case section
         case days
         case environment
+        case bucket
         case generatedAt = "generated_at"
         case sections
         case cards

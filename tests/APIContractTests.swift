@@ -186,6 +186,9 @@ struct APIContractTests {
         precondition(dashboard.cards[1].previous == nil && dashboard.cards[1].higherIsBetter == nil,
                      "Cards without a comparison or a direction remain decodable")
         precondition(dashboard.charts[0].kind == "line" && dashboard.charts[0].xKind == "date")
+        precondition(dashboard.bucket == "day" && dashboard.charts[0].example == "6 people signed up on Mon 28 Sep.")
+        precondition(dashboard.charts[1].definition == nil && dashboard.charts[1].example == nil,
+                     "Charts from servers before 10 Oct 2026 have no texts")
         precondition(!dashboard.charts[0].series[0].previous && dashboard.charts[0].series[1].previous)
         precondition(dashboard.charts[1].xKind == "label" && dashboard.charts[1].cells.isEmpty)
         precondition(dashboard.charts[2].kind == "heatmap" && dashboard.charts[2].cells.count == 6)

@@ -23,9 +23,10 @@ export const GET = apiRoute(async (request) => {
         section: search.get("section") ?? undefined,
         days: search.get("days") ?? undefined,
         environment: search.get("environment") ?? undefined,
+        bucket: search.get("bucket") ?? undefined,
     });
     if (!query.success) throw query.error;
-    const { section, days } = query.data;
+    const { section, days, bucket } = query.data;
     const own = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("pvqntpteehdvhqyctwum")
         ? "production"
         : "staging";
@@ -49,10 +50,10 @@ export const GET = apiRoute(async (request) => {
             );
         }
     }
-    const key = `${environment}:${section}:${days}`;
+    const key = `${environment}:${section}:${days}:${bucket ?? "auto"}`;
     const cached = recent.get(key);
     if (cached && Date.now() - cached.at < 5 * 60_000) return json(await cached.dashboard);
-    const dashboard = readAdminDashboard(section, days, environment, production);
+    const dashboard = readAdminDashboard(section, days, environment, production, bucket);
     recent.set(key, { at: Date.now(), dashboard });
     // A failed result is not reused: the next request retries.
     const result = await dashboard.catch((error: unknown) => {

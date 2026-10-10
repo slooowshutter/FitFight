@@ -8,6 +8,8 @@ struct DashboardView: View {
     let statistics: ProfileStepStatistics?
     /// Won, lost and drew over every page of history, from You; this screen's list only loads one page.
     let results: (won: Int, lost: Int, drew: Int)?
+    /// Wins and played from You's record, for a server from before draws and losses.
+    let record: ProfileRecord?
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
@@ -160,11 +162,13 @@ struct DashboardView: View {
             let drew = rows.filter { $0.result == "draw" }.count
             return (won: won, lost: rows.count - won - drew, drew: drew)
         }()
+        // A server from before draws sends only wins and played, so, as on You, every fight not won
+        // counts as lost and draws stay unknown.
         FFCard {
             HStack {
-                count(totals?.won, String(appLocalized: "Won"), theme.mossText)
+                count(totals?.won ?? record?.wins, String(appLocalized: "Won"), theme.mossText)
                 count(totals?.drew, String(appLocalized: "Drew"), theme.textSecondary)
-                count(totals?.lost, String(appLocalized: "Lost"), theme.emberText)
+                count(totals?.lost ?? record.map { $0.played - $0.wins }, String(appLocalized: "Lost"), theme.emberText)
             }
         }
         Text(String(appLocalized: "Fight history")).ffType(.heading).foregroundStyle(theme.text).padding(.top, 8)

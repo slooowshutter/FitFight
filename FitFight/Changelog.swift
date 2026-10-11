@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 11,
+            notes: "A paid character now starts with three portraits to choose from. Pick your favourite and FitFight draws its five fitness poses, even with the app closed, then notifies you when it is ready."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
             notes: "Your profile picture is now always your companion. Photo uploads are gone."
         ),
         ReleaseNote(

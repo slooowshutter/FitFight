@@ -13,7 +13,7 @@
         },
         {
             "path": "/api/internal/ai/reconcile",
-            "schedule": "15 3 * * *"
+            "schedule": "* * * * *"
         }
     ],
     "git": {

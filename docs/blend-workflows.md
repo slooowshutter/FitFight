@@ -222,21 +222,21 @@ log retention. A prepared response does not prove that the phone received it.
 
 ## Reconciliation and operator procedure
 
-`GET /api/internal/ai/reconcile` is configured in `web/vercel.json` daily at 03:15 UTC as a production backup,
+`GET /api/internal/ai/reconcile` runs every minute on production Vercel Cron (`web/vercel.json`; the
+`blendai` Enterprise team allows per-minute schedules),
 authenticated with `CRON_SECRET` (or the existing `FITFIGHT_CRON_SECRET` alias).
 It selects at most four due known runs and uses the same status decoder, shared
 provider limits, leases and atomic settlement as phone polling. It bypasses only
 the user's caller counter. Work stops at the bounded invocation deadline or shared
-cooldown. Runs are selected by oldest due time. It then resumes up to four paid
-character stages whose inputs were saved, skipping owners who already have an
-unresolved request. Concurrent cron/phone invocations cannot settle twice.
-Configure and verify a frequent hosted scheduler for each environment,
-including staging, before enabling starts. The repository documents
-Supabase Cron for staging scheduled work. Its secret/configuration is not available
-to this workspace. [Vercel Hobby permits daily cron jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing),
-and [Vercel cron targets production deployments](https://vercel.com/docs/cron-jobs),
-so a minute expression in vercel.json neither proves staging scheduling nor fits the
-documented plan. The daily backup alone is not the required staging scheduler.
+cooldown. Runs are selected by oldest due time. When a paid character's run settles,
+that character advances in the same invocation. It then resumes up to four paid
+characters that need a portrait start, the poses of a chosen portrait, or a
+"ready" push, skipping owners whose unresolved request belongs to another purchase.
+Concurrent cron/phone invocations cannot settle twice.
+[Vercel cron targets production deployments](https://vercel.com/docs/cron-jobs) only, so
+`.github/workflows/ai-reconcile.yml` calls staging every 5 minutes (and production as a
+backup) with the repository secrets `FITFIGHT_STAGING_CRON_SECRET` and
+`FITFIGHT_PRODUCTION_CRON_SECRET`. A target without its secret is skipped.
 
 New-start disabling does not disable reconciliation. Keep the key and shared
 provider limits present while known work remains. Status reads use the saved

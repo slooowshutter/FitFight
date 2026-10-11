@@ -11,6 +11,8 @@ import {
     recordCustomCharacterTransaction,
     prepareCustomCharacterStage,
     dueCustomCharacterPurchases,
+    chooseCustomCharacterPortrait,
+    claimCustomCharacterPush,
 } from "./custom-characters-supabase-query";
 import { readSpecialStore } from "./specials-supabase-query";
 
@@ -215,4 +217,102 @@ test("each verified consumable funds exactly one recoverable portrait and five-i
     }, limits, database);
     assert.equal(renamedRun.shouldStart, true);
     assert.equal(renamedRun.request.description, "A white owl");
+});
+
+test("a description saved at claim draws three portraits; the owner picks one and only it feeds the poses", async (context) => {
+    const owner = randomUUID();
+    await database`insert into auth.users (id) values (${owner})`;
+    await database`update private.ai_provider_budget set requests = 0, starts = 0, remaining = null,
+        reset_at = null, blocked_until = null, window_started_at = clock_timestamp(),
+        starts_day = (clock_timestamp() at time zone 'UTC')::date where provider = 'blend'`;
+    const account = (await readSpecialStore(owner, database)).app_account_token;
+    context.after(async () => {
+        await database`delete from private.ai_library_images where user_id = ${owner}`;
+        await database`delete from private.ai_requests where user_id = ${owner}`;
+        await database`delete from private.custom_character_portraits where purchase_id in (
+            select id from private.custom_character_purchases where account_id = ${account})`;
+        await database`delete from private.custom_character_purchases where account_id = ${account}`;
+        await database`delete from private.special_accounts where id = ${account}`;
+        await database`delete from auth.users where id = ${owner}`;
+    });
+    const transactionId = BigInt(`0x${randomUUID().replaceAll("-", "")}`).toString();
+    const receipt = appleCustomCharacterTransactionSchema.parse({
+        transactionId,
+        originalTransactionId: transactionId,
+        bundleId: "com.fitfight.mvp",
+        productId: customCharacterProductId,
+        environment: "Sandbox",
+        type: "Consumable",
+        inAppOwnershipType: "PURCHASED",
+        quantity: 1,
+        appAccountToken: account,
+        purchaseDate: Date.now(),
+        signedDate: Date.now() + 1_000,
+    });
+    const claim = await recordCustomCharacterTransaction(receipt, database, "A red panda in a tracksuit");
+    assert.equal((await recordCustomCharacterTransaction(receipt, database, "Another words")).purchase_id, claim.purchase_id);
+    let character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.description, "A red panda in a tracksuit");
+    assert.equal(character.phase, "portraits");
+    assert.equal(character.status, "generating");
+    assert.equal(character.candidates.length, 3);
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === claim.purchase_id));
+
+    const stage = await prepareCustomCharacterStage(owner, claim.purchase_id, {}, database);
+    if (stage.kind !== "portraits") assert.fail("Expected three portraits");
+    assert.equal(stage.starts.length, 3);
+    const runs = [];
+    for (const [index, key] of stage.starts.entries()) {
+        const run = await reserveAiRequest(owner, {
+            workflow: "avatar", resourceId: claim.purchase_id, idempotencyKey: key,
+            requestHash: String(index).repeat(64), version, creditPrice: 0, sourceRequestIds: [], description: stage.description,
+        }, limits, database);
+        assert.equal(run.shouldStart, true);
+        runs.push(run.request);
+    }
+    for (const [index, run] of runs.entries()) {
+        assert.ok(run.lease_token);
+        await finishAiRequestAttempt(owner, run.id, run.lease_token, index < 2
+            ? { status: "completed", runHandle: { ...version, runId: randomUUID() },
+                result: { image_url: `https://cdn.tryblend.ai/candidate-${index}.png` }, errorCode: null }
+            : { status: "failed", runHandle: null, result: null, errorCode: "ai_failed" }, {}, database);
+    }
+    character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.phase, "choosing");
+    assert.equal(character.status, "generating");
+    assert.deepEqual(character.candidates.map((item) => item.status), ["completed", "completed", "failed"]);
+    assert.equal(character.portrait_url, null);
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === claim.purchase_id));
+    assert.equal(await claimCustomCharacterPush(owner, claim.purchase_id, "portraits", database), true);
+    assert.equal(await claimCustomCharacterPush(owner, claim.purchase_id, "portraits", database), false);
+
+    const [first, second, failed] = character.candidates;
+    await assert.rejects(chooseCustomCharacterPortrait(owner, claim.purchase_id, failed.id, database), {
+        code: "character_portrait_not_ready",
+    });
+    await chooseCustomCharacterPortrait(owner, claim.purchase_id, second.id, database);
+    await chooseCustomCharacterPortrait(owner, claim.purchase_id, second.id, database);
+    await assert.rejects(chooseCustomCharacterPortrait(owner, claim.purchase_id, first.id, database), {
+        code: "character_portrait_chosen",
+    });
+    character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.phase, "poses");
+    assert.equal(character.stage, "fitness");
+    assert.equal(character.portrait_url, "https://cdn.tryblend.ai/candidate-1.png");
+    assert.equal((await database`select count(*)::int as count from private.custom_character_portraits
+        where purchase_id = ${claim.purchase_id} and selected_at is null`)[0].count, 2);
+
+    const fitness = await prepareCustomCharacterStage(owner, claim.purchase_id, {}, database);
+    if (fitness.kind !== "fitness") assert.fail("Expected the poses stage");
+    assert.equal(fitness.avatarRequestId, runs[1].id);
+    const fitnessInput = {
+        workflow: "fitness" as const, resourceId: claim.purchase_id, idempotencyKey: fitness.key,
+        requestHash: "f".repeat(64), version, creditPrice: 0, description: fitness.description,
+    };
+    await assert.rejects(reserveAiRequest(owner, { ...fitnessInput, sourceRequestIds: [runs[0].id] }, limits, database), {
+        code: "not_found",
+    });
+    const poses = await reserveAiRequest(owner, { ...fitnessInput, sourceRequestIds: [runs[1].id] }, limits, database);
+    if (!poses.shouldStart) assert.fail("Expected the poses to start");
+    assert.deepEqual(poses.portraits, ["https://cdn.tryblend.ai/candidate-1.png"]);
 });

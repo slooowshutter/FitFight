@@ -122,6 +122,7 @@ struct ContentView: View {
         }
         .onChange(of: session.profile, initial: true) { _, profile in
             companions.apply(profile)
+            if let profile { Analytics.describe(profile) }
             Task { await companions.publishPending(session: session) }
         }
         .onChange(of: scenePhase) { _, phase in

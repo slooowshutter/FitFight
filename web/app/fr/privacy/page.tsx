@@ -318,7 +318,8 @@ export default function PrivacyPage() {
                         rapports de plantage, les ouvertures de l’app, les écrans
                         visités, les touchers, les actions clés comme créer ou
                         rejoindre un Fight, et des enregistrements de session,
-                        liés à votre identifiant de compte FitFight. Nous les
+                        liés à votre identifiant de compte FitFight et à votre nom
+                        d’utilisateur. Nous les
                         utilisons pour corriger les bugs et améliorer l’app. Les
                         enregistrements masquent tout le texte et toutes les
                         images à l’écran, donc ils ne montrent ni valeurs de

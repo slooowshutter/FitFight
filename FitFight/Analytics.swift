@@ -33,12 +33,24 @@ enum Analytics {
         config.captureAutocaptureElementText = false
         config.surveys = true
         PostHogSDK.shared.setup(config)
+        // Staging (TestFlight) and prod (App Store) share one PostHog project; filter on this.
+        PostHogSDK.shared.register(["environment": AppVersion.backend])
         started = true
     }
 
     static func identify(userId: UUID) {
         guard started else { return }
         PostHogSDK.shared.identify(userId.uuidString)
+    }
+
+    /// Makes people findable by username in PostHog replays and persons.
+    static func describe(_ profile: FitFightProfile) {
+        guard started else { return }
+        PostHogSDK.shared.setPersonProperties(userPropertiesToSet: [
+            "username": profile.handle,
+            "environment": AppVersion.backend,
+            "app_version": "\(AppVersion.marketing) (\(AppVersion.build))",
+        ])
     }
 
     static func reset() {

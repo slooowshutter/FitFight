@@ -293,7 +293,7 @@ export default function PrivacyPage() {
                         When configured, PostHog receives crash reports, app
                         opens, the screens you visit, taps, key actions such as
                         creating or joining a Fight, and session recordings,
-                        linked to your FitFight account identifier. We use them
+                        linked to your FitFight account identifier and username. We use them
                         to find bugs and improve the app. Recordings hide all
                         text and images on screen, so they do not show Health
                         values, names or photos.

@@ -36,7 +36,7 @@ export async function reconcileAiRuns(
             user_id: request.user_id,
             request_id: request.id,
             workflow_id: request.workflow_version.workflowId,
-            version_id: request.workflow_version.versionId,
+            version_id: request.workflow_version.versionId ?? null,
             run_id: request.run_handle?.runId ?? null,
         });
         try {

@@ -314,9 +314,9 @@ cannot settle the new credit constraint. Distribute the native UI only after the
 | `BLEND_ENABLED` | Defaults to `false`; enables new starts only |
 | `BLEND_API_KEY` | Deployment-only key; verify access and provider limits |
 | `BLEND_AVATAR_WORKFLOW_ID` | Published workflow ID |
-| `BLEND_AVATAR_VERSION_ID` | Pinned immutable Avatar version |
-| `BLEND_FITNESS_WORKFLOW_ID`, `BLEND_FITNESS_VERSION_ID` | Published Fitness ID and pinned version |
-| `BLEND_GROUP_PHOTO_WORKFLOW_ID`, `BLEND_GROUP_PHOTO_VERSION_ID` | Published Group Photo ID and pinned version |
+| `BLEND_AVATAR_VERSION_ID` | Optional. Empty runs the latest published Avatar version |
+| `BLEND_FITNESS_WORKFLOW_ID`, `BLEND_FITNESS_VERSION_ID` | Published Fitness ID; version optional, empty means latest |
+| `BLEND_GROUP_PHOTO_WORKFLOW_ID`, `BLEND_GROUP_PHOTO_VERSION_ID` | Published Group Photo ID; version optional, empty means latest |
 | `BLEND_FITNESS_CREDIT_PRICE`, `BLEND_GROUP_PHOTO_CREDIT_PRICE` | Required explicit positive prices for separate credit-funded starts; paid characters do not use them |
 | `APPLE_CUSTOM_CHARACTERS_ENABLED` | Defaults to `false`; native StoreKit checkout stays closed until Apple lookup and Sandbox verification |
 | `APPLE_IAP_ENVIRONMENT` | `Sandbox` on staging, `Production` on production; App Review accounts retain their configured Sandbox shelf |

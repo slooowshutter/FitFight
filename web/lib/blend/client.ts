@@ -173,7 +173,8 @@ export async function startBlendWorkflow(
         !parsed.success ||
         (parsed.data.published_workflow_id != null &&
             parsed.data.published_workflow_id !== workflow.workflowId) ||
-        (parsed.data.published_workflow_version_id != null &&
+        (workflow.versionId !== undefined &&
+            parsed.data.published_workflow_version_id != null &&
             parsed.data.published_workflow_version_id !== workflow.versionId)
     ) {
         throw new ApiError(
@@ -184,7 +185,12 @@ export async function startBlendWorkflow(
         );
     }
     return {
-        data: { ...workflow, runId: parsed.data.run_id },
+        // Record the version Blend actually ran, so later reads check against it.
+        data: {
+            ...workflow,
+            versionId: workflow.versionId ?? parsed.data.published_workflow_version_id ?? undefined,
+            runId: parsed.data.run_id,
+        },
         rateLimit: response.rateLimit,
     };
 }
@@ -206,7 +212,8 @@ export async function readBlendWorkflowRun(
         parsed.data.id !== run.runId ||
         (parsed.data.published_workflow_id != null &&
             parsed.data.published_workflow_id !== run.workflowId) ||
-        (parsed.data.published_workflow_version_id != null &&
+        (run.versionId !== undefined &&
+            parsed.data.published_workflow_version_id != null &&
             parsed.data.published_workflow_version_id !== run.versionId)
     ) {
         throw new ApiError(

@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 10,
+            notes: "You can now change your companion from the levels drawer: tap it on Fights, then choose Change animal."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 6,
             notes: "You can now leave any fight you joined. If you created it, pick who takes over first, or delete it if you are the only one in it."
         ),
@@ -65,6 +72,13 @@ enum Changelog {
             month: 9,
             day: 28,
             notes: "When a new FitFight version is out, a notice at the top offers the update, at most once every three days. Close it to keep using your current version. The app no longer locks until you update."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 28,
+            notes: "Tap your companion on Fights to see its five levels: each pose, the steps it starts at, and how many more steps you need today for the next one."
         ),
         ReleaseNote(
             version: "1.1.2",

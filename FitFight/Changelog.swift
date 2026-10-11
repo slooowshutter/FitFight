@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 11,
+            notes: "Specials are back in the animal picker: 40 one-of-a-kind animals, each owned by only one person."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 10,
             notes: "You can now change your companion from the levels drawer: tap it on Fights, then choose Change animal."
         ),

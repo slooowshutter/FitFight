@@ -131,6 +131,16 @@
                 }
             }
         },
+        "Specials are back in the animal picker: 40 one-of-a-kind animals, each owned by only one person.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les Spéciaux sont de retour dans le choix d’animal : 40 animaux uniques, chacun à une seule personne."
+                    }
+                }
+            }
+        },
         "Your animal now changes with today's steps: armchair under 3k, yawning to 6k, relaxed to 10k, fit to 15k and fully muscled after that. Works for all 12 regular animals. Specials and paid characters are hidden for now.": {
             "localizations": {
                 "fr": {

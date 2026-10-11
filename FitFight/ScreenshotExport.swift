@@ -413,6 +413,8 @@ enum ScreenshotExport {
             .environmentObject(session)
             .environmentObject(HealthKitStepsStore())
             .environmentObject(FeedStore())
+            .environmentObject(SpecialPurchases())
+            .environmentObject(CustomCharacterPurchases())
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)
             .environment(\.ffStaticRender, true)

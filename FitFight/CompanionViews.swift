@@ -3,46 +3,36 @@ import SwiftUI
 enum StockCompanion: String, CaseIterable, Identifiable {
     case badger, raccoon, redPanda = "red-panda", otter, rabbit, fox, bear, boar, sloth, dog, goat, turtle
 
-    case limitedPangolin = "limited-pangolin"
-    case limitedPlatypus = "limited-platypus"
-    case limitedSpottedQuoll = "limited-spotted-quoll"
-    case limitedFennecFox = "limited-fennec-fox"
-    case limitedMuskOx = "limited-musk-ox"
-    case limitedKookaburra = "limited-kookaburra"
-    case limitedPorcupine = "limited-porcupine"
-    case limitedBharal = "limited-bharal"
-    case limitedGoldenSnubNosedMonkey = "limited-golden-snub-nosed-monkey"
-    case limitedProboscisMonkey = "limited-proboscis-monkey"
-    case limitedTreeKangaroo = "limited-tree-kangaroo"
-    case limitedGilaMonster = "limited-gila-monster"
-    case limitedTarsier = "limited-tarsier"
-    case limitedManedWolf = "limited-maned-wolf"
-    case limitedFireSalamander = "limited-fire-salamander"
-    case limitedServalStroll = "limited-serval-stroll"
-    case limitedPuffin = "limited-puffin"
-    case limitedNumbatSprint = "limited-numbat-sprint"
-    case limitedCoatiSnooze = "limited-coati-snooze"
-    case limitedGalago = "limited-galago"
-    case limitedFrilledLizard = "limited-frilled-lizard"
-    case limitedOkapi = "limited-okapi"
-    case limitedHoatzin = "limited-hoatzin"
-    case limitedQuokka = "limited-quokka"
-    case limitedNumbatStride = "limited-numbat-stride"
-    case limitedSifaka = "limited-sifaka"
-    case limitedSecretaryBirdStride = "limited-secretary-bird-stride"
-    case limitedRockHyrax = "limited-rock-hyrax"
-    case limitedServalSprint = "limited-serval-sprint"
-    case limitedBandedMongoose = "limited-banded-mongoose"
-    case limitedAxolotl = "limited-axolotl"
-    case limitedThornyDevilStroll = "limited-thorny-devil-stroll"
-    case limitedCoatiSprint = "limited-coati-sprint"
-    case limitedTamandua = "limited-tamandua"
-    case limitedPaca = "limited-paca"
-    case limitedJerboa = "limited-jerboa"
-    case limitedThornyDevilCoffee = "limited-thorny-devil-coffee"
-    case limitedKakapo = "limited-kakapo"
-    case limitedSecretaryBirdSnooze = "limited-secretary-bird-snooze"
-    case limitedMarkhor = "limited-markhor"
+    case limitedBlackPanther = "limited-black-panther"
+    case limitedLoneWolf = "limited-lone-wolf"
+    case limitedSnowLeopard = "limited-snow-leopard"
+    case limitedTiger = "limited-tiger"
+    case limitedNightOwl = "limited-night-owl"
+    case limitedCrocodile = "limited-crocodile"
+    case limitedPeacock = "limited-peacock"
+    case limitedFlamingo = "limited-flamingo"
+    case limitedPersianCat = "limited-persian-cat"
+    case limitedOstrich = "limited-ostrich"
+    case limitedCheetah = "limited-cheetah"
+    case limitedBaldEagle = "limited-bald-eagle"
+    case limitedSilverback = "limited-silverback"
+    case limitedKangaroo = "limited-kangaroo"
+    case limitedBull = "limited-bull"
+    case limitedMoose = "limited-moose"
+    case limitedBison = "limited-bison"
+    case limitedCamel = "limited-camel"
+    case limitedPanda = "limited-panda"
+    case limitedCapybara = "limited-capybara"
+    case limitedHedgehog = "limited-hedgehog"
+    case limitedGingerCat = "limited-ginger-cat"
+    case limitedAlpaca = "limited-alpaca"
+    case limitedSeal = "limited-seal"
+    case limitedHamster = "limited-hamster"
+    case limitedTreeFrog = "limited-tree-frog"
+    case limitedMouse = "limited-mouse"
+    case limitedGuineaPig = "limited-guinea-pig"
+    case limitedDuck = "limited-duck"
+    case limitedDonkey = "limited-donkey"
 
     var isLimited: Bool { rawValue.hasPrefix("limited-") }
     var productId: String { "com.fitfight.mvp.special.\(rawValue.replacingOccurrences(of: "limited-", with: "").replacingOccurrences(of: "-", with: "_"))" }
@@ -64,46 +54,36 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         case .dog: String(appLocalized: "Dog")
         case .goat: String(appLocalized: "Goat")
         case .turtle: String(appLocalized: "Turtle")
-        case .limitedPangolin: String(appLocalized: "Pangolin")
-        case .limitedPlatypus: String(appLocalized: "Platypus")
-        case .limitedSpottedQuoll: String(appLocalized: "Spotted Quoll")
-        case .limitedFennecFox: String(appLocalized: "Fennec Fox")
-        case .limitedMuskOx: String(appLocalized: "Musk Ox")
-        case .limitedKookaburra: String(appLocalized: "Kookaburra")
-        case .limitedPorcupine: String(appLocalized: "Porcupine")
-        case .limitedBharal: String(appLocalized: "Bharal")
-        case .limitedGoldenSnubNosedMonkey: String(appLocalized: "Golden Snub-Nosed Monkey")
-        case .limitedProboscisMonkey: String(appLocalized: "Proboscis Monkey")
-        case .limitedTreeKangaroo: String(appLocalized: "Tree Kangaroo")
-        case .limitedGilaMonster: String(appLocalized: "Gila Monster")
-        case .limitedTarsier: String(appLocalized: "Tarsier")
-        case .limitedManedWolf: String(appLocalized: "Maned Wolf")
-        case .limitedFireSalamander: String(appLocalized: "Fire Salamander")
-        case .limitedServalStroll: String(appLocalized: "Serval, Easy Pace")
-        case .limitedPuffin: String(appLocalized: "Puffin")
-        case .limitedNumbatSprint: String(appLocalized: "Numbat, Sprint Mode")
-        case .limitedCoatiSnooze: String(appLocalized: "Coati, Snooze Mode")
-        case .limitedGalago: String(appLocalized: "Galago")
-        case .limitedFrilledLizard: String(appLocalized: "Frilled Lizard")
-        case .limitedOkapi: String(appLocalized: "Okapi")
-        case .limitedHoatzin: String(appLocalized: "Hoatzin")
-        case .limitedQuokka: String(appLocalized: "Quokka")
-        case .limitedNumbatStride: String(appLocalized: "Numbat, Steady Stride")
-        case .limitedSifaka: String(appLocalized: "Sifaka")
-        case .limitedSecretaryBirdStride: String(appLocalized: "Secretary Bird, On Duty")
-        case .limitedRockHyrax: String(appLocalized: "Rock Hyrax")
-        case .limitedServalSprint: String(appLocalized: "Serval, Sprint Mode")
-        case .limitedBandedMongoose: String(appLocalized: "Banded Mongoose")
-        case .limitedAxolotl: String(appLocalized: "Axolotl")
-        case .limitedThornyDevilStroll: String(appLocalized: "Thorny Devil, Easy Pace")
-        case .limitedCoatiSprint: String(appLocalized: "Coati, Sprint Mode")
-        case .limitedTamandua: String(appLocalized: "Tamandua")
-        case .limitedPaca: String(appLocalized: "Paca")
-        case .limitedJerboa: String(appLocalized: "Jerboa")
-        case .limitedThornyDevilCoffee: String(appLocalized: "Thorny Devil, Coffee Break")
-        case .limitedKakapo: String(appLocalized: "Kakapo")
-        case .limitedSecretaryBirdSnooze: String(appLocalized: "Secretary Bird, Off Duty")
-        case .limitedMarkhor: String(appLocalized: "Markhor")
+        case .limitedBlackPanther: String(appLocalized: "Black Panther")
+        case .limitedLoneWolf: String(appLocalized: "Lone Wolf")
+        case .limitedSnowLeopard: String(appLocalized: "Snow Leopard")
+        case .limitedTiger: String(appLocalized: "Tiger")
+        case .limitedNightOwl: String(appLocalized: "Night Owl")
+        case .limitedCrocodile: String(appLocalized: "Crocodile")
+        case .limitedPeacock: String(appLocalized: "Peacock")
+        case .limitedFlamingo: String(appLocalized: "Flamingo")
+        case .limitedPersianCat: String(appLocalized: "Persian Cat")
+        case .limitedOstrich: String(appLocalized: "Ostrich")
+        case .limitedCheetah: String(appLocalized: "Cheetah")
+        case .limitedBaldEagle: String(appLocalized: "Bald Eagle")
+        case .limitedSilverback: String(appLocalized: "Silverback")
+        case .limitedKangaroo: String(appLocalized: "Kangaroo")
+        case .limitedBull: String(appLocalized: "Bull")
+        case .limitedMoose: String(appLocalized: "Moose")
+        case .limitedBison: String(appLocalized: "Bison")
+        case .limitedCamel: String(appLocalized: "Camel")
+        case .limitedPanda: String(appLocalized: "Panda")
+        case .limitedCapybara: String(appLocalized: "Capybara")
+        case .limitedHedgehog: String(appLocalized: "Hedgehog")
+        case .limitedGingerCat: String(appLocalized: "Ginger Cat")
+        case .limitedAlpaca: String(appLocalized: "Alpaca")
+        case .limitedSeal: String(appLocalized: "Seal")
+        case .limitedHamster: String(appLocalized: "Hamster")
+        case .limitedTreeFrog: String(appLocalized: "Tree Frog")
+        case .limitedMouse: String(appLocalized: "Mouse")
+        case .limitedGuineaPig: String(appLocalized: "Guinea Pig")
+        case .limitedDuck: String(appLocalized: "Duck")
+        case .limitedDonkey: String(appLocalized: "Donkey")
         }
     }
 
@@ -121,53 +101,68 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         case .dog: String(appLocalized: "Always up for a walk.")
         case .goat: String(appLocalized: "Takes the uphill route.")
         case .turtle: String(appLocalized: "Never out of the race.")
-        case .limitedPangolin: String(appLocalized: "Packed a snack. Called it endurance.")
-        case .limitedPlatypus: String(appLocalized: "Built like a committee. Walks like a legend.")
-        case .limitedSpottedQuoll: String(appLocalized: "Spots the finish line. Ignores the warm-up.")
-        case .limitedFennecFox: String(appLocalized: "Heard you were skipping leg day.")
-        case .limitedMuskOx: String(appLocalized: "Built for winter. Dressed for PE.")
-        case .limitedKookaburra: String(appLocalized: "Laughs at your excuses. Then takes a break.")
-        case .limitedPorcupine: String(appLocalized: "Personal space is part of the training plan.")
-        case .limitedBharal: String(appLocalized: "Your hill is the warm-up.")
-        case .limitedGoldenSnubNosedMonkey: String(appLocalized: "Golden fur. Questionable pacing.")
-        case .limitedProboscisMonkey: String(appLocalized: "Wins every race by a nose.")
-        case .limitedTreeKangaroo: String(appLocalized: "Took the stairs. All the way up the tree.")
-        case .limitedGilaMonster: String(appLocalized: "A monster at taking it easy.")
-        case .limitedTarsier: String(appLocalized: "Wide awake. Deeply suspicious of cardio.")
-        case .limitedManedWolf: String(appLocalized: "All legs. No shortcuts.")
-        case .limitedFireSalamander: String(appLocalized: "Warming up is a personal brand.")
-        case .limitedServalStroll: String(appLocalized: "Long legs. Leisurely agenda.")
-        case .limitedPuffin: String(appLocalized: "Flight mode off. Step count on.")
-        case .limitedNumbatSprint: String(appLocalized: "Small stripes. Unreasonably big ambitions.")
-        case .limitedCoatiSnooze: String(appLocalized: "Yawn first. Personal best later.")
-        case .limitedGalago: String(appLocalized: "Night owl energy. Morning walk regrets.")
-        case .limitedFrilledLizard: String(appLocalized: "Dressed for drama. Stayed for the steps.")
-        case .limitedOkapi: String(appLocalized: "Half stripes. Full commitment to a nap.")
-        case .limitedHoatzin: String(appLocalized: "Pre-workout is coffee and a long sit.")
-        case .limitedQuokka: String(appLocalized: "Smiling through a very optional workout.")
-        case .limitedNumbatStride: String(appLocalized: "Counts ants on rest days. Steps on the others.")
-        case .limitedSifaka: String(appLocalized: "Sideways is still a direction.")
-        case .limitedSecretaryBirdStride: String(appLocalized: "Booked your defeat between two meetings.")
-        case .limitedRockHyrax: String(appLocalized: "Tiny legs. Elephant-sized confidence.")
-        case .limitedServalSprint: String(appLocalized: "Already at the finish. Pretending to stretch.")
-        case .limitedBandedMongoose: String(appLocalized: "Runs in a pack. Keeps a solo victory speech.")
-        case .limitedAxolotl: String(appLocalized: "Regrows limbs. Still skips leg day.")
-        case .limitedThornyDevilStroll: String(appLocalized: "Prickly about pace. Soft on rest days.")
-        case .limitedCoatiSprint: String(appLocalized: "Sniffed out a shortcut. Took the long way.")
-        case .limitedTamandua: String(appLocalized: "Long snout. Short list of excuses.")
-        case .limitedPaca: String(appLocalized: "Times every lap. Rounds down the snack breaks.")
-        case .limitedJerboa: String(appLocalized: "Tiny footprint. Dramatic entrance.")
-        case .limitedThornyDevilCoffee: String(appLocalized: "Sharp outfit. Extremely soft schedule.")
-        case .limitedKakapo: String(appLocalized: "Flight cancelled. Walking reluctantly.")
-        case .limitedSecretaryBirdSnooze: String(appLocalized: "This meeting could have been a nap.")
-        case .limitedMarkhor: String(appLocalized: "Spiralling horns. Perfectly level coffee.")
+        case .limitedBlackPanther: String(appLocalized: "Doesn't count steps. Steps count him.")
+        case .limitedLoneWolf: String(appLocalized: "Runs alone. Finishes first.")
+        case .limitedSnowLeopard: String(appLocalized: "Cold start. Hot finish.")
+        case .limitedTiger: String(appLocalized: "Wraps on. Excuses off.")
+        case .limitedNightOwl: String(appLocalized: "Up at 3 a.m. Still ahead of you.")
+        case .limitedCrocodile: String(appLocalized: "Smiles at the finish line. Bad sign.")
+        case .limitedPeacock: String(appLocalized: "Dressed to win. Also wins.")
+        case .limitedFlamingo: String(appLocalized: "Stands on one leg. Still out-walks you.")
+        case .limitedPersianCat: String(appLocalized: "Pearls on. Pinky up. Pace up.")
+        case .limitedOstrich: String(appLocalized: "Never buries her head. Only the competition.")
+        case .limitedCheetah: String(appLocalized: "Fashionably fast. Never fashionably late.")
+        case .limitedBaldEagle: String(appLocalized: "Spotted your step count from up here.")
+        case .limitedSilverback: String(appLocalized: "Skips nothing. Especially not leg day.")
+        case .limitedKangaroo: String(appLocalized: "Counts jumps as steps. Nobody argues.")
+        case .limitedBull: String(appLocalized: "Charges first. Asks questions never.")
+        case .limitedMoose: String(appLocalized: "Coach says one more lap. Coach is me.")
+        case .limitedBison: String(appLocalized: "Skipping rope. Never skipping cardio.")
+        case .limitedCamel: String(appLocalized: "Hydrated in 2019. Still going.")
+        case .limitedPanda: String(appLocalized: "Bubble tea first. Then domination.")
+        case .limitedCapybara: String(appLocalized: "Unbothered. Undefeated.")
+        case .limitedHedgehog: String(appLocalized: "Prickly before coffee. Fast after.")
+        case .limitedGingerCat: String(appLocalized: "Woke up at noon. Won by dinner.")
+        case .limitedAlpaca: String(appLocalized: "Spits on rest days only.")
+        case .limitedSeal: String(appLocalized: "Warm flippers. Cold competition.")
+        case .limitedHamster: String(appLocalized: "Small legs. Unreasonable cardio.")
+        case .limitedTreeFrog: String(appLocalized: "Hops count double. Allegedly.")
+        case .limitedMouse: String(appLocalized: "Small steps. So many of them.")
+        case .limitedGuineaPig: String(appLocalized: "Squeaks politely. Walks relentlessly.")
+        case .limitedDuck: String(appLocalized: "Small duck. Big lift. Bigger quack.")
+        case .limitedDonkey: String(appLocalized: "Stubborn about cardio. In a good way.")
+        }
+    }
+
+    var series: SpecialSeries? {
+        switch self {
+        case .limitedBlackPanther, .limitedLoneWolf, .limitedSnowLeopard, .limitedTiger, .limitedNightOwl, .limitedCrocodile: .nightHunters
+        case .limitedPeacock, .limitedFlamingo, .limitedPersianCat, .limitedOstrich, .limitedCheetah, .limitedBaldEagle: .royals
+        case .limitedSilverback, .limitedKangaroo, .limitedBull, .limitedMoose, .limitedBison, .limitedCamel: .gymBros
+        case .limitedPanda, .limitedCapybara, .limitedHedgehog, .limitedGingerCat, .limitedAlpaca, .limitedSeal: .cozyClub
+        case .limitedHamster, .limitedTreeFrog, .limitedMouse, .limitedGuineaPig, .limitedDuck, .limitedDonkey: .oddSquad
+        default: nil
         }
     }
 
     func effortImage(stage: CompanionEffortStage?) -> String {
-        // Specials have no effort forms yet.
-        guard let stage, !isLimited else { return image }
+        guard let stage else { return image }
         return "\(image)-effort-\(stage.rawValue)"
+    }
+}
+
+/// Specials come in series of six, shown in this order.
+enum SpecialSeries: CaseIterable {
+    case nightHunters, royals, gymBros, cozyClub, oddSquad
+
+    var name: String {
+        switch self {
+        case .nightHunters: String(appLocalized: "Night Hunters")
+        case .royals: String(appLocalized: "Royals")
+        case .gymBros: String(appLocalized: "Gym Bros")
+        case .cozyClub: String(appLocalized: "Cozy Club")
+        case .oddSquad: String(appLocalized: "Odd Squad")
+        }
     }
 }
 
@@ -1258,44 +1253,61 @@ struct CompanionPicker: View {
                 )
             }
             if category != .yours && !visible.isEmpty && showingGrid {
+                // Specials are grouped under a small header per series; All stays one grid.
+                let groups: [(title: String?, animals: [StockCompanion])] = category == .limited
+                    ? SpecialSeries.allCases.map { series -> (title: String?, animals: [StockCompanion]) in (series.name, visible.filter { $0.series == series }) }.filter { !$0.animals.isEmpty }
+                    : [(nil, visible)]
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
-                    ForEach(visible) { animal in
-                        let edition = status(animal)
-                        Button {
-                            draft = animal
-                            pickingCustom = false
-                            error = ""
-                        } label: {
-                            VStack(spacing: 3) {
-                                Image(animal.image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 104)
-                                    .clipped()
-                                Text(animal.name)
-                                    .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
-                                    .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
-                                    .lineLimit(2, reservesSpace: true)
-                                    .minimumScaleFactor(0.8)
-                                // Every tile reserves the status line so limited and regular animals stay the same size.
-                                Text(specialLabel(animal) ?? " ")
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                                    .accessibilityHidden(!animal.isLimited)
+                    ForEach(groups, id: \.animals) { group in
+                        Section {
+                            ForEach(group.animals) { animal in
+                                let edition = status(animal)
+                                Button {
+                                    draft = animal
+                                    pickingCustom = false
+                                    error = ""
+                                } label: {
+                                    VStack(spacing: 3) {
+                                        Image(animal.image)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 104)
+                                            .clipped()
+                                        Text(animal.name)
+                                            .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
+                                            .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
+                                            .lineLimit(2, reservesSpace: true)
+                                            .minimumScaleFactor(0.8)
+                                        // Every tile reserves the status line so limited and regular animals stay the same size.
+                                        Text(specialLabel(animal) ?? " ")
+                                            .ffType(.caption)
+                                            .foregroundStyle(theme.textSecondary)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.7)
+                                            .accessibilityHidden(!animal.isLimited)
+                                    }
+                                    .padding(8)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                    .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
+                                                in: RoundedRectangle(cornerRadius: theme.radius.card))
+                                    .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                                    .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                                }
+                                .buttonStyle(FFHapticPlainStyle())
+                                .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
+                                .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
                             }
-                            .padding(8)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                            .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
-                                        in: RoundedRectangle(cornerRadius: theme.radius.card))
-                            .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
-                            .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                        } header: {
+                            if let title = group.title {
+                                Text(title)
+                                    .ffType(.label)
+                                    .foregroundStyle(theme.textSecondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 4)
+                                    .accessibilityAddTraits(.isHeader)
+                            }
                         }
-                        .buttonStyle(FFHapticPlainStyle())
-                        .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
-                        .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
                     }
                 }
             }

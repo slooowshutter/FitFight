@@ -29,7 +29,7 @@ for (const [path, handler] of [
 test("checkout cannot supply an owner, environment, price or entitlement", () => {
     const input = {
         action: "reserve",
-        companion_id: "limited-pangolin",
+        companion_id: "limited-black-panther",
         attempt_id: "6283b4c1-0e8f-4caa-b04b-827b6f1e925b",
     };
     assert.equal(specialCheckoutRequestSchema.safeParse(input).success, true);
@@ -51,6 +51,22 @@ test("checkout cannot supply an owner, environment, price or entitlement", () =>
             companion_id: "fox",
         }).success,
         false,
+    );
+    assert.equal(
+        specialCheckoutRequestSchema.safeParse({
+            ...input,
+            companion_id: "limited-pangolin",
+        }).success,
+        false,
+        "A retired Special can no longer be reserved",
+    );
+    assert.equal(
+        specialCheckoutRequestSchema.safeParse({
+            ...input,
+            action: "cancel",
+            companion_id: "limited-pangolin",
+        }).success,
+        true,
     );
     assert.equal(
         specialClaimRequestSchema.safeParse({

@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PostHog
 import StoreKit
 
 struct CustomCharacterStoreSnapshot: Decodable {
@@ -132,6 +133,7 @@ final class CustomCharacterPurchases: ObservableObject {
             switch result {
             case .success(let verified):
                 _ = try await deliver(verified, session: session)
+                PostHogSDK.shared.capture("purchase_completed", properties: ["product": "custom_character"])
             case .userCancelled:
                 UserDefaults.standard.removeObject(forKey: draftKey(userID))
                 UserDefaults.standard.removeObject(forKey: pendingKey(userID))

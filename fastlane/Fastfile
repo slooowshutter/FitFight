@@ -260,6 +260,21 @@ def available_app_releases(app, registered, previous)
     manifest
 end
 
+def upload_dsyms_to_posthog(version, build_number)
+    if ENV.fetch("POSTHOG_CLI_API_KEY", "").empty?
+        UI.important("POSTHOG_CLI_API_KEY is not set; crash stack traces stay unreadable")
+        return
+    end
+    dsyms = File.join(Actions.lane_context[SharedValues::XCODEBUILD_ARCHIVE], "dSYMs")
+    # ponytail: a failed symbol upload must not block shipping the build.
+    system(
+        "npx", "--yes", "@posthog/cli@0.18.10", "dsym", "upload",
+        "--directory", dsyms, "--main-dsym", "#{SCHEME}.app.dSYM",
+        "--release-name", BUNDLE_ID, "--release-version", version, "--build", build_number.to_s,
+        "--skip-on-conflict"
+    ) || UI.important("PostHog dSYM upload failed; crash stack traces for #{version} (#{build_number}) stay unreadable")
+end
+
 def verify_healthkit_background_delivery(ipa_path)
     UI.user_error!("Signed IPA path is unavailable") if ipa_path.nil?
     Dir.mktmpdir("fitfight-ipa") do |directory|
@@ -386,6 +401,7 @@ platform :ios do
         verify_healthkit_background_delivery(
             Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
         )
+        upload_dsyms_to_posthog(version, build_number)
 
         upload_to_testflight(
             api_key: api_key,
@@ -466,6 +482,7 @@ platform :ios do
         ipa_path = Actions.lane_context[SharedValues::IPA_OUTPUT_PATH]
         verify_healthkit_background_delivery(ipa_path)
         verify_production_configuration(ipa_path)
+        upload_dsyms_to_posthog(version, build_number)
 
         upload_to_app_store(
             api_key: api_key,

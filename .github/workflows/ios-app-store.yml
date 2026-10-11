@@ -186,6 +186,8 @@ jobs:
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
                   APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+                  POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+                  POSTHOG_CLI_PROJECT_ID: "658541"
               run: bundle exec fastlane app_store_candidate
 
             - name: Register production candidate and refresh available releases

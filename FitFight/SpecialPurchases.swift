@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PostHog
 import StoreKit
 import UIKit
 
@@ -164,6 +165,7 @@ final class SpecialPurchases: ObservableObject {
             switch result {
             case .success(let verification):
                 let claim = try await deliver(verification, session: session)
+                PostHogSDK.shared.capture("purchase_completed", properties: ["product": "special"])
                 try await refresh(session: session)
                 return claim?.outcome == .owned || self.snapshot?.editions.first(where: { $0.id == animal.rawValue })?.status == .yours
             case .userCancelled:

@@ -1652,8 +1652,11 @@ function definitions(
             };
         }
         case "social": {
-            const posts = sql`select author_id as user_id, created_at as at from public.fight_posts`;
+            // App-wide announcements come from the admin, not from people; comments and reactions on them count.
+            const posts = sql`select author_id as user_id, created_at as at from public.fight_posts where not app_wide`;
             const comments = sql`select author_id as user_id, created_at as at from public.fight_post_comments`;
+            // NOTE: a changed emoji resets created_at, and un-reacting deletes the row, so a reaction
+            // is dated by its latest emoji. No column keeps the first one.
             const reactions = sql`select user_id, created_at as at, emoji from public.fight_post_reactions`;
             const friendships = sql`
                 select requester_id as user_id, accepted_at as at from private.profile_friendships
@@ -1662,12 +1665,20 @@ function definitions(
             const weekly = "Last 7 days vs the 7 before.";
             return {
                 cards: [
-                    { id: "posts", title: "Weekly posts", unit: "count", better: true, note: weekly, query: eventCard(sql, w, 7, posts, count) },
+                    {
+                        id: "posts", title: "Weekly posts", unit: "count", better: true,
+                        note: "Posts on the Feed and in Fights, not app-wide announcements. Last 7 days vs the 7 before.",
+                        query: eventCard(sql, w, 7, posts, count),
+                    },
                     { id: "comments", title: "Weekly comments", unit: "count", better: true, note: weekly, query: eventCard(sql, w, 7, comments, count) },
-                    { id: "reactions", title: "Weekly reactions", unit: "count", better: true, note: weekly, query: eventCard(sql, w, 7, reactions, count) },
+                    {
+                        id: "reactions", title: "Weekly reactions", unit: "count", better: true,
+                        note: "Reactions that still exist, dated by their latest emoji. Last 7 days vs the 7 before.",
+                        query: eventCard(sql, w, 7, reactions, count),
+                    },
                     {
                         id: "posters", title: "Weekly people posting", unit: "count", better: true,
-                        note: "Wrote a post or a comment in the last 7 days, vs the 7 before.",
+                        note: "Wrote a post or a comment in the last 7 days, vs the 7 before. App-wide announcements are not counted.",
                         query: eventCard(sql, w, 7, sql`${posts} union all ${comments}`, people),
                     },
                     {
@@ -1679,18 +1690,26 @@ function definitions(
                         query: eventCard(sql, w, 7, sql`select user_id, created_at as at from public.feedback_votes`, count),
                     },
                     {
-                        id: "friendships", title: "Weekly new friendships", unit: "count", better: true, note: weekly,
+                        id: "friendships", title: "Weekly new friendships", unit: "count", better: true,
+                        note: "Accepted friend requests that still exist. Last 7 days vs the 7 before.",
                         query: eventCard(sql, w, 7, friendships, count),
                     },
                     {
-                        id: "reports", title: "Weekly post reports", unit: "count", better: false, note: weekly,
-                        query: eventCard(sql, w, 7, sql`select reporter_id as user_id, created_at as at from private.fight_post_reports`, count),
+                        // NOTE: a repeat report of the same profile moves its created_at to the repeat.
+                        id: "reports", title: "Weekly reports", unit: "count", better: false,
+                        note: "Reports of posts, comments, feedback and profiles. Deleting a post or comment deletes its reports. Last 7 days vs the 7 before.",
+                        query: eventCard(sql, w, 7, sql`
+                            select reporter_id as user_id, created_at as at from private.fight_post_reports
+                            union all select reporter_id, created_at from private.fight_post_comment_reports
+                            union all select reporter_id, created_at from private.feedback_post_reports
+                            union all select reporter_id, created_at from private.profile_reports
+                        `, count),
                     },
                 ],
                 charts: [
                     {
                         id: "social_activity", title: `Posts, comments and reactions ${per}`, kind: "line", unit: "count", x: "date",
-                        definition: `Posts, comments and reactions in Fight feeds, in each ${w.bucket}.`,
+                        definition: `Posts on the Feed and in Fights, with their comments and reactions, in each ${w.bucket}. App-wide announcements are not counted, but comments and reactions on them are. Only what still exists counts, and a changed emoji counts on the day of the change.`,
                         example: (r) => {
                             const posts = r.at("Posts");
                             const comments = r.at("Comments");
@@ -1706,7 +1725,7 @@ function definitions(
                     },
                     {
                         id: "friendships_per_bucket", title: `New friendships ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Friend requests that were accepted, in each ${w.bucket}.`,
+                        definition: `Friend requests that were accepted, in each ${w.bucket}. A removed or blocked friendship leaves the count.`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `${r.count(n, "new friendship", "new friendships")} started ${r.when}.`;
@@ -1729,7 +1748,7 @@ function definitions(
                     },
                     {
                         id: "top_emojis", title: "Top reactions, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "The most used reactions in the last 30 days.",
+                        definition: "The most used reactions in the last 30 days. Only reactions that still exist, by their current emoji, dated by its last change.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} is the most used reaction: ${r.count(r.top.y, "time", "times")} in 30 days.` : null),
                         query: sql`
                             select emoji as x, count(*)::float8 as y from (${reactions}) as r
@@ -1738,7 +1757,7 @@ function definitions(
                     },
                     {
                         id: "top_posters", title: "Most posts and comments, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "People with the most posts and comments in the last 30 days.",
+                        definition: "People with the most posts and comments in the last 30 days. App-wide announcements are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} wrote ${r.count(r.top.y, "post or comment", "posts and comments")} in the last 30 days.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
@@ -1748,38 +1767,77 @@ function definitions(
                         `,
                     },
                     {
-                        id: "top_feedback", title: "Most voted open bugs and requests", kind: "bar", unit: "count", x: "label",
-                        definition: "Open bugs and requests with the most votes.",
+                        id: "top_feedback", title: "Most voted open bugs and requests, now", kind: "bar", unit: "count", x: "label",
+                        definition: "Bugs and requests that are not archived now, with the most votes. Every vote so far counts.",
                         example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" has the most votes: ${r.format(r.top.y)}.` : null),
                         query: sql`
-                            select left(post.title, 40) as x, count(vote.user_id)::float8 as y
+                            select case post.kind when 'bug' then 'Bug: ' else 'Request: ' end || left(post.title, 36) as x,
+                                count(vote.user_id)::float8 as y
                             from public.feedback_posts as post
                             left join public.feedback_votes as vote on vote.post_id = post.id
-                            where not post.archived group by post.id, post.title order by 2 desc, 1 limit 10
+                            where not post.archived group by post.id, post.kind, post.title order by 2 desc, 1 limit 10
                         `,
                     },
                     {
                         id: "posts_by_fight", title: "Fights with the most posts, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "Fights with the most posts in their feed, all time.",
+                        definition: "Fights with the most posts in their feed, all time. All rounds of a repeating Fight count together, and a post shared to several Fights counts in each. The join code follows the name, because names repeat. App-wide and suggested Fights count too.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has ${r.count(r.top.y, "post", "posts")}.` : null),
+                        // The feed of a round shows the posts of every round of its series; a post's
+                        // fight_id keeps only the first Fight it was shared to, the channels keep all.
                         query: sql`
-                            select left(f.name, 40) as x, count(*)::float8 as y
-                            from public.fight_posts as post join public.fights as f on f.id = post.fight_id
-                            group by f.id, f.name order by 2 desc, 1 limit 10
+                            select left(coalesce(series.name, f.name), 32) || coalesce(' (' || series.join_code || ')', '') as x,
+                                count(distinct channel.post_id)::float8 as y
+                            from public.fight_post_channels as channel
+                            join public.fights as f on f.id = channel.fight_id
+                            left join public.fight_series as series on series.id = f.series_id
+                            group by coalesce(f.series_id, f.id), 1 order by 2 desc, 1 limit 10
                         `,
                     },
                 ],
             };
         }
         case "app": {
-            const attempts = sql`
-                select user_id, started_at as at, trigger, outcome, error_code, total_ms, app_version, app_build
-                from private.healthkit_sync_attempts
+            // Cards read 14 days and charts over time their period, so older rows are skipped in WHERE.
+            const floor = sql`least(${w.start}::date::timestamp at time zone 'Europe/Paris', ${ago(14)}::timestamptz)`;
+            // NOTE: each report is one trace, and most traces are not syncs: the Fights refresh after a
+            // background sync or an action, the upload of other activity, and each extra Apple Health
+            // wake that joins a running sync send their own trace. A steps sync ran when the trace has
+            // its first stage (local_state, since 6 Sep 2026) or a steps upload; a locked phone stops it
+            // before that stage. It saved the steps when an upload succeeded, whatever the Fights
+            // refresh or the activity wait did after it, and attempt_expired always means cancelled.
+            const syncs = sql`
+                select a.user_id, a.started_at as at, a.trigger, a.error_code, a.stages,
+                    case when a.stages @> '[{"stage": "upload", "outcome": "succeeded"}]' then 'Succeeded'
+                        when a.outcome = 'cancelled' or a.error_code = 'attempt_expired' then 'Cancelled'
+                        else 'Failed' end as result
+                from private.healthkit_sync_attempts as a
+                where a.started_at >= greatest(${historyStart}, ${floor})
+                    and (a.stages @> '[{"stage": "local_state"}]' or a.stages @> '[{"stage": "upload"}]'
+                        or a.error_code = 'protected_data_unavailable')
             `;
-            const errors = sql`select user_id, created_at as at, path, status from private.server_error_logs`;
+            // From the first stage of the steps sync to the end of the upload that saved them, so a wait
+            // for a running sync, the Fights refresh and the upload of other activity are left out.
+            const syncTimes = sql`
+                select s.at, (
+                    select (min((stage ->> 'started_ms')::float8 + (stage ->> 'duration_ms')::float8)
+                            filter (where stage ->> 'stage' = 'upload' and stage ->> 'outcome' = 'succeeded')
+                        - coalesce(min((stage ->> 'started_ms')::float8) filter (where stage ->> 'stage' = 'local_state'), 0)
+                    ) / 1000
+                    from jsonb_array_elements(s.stages) as stage
+                ) as seconds
+                from (${syncs}) as s where s.result = 'Succeeded'
+            `;
+            // Any report shows the build a person runs, sync or not.
+            const reports = sql`
+                select user_id, started_at as at, app_version, app_build from private.healthkit_sync_attempts
+                where started_at >= ${ago(7)} and started_at < ${w.now}
+            `;
+            const errors = sql`
+                select user_id, created_at as at, action, status from private.server_error_logs where created_at >= ${floor}
+            `;
             const sent = sql`
                 select user_id, coalesce(processed_at, created_at) as at, kind
-                from private.notification_intents where status = 'sent'
+                from private.notification_intents where status = 'sent' and coalesce(processed_at, created_at) >= ${floor}
             `;
             return {
                 cards: [
@@ -1797,27 +1855,38 @@ function definitions(
                     },
                     {
                         id: "sync_success", title: "Weekly sync success", unit: "percent", better: true,
-                        note: "Share of syncs that succeeded, last 7 days vs the 7 before.",
-                        query: eventCard(sql, w, 7, attempts, sql`avg(case when e.outcome = 'succeeded' then 100.0 else 0 end)`),
+                        note: `Share of Apple Health steps syncs that saved the steps, last 7 days vs the 7 before. Refreshes and other reports that are not syncs are left out.${historyNote(14)}`,
+                        query: eventCard(sql, w, 7, syncs, sql`avg(case when e.result = 'Succeeded' then 100.0 else 0 end)`, historyStart),
                     },
                     {
                         id: "background_syncs", title: "Weekly background syncs", unit: "count", better: true,
-                        note: "Syncs Apple Health started without an open. Last 7 days vs the 7 before.",
-                        query: eventCard(sql, w, 7, sql`select * from (${attempts}) as a where a.trigger = 'observer'`, count),
+                        note: `Steps syncs that Apple Health started, not an open. Last 7 days vs the 7 before.${historyNote(14)}`,
+                        query: eventCard(sql, w, 7, sql`select * from (${syncs}) as s where s.trigger = 'observer'`, count, historyStart),
                     },
                     {
                         id: "sync_time", title: "Weekly median sync time", unit: "seconds", better: false,
-                        note: "Last 7 days vs the 7 before.",
-                        query: eventCard(sql, w, 7, attempts, sql`percentile_cont(0.5) within group (order by e.total_ms / 1000.0)`),
+                        note: `Syncs that saved steps, from the start of the steps sync until the server saved them. Last 7 days vs the 7 before.${historyNote(14)}`,
+                        query: eventCard(sql, w, 7, syncTimes, sql`percentile_cont(0.5) within group (order by e.seconds)`, historyStart),
                     },
                     {
-                        id: "push_share", title: "Push notifications on", unit: "percent", better: true,
-                        note: "Share of users with an authorized device, now.",
+                        // NOTE: the app registers a phone only once push is allowed, always as authorized, and
+                        // never reports a later change in iOS Settings. Sign-out, a move to the other server
+                        // and Apple's refusal of the token (mostly a deleted app) revoke the row.
+                        id: "push_share", title: "Registered for push", unit: "percent", better: true,
+                        note: "Share of users with a phone that allowed push and is still registered, now vs 7 days ago. Push turned off later in iOS Settings still counts.",
                         query: sql`
-                            select 100.0 * (select count(distinct user_id) from private.device_installations
-                                    where revoked_at is null and permission_status in ('authorized', 'provisional', 'ephemeral'))
-                                    / nullif((select count(*) from public.profiles where deleted_at is null), 0) as value,
-                                null::float8 as previous
+                            select 100.0 * count(device.user_id) filter (where device.active) / nullif(count(*), 0) as value,
+                                100.0 * count(device.user_id) filter (where device.active_before and p.created_at < ${ago(7)})
+                                    / nullif(count(*) filter (where p.created_at < ${ago(7)}), 0) as previous
+                            from public.profiles as p
+                            left join (
+                                select user_id, bool_or(revoked_at is null) as active,
+                                    bool_or(created_at < ${ago(7)} and (revoked_at is null or revoked_at >= ${ago(7)})) as active_before
+                                from private.device_installations
+                                where permission_status in ('authorized', 'provisional', 'ephemeral')
+                                group by user_id
+                            ) as device on device.user_id = p.user_id
+                            where p.deleted_at is null
                         `,
                     },
                     {
@@ -1836,7 +1905,7 @@ function definitions(
                         query: sql`
                             with latest as (
                                 select distinct on (user_id) user_id, app_build
-                                from (${attempts}) as a where a.at >= ${ago(7)} and a.at < ${w.now}
+                                from (${reports}) as a
                                 order by user_id, a.at desc
                             ), newest as (
                                 select max(app_build::bigint) as build from latest where app_build ~ '^[0-9]+$'
@@ -1848,66 +1917,66 @@ function definitions(
                         `,
                     },
                     {
+                        // NOTE: one diagnostics row per person keeps their last report forever, and any failed
+                        // trace, a Fights refresh too, leaves an error that only a later steps sync clears.
                         id: "sync_issue_users", title: "Sync errors now", unit: "count", better: false,
-                        note: "People whose latest sync report has an error.",
+                        note: "People with Apple Health who sent a report in the last 7 days and whose latest report has an error.",
                         query: sql`
                             select count(*)::float8 as value, null::float8 as previous
-                            from private.healthkit_sync_diagnostics where error_code is not null
+                            from private.healthkit_sync_diagnostics as d
+                            join (${healthUsers}) as health on health.user_id = d.user_id
+                            join public.profiles as p on p.user_id = d.user_id and p.deleted_at is null
+                            where d.error_code is not null and d.updated_at >= ${ago(7)}
                         `,
                     },
                 ],
                 charts: [
                     {
                         id: "sync_outcomes", title: `Sync outcomes ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Apple Health syncs in each ${w.bucket}, by result.`,
+                        definition: `Apple Health steps syncs in each ${w.bucket}, by result. Succeeded: the server saved the steps. Cancelled: the app stopped the sync, mostly at the 25-second limit of a background wake. Refreshes and other reports that are not syncs are left out.`,
                         example: (r) => {
                             const ok = r.at("Succeeded") ?? 0;
                             const all = ok + (r.at("Failed") ?? 0) + (r.at("Cancelled") ?? 0);
                             const part = r.share(ok, all);
                             return part ? `${part} of syncs succeeded ${r.when}: ${r.format(ok)} of ${r.format(all)}.` : null;
                         },
-                        query: perBucket(sql, w, sql`select at, initcap(outcome) as series from (${attempts}) as a`, count, {
-                            gaps: true, series: ["Succeeded", "Failed", "Cancelled"],
+                        query: perBucket(sql, w, sql`select at, result as series from (${syncs}) as s`, count, {
+                            gaps: true, series: ["Succeeded", "Failed", "Cancelled"], since: w.activityFrom,
                         }),
                     },
                     {
                         id: "sync_triggers", title: `Syncs by trigger ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: "Why each sync ran: Apple Health woke the app in the background, the app opened, or someone pulled to refresh.",
+                        definition: `What started each steps sync in each ${w.bucket}: Apple Health woke the app with new data, the app opened or came back, or the person refreshed, connected Apple Health, or created or joined a Fight in the app.`,
                         example: (r) => {
                             const background = r.at("Background") ?? 0;
-                            const all = background + (r.at("App opened") ?? 0) + (r.at("Pull to refresh") ?? 0);
+                            const all = background + (r.at("App opened") ?? 0) + (r.at("In the app") ?? 0);
                             const part = r.share(background, all);
                             return part ? `${part} of syncs ran in the background ${r.when}: ${r.format(background)} of ${r.format(all)}.` : null;
                         },
                         query: perBucket(sql, w, sql`
                             select at, case trigger when 'foreground' then 'App opened' when 'observer' then 'Background'
-                                else 'Pull to refresh' end as series
-                            from (${attempts}) as a
-                        `, count, { gaps: true, series: ["Background", "App opened", "Pull to refresh"] }),
+                                else 'In the app' end as series
+                            from (${syncs}) as s
+                        `, count, { gaps: true, series: ["Background", "App opened", "In the app"], since: w.activityFrom }),
                     },
                     {
                         id: "sync_durations", title: "Sync time: P50 and P90", kind: "line", unit: "seconds", x: "date",
-                        definition: "How long a sync takes. P50 is the typical sync; only 10% take longer than P90.",
+                        definition: "How long a steps sync takes, from its start until the server saved the steps. Only syncs that saved steps. P50 is the typical sync; only 10% take longer than P90.",
                         example: (r) => {
                             const typical = r.at("P50");
                             const slow = r.at("P90");
                             return typical === undefined || slow === undefined ? null
                                 : `A typical sync took ${r.format(typical)} ${r.when}, and 10% took ${r.format(slow)} or more.`;
                         },
-                        note: `Across each ${w.bucket}'s syncs.`,
-                        query: sql`
-                            with bucketed as (
-                                select date_trunc(${w.bucket}::text, (at at time zone 'Europe/Paris')::date::timestamp)::date as bucket,
-                                    percentile_cont(0.5) within group (order by total_ms / 1000.0) as p50,
-                                    percentile_cont(0.9) within group (order by total_ms / 1000.0) as p90
-                                from (${attempts}) as a
-                                where (a.at at time zone 'Europe/Paris')::date >= ${w.start}::date group by 1
-                            )
-                            select bucketed.bucket::text as x, value.y::float8 as y, value.series
-                            from bucketed cross join lateral (values (1, 'P50', bucketed.p50), (2, 'P90', bucketed.p90))
-                                as value(position, series, y)
-                            order by value.position, bucketed.bucket
-                        `,
+                        note: `Across each ${w.bucket}'s syncs that saved steps.`,
+                        // Each sync is one row of each line, so the line picks the percentile.
+                        query: perBucket(sql, w, sql`
+                            with timed as (${syncTimes})
+                            select at, seconds, 'P50' as series from timed
+                            union all select at, seconds, 'P90' from timed
+                        `, sql`percentile_cont(case when e.series = 'P50' then 0.5 else 0.9 end) within group (order by e.seconds)`, {
+                            gaps: true, series: ["P50", "P90"], since: w.activityFrom,
+                        }),
                     },
                     {
                         id: "errors_per_bucket", title: `Server errors ${per}`, kind: "bar", unit: "count", x: "date",
@@ -1935,28 +2004,30 @@ function definitions(
                         query: sql`
                             select version as x, count(*)::float8 as y from (
                                 select distinct on (user_id) user_id, app_version || ' (' || app_build || ')' as version
-                                from (${attempts}) as a where a.at >= ${ago(7)} and a.at < ${w.now}
+                                from (${reports}) as a
                                 order by user_id, a.at desc
                             ) as latest group by 1 order by 2 desc, 1 limit 12
                         `,
                     },
                     {
-                        id: "sync_error_codes", title: "Sync errors by code, last 7 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Failed syncs in the last 7 days, by error.",
-                        example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common sync error: ${r.count(r.top.y, "time", "times")} in 7 days.` : null),
+                        id: "sync_error_codes", title: "Sync problems by reason, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "Steps syncs in the last 7 days that did not save the steps: failed ones by their error, and cancelled ones in one bar. Together they make the Failed and Cancelled bars of Sync outcomes.",
+                        example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common sync problem: ${r.count(r.top.y, "time", "times")} in 7 days.` : null),
                         query: sql`
-                            select replace(error_code, '_', ' ') as x, count(*)::float8 as y
-                            from (${attempts}) as a
-                            where a.error_code is not null and a.at >= ${ago(7)} and a.at < ${w.now}
-                            group by 1 order by 2 desc
+                            select case when s.result = 'Cancelled' then 'cancelled'
+                                    else coalesce(replace(s.error_code, '_', ' '), 'no code') end as x,
+                                count(*)::float8 as y
+                            from (${syncs}) as s
+                            where s.result <> 'Succeeded' and s.at >= ${ago(7)} and s.at < ${w.now}
+                            group by 1 order by 2 desc, 1
                         `,
                     },
                     {
                         id: "errors_by_path", title: "Server errors by route, last 7 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Server errors in the last 7 days, by API route.",
+                        definition: "Server errors in the last 7 days, by API method and route. IDs in a path count as one route.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} failed the most: ${r.count(r.top.y, "error", "errors")} in 7 days.` : null),
                         query: sql`
-                            select left(path, 48) as x, count(*)::float8 as y from (${errors}) as e
+                            select left(action, 64) as x, count(*)::float8 as y from (${errors}) as e
                             where e.at >= ${ago(7)} and e.at < ${w.now} group by 1 order by 2 desc, 1 limit 10
                         `,
                     },
@@ -1972,10 +2043,13 @@ function definitions(
                     },
                     {
                         id: "notification_outcomes", title: "Notification outcomes, last 7 days", kind: "bar", unit: "count", x: "label",
-                        definition: "What happened to each notification in the last 7 days: sent, or skipped and why.",
+                        definition: "What happened to each notification in the last 7 days: sent, merged into the evening summary, or skipped and why. New-post and reaction alerts wait for one evening summary, which counts once as sent.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "notification", "notifications")}, ${r.top.share} of all.` : null),
+                        // A merged alert is marked skipped as superseded, like a real supersession; its digest_id tells them apart.
                         query: sql`
-                            select initcap(status) || coalesce(': ' || replace(skip_reason, '_', ' '), '') as x, count(*)::float8 as y
+                            select case when digest_id is not null then 'Merged into evening summary'
+                                    else initcap(status) || coalesce(': ' || replace(skip_reason, '_', ' '), '') end as x,
+                                count(*)::float8 as y
                             from private.notification_intents
                             where created_at >= ${ago(7)} and created_at < ${w.now}
                             group by 1 order by 2 desc limit 12
@@ -1994,45 +2068,66 @@ function definitions(
                         `,
                     },
                     {
-                        id: "push_permissions", title: "Push permission on devices, now", kind: "bar", unit: "count", x: "label",
-                        definition: "Devices by notification permission, now.",
-                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "device", "devices")}, ${r.top.share} of all.` : null),
+                        id: "push_registrations", title: "Phones registered for push, by state now", kind: "bar", unit: "count", x: "label",
+                        definition: "Every phone that allowed push and sent its token, by its state now. Refused by Apple: Apple said the token no longer works, mostly because the app was deleted. The app does not report push turned off later in iOS Settings.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "phone", "phones")}, ${r.top.share} of all.` : null),
                         query: sql`
-                            select initcap(replace(coalesce(permission_status, 'unknown'), '_', ' ')) as x, count(*)::float8 as y
-                            from private.device_installations where revoked_at is null group by 1 order by 2 desc
+                            select case when revoked_at is null then 'Registered'
+                                    when revoke_reason = 'signed_out' then 'Signed out'
+                                    when revoke_reason = 'other_environment' then 'Moved to the other server'
+                                    when revoke_reason = 'decrypt_failed' then 'Unreadable token'
+                                    else 'Refused by Apple' end as x,
+                                count(*)::float8 as y
+                            from private.device_installations
+                            where permission_status in ('authorized', 'provisional', 'ephemeral')
+                            group by 1 order by 2 desc, 1
                         `,
                     },
                     {
-                        id: "background_refresh", title: "Background App Refresh, now", kind: "bar", unit: "count", x: "label",
-                        definition: "Phones by their Background App Refresh setting, which background syncs need.",
-                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "phone", "phones")}, ${r.top.share} of all.` : null),
+                        id: "background_refresh", title: "Background App Refresh, last 7 days", kind: "bar", unit: "count", x: "label",
+                        definition: "People with Apple Health who sent a report in the last 7 days, by the Background App Refresh setting on their latest report. Background syncs need it.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "person", "people")}, ${r.top.share} of them.` : null),
                         query: sql`
-                            select initcap(coalesce(background_refresh_status, 'unknown')) as x, count(*)::float8 as y
-                            from private.healthkit_sync_diagnostics group by 1 order by 2 desc
+                            select initcap(d.background_refresh_status) as x, count(*)::float8 as y
+                            from private.healthkit_sync_diagnostics as d
+                            join (${healthUsers}) as health on health.user_id = d.user_id
+                            join public.profiles as p on p.user_id = d.user_id and p.deleted_at is null
+                            where d.updated_at >= ${ago(7)}
+                            group by 1 order by 2 desc, 1
                         `,
                     },
                     {
                         id: "last_sync_age", title: "Time since last Apple Health sync, now", kind: "bar", unit: "count", x: "label",
-                        definition: "Apple Health connections by the time since their last successful sync, now.",
+                        definition: "People whose phone sent Apple Health steps, by the time since the server last saved steps from their phone, now. Every sync saves today's steps.",
                         example: (r) => {
                             const recent = (r.row("Under 1 hour") ?? 0) + (r.row("1-6 hours") ?? 0);
                             const part = r.share(recent, r.total);
                             return part
-                                ? `${part} of Apple Health connections synced in the last 6 hours: ${r.format(recent)} of ${r.format(r.total)}.`
+                                ? `${part} of people with Apple Health synced steps in the last 6 hours: ${r.format(recent)} of ${r.format(r.total)}.`
                                 : null;
                         },
+                        // NOTE: data_sources.last_success_at moves on every Fight create, join or accept, sync or not.
+                        // A day row changes on each sync (its observed_through and input move), so its
+                        // updated_at is the last saved sync; the 23 Sep copies of legacy days keep their own.
                         query: sql`
                             with ages as (
-                                select extract(epoch from (${w.now} - max(last_success_at))) / 3600 as hours
-                                from public.data_sources where provider = 'apple_health' and revoked_at is null
-                                group by user_id
+                                select greatest(0, extract(epoch from (${w.now} - max(saved.updated_at))) / 3600) as hours
+                                from (
+                                    select metric.user_id, metric.updated_at from private.activity_metrics as metric
+                                    join public.data_sources as source on source.id = metric.source_id
+                                    where metric.scope = 'day' and metric.metric = 'steps' and source.provider = 'apple_health'
+                                    union all
+                                    select legacy.user_id, legacy.updated_at from public.metric_days as legacy
+                                    join public.data_sources as source on source.id = legacy.source_id
+                                    where legacy.metric = 'steps' and source.provider = 'apple_health'
+                                ) as saved
+                                join public.profiles as p on p.user_id = saved.user_id and p.deleted_at is null
+                                group by saved.user_id
                             )
-                            select band.x, (case when band.position = 7 then (select count(*) from ages where hours is null)
-                                else (select count(*) from ages where hours >= band.low and hours < band.high) end)::float8 as y
+                            select band.x, (select count(*) from ages where hours >= band.low and hours < band.high)::float8 as y
                             from (values
                                 (1, 'Under 1 hour', 0, 1), (2, '1-6 hours', 1, 6), (3, '6-24 hours', 6, 24),
-                                (4, '1-3 days', 24, 72), (5, '3-7 days', 72, 168), (6, 'Over a week', 168, 10000000),
-                                (7, 'Never', 0, 0)
+                                (4, '1-3 days', 24, 72), (5, '3-7 days', 72, 168), (6, 'Over a week', 168, 10000000)
                             ) as band(position, x, low, high) order by band.position
                         `,
                     },

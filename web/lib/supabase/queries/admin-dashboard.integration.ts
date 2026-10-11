@@ -140,4 +140,43 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     const joinedBefore = await joinedFight();
     await database`update public.fights set state = 'cancelled' where id = ${fightId}`;
     assert.equal(await joinedFight(), joinedBefore - 1, "A member of a cancelled fight has not joined a fight");
+
+    // A sync is a trace that ran the steps sync. An Apple Health wake that joins a running sync, the
+    // upload of other activity and a Fights refresh send their own traces and are not syncs. A sync
+    // that saved the steps before the watchdog cut the wait for other activity succeeded.
+    const syncTiles = async () => {
+        const app = await readAdminDashboard("app", 30, "staging", database);
+        const problems = app.charts.find((chart) => chart.id === "sync_error_codes")?.series[0]?.points ?? [];
+        return {
+            background: app.cards.find((card) => card.id === "background_syncs")?.value ?? 0,
+            cancelled: problems.find((point) => point.x === "cancelled")?.y ?? 0,
+            offline: problems.find((point) => point.x === "network unavailable")?.y ?? 0,
+        };
+    };
+    const syncsBefore = await syncTiles();
+    await database`
+        insert into private.healthkit_sync_attempts(user_id, attempt_id, trigger, started_at, outcome, error_code, total_ms,
+            stages, app_version, app_build)
+        select ${userId}, gen_random_uuid(), traced.trigger,
+            now() - make_interval(days => offset_days, hours => 5) + make_interval(secs => traced.seconds),
+            traced.outcome, traced.error_code, 25000, traced.stages::jsonb, '1.1.3', '220'
+        from generate_series(1, 6) as offset_days
+        cross join (values
+            ('observer', 0, 'succeeded', null, '[{"stage": "local_state", "started_ms": 5, "duration_ms": 2, "outcome": "succeeded"},
+                {"stage": "upload", "started_ms": 900, "duration_ms": 600, "outcome": "succeeded"}]'),
+            ('observer', 1, 'succeeded', null, '[]'),
+            ('observer', 2, 'succeeded', null, '[{"stage": "healthkit_activity", "started_ms": 0, "duration_ms": 900, "outcome": "succeeded"}]'),
+            ('foreground', 30, 'succeeded', null, '[{"stage": "session", "started_ms": 0, "duration_ms": 5, "outcome": "succeeded"},
+                {"stage": "fights_refresh", "started_ms": 5, "duration_ms": 400, "outcome": "succeeded"}]'),
+            ('observer', 600, 'cancelled', 'attempt_expired', '[{"stage": "local_state", "started_ms": 5, "duration_ms": 2, "outcome": "succeeded"},
+                {"stage": "upload", "started_ms": 900, "duration_ms": 600, "outcome": "succeeded"}]'),
+            ('observer', 1200, 'failed', 'network_unavailable', '[{"stage": "local_state", "started_ms": 5, "duration_ms": 2, "outcome": "succeeded"},
+                {"stage": "context", "started_ms": 10, "duration_ms": 8000, "outcome": "failed"}]')
+        ) as traced(trigger, seconds, outcome, error_code, stages)
+    `;
+    const syncsAfter = await syncTiles();
+    const addedSyncs = syncsAfter.background - syncsBefore.background;
+    assert.ok(Math.abs(addedSyncs - 18) <= 1, `Three background syncs on each of 6 days, got ${addedSyncs}`);
+    assert.ok(Math.abs(syncsAfter.offline - syncsBefore.offline - 6) <= 1, "Each failed sync counts under its error");
+    assert.ok(Math.abs(syncsAfter.cancelled - syncsBefore.cancelled) <= 1, "A sync that saved its steps is not a problem");
 });

@@ -7,9 +7,10 @@ function restoreEnv(name: string, previous: string | undefined) {
     else process.env[name] = previous;
 }
 
-test("recognizes the admin username and email", () => {
+test("recognizes the admin usernames and email", () => {
     assert.equal(isFitFightAdmin({ handle: "marc", emails: [] }), true);
     assert.equal(isFitFightAdmin({ handle: "MARC", emails: [] }), true);
+    assert.equal(isFitFightAdmin({ handle: "rad", emails: [] }), true);
     assert.equal(
         isFitFightAdmin({
             handle: "maya_moves",

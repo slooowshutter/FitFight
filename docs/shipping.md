@@ -166,8 +166,9 @@ Names only. Never print values. Never paste the PostHog project token in chat.
 | Secret                    | Used when                                     | What it is                                                   |
 | ------------------------- | --------------------------------------------- | ------------------------------------------------------------ |
 | `POSTHOG_PROJECT_API_KEY` | TestFlight (`preview`) and App Store archives | PostHog **project** API key (`phc_...`). Crashes, product analytics and session replay. |
+| `POSTHOG_CLI_API_KEY`     | TestFlight (`preview`) and App Store archives | PostHog **personal** API key, scopes `error tracking write` and `organization read`. Uploads dSYMs so crash stack traces are readable. Missing or failed upload warns and never blocks the build. |
 
-Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. In PostHog, turn on error-tracking exception autocapture and session replay (Settings, Session replay, Record user sessions).
+Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. PostHog lives in the FitFight org, project `FitFight iOS` (ID `658541`, also set as `POSTHOG_CLI_PROJECT_ID` in the workflows). Replay, error tracking and surveys are on there. Events carry `environment` (`staging` or `prod`); persons carry `username`.
 
 Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
 

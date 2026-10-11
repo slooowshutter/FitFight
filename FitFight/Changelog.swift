@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 11,
+            notes: "Profile → Settings now has Share usage analytics. It sends screens, taps and screen recordings with every text and image hidden, so we can find bugs. Turn it off any time. Crash reports are always sent."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 10,
             notes: "You can now change your companion from the levels drawer: tap it on Fights, then choose Change animal."
         ),

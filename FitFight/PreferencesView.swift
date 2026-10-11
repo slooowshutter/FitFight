@@ -10,6 +10,7 @@ struct PreferencesView: View {
     @State private var showingNotifications = false
     @State private var showingBeta = false
     @State private var distribution: AppDistribution?
+    @AppStorage(Analytics.enabledKey) private var analyticsEnabled = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -101,6 +102,17 @@ struct PreferencesView: View {
                     showingBeta = true
                 }
             }
+            FFSection(title: String(appLocalized: "Privacy")) {
+                FFGroupedRows {
+                    FFGroupedRow(title: String(appLocalized: "Share usage analytics"),
+                                 subtitle: String(appLocalized: "Screens, taps and screen recordings with all text and images hidden. Crash reports are always sent."),
+                                 subtitleTone: .neutral,
+                                 trailing: AnyView(Toggle(String(appLocalized: "Share usage analytics"), isOn: $analyticsEnabled)
+                                     .labelsHidden()
+                                     .tint(theme.mossText)))
+                }
+            }
+            .onChange(of: analyticsEnabled) { _, enabled in Analytics.setEnabled(enabled) }
             FFSection(title: String(appLocalized: "This installation")) {
                 FFGroupedRows {
                     FFGroupedRow(title: String(appLocalized: "Installed from"),

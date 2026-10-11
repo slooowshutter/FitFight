@@ -11663,6 +11663,36 @@
                 }
             }
         },
+        "Profile → Settings now has Share usage analytics. It sends screens, taps and screen recordings with every text and image hidden, so we can find bugs. Turn it off any time. Crash reports are always sent.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profil → Réglages propose maintenant Partager les statistiques d’usage. Cela envoie les écrans, les touchers et des enregistrements d’écran où tout texte et toute image sont masqués, pour nous aider à trouver les bugs. Désactivez-le à tout moment. Les rapports de plantage sont toujours envoyés."
+                    }
+                }
+            }
+        },
+        "Share usage analytics": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Partager les statistiques d’usage"
+                    }
+                }
+            }
+        },
+        "Screens, taps and screen recordings with all text and images hidden. Crash reports are always sent.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Écrans, touchers et enregistrements d’écran avec tout le texte et les images masqués. Les rapports de plantage sont toujours envoyés."
+                    }
+                }
+            }
+        },
         "Loading…": {
             "localizations": {
                 "fr": {

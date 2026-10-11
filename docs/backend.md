@@ -52,27 +52,36 @@ query only marks its own tile with `Query failed: ...`.
   `bucket` (the app's Day, Week or Month choice) overrides that bucket. Each metric
   is computed per bucket: counts add up, people count once per bucket, averages
   and shares use every person-day in it, and DAU is the daily average. Activity
-  charts start where sync history starts. Every other chart names its own span
-  ("last 30 days", "all time", "now").
+  tiles use sync history from its first complete day (`activityFrom`: 2 Oct 2026,
+  the first full day after production stopped deleting sync reports): a card
+  window that starts earlier has no number, and charts over time start there,
+  WAU 6 days and MAU 29 days later. Every other chart names its own span ("last
+  30 days", "all time", "now").
 - **Chart pages (10 Oct 2026):** every chart carries a `definition` (what it
   measures) and an `example` sentence that reads one current number off it: the
   newest complete day, week or month, or now for totals and states. Both are built
   on the server in English, so their wording changes need no app build.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
-  (manual refreshes also count as activity). A foreground trace within 60 seconds
-  after a background `observer` sync is the post-sync refresh, not an open. Sync
-  history is kept since 29 Sep (never-delete rule), so engagement history grows
-  from that date; earlier rows were pruned after 7 days.
+  (manual reports also count as activity). A report with a `today_total` stage
+  is a launch or a return from the background. Other foreground reports (the
+  Fights refresh after a background sync or an in-app action, the upload of
+  other activity) are not opens; a report without `today_total` or
+  `healthkit_activity` counts only when the person sent no report in the 10
+  minutes before it, because an open without Apple Health looks the same.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
-  day. "Health history" cards include imported days before signup.
+  day. A day is final only after the phone's first sync after its midnight, so
+  complete-day tiles end the day before yesterday. A fight day is a day that a
+  real Fight covers for 12 hours or more. "Health history" cards include imported
+  days before signup.
 - **Speed:** a tab's tiles take turns on the pool's connections (10 for the
   read-only production connection, 3 for the server's own database), and each
   note ends with that tile's own query time (`Took 1.2 s.`). The route reuses a
   running or under-5-minute-old result for the same environment, section and
   period on that server instance, so Refresh can show data up to 5 minutes old.
   A result with a failed tile is not reused.
-- **Retention:** follows people who connected Apple Health. Someone is retained in
+- **Retention:** follows people whose phone sent Apple Health steps (a
+  `data_sources` row is not proof: Fight actions create one). Someone is retained in
   a week (or 30-day month) counted from their own signup day when their phone
   synced steps that week: background syncs run without an open until the app is
   deleted or Health is turned off. A person counts for a week only once it has
@@ -81,7 +90,8 @@ query only marks its own tile with `Query failed: ...`.
   got past that week or month, against the span before. App opens are not used
   yet: the servers the app talks to still delete sync reports after 7 days, which
   would make week 1 look close to 0%.
-- **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
+- **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights (once
+  suggested, from the admin action, even after the suggestion is removed), whose
   invitations are automatic.
 - **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the
   admin email). The app always sends `X-FitFight-Auth-Project` with its own

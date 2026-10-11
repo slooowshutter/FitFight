@@ -140,13 +140,15 @@ export type AdminDashboardQueryFragment = PendingQuery<Row[]>;
 
 /**
  * Cards use fixed spans from `now` (rolling) or `today` (complete Paris days). Charts over time
- * cover Paris days from `start`, a bucket start, through today.
+ * cover Paris days from `start`, a bucket start, through today. `activityFrom` is the first Paris
+ * day of complete sync history: app opens before it were deleted.
  */
 export type AdminDashboardWindow = {
     now: Date;
     today: string;
     start: string;
     bucket: AdminDashboardBucket;
+    activityFrom: string;
 };
 
 export type AdminDashboardCardDefinition = {

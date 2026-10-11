@@ -94,4 +94,50 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     const weeks = weekly.charts.find((chart) => chart.id === "new_users_per_bucket")?.series[0]?.points ?? [];
     assert.ok(weeks.length >= 3 && weeks.every((point) => new Date(`${point.x}T00:00:00Z`).getUTCDay() === 1), "A chosen week bucket starts on Mondays");
     assert.equal((await readAdminDashboard("overview", 365, "staging", database, "day")).bucket, "day");
+
+    // A launch reads today's steps first, so it is an open even 20 seconds after a background
+    // sync. The upload of other activity and the Fights refreshes after an action are not opens.
+    const weeklyOpens = async () => (await readAdminDashboard("engagement", 30, "staging", database))
+        .cards.find((card) => card.id === "app_opens")?.value ?? 0;
+    const opensBefore = await weeklyOpens();
+    await database`
+        insert into private.healthkit_sync_attempts(user_id, attempt_id, trigger, started_at, outcome, total_ms,
+            stages, app_version, app_build)
+        select ${userId}, gen_random_uuid(), traced.trigger,
+            now() - make_interval(days => offset_days, hours => 3) + make_interval(secs => traced.seconds),
+            'succeeded', 1200, traced.stages::jsonb, '1.1.3', '220'
+        from generate_series(1, 5) as offset_days
+        cross join (values
+            ('observer', 0, '[{"stage": "upload"}]'),
+            ('foreground', 20, '[{"stage": "today_total"}, {"stage": "upload"}, {"stage": "fights_refresh"}]'),
+            ('foreground', 40, '[{"stage": "healthkit_activity"}, {"stage": "activity_upload"}]'),
+            ('foreground', 180, '[{"stage": "session"}, {"stage": "fights_refresh"}]'),
+            ('foreground', 360, '[{"stage": "session"}, {"stage": "fights_refresh"}]')
+        ) as traced(trigger, seconds, stages)
+    `;
+    const addedOpens = (await weeklyOpens()) - opensBefore;
+    assert.ok(Math.abs(addedOpens - 5) <= 1, `Five launches and no refreshes or uploads are opens, got ${addedOpens}`);
+
+    // Complete sync history starts on one day: WAU needs 7 days of it, MAU 30, and a card window
+    // that starts before it has no number.
+    const byDay = await readAdminDashboard("engagement", 3650, "staging", database, "day");
+    const line = (name: string) => byDay.charts.find((chart) => chart.id === "dau_wau_mau")
+        ?.series.find((series) => series.name === name)?.points ?? [];
+    const historyStart = line("DAU")[0]?.x;
+    if (historyStart && first?.day && historyStart > first.day) {
+        const historyMs = Date.parse(`${historyStart}T00:00:00Z`);
+        const shifted = (days: number) => new Date(historyMs + days * 86_400_000).toISOString().slice(0, 10);
+        assert.equal(line("WAU")[0]?.x, shifted(6), "WAU starts once sync history covers 7 days");
+        assert.ok(line("MAU").length === 0 || line("MAU")[0]?.x === shifted(29), "MAU starts once sync history covers 30 days");
+        const monthly = byDay.cards.find((card) => card.id === "monthly_active");
+        if (Date.now() - 31 * 86_400_000 < historyMs) assert.equal(monthly?.value, null, "No monthly number before 30 days of history");
+        if (Date.now() - 61 * 86_400_000 < historyMs) assert.equal(monthly?.previous, null, "No monthly change before 60 days of history");
+    }
+
+    // Cancelling a Fight keeps its members accepted, but they did not join a fight.
+    const joinedFight = async () => (await readAdminDashboard("users", 30, "staging", database))
+        .charts.find((chart) => chart.id === "funnel_all")?.series[0]?.points.find((point) => point.x === "Joined a fight")?.y ?? 0;
+    const joinedBefore = await joinedFight();
+    await database`update public.fights set state = 'cancelled' where id = ${fightId}`;
+    assert.equal(await joinedFight(), joinedBefore - 1, "A member of a cancelled fight has not joined a fight");
 });

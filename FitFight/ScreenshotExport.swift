@@ -171,6 +171,7 @@ enum ScreenshotExport {
                     .environmentObject(feed)
                     .environmentObject(companions)
                     .environmentObject(SpecialPurchases())
+                    .environmentObject(CustomCharacterPurchases())
                     .environmentObject(AccountPreferencesStore())
                     .environment(\.ffTheme, store.theme)
                     .environment(\.colorScheme, store.theme.colorScheme)

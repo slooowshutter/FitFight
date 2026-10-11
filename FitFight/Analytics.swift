@@ -23,10 +23,14 @@ enum Analytics {
         // SwiftUI needs screenshot mode. The default masks keep every text and image hidden,
         // so step counts and other Health numbers never leave the phone in a replay.
         config.sessionReplayConfig.screenshotMode = true
+        // Request URLs carry join codes and fight IDs.
+        config.sessionReplayConfig.captureNetworkTelemetry = false
         config.captureApplicationLifecycleEvents = true
         // UIKit screen names are SwiftUI hosting controllers; ContentView names the tabs instead.
         config.captureScreenViews = false
         config.captureElementInteractions = true
+        // Tap text would leak what replay masks: step counts, usernames, typed Fight names.
+        config.captureAutocaptureElementText = false
         config.surveys = true
         PostHogSDK.shared.setup(config)
         started = true

@@ -235,8 +235,8 @@ characters that need a portrait start, the poses of a chosen portrait, or a
 Concurrent cron/phone invocations cannot settle twice.
 [Vercel cron targets production deployments](https://vercel.com/docs/cron-jobs) only, so
 `.github/workflows/ai-reconcile.yml` calls staging every 5 minutes (and production as a
-backup) with the repository secrets `FITFIGHT_STAGING_CRON_SECRET` and
-`FITFIGHT_PRODUCTION_CRON_SECRET`. A target without its secret is skipped.
+backup) with the one repository secret `CRON_SECRET`, the same value as every
+Vercel environment. Without it both targets are skipped.
 
 New-start disabling does not disable reconciliation. Keep the key and shared
 provider limits present while known work remains. Status reads use the saved

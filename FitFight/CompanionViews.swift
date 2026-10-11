@@ -748,12 +748,19 @@ struct CompanionIntroduction: View {
 
     @ViewBuilder
     private var youCharacter: some View {
-        // Specials have no effort forms yet, and a custom animal needs all five fitness images.
-        if surface == .fights && (companions.isCustom ? !fitnessImages.isEmpty : !companions.selection.isLimited) {
-            Button { showingLevels = true } label: { levelArt(youEffort) }
+        // Every companion opens the drawer on Fights, so Change animal is always reachable.
+        if surface == .fights {
+            Button { showingLevels = true } label: { youArt }
                 .buttonStyle(FFPressStyle())
                 .accessibilityLabel(String(appLocalized: "Companion levels"))
-        } else if companions.isCustom {
+        } else {
+            youArt
+        }
+    }
+
+    @ViewBuilder
+    private var youArt: some View {
+        if companions.isCustom {
             RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, effort: youEffort)
@@ -1016,6 +1023,8 @@ struct CompanionStage: View {
     @Binding var selection: StockCompanion?
     var label: (StockCompanion) -> String? = { _ in nil }
     var disabled = false
+    /// Height of everything else on the screen. When set, the stage grows to fill the rest instead of a fixed 320.
+    var reserved: CGFloat?
     @Environment(\.ffTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.ffStaticRender) private var staticRender
@@ -1025,29 +1034,11 @@ struct CompanionStage: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            GeometryReader { proxy in
-                let width = proxy.size.width * 0.62
-                if staticRender {
-                    // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
-                    let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
-                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
-                        .fixedSize()
-                        .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
-                        .frame(width: proxy.size.width, alignment: .leading)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
-                            .scrollTargetLayout()
-                    }
-                    .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
-                    .scrollTargetBehavior(.viewAligned)
-                    .scrollPosition(id: $selection, anchor: .center)
-                    .animation(reduceMotion ? nil : .snappy, value: selection)
-                    .disabled(disabled)
-                }
+            if let reserved {
+                stage.containerRelativeFrame(.vertical) { height, _ in max(320, height - reserved) }
+            } else {
+                stage.frame(height: 320)
             }
-            .frame(height: 320)
-            .clipped()
             ScrollViewReader { reader in
                 ScrollView(.horizontal, showsIndicators: false) {
                     thumbnails
@@ -1063,6 +1054,32 @@ struct CompanionStage: View {
             }
         }
         .padding(.horizontal, -20)
+    }
+
+    private var stage: some View {
+        GeometryReader { proxy in
+            // Wider pages when the stage is tall, so the artwork actually grows with it.
+            let width = min(proxy.size.width * 0.8, max(proxy.size.width * 0.62, (proxy.size.height - 100) * 0.88))
+            if staticRender {
+                // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
+                let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
+                HStack(spacing: overlap) { ForEach(animals) { page($0, width: width, imageHeight: proxy.size.height - 100) } }
+                    .fixedSize()
+                    .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
+                    .frame(width: proxy.size.width, alignment: .leading)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width, imageHeight: proxy.size.height - 100) } }
+                        .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $selection, anchor: .center)
+                .animation(reduceMotion ? nil : .snappy, value: selection)
+                .disabled(disabled)
+            }
+        }
+        .clipped()
     }
 
     private var thumbnails: some View {
@@ -1090,12 +1107,12 @@ struct CompanionStage: View {
         .padding(.horizontal, 20)
     }
 
-    private func page(_ animal: StockCompanion, width: CGFloat) -> some View {
+    private func page(_ animal: StockCompanion, width: CGFloat, imageHeight: CGFloat) -> some View {
         VStack(spacing: 4) {
             Image(animal.image)
                 .resizable()
                 .scaledToFit()
-                .frame(height: 220)
+                .frame(height: imageHeight)
                 .opacity(selection == animal ? 1 : 0.55)
                 .accessibilityHidden(true)
             Group {
@@ -1236,7 +1253,8 @@ struct CompanionPicker: View {
                         error = ""
                     }),
                     label: specialLabel,
-                    disabled: isSaving || purchases.isBusy
+                    disabled: isSaving || purchases.isBusy,
+                    reserved: category == .limited || draft?.isLimited == true ? 280 : 240
                 )
             }
             if category != .yours && !visible.isEmpty && showingGrid {
@@ -1364,7 +1382,7 @@ struct CompanionPicker: View {
                             }
                         }
                         .buttonStyle(FFHapticPlainStyle())
-                        .disabled(isSaving || CompanionPreview.isEnabled)
+                        .disabled(isSaving)
                     }
                 }
                 if !error.isEmpty && (draft == nil || pickingCustom) {

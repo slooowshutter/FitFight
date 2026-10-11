@@ -14,7 +14,7 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 **Checks:** Strict TypeScript and all 438 backend unit tests passed. A new disposable-database case covers claim-time description, three parallel portraits, choice, and chosen-only poses; it needs `DATABASE_URL` and was not run here. Localization and native API boundary checks passed. The simulator build succeeded. No migration, deployment, secret or TestFlight change was made.
 
-**Marc:** Add repository secret `FITFIGHT_STAGING_CRON_SECRET` with the staging Preview `CRON_SECRET` value. Staging has none yet, so first add a Preview `CRON_SECRET` in Vercel. Optionally add `FITFIGHT_PRODUCTION_CRON_SECRET` too. GitHub runs schedules only from `main`.
+**Cron secret:** one `CRON_SECRET` value for Production, Preview and Development in Vercel, copied to the repository secret `CRON_SECRET` for the GitHub backup schedule. GitHub runs schedules only from `main`.
 
 ## Personal Dashboard empty on TestFlight, prepared 11 Oct 2026
 

@@ -1947,6 +1947,8 @@ function definitions(
     }
 }
 
+const turnQueues = new WeakMap<Sql, { free: number; turns: (() => void)[] }>();
+
 /**
  * Operator-only aggregates, computed live from Postgres on every request.
  * Each card or chart is one query, so a failing query only marks its own tile.
@@ -1980,21 +1982,22 @@ export async function readAdminDashboard(
     const { cards, charts } = definitions(database, w, section);
     const failure = (error: unknown) => `Query failed: ${error instanceof Error ? error.message : String(error)}`;
     // NOTE: tiles take turns on the pool's connections, so each note's time is the tile's own
-    // query, not its wait for a free connection.
-    let free = database.options.max;
-    const turns: (() => void)[] = [];
+    // query, not its wait for a free connection. The app loads every section at once, so the
+    // turns belong to the pool, and a section asked for first is served first.
+    const queue = turnQueues.get(database) ?? { free: database.options.max, turns: [] };
+    turnQueues.set(database, queue);
     const timed = async <T extends { note: string | null }>(tile: () => Promise<T>): Promise<T> => {
-        if (free > 0) free--;
-        else await new Promise<void>((resolve) => turns.push(resolve));
+        if (queue.free > 0) queue.free--;
+        else await new Promise<void>((resolve) => queue.turns.push(resolve));
         const started = performance.now();
         try {
             const result = await tile();
             const took = `Took ${Math.floor((performance.now() - started) / 100) / 10} s.`;
             return { ...result, note: result.note ? `${result.note} ${took}` : took };
         } finally {
-            const next = turns.shift();
+            const next = queue.turns.shift();
             if (next) next();
-            else free++;
+            else queue.free++;
         }
     };
     const [cardTiles, chartTiles] = await Promise.all([

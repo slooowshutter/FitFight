@@ -1,31 +1,144 @@
 import Charts
 import SwiftUI
 
+/// Every section's payload, kept by Dashboard so leaving the Admin tab and coming back doesn't
+/// load again. Opening Admin loads the selected section first, then the others, so a chip
+/// shows its numbers at once.
+@MainActor
+final class AdminDashboardStore: ObservableObject {
+    /// The newest payload of each server and section ("production-users"), of any period.
+    @Published private(set) var payloads: [String: FitFightAdminDashboard] = [:]
+    /// The period and bucket each payload answers, so its charts over time dim under another one.
+    @Published private(set) var answered: [String: String] = [:]
+    @Published private(set) var failures: [String: (request: String, message: String)] = [:]
+    /// The sections listed by the last payload. Empty until the first one loads.
+    @Published private(set) var sections: [FitFightAdminDashboard.Section] = []
+    /// Running loads by server, section, period and bucket. A second caller waits for the first.
+    @Published private var loads: [String: Task<Void, Never>] = [:]
+    /// The period and bucket last asked of each server. A slower load of an earlier one never
+    /// replaces it.
+    private var wanted: [String: String] = [:]
+    /// Refresh bumps this so every section loads again; `fresh` records the generation of each payload.
+    private var generation = 0
+    private var fresh: [String: Int] = [:]
+    /// The running preload, by server, period, bucket and generation.
+    private var preloading: (id: String, task: Task<Void, Never>)?
+
+    func isLoading(_ server: AdminDashboardView.Server, _ section: String, request: String) -> Bool {
+        loads["\(server.rawValue)-\(section)-\(request)"] != nil
+    }
+
+    /// Starts loading every section of this server, period and bucket, unless that already runs.
+    /// The store owns the work, so a chart page or another Dashboard tab doesn't stop it.
+    func open(first section: String, server: AdminDashboardView.Server, days: Int, bucket: String?, session: SessionStore) {
+        let request = "\(days)-\(bucket ?? "auto")"
+        let id = "\(server.rawValue)-\(request)-\(generation)"
+        guard preloading?.id != id else { return }
+        preloading?.task.cancel()
+        wanted[server.rawValue] = request
+        preloading = (id, Task { await preload(first: section, server: server, days: days, bucket: bucket, session: session) })
+    }
+
+    /// The selected section alone first, so it has the database to itself, then the others in
+    /// chip order two at a time. A tapped chip that hasn't started loads at once on its own.
+    private func preload(first section: String, server: AdminDashboardView.Server, days: Int, bucket: String?, session: SessionStore) async {
+        let request = "\(days)-\(bucket ?? "auto")"
+        await load(section, server: server, days: days, bucket: bucket, session: session)
+        // A failed first section (not the admin, offline) would fail the others too.
+        guard answered["\(server.rawValue)-\(section)"] == request else { return }
+        var waiting = sections.map(\.id).filter { $0 != section }[...]
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<2 {
+                guard let next = waiting.popFirst() else { break }
+                group.addTask { await self.load(next, server: server, days: days, bucket: bucket, session: session) }
+            }
+            for await _ in group {
+                guard !Task.isCancelled, let next = waiting.popFirst() else { continue }
+                group.addTask { await self.load(next, server: server, days: days, bucket: bucket, session: session) }
+            }
+        }
+    }
+
+    /// Loads one section unless its payload already answers this period and bucket, or it failed
+    /// for them; Retry and Refresh clear that. The request finishes even if the caller goes away,
+    /// so its result is ready when Admin opens again.
+    func load(_ section: String, server: AdminDashboardView.Server, days: Int, bucket: String?, session: SessionStore) async {
+        let key = "\(server.rawValue)-\(section)"
+        let request = "\(days)-\(bucket ?? "auto")"
+        if answered[key] == request && fresh[key] == generation { return }
+        if failures[key]?.request == request { return }
+        let id = "\(key)-\(request)"
+        if let running = loads[id] {
+            await running.value
+            return
+        }
+        let task = Task {
+            do {
+                let token = try await session.freshAccessToken()
+                let project = SupabaseConfig.projectURL.host?.components(separatedBy: ".").first ?? ""
+                let result = try await FitFightAPI(baseURL: server.baseURL).adminDashboard(
+                    section: section,
+                    days: days,
+                    bucket: bucket,
+                    environment: server.rawValue,
+                    authProject: project,
+                    accessToken: token
+                )
+                guard wanted[server.rawValue] == request || payloads[key] == nil else { return }
+                payloads[key] = result
+                answered[key] = request
+                fresh[key] = generation
+                failures[key] = nil
+                if let listed = result.sections {
+                    sections = listed
+                }
+            } catch {
+                guard wanted[server.rawValue] == request else { return }
+                if case FitFightAPIError.http(let status, _, _) = error, status == 403 {
+                    failures[key] = (request, "This account isn't the FitFight admin on \(server.title).")
+                } else {
+                    failures[key] = (request, error.localizedDescription)
+                }
+            }
+        }
+        loads[id] = task
+        await task.value
+        loads[id] = nil
+    }
+
+    /// Retry: failed sections load again.
+    func retry() {
+        failures = [:]
+        preloading?.task.cancel()
+        preloading = nil
+    }
+
+    /// Refresh: every section loads again, the shown ones staying on screen until then.
+    func refresh() {
+        generation += 1
+        failures = [:]
+    }
+}
+
 /// Marc's analytics inside Profile > Dashboard. The server defines every section, card and
 /// chart, so new ones need no app update. The copy is English only, so it uses verbatim text.
 struct AdminDashboardView: View {
+    @ObservedObject var store: AdminDashboardStore
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     /// Starts on Production and remembers the switch. A new key, so a Staging choice saved by
     /// an earlier build doesn't stick.
     @AppStorage("fitfight.admin-dashboard.environment") private var server = Server.production
     @State private var sectionID = "overview"
-    /// The sections listed by the last payload. Empty until the first one loads.
-    @State private var sections: [FitFightAdminDashboard.Section] = []
     /// The period of the charts over time only. Cards and breakdowns name their own fixed span.
     @State private var timeframe = Timeframe.month
     /// The bucket of the charts over time. Auto lets the server pick by period.
     @State private var granularity = Granularity.auto
-    /// The period and bucket of the loaded payload, so its charts over time dim while others load.
-    @State private var loaded = ""
     /// The chart whose page is open.
     @State private var openChartID: String?
-    @State private var dashboard: FitFightAdminDashboard?
-    @State private var loading = false
-    @State private var failure: String?
     /// Cards tapped to show the exact value instead of the rounded-down one.
     @State private var exactCards: Set<String> = []
-    /// Refresh and Retry bump this to rerun the load task.
+    /// Refresh and Retry bump this to rerun the load tasks.
     @State private var reloads = 0
 
     enum Server: String, CaseIterable {
@@ -51,6 +164,8 @@ struct AdminDashboardView: View {
 
     private var request: String { "\(days)-\(granularity.rawValue)" }
 
+    private var bucket: String? { granularity == .auto ? nil : granularity.rawValue }
+
     private var days: Int {
         switch timeframe {
         case .week: return 7
@@ -62,13 +177,18 @@ struct AdminDashboardView: View {
         }
     }
 
+    private var key: String { "\(server.rawValue)-\(sectionID)" }
+
     /// Only the payload for the selected environment and section, so an earlier section's cards
     /// never sit under a newly selected chip while its data loads. Another period keeps the cards
     /// and breakdowns, which don't depend on it, and dims the charts over time until it loads.
-    private var shown: FitFightAdminDashboard? {
-        guard let dashboard, dashboard.section == sectionID,
-              dashboard.environment == server.rawValue else { return nil }
-        return dashboard
+    private var shown: FitFightAdminDashboard? { store.payloads[key] }
+
+    private var loading: Bool { store.isLoading(server, sectionID, request: request) }
+
+    private var failure: String? {
+        guard let failed = store.failures[key], failed.request == request else { return nil }
+        return failed.message
     }
 
     var body: some View {
@@ -77,7 +197,10 @@ struct AdminDashboardView: View {
             statusLine
             if let failure {
                 FFNotice(text: failure, tone: .ember, systemImage: "exclamationmark.triangle")
-                FFButton(title: "Retry", kind: .secondary) { reloads += 1 }
+                FFButton(title: "Retry", kind: .secondary) {
+                    store.retry()
+                    reloads += 1
+                }
             }
             if let dashboard = shown {
                 LazyVGrid(
@@ -105,8 +228,13 @@ struct AdminDashboardView: View {
                     .padding(.vertical, 40)
             }
         }
+        // Opening Admin, another server or period, and Refresh load every section, this one first.
+        .task(id: "\(server)-\(request)-\(reloads)") {
+            store.open(first: sectionID, server: server, days: days, bucket: bucket, session: session)
+        }
+        // A chip whose section hasn't started yet doesn't wait for its turn.
         .task(id: "\(server)-\(sectionID)-\(request)-\(reloads)") {
-            await load()
+            await store.load(sectionID, server: server, days: days, bucket: bucket, session: session)
         }
         .navigationDestination(item: $openChartID) { id in
             if let dashboard = shown, let chart = dashboard.charts.first(where: { $0.id == id }) {
@@ -120,7 +248,7 @@ struct AdminDashboardView: View {
         FFSegmented(items: Server.allCases, selection: $server) { $0.title }
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(sections, id: \.id) { item in
+                ForEach(store.sections, id: \.id) { item in
                     let on = item.id == sectionID
                     Button {
                         sectionID = item.id
@@ -157,6 +285,7 @@ struct AdminDashboardView: View {
                     .controlSize(.small)
             }
             Button {
+                store.refresh()
                 reloads += 1
             } label: {
                 Image(systemName: "arrow.clockwise")
@@ -197,7 +326,7 @@ struct AdminDashboardView: View {
             ForEach(trends) { chart in
                 chartCard(chart, bucket: dashboard.bucket)
             }
-            .opacity(loaded == request ? 1 : 0.4)
+            .opacity(store.answered[key] == request ? 1 : 0.4)
         }
     }
 
@@ -305,44 +434,6 @@ struct AdminDashboardView: View {
             return (text: text, color: theme.textSecondary)
         }
         return (text: text, color: (delta > 0) == better ? theme.mossText : theme.emberText)
-    }
-
-    private func load() async {
-        let target = server
-        let section = sectionID
-        let window = days
-        let bucket = granularity == .auto ? nil : granularity.rawValue
-        let requested = request
-        loading = true
-        do {
-            let token = try await session.freshAccessToken()
-            let project = SupabaseConfig.projectURL.host?.components(separatedBy: ".").first ?? ""
-            let result = try await FitFightAPI(baseURL: target.baseURL).adminDashboard(
-                section: section,
-                days: window,
-                bucket: bucket,
-                environment: target.rawValue,
-                authProject: project,
-                accessToken: token
-            )
-            try Task.checkCancellation()
-            dashboard = result
-            loaded = requested
-            if let listed = result.sections {
-                sections = listed
-            }
-            failure = nil
-        } catch {
-            // A newer selection cancelled this load. Its own run owns the spinner and the result.
-            guard !Task.isCancelled else { return }
-            dashboard = nil
-            if case FitFightAPIError.http(let status, _, _) = error, status == 403 {
-                failure = "This account isn't the FitFight admin on \(target.title)."
-            } else {
-                failure = error.localizedDescription
-            }
-        }
-        loading = false
     }
 }
 

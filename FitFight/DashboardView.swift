@@ -14,6 +14,8 @@ struct DashboardView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @StateObject private var history = ProfileScreenStore()
+    /// Kept here, so the Admin tab's sections stay loaded while Marc looks at another tab.
+    @StateObject private var adminDashboard = AdminDashboardStore()
     @State private var tab = Tab.steps
     @State private var filter = Filter.all
     @State private var selectedDay: Int?
@@ -35,7 +37,7 @@ struct DashboardView: View {
             case .steps: stepsTab
             case .fights: fightsTab
             case .sports: sportsTab
-            case .admin: AdminDashboardView()
+            case .admin: AdminDashboardView(store: adminDashboard)
             }
         }
         .navigationTitle(String(appLocalized: "Dashboard"))

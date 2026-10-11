@@ -126,6 +126,9 @@ test("each verified consumable funds exactly one recoverable portrait and five-i
     }, {}, database);
     assert.equal((await readCustomCharacterStore(owner, database)).characters[0].status, "complete");
     assert.equal((await readAiLibrary(owner, database)).find((item) => item.request_id === fitnessRun.request.id)?.images.length, 5);
+    // A finished character stays due only until its ready push is claimed.
+    assert.equal((await dueCustomCharacterPurchases(database)).some((item) => item.id === first.purchase_id), true);
+    await database`update private.custom_character_purchases set poses_notified_at = now() where id = ${first.purchase_id}`;
     assert.equal((await dueCustomCharacterPurchases(database)).some((item) => item.id === first.purchase_id), false);
     assert.deepEqual(await prepareCustomCharacterStage(owner, first.purchase_id, {}, database), {
         kind: "existing", requestId: fitnessRun.request.id,

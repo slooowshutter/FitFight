@@ -19,6 +19,29 @@ export const customCharacterPurchaseRowSchema = z.object({
     revoked_at: z.coerce.date().nullable(),
     signed_at: z.coerce.date(),
     purchase_at: z.coerce.date(),
+    portraits_notified_at: z.coerce.date().nullable(),
+    poses_notified_at: z.coerce.date().nullable(),
+});
+
+export const customCharacterPortraitRowSchema = z.object({
+    id: z.string().uuid(),
+    purchase_id: z.string().uuid(),
+    slot: z.number().int().min(1).max(3),
+    action_key: z.string().uuid(),
+    selected_at: z.coerce.date().nullable(),
+});
+
+/** `status` keeps the values older apps decode; `phase` adds the portrait choice. */
+export const customCharacterPhaseValues = [
+    "ready", "portraits", "choosing", "poses", "complete", "retryable", "needs_support", "refunded",
+] as const;
+
+export const customCharacterCandidateSchema = z.object({
+    id: z.string().uuid(),
+    slot: z.number().int().min(1).max(3),
+    status: z.enum(["pending", "completed", "failed", "needs_support"]),
+    image_url: z.string().url().nullable(),
+    selected: z.boolean(),
 });
 
 export const customCharacterProgressSchema = z.object({
@@ -28,6 +51,9 @@ export const customCharacterProgressSchema = z.object({
     status: z.enum(["ready", "generating", "retryable", "needs_support", "complete", "refunded"]),
     request_id: z.string().uuid().nullable(),
     poll_after_seconds: z.number().int().positive().nullable(),
+    phase: z.enum(customCharacterPhaseValues),
+    portrait_url: z.string().url().nullable(),
+    candidates: z.array(customCharacterCandidateSchema),
 });
 
 export const customCharacterStoreSchema = z.object({
@@ -40,11 +66,17 @@ export const customCharacterStoreSchema = z.object({
 
 export const customCharacterClaimRequestSchema = z.object({
     signed_transaction: z.string().min(1).max(30_000),
+    description: z.string().trim().min(1).max(1000).optional(),
 }).strict();
 
 export const customCharacterAdvanceRequestSchema = z.object({
     description: z.string().trim().min(1).max(1000).optional(),
     retry: z.boolean().optional(),
+    choose_portrait: z.boolean().optional(),
+}).strict();
+
+export const customCharacterChooseRequestSchema = z.object({
+    candidate_id: z.string().uuid(),
 }).strict();
 
 export const customCharacterPurchaseIdSchema = z.string().uuid();
@@ -55,6 +87,8 @@ export const customCharacterAttemptSchema = z.object({
     workflow: z.enum(["avatar", "fitness"]),
     status: z.enum(aiRequestStateValues),
     next_poll_at: z.coerce.date(),
+    idempotency_key: z.string().uuid(),
+    image_url: z.string().url().nullable(),
 });
 
 export const customCharacterClaimResultSchema = z.object({
@@ -69,5 +103,6 @@ export type CustomCharacterAdvanceRequest = z.infer<typeof customCharacterAdvanc
 export type CustomCharacterAttempt = z.infer<typeof customCharacterAttemptSchema>;
 export type CustomCharacterStage =
     | { kind: "existing"; requestId: string }
+    | { kind: "portraits"; description: string; starts: string[]; pending: string[] }
     | { kind: "avatar"; key: string; description: string }
     | { kind: "fitness"; key: string; description: string; avatarRequestId: string };

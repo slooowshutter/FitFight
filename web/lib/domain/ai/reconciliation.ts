@@ -2,14 +2,17 @@ import { ApiError } from "@/lib/http";
 import { readAiRun } from "@/lib/domain/ai/workflow-requests";
 import { dueAiRequests } from "@/lib/supabase/queries/ai-requests-supabase-query";
 import { dueCustomCharacterPurchases } from "@/lib/supabase/queries/custom-characters-supabase-query";
-import { advancePaidCharacter } from "@/lib/domain/ai/paid-character";
+import { advancePaidCharacter, deferredCharacterStartCodes } from "@/lib/domain/ai/paid-character";
 import {
     correlateAiRequest,
     observeAiCall,
 } from "@/lib/observability/ai-request-log";
 import type { AiReconciliationDependencies } from "@/lib/types/ai/service";
 
-/** At most four status reads per invocation. Unknown starts are never resubmitted or timed out into refunds. */
+/**
+ * At most four status reads per invocation. Unknown starts are never resubmitted or timed out into refunds.
+ * A paid character whose run just settled advances in the same invocation instead of waiting for the next one.
+ */
 export async function reconcileAiRuns(
     deps: AiReconciliationDependencies = {
         due: dueAiRequests,
@@ -40,8 +43,17 @@ export async function reconcileAiRuns(
                 "reconciler",
             );
             checked++;
-            if (["completed", "failed", "cancelled"].includes(result.status))
+            if (["completed", "failed", "cancelled"].includes(result.status)) {
                 settled++;
+                if (request.resource_id !== null && deps.paidAdvance) {
+                    try {
+                        await deps.paidAdvance(request.user_id, request.resource_id, {});
+                    } catch (error) {
+                        // The paid pass below and the next run retry; one purchase must not stop the batch.
+                        if (!(error instanceof ApiError)) throw error;
+                    }
+                }
+            }
             observeAiCall({
                 leg: "reconciler",
                 operation: "observe_run",
@@ -80,8 +92,7 @@ export async function reconcileAiRuns(
                 await deps.paidAdvance(purchase.userId, purchase.id, {});
             } catch (error) {
                 if (!(error instanceof ApiError)) throw error;
-                if (!["ai_busy", "ai_unavailable", "ai_rate_limited", "ai_daily_limit", "ai_in_progress"].includes(error.code))
-                    throw error;
+                if (!deferredCharacterStartCodes.includes(error.code)) throw error;
             }
         }
     }

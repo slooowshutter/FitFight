@@ -10,15 +10,14 @@ struct PaidCharacterView: View {
     @State private var description = ""
     @State private var library: [FitFightAILibraryEntry] = []
     @State private var isSelecting = false
+    @State private var picked: [UUID: UUID] = [:]
+    @State private var choosingID: UUID?
     @State private var error = ""
 
-    private var incomplete: [CustomCharacterProgress] {
-        purchases.snapshot?.characters.filter({
-            $0.status == .generating || $0.status == .retryable || $0.status == .needsSupport
-        }) ?? []
+    /// The server keeps drawing without the app; polling only makes progress visible sooner while open.
+    private var pollingID: UUID? {
+        purchases.inProgress.first(where: { $0.phase == .portraits || $0.phase == .poses })?.id
     }
-
-    private var pollingID: UUID? { incomplete.first(where: { $0.status == .generating })?.id }
 
     var body: some View {
         FFScreen(clearance: false) {
@@ -31,28 +30,14 @@ struct PaidCharacterView: View {
                 .accessibilityLabel(String(localized: "Close"))
                 .foregroundStyle(theme.textSecondary)
             }
-            Text("One purchase creates one character and five fitness images that change with your daily Steps.")
+            Text("One purchase draws three portraits. Pick your favourite, then we create five fitness images from it that change with your daily Steps.")
                 .ffType(.body).foregroundStyle(theme.textSecondary)
 
-            ForEach(incomplete) { active in
+            ForEach(purchases.inProgress) { active in
                 FFSection(title: String(localized: "Your character")) {
                     Text(active.description ?? description).ffType(.body).foregroundStyle(theme.text)
-                    if active.status == .generating {
-                        ProgressView().tint(theme.gold)
-                        Text(active.stage == .fitness ? "Creating five fitness images…" : "Creating your portrait…")
-                            .ffType(.caption).foregroundStyle(theme.textSecondary)
-                        Text("You can close this screen. Your character keeps generating.")
-                            .ffType(.caption).foregroundStyle(theme.textSecondary)
-                    } else if active.status == .retryable {
-                        Text("The images could not be completed. Retry this character without another purchase.")
-                            .ffType(.caption).foregroundStyle(theme.emberText)
-                        FFButton(title: String(localized: "Try again"), kind: .secondary, enabled: !purchases.isBusy, busy: purchases.isBusy, fullWidth: true) {
-                            Task { await retry(active) }
-                        }
-                    } else {
-                        Text("We could not confirm whether this generation started. Contact support before retrying.")
-                            .ffType(.caption).foregroundStyle(theme.emberText)
-                    }
+                    steps(active)
+                    progress(active)
                 }
             }
             FFField(label: String(localized: "Your animal"), counter: "\(description.count)/1000", minHeight: 120) {
@@ -123,6 +108,7 @@ struct PaidCharacterView: View {
             if description.isEmpty { description = initialDescription }
             do { try await purchases.refresh(session: session) }
             catch { self.error = error.localizedDescription }
+            purchases.markReadySeen()
             await loadLibrary()
         }
         .task(id: pollingID) {
@@ -130,10 +116,11 @@ struct PaidCharacterView: View {
             while !Task.isCancelled {
                 do {
                     let progress = try await purchases.advance(id, session: session)
-                    if progress.status != .generating {
+                    if progress.phase != .portraits && progress.phase != .poses {
                         // The finished snapshot clears pollingID, which cancels this task; finish outside it.
                         Task {
                             await loadLibrary()
+                            purchases.markReadySeen()
                             if progress.status == .complete,
                                let entry = library.first(where: { $0.requestID == progress.requestID && $0.workflow == .fitness }) {
                                 await select(entry)
@@ -151,6 +138,130 @@ struct PaidCharacterView: View {
         }
     }
 
+    /// Portraits, choice, poses: the three steps every new character goes through.
+    private func steps(_ character: CustomCharacterProgress) -> some View {
+        let current: Int = switch character.phase {
+        case .ready, .portraits: 0
+        case .choosing: 1
+        case .poses: 2
+        case .complete: 3
+        case .retryable, .needsSupport, .refunded: character.stage == .fitness ? 2 : 0
+        }
+        let titles = [String(localized: "Portraits"), String(localized: "Choose"), String(localized: "Poses")]
+        return HStack(spacing: 8) {
+            ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
+                HStack(spacing: 6) {
+                    Image(systemName: index < current ? "checkmark.circle.fill" : index == current ? "circle.dotted" : "circle")
+                        .foregroundStyle(index < current ? theme.mossText : index == current ? theme.gold : theme.textTertiary)
+                    Text(title).ffType(.caption)
+                        .foregroundStyle(index <= current ? theme.text : theme.textTertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func progress(_ active: CustomCharacterProgress) -> some View {
+        let selection = picked[active.id]
+        switch active.phase {
+        case .portraits where active.candidates.isEmpty:
+            ProgressView().tint(theme.gold)
+            Text("Creating your portrait…").ffType(.caption).foregroundStyle(theme.textSecondary)
+            closeHint
+        case .portraits, .choosing:
+            HStack(spacing: 8) {
+                ForEach(active.candidates) { candidate in
+                    candidateTile(candidate, picked: selection == candidate.id) {
+                        picked[active.id] = candidate.id
+                    }
+                }
+            }
+            if active.phase == .portraits {
+                Text("Drawing three portraits. This takes about a minute.")
+                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+                closeHint
+            } else {
+                Text("Pick your favourite. The other portraits stay saved in your account.")
+                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+            }
+            if active.candidates.contains(where: { $0.status == .completed }) {
+                FFButton(title: String(localized: "Use this portrait"), kind: .primary,
+                         enabled: selection != nil && choosingID == nil, busy: choosingID == active.id, fullWidth: true) {
+                    if let selection { Task { await choose(active, candidate: selection) } }
+                }
+            }
+            if active.phase == .choosing, active.candidates.contains(where: { $0.status == .failed }) {
+                FFButton(title: String(localized: "Redraw the failed portraits"), kind: .ghost,
+                         enabled: !purchases.isBusy, busy: purchases.isBusy, fullWidth: true) {
+                    Task { await retry(active) }
+                }
+            }
+        case .poses:
+            if let portrait = active.portraitURL {
+                RemotePhoto(url: portrait, contentMode: .fit) { theme.control }
+                    .frame(height: 160)
+            }
+            ProgressView().tint(theme.gold)
+            Text("Creating five fitness images…").ffType(.caption).foregroundStyle(theme.textSecondary)
+            closeHint
+        case .retryable:
+            Text("The images could not be completed. Retry this character without another purchase.")
+                .ffType(.caption).foregroundStyle(theme.emberText)
+            FFButton(title: String(localized: "Try again"), kind: .secondary, enabled: !purchases.isBusy, busy: purchases.isBusy, fullWidth: true) {
+                Task { await retry(active) }
+            }
+        case .needsSupport:
+            Text("We could not confirm whether this drawing started. Contact support and we will finish your character at no cost.")
+                .ffType(.caption).foregroundStyle(theme.emberText)
+            Link(destination: supportURL) {
+                Text("Contact support").ffType(.button).foregroundStyle(theme.text)
+                    .frame(maxWidth: .infinity).padding(.vertical, 13)
+                    .background(theme.control, in: Capsule())
+                    .overlay { Capsule().strokeBorder(theme.line, lineWidth: 1) }
+            }
+        case .ready, .complete, .refunded:
+            EmptyView()
+        }
+    }
+
+    private var closeHint: some View {
+        Text("You can close the app. We will send a notification when your character is ready.")
+            .ffType(.caption).foregroundStyle(theme.textSecondary)
+    }
+
+    private var supportURL: URL {
+        let site = URL(string: AppVersion.backend == "prod" ? "https://fitfight.app" : "https://staging.fitfight.app")!
+        return (AppLocalization.languageCode == "fr" ? site.appending(path: "fr") : site).appending(path: "support")
+    }
+
+    private func candidateTile(_ candidate: CustomCharacterProgress.Candidate, picked: Bool, onPick: @escaping () -> Void) -> some View {
+        Button(action: onPick) {
+            ZStack {
+                theme.control
+                switch candidate.status {
+                case .completed:
+                    RemotePhoto(url: candidate.imageURL, contentMode: .fill) { theme.control }
+                case .pending:
+                    ProgressView().tint(theme.gold)
+                case .failed, .needsSupport:
+                    Image(systemName: "exclamationmark.triangle").foregroundStyle(theme.emberText)
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous)
+                    .strokeBorder(picked ? theme.mossText : theme.hairline, lineWidth: picked ? 3 : 1)
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .disabled(candidate.status != .completed)
+        .accessibilityLabel(String(appLocalized: "character.portrait", defaultValue: "Portrait \(candidate.slot)"))
+        .accessibilityAddTraits(picked ? .isSelected : [])
+    }
+
     private func loadLibrary() async {
         do { library = try await FitFightAPI().aiLibrary(accessToken: try await session.freshAccessToken()) }
         catch { if !Task.isCancelled { self.error = error.localizedDescription } }
@@ -166,6 +277,13 @@ struct PaidCharacterView: View {
         catch { self.error = error.localizedDescription }
     }
 
+    private func choose(_ character: CustomCharacterProgress, candidate: UUID) async {
+        choosingID = character.id
+        defer { choosingID = nil }
+        do { _ = try await purchases.choose(character.id, candidate: candidate, session: session) }
+        catch { self.error = error.localizedDescription }
+    }
+
     private func select(_ entry: FitFightAILibraryEntry) async {
         guard !isSelecting else { return }
         isSelecting = true
@@ -174,5 +292,76 @@ struct PaidCharacterView: View {
             try await session.setCompanion(image: .init(requestID: entry.requestID, stage: "resting"))
             companions.apply(session.profile)
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+/// A Fights card for a paid character that is being drawn, waits for a portrait choice, or is ready.
+/// It shows nothing when there is no such character, and opens the character screen when tapped.
+struct PaidCharacterProgressCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var purchases: CustomCharacterPurchases
+    @Environment(\.ffTheme) private var theme
+    @State private var showing = false
+
+    var body: some View {
+        // The container stays when the card hides, so an open sheet is not dismissed with it.
+        VStack(spacing: 0) {
+            if let character = purchases.inProgress.first ?? purchases.unseenReady.first {
+                Button { showing = true } label: {
+                    FFCard {
+                        HStack(spacing: 13) {
+                            ZStack {
+                                theme.control
+                                if let url = character.portraitURL ?? character.candidateURLs.first {
+                                    RemotePhoto(url: url, contentMode: .fill) { theme.control }
+                                } else {
+                                    ProgressView().tint(theme.gold)
+                                }
+                            }
+                            .frame(width: 48, height: 48)
+                            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(title(character)).ffType(.heading).foregroundStyle(theme.text)
+                                Text(subtitle(character)).ffType(.caption).foregroundStyle(theme.textSecondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
+                        }
+                    }
+                }
+                .buttonStyle(FFHapticPlainStyle())
+            }
+        }
+        .sheet(isPresented: $showing) {
+            PaidCharacterView(initialDescription: "")
+        }
+        .task {
+            // The server advances on its own; this only keeps the card current while it is on screen.
+            while !Task.isCancelled {
+                try? await purchases.refresh(session: session)
+                guard purchases.inProgress.contains(where: { $0.phase == .portraits || $0.phase == .poses }) else { return }
+                try? await Task.sleep(for: .seconds(20))
+            }
+        }
+    }
+
+    private func title(_ character: CustomCharacterProgress) -> String {
+        switch character.phase {
+        case .choosing: String(localized: "Pick your favourite")
+        case .complete: String(localized: "Your character is ready")
+        case .retryable, .needsSupport: String(localized: "Your character needs attention")
+        default: String(localized: "Your character is being drawn")
+        }
+    }
+
+    private func subtitle(_ character: CustomCharacterProgress) -> String {
+        switch character.phase {
+        case .choosing: String(localized: "Three portraits are ready.")
+        case .complete: String(localized: "Make it your companion.")
+        case .poses: String(localized: "Creating five fitness images.")
+        case .retryable: String(localized: "Try again at no cost.")
+        case .needsSupport: String(localized: "Contact support.")
+        default: String(localized: "Three portraits are on the way.")
+        }
     }
 }

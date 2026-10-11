@@ -1,6 +1,242 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Choose": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choix"
+                    }
+                }
+            }
+        },
+        "Contact support.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Contactez le support."
+                    }
+                }
+            }
+        },
+        "Creating five fitness images.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Création des cinq images de forme."
+                    }
+                }
+            }
+        },
+        "Make it your companion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Faites-en votre compagnon."
+                    }
+                }
+            }
+        },
+        "Pick your favourite": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisissez votre préféré"
+                    }
+                }
+            }
+        },
+        "Portraits": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Portraits"
+                    }
+                }
+            }
+        },
+        "Poses": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Poses"
+                    }
+                }
+            }
+        },
+        "Redraw the failed portraits": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Redessiner les portraits échoués"
+                    }
+                }
+            }
+        },
+        "Three portraits are on the way.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trois portraits arrivent."
+                    }
+                }
+            }
+        },
+        "Three portraits are ready.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trois portraits sont prêts."
+                    }
+                }
+            }
+        },
+        "Try again at no cost.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réessayez sans frais."
+                    }
+                }
+            }
+        },
+        "Use this portrait": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Utiliser ce portrait"
+                    }
+                }
+            }
+        },
+        "Your character is being drawn": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre personnage est en cours de dessin"
+                    }
+                }
+            }
+        },
+        "Your character is ready": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre personnage est prêt"
+                    }
+                }
+            }
+        },
+        "Your character needs attention": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre personnage a besoin de vous"
+                    }
+                }
+            }
+        },
+        "One purchase draws three portraits. Pick your favourite, then we create five fitness images from it that change with your daily Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un achat dessine trois portraits. Choisissez votre préféré, puis nous en créons cinq images de forme qui changent avec vos Pas du jour."
+                    }
+                }
+            }
+        },
+        "Drawing three portraits. This takes about a minute.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dessin de trois portraits. Cela prend environ une minute."
+                    }
+                }
+            }
+        },
+        "Pick your favourite. The other portraits stay saved in your account.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisissez votre préféré. Les autres portraits restent enregistrés dans votre compte."
+                    }
+                }
+            }
+        },
+        "We could not confirm whether this drawing started. Contact support and we will finish your character at no cost.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous n’avons pas pu confirmer le début du dessin. Contactez le support et nous terminerons votre personnage sans frais."
+                    }
+                }
+            }
+        },
+        "Contact support": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Contacter le support"
+                    }
+                }
+            }
+        },
+        "You can close the app. We will send a notification when your character is ready.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous pouvez fermer l’app. Nous vous enverrons une notification quand votre personnage sera prêt."
+                    }
+                }
+            }
+        },
+        "A paid character now starts with three portraits to choose from. Pick your favourite and FitFight draws its five fitness poses, even with the app closed, then notifies you when it is ready.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un personnage payant commence maintenant par trois portraits au choix. Choisissez votre préféré et FitFight dessine ses cinq poses de forme, même app fermée, puis vous prévient quand il est prêt."
+                    }
+                }
+            }
+        },
+        "character.portrait": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Portrait %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Portrait %lld"
+                    }
+                }
+            }
+        },
         "You can now leave any fight you joined. If you created it, pick who takes over first, or delete it if you are the only one in it.": {
             "localizations": {
                 "fr": {
@@ -308,16 +544,6 @@
                 }
             }
         },
-        "One purchase creates one character and five fitness images that change with your daily Steps.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un achat crée un personnage et cinq images qui changent selon vos pas du jour."
-                    }
-                }
-            }
-        },
         "Purchase status is unknown. Check purchases before buying again.": {
             "localizations": {
                 "fr": {
@@ -344,16 +570,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les images n’ont pas pu être terminées. Réessayez sans faire un nouvel achat."
-                    }
-                }
-            }
-        },
-        "We could not confirm whether this generation started. Contact support before retrying.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Nous ne pouvons pas confirmer le lancement. Contactez l’assistance avant de réessayer."
                     }
                 }
             }

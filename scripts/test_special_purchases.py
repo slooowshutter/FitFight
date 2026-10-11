@@ -7,8 +7,10 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 source = (root / "FitFight/SpecialPurchases.swift").read_text()
-source = source.replace("import StoreKit\n", "").replace("import UIKit\n", "")
+source = source.replace("import StoreKit\n", "").replace("import UIKit\n", "").replace("import PostHog\n", "")
 source = source[:source.index("    func requestRefund(")] + "}\n"
+# Analytics is out of scope here; a no-op stands in for the PostHog SDK.
+source += "\nenum PostHogSDK { static let shared = PostHogStub() }\nstruct PostHogStub { func capture(_ event: String, properties: [String: Any]? = nil) {} }\n"
 source += (root / "tests/SpecialPurchaseTests.swift").read_text()
 with tempfile.TemporaryDirectory(prefix="fitfight-special-tests-") as directory:
     generated = Path(directory) / "SpecialPurchaseTests.swift"

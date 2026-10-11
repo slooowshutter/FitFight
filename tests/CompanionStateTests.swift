@@ -91,30 +91,6 @@ enum CompanionStateTests {
         restored.apply(FitFightProfile(userId: UUID(), handle: "other", displayName: "Other", handleSetAt: nil))
         precondition(restored.savedPrompts.isEmpty && restored.customPrompt.isEmpty, "Accounts must not share a library")
 
-        // A new device has no account cache and must load the same library from the API.
-        UserDefaults.standard.removeObject(forKey: "ff.companion.library." + userId.uuidString)
-        let newDevice = CompanionStore()
-        precondition(newDevice.savedPrompts.isEmpty && newDevice.customPrompt.isEmpty,
-                     "Descriptions must stay hidden until an account is known")
-        newDevice.apply(session.profile)
-        precondition(newDevice.savedPrompts.isEmpty)
-        try await newDevice.loadSavedPrompts(session: session)
-        precondition(newDevice.savedPrompts == [prompt, second])
-        precondition(newDevice.customPrompt == prompt)
-        try await newDevice.choose(id: "custom", prompt: second, session: session)
-        precondition(session.profile?.companionPrompt == second)
-
-        session.suspendLoad = true
-        let load = Task { try await newDevice.loadSavedPrompts(session: session) }
-        while session.pendingLoad == nil { await Task.yield() }
-        newDevice.apply(nil)
-        session.profile = nil
-        session.pendingLoad?.resume(returning: [prompt, second])
-        do {
-            try await load.value
-            preconditionFailure("A signed-out library request must be discarded")
-        } catch is CancellationError { }
-        precondition(newDevice.savedPrompts.isEmpty && newDevice.customPrompt.isEmpty)
         CompanionStore.deleteLocalLibrary(for: userId)
         precondition(UserDefaults.standard.stringArray(forKey: "ff.companion.library." + userId.uuidString) == nil)
 

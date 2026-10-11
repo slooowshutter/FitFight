@@ -2,7 +2,7 @@ import Foundation
 import PostHog
 
 @MainActor
-enum CrashReporting {
+enum Analytics {
     private static let defaultHost = "https://us.i.posthog.com"
     private static var started = false
 
@@ -19,25 +19,15 @@ enum CrashReporting {
             host: hostRaw.isEmpty ? defaultHost : hostRaw
         )
         config.errorTrackingConfig.autoCapture = true
-        config.sessionReplay = false
-        config.captureApplicationLifecycleEvents = false
+        config.sessionReplay = true
+        // SwiftUI needs screenshot mode. The default masks keep every text and image hidden,
+        // so step counts and other Health numbers never leave the phone in a replay.
+        config.sessionReplayConfig.screenshotMode = true
+        config.captureApplicationLifecycleEvents = true
+        // UIKit screen names are SwiftUI hosting controllers; ContentView names the tabs instead.
         config.captureScreenViews = false
-        config.captureElementInteractions = false
-        config.surveys = false
-        config.preloadFeatureFlags = false
-        config.sendFeatureFlagEvent = false
-        config.enableSwizzling = false
-        config.rageClickConfig.enabled = false
-        config.flushAt = 1
-        // Crash-only: never send screens, sessions, Health, or product events.
-        config.setBeforeSend { event in
-            switch event.event {
-            case "$exception", "$identify":
-                return event
-            default:
-                return nil
-            }
-        }
+        config.captureElementInteractions = true
+        config.surveys = true
         PostHogSDK.shared.setup(config)
         started = true
     }

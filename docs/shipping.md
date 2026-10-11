@@ -165,9 +165,9 @@ Names only. Never print values. Never paste the PostHog project token in chat.
 
 | Secret                    | Used when                                     | What it is                                                   |
 | ------------------------- | --------------------------------------------- | ------------------------------------------------------------ |
-| `POSTHOG_PROJECT_API_KEY` | TestFlight (`preview`) and App Store archives | PostHog **project** API key (`phc_...`). Crash reports only. |
+| `POSTHOG_PROJECT_API_KEY` | TestFlight (`preview`) and App Store archives | PostHog **project** API key (`phc_...`). Crashes, product analytics and session replay. |
 
-Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. In PostHog, turn on error-tracking exception autocapture and leave session replay off.
+Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. In PostHog, turn on error-tracking exception autocapture and session replay (Settings, Session replay, Record user sessions).
 
 Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
 

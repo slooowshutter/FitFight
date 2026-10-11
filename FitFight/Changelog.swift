@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 11,
+            notes: "Your profile picture is now always your companion. Photo uploads are gone."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
             notes: "Specials are back in the animal picker: 40 one-of-a-kind animals, each owned by only one person."
         ),
         ReleaseNote(

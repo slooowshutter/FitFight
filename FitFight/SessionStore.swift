@@ -402,21 +402,6 @@ final class SessionStore: ObservableObject {
         cacheProfile(updated, for: userId)
     }
 
-    func setAvatar(_ media: FitFightMedia) async throws {
-        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
-        guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
-            throw HandleError.notSignedIn
-        }
-        let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(
-            avatarMediaId: media.id,
-            accessToken: token
-        )
-        try Task.checkCancellation()
-        guard authSession?.user.id == userId else { throw CancellationError() }
-        cacheProfile(updated, for: userId)
-    }
-
     func companionPrompts() async throws -> [String] {
         let token = try await freshAccessToken()
         return try await api.companionPrompts(accessToken: token)

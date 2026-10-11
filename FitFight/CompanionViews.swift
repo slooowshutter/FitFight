@@ -913,15 +913,11 @@ struct CompanionLevelsSheet<Art: View>: View {
 }
 
 struct CompanionScene: View {
-    var name = "race"
-
     var body: some View {
-        Image("Companion-\(name)")
+        Image("Companion-race")
             .resizable()
             .scaledToFit()
-            .accessibilityLabel(name == "race"
-                ? String(appLocalized: "Rabbit, Turtle, Fox and Badger running together")
-                : String(appLocalized: "Rabbit, Fox, Badger and Turtle playing tennis"))
+            .accessibilityLabel(String(appLocalized: "Rabbit, Turtle, Fox and Badger running together"))
     }
 }
 
@@ -1403,16 +1399,6 @@ struct CompanionPicker: View {
                     }
                 }
             }
-            #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled {
-                FFSection(title: String(appLocalized: "Artwork study")) {
-                    CompanionScene(name: "tennis")
-                    Text("Fixed demo cast. Artwork study only; this is not a Feed post.")
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                }
-            }
-            #endif
         }
         .safeAreaInset(edge: .bottom) {
             if let draft, !pickingCustom, animals(in: category).contains(draft) {

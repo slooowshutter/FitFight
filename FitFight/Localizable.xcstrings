@@ -131,6 +131,16 @@
                 }
             }
         },
+        "Your profile picture is now always your companion. Photo uploads are gone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ta photo de profil est maintenant toujours ton compagnon. L’envoi de photos n’existe plus."
+                    }
+                }
+            }
+        },
         "Specials are back in the animal picker: 40 one-of-a-kind animals, each owned by only one person.": {
             "localizations": {
                 "fr": {
@@ -3455,16 +3465,6 @@
                 }
             }
         },
-        "Artwork study": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Étude d’illustration"
-                    }
-                }
-            }
-        },
         "Badger": {
             "localizations": {
                 "fr": {
@@ -3605,16 +3605,6 @@
                 }
             }
         },
-        "Fixed demo cast. Artwork study only; this is not a Feed post.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Personnages fixes de démonstration. Étude d’illustration uniquement ; ce n’est pas une publication du Fil."
-                    }
-                }
-            }
-        },
         "Good company.": {
             "localizations": {
                 "fr": {
@@ -3741,16 +3731,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Lapin"
-                    }
-                }
-            }
-        },
-        "Rabbit, Fox, Badger and Turtle playing tennis": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lapin, Renard, Blaireau et Tortue jouent au tennis"
                     }
                 }
             }
@@ -15120,16 +15100,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "meilleur jour"
-                    }
-                }
-            }
-        },
-        "Use a photo": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Utiliser une photo"
                     }
                 }
             }

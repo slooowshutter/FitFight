@@ -57,6 +57,8 @@ Declare these collected data types:
 | Product Interaction   | App opens from sync reports, plus PostHog app lifecycle, screen views, taps, key Fight/purchase events and masked session replay |                Yes | Analytics         |
 | Crash Data            | Stack traces and related crash diagnostics sent to PostHog                                                         |                Yes | App Functionality |
 
+**Before the next App Store submission (11 Oct 2026, agent task, not Marc):** PostHog now records product analytics and masked session replay (lifecycle, screen views, taps without text, Fight and purchase events, replay with all text and images hidden), linked to the account UUID and username. The submitting agent must update App Store Connect → App Privacy before submitting: Product Interaction linked to the user with Analytics, User ID with Analytics, Crash Data unchanged, no tracking. Verify the answers match `FitFight/PrivacyInfo.xcprivacy` and the published privacy pages, then record it in `docs/status.md`.
+
 Analytics (29 Sep 2026): Marc's admin dashboard shows internal aggregate statistics, such as app opens, signups, Fight activity and average daily Steps. Only Marc sees it. Sync reports are no longer deleted after seven days. Marc must add these Analytics purposes and Product Interaction in App Store Connect before the next App Store submission; the manifest already lists them.
 
 The app does not read the address book, GPS routes, or heart rate, and has no advertising identifiers. PostHog product analytics is first-party and is not tracking. Review uploaded files/video audio, stored referral relationships, and diagnostic timing against Apple's exact categories rather than copying older “no photos/videos” answers.

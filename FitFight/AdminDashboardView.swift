@@ -72,6 +72,8 @@ final class AdminDashboardStore: ObservableObject {
             await running.value
             return
         }
+        // The same period loaded before a Refresh: ask the server for new numbers too.
+        let refresh = answered[key] == request
         let task = Task {
             do {
                 let token = try await session.freshAccessToken()
@@ -80,6 +82,7 @@ final class AdminDashboardStore: ObservableObject {
                     section: section,
                     days: days,
                     bucket: bucket,
+                    refresh: refresh,
                     environment: server.rawValue,
                     authProject: project,
                     accessToken: token

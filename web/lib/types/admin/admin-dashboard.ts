@@ -36,6 +36,8 @@ export const adminDashboardQuerySchema = z.object({
     environment: adminDashboardEnvironmentSchema.optional(),
     /** Omitted: days up to 62 days, weeks up to a year, then months. */
     bucket: adminDashboardBucketSchema.optional(),
+    /** "true" reuses a result only from the last minute instead of the last five. */
+    refresh: z.enum(["true", "false"]).optional(),
 });
 
 export const adminDashboardCardSchema = z.object({

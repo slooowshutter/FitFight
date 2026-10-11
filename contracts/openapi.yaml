@@ -910,7 +910,7 @@ paths:
                     "required": true,
                     "schema": {
                         "type": "string",
-                        "enum": ["overview", "retention", "users", "engagement", "steps", "fights", "social", "app"]
+                        "enum": ["overview", "growth", "retention", "users", "engagement", "steps", "fights", "revenue", "social", "app"]
                     }
                 },
                 {
@@ -981,7 +981,7 @@ paths:
                                                 "title": { "type": "string" },
                                                 "value": { "type": ["number", "null"] },
                                                 "previous": { "type": ["number", "null"] },
-                                                "unit": { "type": "string", "enum": ["count", "steps", "percent", "days", "hours", "minutes", "seconds"] },
+                                                "unit": { "type": "string", "enum": ["count", "steps", "percent", "days", "hours", "minutes", "seconds", "eur"], "description": "eur is an amount in euros, from servers of 11 Oct 2026 on. An app that does not know a unit shows the value as a count." },
                                                 "higher_is_better": { "type": ["boolean", "null"] },
                                                 "note": { "type": ["string", "null"] }
                                             }
@@ -996,7 +996,7 @@ paths:
                                                 "id": { "type": "string" },
                                                 "title": { "type": "string" },
                                                 "kind": { "type": "string", "enum": ["line", "bar", "heatmap"] },
-                                                "unit": { "type": "string" },
+                                                "unit": { "type": "string", "description": "One of the card units." },
                                                 "x_kind": { "type": "string", "enum": ["date", "label"] },
                                                 "note": { "type": ["string", "null"] },
                                                 "definition": { "type": ["string", "null"], "description": "What the chart measures. Servers before 10 Oct 2026 omit it." },

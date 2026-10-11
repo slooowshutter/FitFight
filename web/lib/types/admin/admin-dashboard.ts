@@ -3,11 +3,13 @@ import { z } from "zod";
 
 export const adminDashboardSectionValues = [
     "overview",
+    "growth",
     "retention",
     "users",
     "engagement",
     "steps",
     "fights",
+    "revenue",
     "social",
     "app",
 ] as const;
@@ -19,6 +21,7 @@ export const adminDashboardUnitValues = [
     "hours",
     "minutes",
     "seconds",
+    "eur",
 ] as const;
 export const adminDashboardChartKindValues = ["line", "bar", "heatmap"] as const;
 export const adminDashboardXKindValues = ["date", "label"] as const;
@@ -149,6 +152,7 @@ export type AdminDashboardWindow = {
     start: string;
     bucket: AdminDashboardBucket;
     activityFrom: string;
+    environment: AdminDashboardEnvironment;
 };
 
 export type AdminDashboardCardDefinition = {

@@ -143,6 +143,7 @@ function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): Adm
     const period = (x: string) => w.bucket === "day" ? day(x) : w.bucket === "week" ? `the week of ${dayMonth(x)}`
         : new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(date(x));
     const format = (value: number, unit = chart.unit) => {
+        if (unit === "eur") return `${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`;
         const digits = value.toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
         if (unit === "percent") return `${digits}%`;
         if (unit === "count" || unit === "steps") return digits;
@@ -1651,6 +1652,302 @@ function definitions(
                 ],
             };
         }
+        case "growth": {
+            // NOTE: each steps sync adds an activity_raw total for that day, because today's total ends
+            // at the server time of the sync, so its payload is new. A Paris day with one is a day the
+            // phone sent steps, opened or not, and a later sync never fills the days between. Builds
+            // before the activity sync sent steps only for live Fights, so this starts with complete
+            // sync history.
+            const syncDays = (floor: AdminDashboardQueryFragment) => sql`
+                select distinct raw.user_id, (raw.created_at at time zone 'Europe/Paris')::date as day, p.joined_day
+                from private.activity_raw as raw
+                join public.data_sources as source on source.id = raw.source_id and source.provider = 'apple_health'
+                join (${profiles}) as p on p.user_id = raw.user_id
+                where raw.record_kind = 'total' and raw.record_type = 'steps'
+                    and raw.created_at >= greatest((${floor})::timestamp at time zone 'Europe/Paris', ${historyStart})
+                    and raw.created_at < (${w.today}::date)::timestamp at time zone 'Europe/Paris'
+            `;
+            // How each signup came, decided by the 7 days after it like referredSignups: they joined a
+            // real Fight that someone else owns, else claimed a friend's link. A deferred join also sets
+            // accepted_at, and a later leave keeps it.
+            const arrivals = sql`
+                select p.user_id, p.at, p.joined_day, joined.fight_id,
+                    case when joined.fight_id is not null then 'Joined a friend''s fight'
+                        when p.user_id in (select r.user_id from (${referredSignups}) as r) then 'Friend''s link'
+                        else 'On their own' end as series
+                from (${profiles}) as p
+                left join lateral (
+                    select m.fight_id from public.fight_members as m
+                    join (${realFights}) as f on f.id = m.fight_id
+                    where m.user_id = p.user_id and f.owner_id <> p.user_id
+                        and m.accepted_at < p.created_at + interval '7 days'
+                    order by m.accepted_at limit 1
+                ) as joined on true
+            `;
+            const span = w.bucket === "month" ? 30 : 7;
+            return {
+                cards: [
+                    weeklyNewUsers,
+                    {
+                        id: "quick_ratio", title: "Weekly quick ratio", unit: "percent", better: true,
+                        note: `People whose phone started sending steps, per person whose phone stopped. 100% is flat. The 7 days before today vs the week before.${historyNote(21)}`,
+                        query: sql`
+                            with weeks as (
+                                select s.user_id,
+                                    bool_or(s.day >= ${w.today}::date - 7) as w0,
+                                    bool_or(s.day >= ${w.today}::date - 14 and s.day < ${w.today}::date - 7) as w1,
+                                    bool_or(s.day < ${w.today}::date - 14) as w2
+                                from (${syncDays(sql`${w.today}::date - 21`)}) as s
+                                group by s.user_id
+                            )
+                            select case when ${w.today}::date - 14 >= ${w.activityFrom}::date then
+                                    100.0 * count(*) filter (where w0 and not w1)
+                                        / nullif(count(*) filter (where w1 and not w0), 0) end as value,
+                                case when ${w.today}::date - 21 >= ${w.activityFrom}::date then
+                                    100.0 * count(*) filter (where w1 and not w2)
+                                        / nullif(count(*) filter (where w2 and not w1), 0) end as previous
+                            from weeks
+                        `,
+                    },
+                    {
+                        id: "viral_rate", title: "Monthly viral rate", unit: "percent", better: true,
+                        note: `New users who came through a friend, per 100 older users whose phone sent steps. The 30 days before today vs the 30 before.${historyNote(60)}`,
+                        query: sql`
+                            with active as (
+                                select s.user_id,
+                                    bool_or(s.day >= ${w.today}::date - 30 and s.joined_day < ${w.today}::date - 30) as recent,
+                                    bool_or(s.day < ${w.today}::date - 30 and s.joined_day < ${w.today}::date - 60) as earlier
+                                from (${syncDays(sql`${w.today}::date - 60`)}) as s
+                                group by s.user_id
+                            ),
+                            brought as (
+                                select a.joined_day >= ${w.today}::date - 30 as recent from (${arrivals}) as a
+                                where a.series <> 'On their own'
+                                    and a.joined_day >= ${w.today}::date - 60 and a.joined_day < ${w.today}::date
+                            )
+                            select case when ${w.today}::date - 30 >= ${w.activityFrom}::date then
+                                    100.0 * (select count(*) from brought where recent)
+                                        / nullif((select count(*) from active where recent), 0) end as value,
+                                case when ${w.today}::date - 60 >= ${w.activityFrom}::date then
+                                    100.0 * (select count(*) from brought where not recent)
+                                        / nullif((select count(*) from active where earlier), 0) end as previous
+                        `,
+                    },
+                ],
+                charts: [
+                    {
+                        id: "signups_by_source", title: `Signups by source ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Signups in each ${w.bucket}, by how they came. Joined a friend's fight: within 7 days of signing up, they joined a real Fight that someone else owns. Friend's link: within 7 days, they claimed a friend's referral link but joined no such Fight. On their own: everyone else, including people a friend told about FitFight without a link. App-wide and suggested Fights do not count. The bars add up to the new users, and a signup of the last 7 days can still move to a friend source. Deleted accounts are not counted.`,
+                        example: (r) => {
+                            const fight = r.at("Joined a friend's fight");
+                            const link = r.at("Friend's link");
+                            const own = r.at("On their own");
+                            if (fight === undefined || link === undefined || own === undefined) return null;
+                            return `${r.count(fight + link + own, "person", "people")} signed up ${r.when}: ${r.format(fight)} joined a friend's fight, ${r.format(link)} used a friend's link and ${r.format(own)} came on their own.`;
+                        },
+                        note: "The 7 days after signup decide the source.",
+                        query: perBucket(sql, w, arrivals, count, {
+                            series: ["Joined a friend's fight", "Friend's link", "On their own"],
+                        }),
+                    },
+                    {
+                        id: "growth_flow", title: `People gained and lost ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `People whose phone sends Apple Health steps, by what changed. Each point compares the ${span} days up to the end of the ${w.bucket} (up to yesterday for the current one) with the ${span} days before. New: signed up in those ${2 * span} days, and the phone sent steps for the first time. Came back: an older account whose phone sent steps after ${span} days without any. Lost, below zero: the phone sent steps in the earlier ${span} days but not in the later ones. People who stayed are not shown.${w.bucket === "day" ? " Day points overlap, so they do not add up." : ""} A background sync counts, so this follows phones that still sync, not app opens. Deleted accounts are not counted.`,
+                        example: (r) => {
+                            const fresh = r.latest("New");
+                            const back = r.latest("Came back");
+                            const lost = r.latest("Lost");
+                            if (fresh === undefined || back === undefined || lost === undefined) return null;
+                            return `In the ${span} days up to yesterday, ${r.count(fresh, "new person", "new people")} started sending steps, ${r.count(back, "person", "people")} came back and ${r.count(Math.abs(lost), "person", "people")} stopped.`;
+                        },
+                        note: `Each point: the ${span} days up to its end against the ${span} before. Lost is below zero.${historyNote(Math.round((Date.parse(w.today) - Date.parse(w.start)) / 86_400_000) + 2 * span)}`,
+                        query: sql`
+                            with synced as materialized (${syncDays(sql`${w.start}::date - ${2 * span}::int`)}),
+                            point as (
+                                select sp.bucket, least(sp.day, ${w.today}::date - 1) as last_day
+                                from (${samplePoints(sql, w)}) as sp
+                                where sp.bucket < ${w.today}::date
+                                    and least(sp.day, ${w.today}::date - 1) - ${2 * span - 1}::int >= ${w.activityFrom}::date
+                            ),
+                            people as (
+                                select pt.bucket, s.user_id, min(s.joined_day) as joined_day,
+                                    bool_or(s.day > pt.last_day - ${span}::int) as now_active,
+                                    bool_or(s.day <= pt.last_day - ${span}::int) as before_active
+                                from point as pt
+                                join synced as s on s.day > pt.last_day - ${2 * span}::int and s.day <= pt.last_day
+                                group by pt.bucket, s.user_id
+                            ),
+                            counted as (
+                                select pt.bucket,
+                                    count(pe.user_id) filter (where pe.now_active and not pe.before_active
+                                        and pe.joined_day > pt.last_day - ${2 * span}::int) as fresh,
+                                    count(pe.user_id) filter (where pe.now_active and not pe.before_active
+                                        and pe.joined_day <= pt.last_day - ${2 * span}::int) as back,
+                                    count(pe.user_id) filter (where pe.before_active and not pe.now_active) as lost
+                                from point as pt
+                                left join people as pe on pe.bucket = pt.bucket
+                                group by pt.bucket
+                            )
+                            select c.bucket::text as x, v.y::float8 as y, v.series
+                            from counted as c
+                            cross join lateral (values (1, 'New', c.fresh), (2, 'Came back', c.back), (3, 'Lost', -c.lost))
+                                as v(position, series, y)
+                            order by v.position, c.bucket
+                        `,
+                    },
+                    {
+                        id: "recruiting_fights", title: "Fights that brought new users, all time", kind: "bar", unit: "count", x: "label",
+                        definition: "Real Fights, all rounds of a repeating Fight together, by the new users who joined them within 7 days of signing up. A person counts once, for the first such Fight. Each label shows the Fight's name and its owner now. App-wide and suggested Fights do not count.",
+                        example: (r) => (r.top && r.top.y > 0
+                            ? `${r.top.x} brought ${r.count(r.top.y, "new person", "new people")} to FitFight.`
+                            : null),
+                        query: sql`
+                            select left(coalesce(series.name, f.name), 28) || ' by ' || coalesce('@' || owner.handle, 'a deleted account') as x,
+                                count(*)::float8 as y
+                            from (${arrivals}) as a
+                            join public.fights as f on f.id = a.fight_id
+                            left join public.fight_series as series on series.id = f.series_id
+                            left join public.profiles as owner
+                                on owner.user_id = coalesce(series.owner_id, f.owner_id) and owner.deleted_at is null
+                            group by 1 order by 2 desc, 1 limit 10
+                        `,
+                    },
+                ],
+            };
+        }
+        case "revenue": {
+            // On the production database, Sandbox purchases are App Review's. Staging has only Sandbox ones.
+            const storeEnvironment = w.environment === "production" ? "Production" : "Sandbox";
+            const sandboxNote = w.environment === "production" ? "" : " Staging: Sandbox purchases, no real money.";
+            // One row per purchase that was not refunded, with what the buyer paid in euros: Apple's
+            // price in thousandths, or the euro list price for other currencies. The newest record of a
+            // Special decides; one charged after someone else got its edition counts until Apple refunds it.
+            const sales = sql`
+                with specials as (
+                    select distinct on (t.original_transaction_id) t.account_id, t.purchase_at, t.outcome, t.evidence
+                    from private.special_transactions as t
+                    where t.environment = ${storeEnvironment}
+                    order by t.original_transaction_id, t.signed_at desc
+                )
+                select account.user_id, sold.at, sold.series,
+                    case when sold.evidence ->> 'currency' = 'EUR' and sold.evidence ->> 'price' is not null
+                        then (sold.evidence ->> 'price')::numeric / 1000 else sold.list_price end as amount
+                from (
+                    select account_id, purchase_at as at, 'Specials' as series, evidence, 0.99 as list_price
+                    from specials where outcome <> 'refunded'
+                    union all
+                    select account_id, purchase_at, 'Custom characters', evidence, 4.99
+                    from private.custom_character_purchases
+                    where environment = ${storeEnvironment} and revoked_at is null
+                ) as sold
+                join private.special_accounts as account on account.id = sold.account_id
+            `;
+            return {
+                cards: [
+                    {
+                        id: "monthly_revenue", title: "Monthly revenue", unit: "eur", better: true,
+                        note: `What buyers paid, VAT included, before Apple's commission. Refunds left out. Last 30 days vs the 30 before.${sandboxNote}`,
+                        query: sql`
+                            select coalesce(sum(e.amount) filter (where e.at >= ${ago(30)} and e.at < ${w.now}), 0)::float8 as value,
+                                coalesce(sum(e.amount) filter (where e.at >= ${ago(60)} and e.at < ${ago(30)}), 0)::float8 as previous
+                            from (${sales}) as e
+                        `,
+                    },
+                    {
+                        id: "paying_users", title: "Paying users", unit: "percent", better: true,
+                        note: `Share of all users who bought a Special or a custom character and were not refunded. Now vs 7 days ago.${sandboxNote}`,
+                        query: sql`
+                            with paid as (select s.user_id, min(s.at) as first_paid from (${sales}) as s group by s.user_id)
+                            select 100.0 * count(paid.user_id) filter (where paid.first_paid < ${w.now}) / nullif(count(*), 0) as value,
+                                100.0 * count(paid.user_id) filter (where p.created_at < ${ago(7)} and paid.first_paid < ${ago(7)})
+                                    / nullif(count(*) filter (where p.created_at < ${ago(7)}), 0) as previous
+                            from public.profiles as p
+                            left join paid on paid.user_id = p.user_id
+                            where p.deleted_at is null and p.created_at < ${w.now}
+                        `,
+                    },
+                    {
+                        id: "character_failure_rate", title: "Monthly character failure rate", unit: "percent", better: false,
+                        note: `Share of custom characters bought in the last 30 days whose Blend run failed, was cancelled or did not confirm its start, vs the 30 before. A retry that worked still counts.${sandboxNote}`,
+                        query: eventCard(sql, w, 30, sql`
+                            select c.purchase_at as at, exists (
+                                select 1 from private.ai_requests as r
+                                where r.resource_id = c.id and r.status in ('failed', 'cancelled', 'start_unconfirmed')
+                            ) as failed
+                            from private.custom_character_purchases as c
+                            where c.environment = ${storeEnvironment} and c.description is not null
+                        `, sql`avg(case when e.failed then 100.0 else 0 end)`),
+                    },
+                ],
+                charts: [
+                    {
+                        id: "revenue_per_bucket", title: `Revenue ${per}`, kind: "bar", unit: "eur", x: "date",
+                        definition: `What buyers paid in each ${w.bucket}, by product. VAT included, before Apple's commission. Refunded purchases are left out. The amount is Apple's price in euros, or the euro list price (0.99 EUR a Special, 4.99 EUR a custom character) for other currencies.${w.environment === "production" ? " App Review's Sandbox purchases are left out." : sandboxNote}`,
+                        example: (r) => {
+                            const specials = r.at("Specials");
+                            const characters = r.at("Custom characters");
+                            if (specials === undefined || characters === undefined) return null;
+                            return specials + characters === 0 ? `Nobody bought anything ${r.when}.`
+                                : `Buyers paid ${r.format(specials + characters)} ${r.when}: ${r.format(specials)} for Specials and ${r.format(characters)} for custom characters.`;
+                        },
+                        note: `VAT included, before Apple's commission. Refunds left out.${sandboxNote}`,
+                        query: perBucket(sql, w, sales, sql`sum(e.amount)`, { series: ["Specials", "Custom characters"] }),
+                    },
+                    {
+                        id: "purchase_outcomes", title: "Purchases by state, all time", kind: "bar", unit: "count", x: "label",
+                        definition: `Every purchase by its state now, as the app shows it to the buyer. A Special is owned, refunded, or charged but not given because someone else got that edition first. A custom character is delivered when its five images are done, else generating, not described yet, failed and free to retry, waiting for support because Blend did not confirm the start, or refunded. Deleted accounts are not counted.${sandboxNote}`,
+                        example: (r) => {
+                            const characters = r.rows.filter((row) => row.x.startsWith("Character")).reduce((sum, row) => sum + row.y, 0);
+                            const specials = r.total - characters;
+                            const delivered = r.row("Character delivered") ?? 0;
+                            const support = r.row("Character needs support") ?? 0;
+                            if (characters === 0) return specials > 0 ? `${r.count(specials, "Special was", "Specials were")} bought, and no custom character yet.` : null;
+                            return `${r.format(delivered)} of ${r.count(characters, "paid character is", "paid characters are")} delivered.${support > 0 ? ` ${r.count(support, "needs", "need")} support.` : ""}`;
+                        },
+                        query: sql`
+                            with characters as (
+                                -- The same states, in the same order, as readCustomCharacterStore.
+                                select c.revoked_at, c.description,
+                                    (select r.status from private.ai_requests as r where r.resource_id = c.id and r.workflow = 'avatar'
+                                        order by r.created_at desc limit 1) as portrait,
+                                    (select r.status from private.ai_requests as r where r.resource_id = c.id and r.workflow = 'fitness'
+                                        order by r.created_at desc limit 1) as fitness
+                                from private.custom_character_purchases as c
+                                join private.special_accounts as account on account.id = c.account_id
+                                where c.environment = ${storeEnvironment} and account.user_id is not null
+                            ), specials as (
+                                select distinct on (t.original_transaction_id) t.outcome
+                                from private.special_transactions as t
+                                join private.special_accounts as account on account.id = t.account_id
+                                where t.environment = ${storeEnvironment} and account.user_id is not null
+                                order by t.original_transaction_id, t.signed_at desc
+                            ), states as (
+                                select case outcome when 'owned' then 'Special owned' when 'refunded' then 'Special refunded'
+                                    else 'Special charged, not given' end as x
+                                from specials
+                                union all
+                                select case
+                                    when revoked_at is not null then 'Character refunded'
+                                    when fitness = 'completed' then 'Character delivered'
+                                    when coalesce(fitness, portrait) = 'start_unconfirmed' then 'Character needs support'
+                                    when coalesce(fitness, portrait) in ('failed', 'cancelled') then 'Character failed, can retry'
+                                    when description is null then 'Character not described yet'
+                                    else 'Character generating' end
+                                from characters
+                            )
+                            select o.x, count(states.x)::float8 as y
+                            from (values (1, 'Special owned'), (2, 'Special refunded'), (3, 'Special charged, not given'),
+                                (4, 'Character delivered'), (5, 'Character generating'), (6, 'Character not described yet'),
+                                (7, 'Character failed, can retry'), (8, 'Character needs support'), (9, 'Character refunded'))
+                                as o(position, x)
+                            left join states on states.x = o.x
+                            group by o.position, o.x
+                            order by o.position
+                        `,
+                    },
+                ],
+            };
+        }
         case "social": {
             const posts = sql`select author_id as user_id, created_at as at from public.fight_posts`;
             const comments = sql`select author_id as user_id, created_at as at from public.fight_post_comments`;
@@ -2079,7 +2376,7 @@ export async function readAdminDashboard(
     // them, so staging history stays short until Marc points that domain at `preview`; then move
     // its date to the first full day after the switch.
     const activityFrom = { production: "2026-10-02", staging: "2026-10-02" }[environment];
-    const w: AdminDashboardWindow = { now, today, start: range.start, bucket: range.bucket, activityFrom };
+    const w: AdminDashboardWindow = { now, today, start: range.start, bucket: range.bucket, activityFrom, environment };
     const { cards, charts } = definitions(database, w, section);
     const failure = (error: unknown) => `Query failed: ${error instanceof Error ? error.message : String(error)}`;
     // NOTE: tiles take turns on the pool's connections, so each note's time is the tile's own

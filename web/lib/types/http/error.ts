@@ -26,6 +26,7 @@ export const ERROR_CODES = {
     character_refunded: "character_refunded",
     character_portrait_chosen: "character_portrait_chosen",
     character_portrait_not_ready: "character_portrait_not_ready",
+    character_retry_limit: "character_retry_limit",
     already_member: "already_member",
     fight_not_joinable: "fight_not_joinable",
     fight_full: "fight_full",

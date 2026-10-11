@@ -227,6 +227,9 @@ export async function prepareCustomCharacterStage(
                     result ->> 'image_url' as image_url
                 from private.ai_requests where resource_id = ${purchaseId} order by created_at desc`,
         );
+        // NOTE: each free retry is a new paid Blend run, so a purchase gets a bounded number of them.
+        if (input.retry && attempts.filter((item) => ["failed", "cancelled"].includes(item.status)).length >= 6)
+            throw new ApiError(409, "character_retry_limit", "This character needs support before another retry");
         let avatar = attempts.find((item) => item.workflow === "avatar");
         const fitness = attempts.find((item) => item.workflow === "fitness");
         if (purchase.description === null) {
@@ -365,6 +368,11 @@ export async function dueCustomCharacterPurchases(database: Sql = createDatabase
         )
         order by purchase.updated_at, purchase.id limit 4`;
     return rows.map((row) => ({ id: String(row.id), userId: String(row.user_id) }));
+}
+
+/** Moves a purchase that keeps failing to the back of the reconcile queue, so it cannot starve the others. */
+export async function deferCustomCharacterPurchase(purchaseId: string, database: Sql = createDatabaseClient()) {
+    await database`update private.custom_character_purchases set updated_at = now() where id = ${purchaseId}`;
 }
 
 /** The owner picks one finished portrait; the other portraits are kept, unselected. */

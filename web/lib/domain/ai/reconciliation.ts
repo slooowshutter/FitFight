@@ -1,7 +1,10 @@
 import { ApiError } from "@/lib/http";
 import { readAiRun } from "@/lib/domain/ai/workflow-requests";
 import { dueAiRequests } from "@/lib/supabase/queries/ai-requests-supabase-query";
-import { dueCustomCharacterPurchases } from "@/lib/supabase/queries/custom-characters-supabase-query";
+import {
+    deferCustomCharacterPurchase,
+    dueCustomCharacterPurchases,
+} from "@/lib/supabase/queries/custom-characters-supabase-query";
 import { advancePaidCharacter, deferredCharacterStartCodes } from "@/lib/domain/ai/paid-character";
 import {
     correlateAiRequest,
@@ -19,6 +22,7 @@ export async function reconcileAiRuns(
         read: readAiRun,
         paidDue: dueCustomCharacterPurchases,
         paidAdvance: advancePaidCharacter,
+        paidDefer: deferCustomCharacterPurchase,
     },
 ) {
     const requests = await deps.due();
@@ -92,7 +96,8 @@ export async function reconcileAiRuns(
                 await deps.paidAdvance(purchase.userId, purchase.id, {});
             } catch (error) {
                 if (!(error instanceof ApiError)) throw error;
-                if (!deferredCharacterStartCodes.includes(error.code)) throw error;
+                // One purchase that keeps failing must not stop or starve the others.
+                if (!deferredCharacterStartCodes.includes(error.code)) await deps.paidDefer?.(purchase.id);
             }
         }
     }

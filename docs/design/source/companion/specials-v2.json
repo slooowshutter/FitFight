@@ -916,5 +916,889 @@
         "succeeded": 24,
         "planned": 24,
         "totalCostUsd": 2.03
+    },
+    "v3Status": "kept except Lion and Koala (redo) and Stallion, Emperor Penguin, Rhino, Hippo (replaced)",
+    "v4": {
+        "date": "2026-10-11",
+        "workflow": "FitFight Animal Avatars (published c405d12d)",
+        "succeeded": 12,
+        "planned": 12,
+        "totalCostUsd": 1.02,
+        "specials": {
+            "special-lion-king": {
+                "series": "royals",
+                "name": "Lion",
+                "signatureDetail": "a gold medal on a ribbon around the neck",
+                "attitude": "Chin up, regal smug half-smile.",
+                "caption": null,
+                "description": "A proud adult lion with a huge golden mane, no crown. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a gold medal on a ribbon around the neck. Chin up, regal smug half-smile.",
+                "note": "replaces v3 (crown removed)",
+                "candidates": [
+                    {
+                        "runId": "3e3bde8d-3e25-454b-9e15-e547a0e0b403",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/7a7af2c6-093f-49a9-bdef-691f6527b1a2",
+                        "file": ".context/specials-v4/lion-king-1.png",
+                        "status": "completed"
+                    },
+                    {
+                        "runId": "8eecc87c-be57-4873-bfb9-3d980f37ad72",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9a81a740-310c-486c-8c08-be7466da47e2",
+                        "file": ".context/specials-v4/lion-king-2.png",
+                        "status": "completed"
+                    }
+                ]
+            },
+            "special-koala": {
+                "series": "cozy-club",
+                "name": "Koala",
+                "signatureDetail": "a small green cannabis leaf tucked behind one ear",
+                "attitude": "Barely awake, smug half-closed eyes.",
+                "caption": null,
+                "description": "A chubby grey koala with big fluffy ears and a large dark nose. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small green cannabis leaf tucked behind one ear. Barely awake, smug half-closed eyes.",
+                "note": "replaces v3 (eucalyptus sprig)",
+                "candidates": [
+                    {
+                        "runId": "6c490440-492c-462c-ad9e-b2389b166471",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9a9f29cc-86a8-4973-bc8f-cb159e89ce84",
+                        "file": ".context/specials-v4/koala-1.png",
+                        "status": "completed"
+                    },
+                    {
+                        "runId": "dfe667a3-cd1b-45a4-8a19-6b4317997e9a",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/5d9cb660-3229-4a31-9da2-0b6958ec8615",
+                        "file": ".context/specials-v4/koala-2.png",
+                        "status": "completed"
+                    }
+                ]
+            },
+            "special-swan": {
+                "series": "royals",
+                "name": "Swan",
+                "signatureDetail": "a small black bow tie",
+                "attitude": "Poised, elegant, quietly superior.",
+                "caption": "Graceful on top. Paddling like mad below.",
+                "description": "An elegant white swan with a long graceful neck and an orange beak, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small black bow tie. Poised, elegant, quietly superior.",
+                "note": "replaces Stallion",
+                "candidates": [
+                    {
+                        "runId": "cffff21d-7e5d-49d5-8302-05346e5df895",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/22d7a6c2-cc33-4cf5-b074-f2822d203762",
+                        "file": ".context/specials-v4/swan-1.png",
+                        "status": "completed"
+                    },
+                    {
+                        "runId": "5f086962-89ff-43cd-b61f-64f87b262a48",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/57e256e8-cf17-4137-96b7-1c70ce69e03a",
+                        "file": ".context/specials-v4/swan-2.png",
+                        "status": "completed"
+                    }
+                ]
+            },
+            "special-giraffe": {
+                "series": "royals",
+                "name": "Giraffe",
+                "signatureDetail": "a gold monocle over one eye",
+                "attitude": "Looking down at everyone, refined and smug.",
+                "caption": "Sees the finish line from the start line.",
+                "description": "A tall elegant giraffe with a long neck, ossicones and patchy tan spots. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a gold monocle over one eye. Looking down at everyone, refined and smug.",
+                "note": "replaces Emperor Penguin",
+                "candidates": [
+                    {
+                        "runId": "8727c0dd-1365-41ca-8cc4-3493f3920171",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/3a10f0ae-9479-4d2a-a1eb-f5f7322f3208",
+                        "file": ".context/specials-v4/giraffe-1.png",
+                        "status": "completed"
+                    },
+                    {
+                        "runId": "0dea58e0-f931-4281-90f1-7727117b600e",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/38d92a60-3b4f-431d-8dc8-1c6f31ad4c41",
+                        "file": ".context/specials-v4/giraffe-2.png",
+                        "status": "completed"
+                    }
+                ]
+            },
+            "special-bull": {
+                "series": "gym-bros",
+                "name": "Bull",
+                "signatureDetail": "a gold nose ring",
+                "attitude": "Snorting, head lowered, ready to charge.",
+                "caption": "Charges first. Asks questions never.",
+                "description": "A huge muscular black bull with curved horns and a broad chest. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a gold nose ring. Snorting, head lowered, ready to charge.",
+                "note": "replaces Rhino",
+                "candidates": [
+                    {
+                        "runId": "88de1ba9-1b9d-4649-89ac-f398e0f55c59",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/01e3b2d0-016d-479b-bc29-5f3cff081d41",
+                        "file": ".context/specials-v4/bull-1.png",
+                        "status": "completed"
+                    },
+                    {
+                        "runId": "3a608fdf-8c4e-4e3b-836b-8a12c37fe538",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/0f544681-1df8-4d24-a14e-41aff777582b",
+                        "file": ".context/specials-v4/bull-2.png",
+                        "status": "completed"
+                    }
+                ]
+            },
+            "special-walrus": {
+                "series": "gym-bros",
+                "name": "Walrus",
+                "signatureDetail": "a small dumbbell in one flipper",
+                "attitude": "Proud, puffed up, very satisfied with himself.",
+                "caption": "Bulking season never ended.",
+                "description": "A massive round walrus with long tusks and a bristly mustache, flippers used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small dumbbell in one flipper. Proud, puffed up, very satisfied with himself.",
+                "note": "replaces Hippo",
+                "candidates": [
+                    {
+                        "runId": "5abb7e9c-3dc6-4cd8-8e81-c9dffa441c98",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/c64e1d54-d230-4ff6-b416-6355ef2cc4fd",
+                        "file": ".context/specials-v4/walrus-1.png",
+                        "status": "completed"
+                    },
+                    {
+                        "runId": "ad2f3571-c681-4788-b80d-af2304bcdb17",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/4f6d80c4-f1cd-4e42-b714-a7939c1be22a",
+                        "file": ".context/specials-v4/walrus-2.png",
+                        "status": "completed"
+                    }
+                ]
+            }
+        }
+    },
+    "final": {
+        "date": "2026-10-11",
+        "decision": "20 decided: 18 kept from v3, plus Ostrich and Bald Eagle (Royals) from v5. Eagle trophy dropped; detail redo pending.",
+        "series": [
+            {
+                "id": "night-hunters",
+                "name": "Night Hunters",
+                "specials": [
+                    {
+                        "id": "special-black-panther",
+                        "name": "Black Panther",
+                        "signatureDetail": "a thick gold rope chain necklace",
+                        "caption": "Doesn't count steps. Steps count him.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "978f67f7-06da-4873-916e-c44bf7ac5346",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/50e8428b-812d-4ca7-a9db-6823399752a2",
+                        "file": ".context/specials-v3/black-panther.png"
+                    },
+                    {
+                        "id": "special-lone-wolf",
+                        "name": "Lone Wolf",
+                        "signatureDetail": "a small silver hoop earring",
+                        "caption": "Runs alone. Finishes first.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "a35e108a-9077-44b8-b5a7-47415ec4c760",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/02036ec8-1faf-410e-bb77-7e85cbc94f25",
+                        "file": ".context/specials-v3/lone-wolf.png"
+                    },
+                    {
+                        "id": "special-snow-leopard",
+                        "name": "Snow Leopard",
+                        "signatureDetail": "ice-blue ski goggles pushed up on the forehead",
+                        "caption": "Cold start. Hot finish.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "42539878-7ff8-4dbc-ab16-4ab22a6cefe3",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/eea2bc3a-df8d-4b9b-ad7f-f9e691dee1d7",
+                        "file": ".context/specials-v3/snow-leopard.png"
+                    },
+                    {
+                        "id": "special-tiger",
+                        "name": "Tiger",
+                        "signatureDetail": "red cloth hand wraps on both hands",
+                        "caption": "Wraps on. Excuses off.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "f61e62cb-6782-40a6-9f3e-0be1ff26475f",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/e5c71476-83d9-4309-8d8b-b82d198dfd5e",
+                        "file": ".context/specials-v3/tiger.png"
+                    },
+                    {
+                        "id": "special-night-owl",
+                        "name": "Night Owl",
+                        "signatureDetail": "gold-rimmed round glasses",
+                        "caption": "Up at 3 a.m. Still ahead of you.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "62773e16-9515-4d4b-bbfb-52e871e77bdb",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/af6a7ee1-3213-4c21-ade9-30567fcbabb1",
+                        "file": ".context/specials-v3/night-owl.png"
+                    },
+                    {
+                        "id": "special-crocodile",
+                        "name": "Crocodile",
+                        "signatureDetail": "dark rectangular sunglasses",
+                        "caption": "Smiles at the finish line. Bad sign.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "122258f7-a184-4531-a367-56eaaedf811d",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/83a36097-84c2-45a8-87d1-9b6faba4df80",
+                        "file": ".context/specials-v3/crocodile.png"
+                    }
+                ],
+                "openSlots": 0
+            },
+            {
+                "id": "royals",
+                "name": "Royals",
+                "specials": [
+                    {
+                        "id": "special-peacock",
+                        "name": "Peacock",
+                        "signatureDetail": "gold aviator sunglasses",
+                        "caption": "Dressed to win. Also wins.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "e06f56a0-7e88-4cdf-a3cf-0883ee7aff07",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/1dcdb069-c388-4b8f-9748-100dc5bbba10",
+                        "file": ".context/specials-v3/peacock.png"
+                    },
+                    {
+                        "id": "special-flamingo",
+                        "name": "Flamingo",
+                        "signatureDetail": "white heart-shaped sunglasses",
+                        "caption": "Stands on one leg. Still out-walks you.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "f418f140-0fde-450a-9314-db35c3531524",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9390e5fc-892b-435f-a7a8-83268a34fe1b",
+                        "file": ".context/specials-v3/flamingo.png"
+                    },
+                    {
+                        "id": "special-persian-cat",
+                        "name": "Persian Cat",
+                        "signatureDetail": "a pearl necklace",
+                        "caption": "Pearls on. Pinky up. Pace up.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "7f88bb04-a17b-4669-96f4-4d15915b7222",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/cf2ebbcb-dc07-4409-be6c-e7116ce3e03b",
+                        "file": ".context/specials-v3/persian-cat.png"
+                    },
+                    {
+                        "id": "special-ostrich",
+                        "name": "Ostrich",
+                        "signatureDetail": "small gold hoop earrings",
+                        "caption": "Never buries her head. Only the competition.",
+                        "source": "v5",
+                        "status": "kept",
+                        "runId": "c134ae16-0adb-46c5-bd34-7c09dd8daadf",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/14241a31-9afe-4f18-8f07-5c991cf3204d",
+                        "file": ".context/specials-v5/royals-a-ostrich.png"
+                    },
+                    {
+                        "id": "special-bald-eagle",
+                        "name": "Bald Eagle",
+                        "signatureDetail": "none",
+                        "caption": "Spotted your step count from up here.",
+                        "source": "v6",
+                        "status": "plain eagle chosen (no accessory)",
+                        "candidates": [
+                            {
+                                "runId": "d91f6abb-21bb-4f96-8b77-0175da11227d",
+                                "detail": "dark aviator sunglasses",
+                                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/87f98c32-41e8-47f4-8cf9-a4040b9b90c5",
+                                "file": ".context/specials-v5/eagle-redo-1.png",
+                                "costUsd": 0.084
+                            },
+                            {
+                                "runId": "af08c966-24ef-4973-a78c-1dca507ef067",
+                                "detail": "small thin gold chain",
+                                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/7d9b4ae8-b3fc-4a1c-914d-9fc1ef05cd1d",
+                                "file": ".context/specials-v5/eagle-redo-2.png",
+                                "costUsd": 0.085
+                            }
+                        ],
+                        "runId": "27f1e330-5815-41e9-87c6-fddaaa4de5bd",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/6f68f8fa-5448-4b77-8404-2f4e925a0fdb",
+                        "file": ".context/specials-v6/bald-eagle-plain.png"
+                    }
+                ],
+                "openSlots": 1
+            },
+            {
+                "id": "gym-bros",
+                "name": "Gym Bros",
+                "specials": [
+                    {
+                        "id": "special-silverback",
+                        "name": "Silverback",
+                        "signatureDetail": "an orange sweatband on the forehead",
+                        "caption": "Skips nothing. Especially not leg day.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "7955e066-8b67-4bbe-a084-71e5cd30059e",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/dec57134-6d0c-4fde-9a68-61279c5f655b",
+                        "file": ".context/specials-v3/silverback.png"
+                    },
+                    {
+                        "id": "special-kangaroo",
+                        "name": "Kangaroo",
+                        "signatureDetail": "red boxing gloves",
+                        "caption": "Counts jumps as steps. Nobody argues.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "3bcba63d-4b54-4a81-8fa1-ee8909b402eb",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/b8aa2d38-0ef1-47ee-950c-ae7aa67923a1",
+                        "file": ".context/specials-v3/kangaroo.png"
+                    },
+                    {
+                        "id": "special-hamster",
+                        "name": "Hamster",
+                        "signatureDetail": "an energy drink can in one hand",
+                        "caption": "Small legs. Unreasonable cardio.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "b18f6e24-2122-447e-81f0-a0cd05bad453",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/c8912910-ec6c-4b57-94d2-1b91daf9674c",
+                        "file": ".context/specials-v3/hamster.png"
+                    },
+                    {
+                        "id": "special-tree-frog",
+                        "name": "Tree Frog",
+                        "signatureDetail": "a basketball under one arm",
+                        "caption": "Hops count double. Allegedly.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "38a2bb50-bdf3-47ad-a3b5-7e0dd25e052f",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/5297d5a6-8c14-4c87-a9e3-29e1b199b360",
+                        "file": ".context/specials-v3/tree-frog.png"
+                    }
+                ],
+                "openSlots": 2
+            },
+            {
+                "id": "cozy-club",
+                "name": "Cozy Club",
+                "specials": [
+                    {
+                        "id": "special-panda",
+                        "name": "Panda",
+                        "signatureDetail": "a bubble tea with a big straw",
+                        "caption": "Bubble tea first. Then domination.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "c0187bad-702f-4066-a9df-7eb7c4d43046",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2ea29133-a8ce-4b1a-bc15-92ffa7af5b0b",
+                        "file": ".context/specials-v3/panda.png"
+                    },
+                    {
+                        "id": "special-capybara",
+                        "name": "Capybara",
+                        "signatureDetail": "a small yuzu fruit balanced on its head",
+                        "caption": "Unbothered. Undefeated.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "854db487-a499-4a71-9296-8aced795a142",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/4ea886fc-10ea-4daa-bb8b-b76b5dd8c156",
+                        "file": ".context/specials-v3/capybara.png"
+                    },
+                    {
+                        "id": "special-hedgehog",
+                        "name": "Hedgehog",
+                        "signatureDetail": "a steaming mug of hot cocoa",
+                        "caption": "Prickly before coffee. Fast after.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "6ebf0862-0b9a-4636-adf3-e59628a17998",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2a253580-b246-4eaf-9593-25f2613606e4",
+                        "file": ".context/specials-v3/hedgehog.png"
+                    },
+                    {
+                        "id": "special-ginger-cat",
+                        "name": "Ginger Cat",
+                        "signatureDetail": "a small bowl of cereal with a spoon",
+                        "caption": "Woke up at noon. Won by dinner.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "064a6a09-3350-4424-a934-1917a581f423",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/0fd7920b-462f-4269-be7b-f4cb2fe4c570",
+                        "file": ".context/specials-v3/ginger-cat.png"
+                    },
+                    {
+                        "id": "special-alpaca",
+                        "name": "Alpaca",
+                        "signatureDetail": "round retro sunglasses",
+                        "caption": "Spits on rest days only.",
+                        "source": "v3",
+                        "status": "kept",
+                        "runId": "a5841b59-5a53-46ab-86e9-7c0d725dda45",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d90a36da-b194-4ed9-9ce7-9f1d53f20e02",
+                        "file": ".context/specials-v3/alpaca.png"
+                    }
+                ],
+                "openSlots": 1
+            }
+        ],
+        "openSlots": {
+            "Night Hunters": 0,
+            "Royals": 1,
+            "Gym Bros": 2,
+            "Cozy Club": 1
+        },
+        "decidedCount": 20
+    },
+    "v4Status": "all six v4 images rejected by Marc on 11 Oct 2026; slots reopened with new animals in v5",
+    "v5": {
+        "date": "2026-10-11",
+        "workflow": "FitFight Animal Avatars (published c405d12d)",
+        "rule": "New animals for the 6 open slots, 3 options each, free kit, no headband, one detail.",
+        "succeeded": 18,
+        "planned": 18,
+        "totalCostUsd": 1.52,
+        "slots": [
+            {
+                "slot": "royals-a",
+                "series": "Royals",
+                "note": "replaces Stallion",
+                "options": [
+                    {
+                        "id": "special-zebra",
+                        "name": "Zebra",
+                        "signatureDetail": "a single pearl stud earring",
+                        "attitude": "Chin up, elegant, quietly smug.",
+                        "caption": "Dressed in stripes. Earned every one.",
+                        "description": "A sleek zebra with crisp black and white stripes and a short upright mane. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a single pearl stud earring. Chin up, elegant, quietly smug.",
+                        "runId": "2e9d84bc-eee6-4beb-8bbd-2860c307482b",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/15f95392-bdb2-48eb-a6f5-81525bcaf5fb",
+                        "file": ".context/specials-v5/royals-a-zebra.png"
+                    },
+                    {
+                        "id": "special-ostrich",
+                        "name": "Ostrich",
+                        "signatureDetail": "small gold hoop earrings",
+                        "attitude": "Haughty, unimpressed, very fabulous.",
+                        "caption": "Never buries her head. Only the competition.",
+                        "description": "A tall ostrich with fluffy black body feathers, long bare neck and long legs, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: small gold hoop earrings. Haughty, unimpressed, very fabulous.",
+                        "runId": "c134ae16-0adb-46c5-bd34-7c09dd8daadf",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/14241a31-9afe-4f18-8f07-5c991cf3204d",
+                        "file": ".context/specials-v5/royals-a-ostrich.png"
+                    },
+                    {
+                        "id": "special-cheetah",
+                        "name": "Cheetah",
+                        "signatureDetail": "a slim gold wristwatch",
+                        "attitude": "Cool, composed, effortlessly fast.",
+                        "caption": "Fashionably fast. Never fashionably late.",
+                        "description": "A lean cheetah with golden fur, black spots and black tear lines under the eyes. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a slim gold wristwatch. Cool, composed, effortlessly fast.",
+                        "runId": "681fd135-c7dc-4e29-b5a5-2f74a57fe2cc",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/41f96baf-125b-455e-8c19-b7e80ddcd033",
+                        "file": ".context/specials-v5/royals-a-cheetah.png"
+                    }
+                ]
+            },
+            {
+                "slot": "royals-b",
+                "series": "Royals",
+                "note": "replaces Emperor Penguin",
+                "options": [
+                    {
+                        "id": "special-stag",
+                        "name": "Stag",
+                        "signatureDetail": "a gold pocket watch chain clipped to the shorts",
+                        "attitude": "Dignified, calm, slightly superior.",
+                        "caption": "Antlers polished. Pace immaculate.",
+                        "description": "A noble red deer stag with big branching antlers. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a gold pocket watch chain clipped to the shorts. Dignified, calm, slightly superior.",
+                        "runId": "4ec712c2-1afb-44dd-b468-5cc78381e02b",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/1c11df85-2a7c-444c-b436-1007029c0f26",
+                        "file": ".context/specials-v5/royals-b-stag.png"
+                    },
+                    {
+                        "id": "special-macaw",
+                        "name": "Macaw",
+                        "signatureDetail": "a small porcelain teacup held with pinky raised",
+                        "attitude": "Posh and loudly confident.",
+                        "caption": "Pinky up. Steps up. Volume up.",
+                        "description": "A bright scarlet macaw with blue and yellow wings used as arms and a curved beak. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small porcelain teacup held with pinky raised. Posh and loudly confident.",
+                        "runId": "a55d9228-1f84-4e65-978f-b26a42518e79",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9d4c1f1c-c158-4900-b16e-d0c8d6dec98a",
+                        "file": ".context/specials-v5/royals-b-macaw.png"
+                    },
+                    {
+                        "id": "special-toucan",
+                        "name": "Toucan",
+                        "signatureDetail": "a single red rose held in the beak",
+                        "attitude": "Smooth, charming, a little too sure of himself.",
+                        "caption": "Arrives with a rose. Leaves with the win.",
+                        "description": "A glossy black toucan with a huge colourful orange beak, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a single red rose held in the beak. Smooth, charming, a little too sure of himself.",
+                        "runId": "f3fb84bc-e73e-451c-a579-5a64d518b174",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/7d7987da-92d6-4445-bd2a-78a0a5c876e5",
+                        "file": ".context/specials-v5/royals-b-toucan.png"
+                    }
+                ]
+            },
+            {
+                "slot": "gym-a",
+                "series": "Gym Bros",
+                "note": "replaces Rhino",
+                "options": [
+                    {
+                        "id": "special-moose",
+                        "name": "Moose",
+                        "signatureDetail": "a silver coach whistle on a cord",
+                        "attitude": "Stern coach face, arms crossed.",
+                        "caption": "Coach says one more lap. Coach is me.",
+                        "description": "A huge muscular moose with wide flat antlers and a long nose. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a silver coach whistle on a cord. Stern coach face, arms crossed.",
+                        "runId": "00ac4155-75b0-4cdc-a3b4-48cc31d0e8bd",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9c0fe881-cc34-4de8-87db-4bf2eb379a80",
+                        "file": ".context/specials-v5/gym-a-moose.png"
+                    },
+                    {
+                        "id": "special-elephant",
+                        "name": "Elephant",
+                        "signatureDetail": "a small kettlebell held in the trunk",
+                        "attitude": "Proud, steady, mildly showing off.",
+                        "caption": "Never forgets leg day.",
+                        "description": "A big strong grey elephant with large ears and a long trunk. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small kettlebell held in the trunk. Proud, steady, mildly showing off.",
+                        "runId": "8446a016-b568-4ca6-97ff-eb07b3635e3b",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/c3d92e40-3cdd-4013-a139-057cf14ce64b",
+                        "file": ".context/specials-v5/gym-a-elephant.png"
+                    },
+                    {
+                        "id": "special-bison",
+                        "name": "Bison",
+                        "signatureDetail": "a jump rope slung over one shoulder",
+                        "attitude": "Grumpy, unstoppable, breathing hard.",
+                        "caption": "Skipping rope. Never skipping cardio.",
+                        "description": "A massive American bison with a shaggy brown hump and short curved horns. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a jump rope slung over one shoulder. Grumpy, unstoppable, breathing hard.",
+                        "runId": "4d9d56db-b308-41ce-916d-ec7c1f9e53f5",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/4dc8070f-e04a-4baa-b575-96585d4ca288",
+                        "file": ".context/specials-v5/gym-a-bison.png"
+                    }
+                ]
+            },
+            {
+                "slot": "gym-b",
+                "series": "Gym Bros",
+                "note": "replaces Hippo",
+                "options": [
+                    {
+                        "id": "special-rooster",
+                        "name": "Rooster",
+                        "signatureDetail": "a silver stopwatch held up",
+                        "attitude": "Loud, smug, way too awake.",
+                        "caption": "Up at 5. Annoying by 5:01.",
+                        "description": "A proud rooster with a red comb, glossy tail feathers and wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a silver stopwatch held up. Loud, smug, way too awake.",
+                        "runId": "9985761d-c4fc-4baa-b00d-c7054266a5bc",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/7ddec320-e331-4f69-89bb-7a4e24fa85ad",
+                        "file": ".context/specials-v5/gym-b-rooster.png"
+                    },
+                    {
+                        "id": "special-beaver",
+                        "name": "Beaver",
+                        "signatureDetail": "a small towel slung over one shoulder",
+                        "attitude": "Hardworking, cheeky buck-toothed grin.",
+                        "caption": "Works like a beaver. Literally.",
+                        "description": "A sturdy brown beaver with big orange front teeth and a flat paddle tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small towel slung over one shoulder. Hardworking, cheeky buck-toothed grin.",
+                        "runId": "caddb8d1-4b45-4dba-b96b-30db0fc53100",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/cf9f52fd-4159-4a60-93ac-492813ac63b9",
+                        "file": ".context/specials-v5/gym-b-beaver.png"
+                    },
+                    {
+                        "id": "special-camel",
+                        "name": "Camel",
+                        "signatureDetail": "a big water bottle in one hand",
+                        "attitude": "Deadpan, unbothered, endlessly patient.",
+                        "caption": "Hydrated in 2019. Still going.",
+                        "description": "A tall one-humped camel with sandy fur and heavy-lidded eyes. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a big water bottle in one hand. Deadpan, unbothered, endlessly patient.",
+                        "runId": "841abe73-55cd-4ac9-804d-a5ba206d8cbe",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2f53125c-b66c-4dd6-a878-088e0d8ca3db",
+                        "file": ".context/specials-v5/gym-b-camel.png"
+                    }
+                ]
+            },
+            {
+                "slot": "cozy",
+                "series": "Cozy Club",
+                "note": "replaces Koala",
+                "options": [
+                    {
+                        "id": "special-sheep",
+                        "name": "Sheep",
+                        "signatureDetail": "knitting needles with a tiny half-knitted scarf",
+                        "attitude": "Sleepy and content.",
+                        "caption": "Counts steps, not sheep.",
+                        "description": "A round fluffy white sheep with a black face and black legs. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: knitting needles with a tiny half-knitted scarf. Sleepy and content.",
+                        "runId": "46d2c061-fc68-42c2-ae43-b5eabd6a538a",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/90999471-f80b-45c7-8ecc-8e1cdd53268a",
+                        "file": ".context/specials-v5/cozy-sheep.png"
+                    },
+                    {
+                        "id": "special-seal",
+                        "name": "Seal",
+                        "signatureDetail": "a hot water bottle hugged to the chest",
+                        "attitude": "Blissfully cozy, eyes half closed.",
+                        "caption": "Warm flippers. Cold competition.",
+                        "description": "A chubby grey harbour seal with big dark eyes and whiskers, flippers used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a hot water bottle hugged to the chest. Blissfully cozy, eyes half closed.",
+                        "runId": "d803d2a6-0bba-4670-9f74-8937702b33ab",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d380cab4-549f-4664-b16e-bb204687f4ab",
+                        "file": ".context/specials-v5/cozy-seal.png"
+                    },
+                    {
+                        "id": "special-squirrel",
+                        "name": "Squirrel",
+                        "signatureDetail": "a big acorn held in both paws",
+                        "attitude": "Cute but suspicious.",
+                        "caption": "Saving steps for winter.",
+                        "description": "A plump red squirrel with ear tufts and a huge bushy tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a big acorn held in both paws. Cute but suspicious.",
+                        "runId": "948ee0e5-3e19-41f3-99ec-3f1c7a84daa8",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/4e986c2c-e6bd-4f01-9bc6-876dd3543ba3",
+                        "file": ".context/specials-v5/cozy-squirrel.png"
+                    }
+                ]
+            },
+            {
+                "slot": "wildcard",
+                "series": "Royals or any",
+                "note": "replaces Lion",
+                "options": [
+                    {
+                        "id": "special-eagle",
+                        "name": "Bald Eagle",
+                        "signatureDetail": "a tiny gold trophy held in one wing",
+                        "attitude": "Intense, proud stare.",
+                        "caption": "Spotted your step count from up here.",
+                        "description": "A proud bald eagle with a white head, yellow hooked beak and brown wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a tiny gold trophy held in one wing. Intense, proud stare.",
+                        "runId": "35d94e8a-7d02-475f-8a71-4d5de6cbe7a2",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9f6d5eb8-a283-4bb6-a7cd-bf987588ac61",
+                        "file": ".context/specials-v5/wildcard-eagle.png"
+                    },
+                    {
+                        "id": "special-meerkat",
+                        "name": "Meerkat",
+                        "signatureDetail": "small binoculars around the neck",
+                        "attitude": "Alert, nosy, on lookout.",
+                        "caption": "On lookout for anyone outwalking him.",
+                        "description": "A slim sandy meerkat with dark eye patches standing very upright. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: small binoculars around the neck. Alert, nosy, on lookout.",
+                        "runId": "482fdabf-cab0-442b-bd5c-25ad6f4856f3",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/7d7616f4-2c09-4f14-8a43-bef51ebb4c7c",
+                        "file": ".context/specials-v5/wildcard-meerkat.png"
+                    },
+                    {
+                        "id": "special-lemur",
+                        "name": "Ring-tailed Lemur",
+                        "signatureDetail": "a small paper coffee cup",
+                        "attitude": "Wide-eyed, caffeinated, chaotic.",
+                        "caption": "Caffeinated. Ring-tailed. Unstoppable.",
+                        "description": "A ring-tailed lemur with big orange eyes and a long black and white striped tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small paper coffee cup. Wide-eyed, caffeinated, chaotic.",
+                        "runId": "b6392fbb-cae8-4c32-8140-40b4585fe033",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/a7a7d7ad-1c84-41d6-bedf-036409604754",
+                        "file": ".context/specials-v5/wildcard-lemur.png"
+                    }
+                ]
+            }
+        ],
+        "picks": {
+            "royals": [
+                "special-ostrich",
+                "special-eagle (without trophy, redo)"
+            ]
+        }
+    },
+    "v6": {
+        "date": "2026-10-11",
+        "workflow": "FitFight Animal Avatars (published c405d12d)",
+        "rule": "Plain Bald Eagle (no accessory) plus 5 new options each for Royals, Gym Bros and Cozy Club.",
+        "succeeded": 16,
+        "planned": 16,
+        "totalCostUsd": 1.35,
+        "specials": [
+            {
+                "id": "special-bald-eagle-plain",
+                "series": "royals",
+                "name": "Bald Eagle",
+                "signatureDetail": "none",
+                "attitude": "Intense, proud stare.",
+                "caption": "Spotted your step count from up here.",
+                "description": "A proud bald eagle with a white head, yellow hooked beak and brown wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. No accessory at all, nothing held in the wings, no glasses, no jewelry. Intense, proud stare.",
+                "runId": "27f1e330-5815-41e9-87c6-fddaaa4de5bd",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/6f68f8fa-5448-4b77-8404-2f4e925a0fdb",
+                "file": ".context/specials-v6/bald-eagle-plain.png"
+            },
+            {
+                "id": "special-pelican",
+                "series": "royals",
+                "name": "Pelican",
+                "signatureDetail": "a small pink silk neckerchief",
+                "attitude": "Prim, fussy, quietly judging.",
+                "caption": "Swallows the competition. Politely.",
+                "description": "A big white pelican with a long beak and a pouch, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small pink silk neckerchief. Prim, fussy, quietly judging.",
+                "runId": "030d1241-746d-4bc6-b26f-b2a26d5dbcd4",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/a2abe2a9-9579-493a-b45b-c0af4d5eb479",
+                "file": ".context/specials-v6/pelican.png"
+            },
+            {
+                "id": "special-jaguar",
+                "series": "royals",
+                "name": "Jaguar",
+                "signatureDetail": "a gold signet ring",
+                "attitude": "Calm, confident, a little dangerous.",
+                "caption": "Quiet entrance. Loud finish.",
+                "description": "A powerful jaguar with golden fur and black rosettes. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a gold signet ring. Calm, confident, a little dangerous.",
+                "runId": "a89a7741-6d0a-4218-8bc6-481e9c68fed5",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2a4e39fe-186a-4d14-a775-ba5b31510092",
+                "file": ".context/specials-v6/jaguar.png"
+            },
+            {
+                "id": "special-unicorn",
+                "series": "royals",
+                "name": "Unicorn",
+                "signatureDetail": "a tiny gold star earring",
+                "attitude": "Sparkly but deeply unimpressed.",
+                "caption": "Rare. Like your rest days.",
+                "description": "A white unicorn with a spiral golden horn and a pastel rainbow mane. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a tiny gold star earring. Sparkly but deeply unimpressed.",
+                "runId": "c12ad9d4-f10d-4269-9577-dc71f54a4aa9",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/5d118e29-ed52-422b-b63f-82d415ebeb2b",
+                "file": ".context/specials-v6/unicorn.png"
+            },
+            {
+                "id": "special-cockatoo",
+                "series": "royals",
+                "name": "Cockatoo",
+                "signatureDetail": "a small folding hand fan",
+                "attitude": "Dramatic, diva energy.",
+                "caption": "Crest up. Expectations higher.",
+                "description": "A white sulphur-crested cockatoo with a tall yellow crest, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small folding hand fan. Dramatic, diva energy.",
+                "runId": "4d89ef38-7035-42a1-9222-420bcbf72359",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/483ce580-7822-489e-ad9e-9693313caee1",
+                "file": ".context/specials-v6/cockatoo.png"
+            },
+            {
+                "id": "special-lynx",
+                "series": "royals",
+                "name": "Lynx",
+                "signatureDetail": "a small gold ear cuff",
+                "attitude": "Cool, sharp-eyed, mysterious.",
+                "caption": "Sees your steps through walls.",
+                "description": "A sleek grey lynx with tufted ears, side whiskers and a short tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small gold ear cuff. Cool, sharp-eyed, mysterious.",
+                "runId": "8fb9e5b8-7298-4a88-9ccc-53cec33d017e",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/350648a4-8a5d-4550-8d22-793ea4bb42a7",
+                "file": ".context/specials-v6/lynx.png"
+            },
+            {
+                "id": "special-pig",
+                "series": "gym-bros",
+                "name": "Pig",
+                "signatureDetail": "a protein shaker in one hand",
+                "attitude": "Hyped, proud, red-cheeked.",
+                "caption": "Squeals at every PR.",
+                "description": "A stocky pink pig with a round snout and curly tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a protein shaker in one hand. Hyped, proud, red-cheeked.",
+                "runId": "16e30e00-6784-4f48-a175-ed1e0af6f1b3",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/f6b8f067-041d-4885-82ee-82c7845c6730",
+                "file": ".context/specials-v6/pig.png"
+            },
+            {
+                "id": "special-chimpanzee",
+                "series": "gym-bros",
+                "name": "Chimpanzee",
+                "signatureDetail": "a banana held like a microphone",
+                "attitude": "Loud, cocky, mid-trash-talk.",
+                "caption": "Banana first. Then bananas.",
+                "description": "A strong chimpanzee with dark fur and a cheeky face. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a banana held like a microphone. Loud, cocky, mid-trash-talk.",
+                "runId": "d298fb74-2095-4f22-b3bd-d984802a41b2",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/0aadf091-0bf1-4ba2-b901-3183de7934ed",
+                "file": ".context/specials-v6/chimpanzee.png"
+            },
+            {
+                "id": "special-duck",
+                "series": "gym-bros",
+                "name": "Duck",
+                "signatureDetail": "a tiny barbell held overhead",
+                "attitude": "Tiny but absolutely furious.",
+                "caption": "Small duck. Big lift. Bigger quack.",
+                "description": "A small white duck with an orange beak, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a tiny barbell held overhead. Tiny but absolutely furious.",
+                "runId": "4cae9352-6cd2-40ba-8b30-1afaa290c553",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d9d8357b-ccf9-4ac3-81b7-bb2d159a1814",
+                "file": ".context/specials-v6/duck.png"
+            },
+            {
+                "id": "special-shark",
+                "series": "gym-bros",
+                "name": "Shark",
+                "signatureDetail": "swim goggles pushed up on the forehead",
+                "attitude": "Restless, toothy, way too intense.",
+                "caption": "Never stops moving. Literally can't.",
+                "description": "A grey great white shark standing upright on two legs, fins used as arms, a big toothy grin. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: swim goggles pushed up on the forehead. Restless, toothy, way too intense.",
+                "runId": "0ded978f-af9b-4a8e-b82c-c44c44555365",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/3c3e7419-47cb-4fa6-9206-2a37908048de",
+                "file": ".context/specials-v6/shark.png"
+            },
+            {
+                "id": "special-hyena",
+                "series": "gym-bros",
+                "name": "Hyena",
+                "signatureDetail": "a small megaphone",
+                "attitude": "Laughing, loud, trash-talking.",
+                "caption": "Laughs at your step count. Loudly.",
+                "description": "A spotted hyena with round ears and a mischievous grin. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small megaphone. Laughing, loud, trash-talking.",
+                "runId": "959e9dea-7586-4463-930b-c5ddc071b9e1",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2e7ad52c-4757-47d9-b9d6-3d02fc638295",
+                "file": ".context/specials-v6/hyena.png"
+            },
+            {
+                "id": "special-mouse",
+                "series": "cozy-club",
+                "name": "Mouse",
+                "signatureDetail": "a little wedge of cheese",
+                "attitude": "Cute, sleepy, very pleased.",
+                "caption": "Small steps. So many of them.",
+                "description": "A small grey mouse with big round ears and a long thin tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a little wedge of cheese. Cute, sleepy, very pleased.",
+                "runId": "7c2b2830-4493-4c4c-bf94-68250ad96526",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/18d74d4f-a60d-4003-b7d7-5509484753a6",
+                "file": ".context/specials-v6/mouse.png"
+            },
+            {
+                "id": "special-guinea-pig",
+                "series": "cozy-club",
+                "name": "Guinea Pig",
+                "signatureDetail": "a lettuce leaf held in both paws",
+                "attitude": "Content, munching, unbothered.",
+                "caption": "Squeaks politely. Walks relentlessly.",
+                "description": "A round tricolour guinea pig with a fluffy coat. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a lettuce leaf held in both paws. Content, munching, unbothered.",
+                "runId": "ab0326dd-965f-449c-9c46-52a6878871a7",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/68f2ae6d-d79d-409c-85f8-93f56bbf6a0b",
+                "file": ".context/specials-v6/guinea-pig.png"
+            },
+            {
+                "id": "special-manatee",
+                "series": "cozy-club",
+                "name": "Manatee",
+                "signatureDetail": "a slice of watermelon",
+                "attitude": "Blissful, slow, smiling.",
+                "caption": "Slow and steady. Mostly steady.",
+                "description": "A gentle round grey manatee with a whiskered snout, flippers used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a slice of watermelon. Blissful, slow, smiling.",
+                "runId": "87e39234-d48a-45f5-acba-982666ce579b",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/355c3b82-5b12-4337-8188-12e4fabea0dd",
+                "file": ".context/specials-v6/manatee.png"
+            },
+            {
+                "id": "special-fruit-bat",
+                "series": "cozy-club",
+                "name": "Fruit Bat",
+                "signatureDetail": "a sleep mask pushed up on the forehead",
+                "attitude": "Just woke up, groggy and smug.",
+                "caption": "Hangs around. Then wins.",
+                "description": "A fluffy brown fruit bat with big eyes and folded leathery wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a sleep mask pushed up on the forehead. Just woke up, groggy and smug.",
+                "runId": "1d1d0d2f-0e84-4b52-9514-3c6d9f5345b2",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/a82810ec-e8cd-4546-8c67-f1494a4fc4d2",
+                "file": ".context/specials-v6/fruit-bat.png"
+            },
+            {
+                "id": "special-chinchilla",
+                "series": "cozy-club",
+                "name": "Chinchilla",
+                "signatureDetail": "a small pillow hugged to the chest",
+                "attitude": "Sleepy, soft, cozy.",
+                "caption": "Too fluffy to lose.",
+                "description": "A very fluffy grey chinchilla with big round ears and a bushy tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No headband, no wristbands, no jacket or extra clothing. One signature detail only: a small pillow hugged to the chest. Sleepy, soft, cozy.",
+                "runId": "8260e2a4-d8af-43ac-9e14-183594f60b7a",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/432b89b2-b542-4b9b-b05b-31c6696f4d98",
+                "file": ".context/specials-v6/chinchilla.png"
+            }
+        ]
     }
 }

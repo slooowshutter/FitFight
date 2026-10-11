@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { applePurchaseEnvironmentSchema } from "@/lib/types/apple/special-purchase";
-import { limitedCompanionIdSchema } from "@/lib/types/companions/companion";
+import {
+    limitedCompanionIdSchema,
+    specialCompanionIdSchema,
+} from "@/lib/types/companions/companion";
 
 export const specialsConfigurationSchema = z.object({
     environment: applePurchaseEnvironmentSchema,
@@ -31,11 +34,13 @@ export const specialEditionStateValues = [
 export const specialEditionSchema = z.object({
     id: z.string().uuid(),
     environment: applePurchaseEnvironmentSchema,
-    companion_id: limitedCompanionIdSchema,
+    companion_id: specialCompanionIdSchema,
     account_id: z.string().uuid().nullable(),
     state: z.enum(specialEditionStateValues),
     attempt_id: z.string().uuid().nullable(),
     original_transaction_id: z.string().nullable(),
+    /** A retired edition is never offered again; an account that already holds it keeps it. */
+    retired_at: z.coerce.date().nullable(),
 });
 export const specialCheckoutRequestSchema = z.discriminatedUnion("action", [
     z
@@ -48,14 +53,14 @@ export const specialCheckoutRequestSchema = z.discriminatedUnion("action", [
     z
         .object({
             action: z.literal("cancel"),
-            companion_id: limitedCompanionIdSchema,
+            companion_id: specialCompanionIdSchema,
             attempt_id: z.string().uuid(),
         })
         .strict(),
 ]);
 export const specialClaimRequestSchema = z
     .object({
-        companion_id: limitedCompanionIdSchema,
+        companion_id: specialCompanionIdSchema,
         signed_transaction: z.string().min(1).max(30_000),
     })
     .strict();
@@ -63,7 +68,7 @@ export const specialOutcomeValues = ["owned", "refunded", "conflict"] as const;
 export const specialClaimResultSchema = z.object({
     outcome: z.enum(specialOutcomeValues),
     transaction_id: z.string(),
-    companion_id: limitedCompanionIdSchema,
+    companion_id: specialCompanionIdSchema,
 });
 export const specialTransactionRecordSchema = specialClaimResultSchema.extend({
     account_id: z.string().uuid(),
@@ -76,7 +81,7 @@ export const specialStoreSchema = z.object({
     purchases_enabled: z.boolean(),
     editions: z.array(
         z.object({
-            id: limitedCompanionIdSchema,
+            id: specialCompanionIdSchema,
             product_id: z.string(),
             status: z.enum([
                 "available",

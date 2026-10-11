@@ -25,7 +25,7 @@ struct Product {
 final class Transaction {
     let id: UInt64 = 123
     let originalID: UInt64 = 123
-    let productID = StockCompanion.pangolin.productId
+    let productID = StockCompanion.blackPanther.productId
     let appAccountToken: UUID?
     var finished = false
     static var continuation: AsyncStream<VerificationResult<Transaction>>.Continuation?
@@ -46,9 +46,9 @@ final class Transaction {
 enum AppStore { static func sync() async throws {} }
 enum StoreKitError: Error { case userCancelled }
 enum StockCompanion: String, CaseIterable {
-    case pangolin = "limited-pangolin", platypus = "limited-platypus"
+    case blackPanther = "limited-black-panther", loneWolf = "limited-lone-wolf"
     var isLimited: Bool { true }
-    var productId: String { "com.fitfight.mvp.special.\(rawValue.dropFirst(8))" }
+    var productId: String { "com.fitfight.mvp.special.\(rawValue.dropFirst(8).replacingOccurrences(of: "-", with: "_"))" }
 }
 
 @MainActor
@@ -75,7 +75,7 @@ struct FitFightAPI {
             throw URLError(.notConnectedToInternet)
         }
         return SpecialStoreSnapshot(appAccountToken: Self.account, environment: "Sandbox", purchasesEnabled: true,
-            editions: StockCompanion.allCases.map { .init(id: $0.rawValue, productId: $0.productId, status: $0 == .pangolin ? Self.status : .available) }, conflicts: [])
+            editions: StockCompanion.allCases.map { .init(id: $0.rawValue, productId: $0.productId, status: $0 == .blackPanther ? Self.status : .available) }, conflicts: [])
     }
     func specialCheckout(action: String, companionId: String, attemptId: UUID, accessToken: String) async throws {
         if action == "reserve" {
@@ -110,19 +110,19 @@ struct SpecialPurchaseTests {
         let observer = Task { await purchases.observe(session: session) }
         defer { observer.cancel() }
         for _ in 0..<100 where purchases.products.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
-        precondition(purchases.canBuy(.pangolin))
+        precondition(purchases.canBuy(.blackPanther))
 
         FitFightAPI.loseReserveResponse = true
-        let firstResult = await purchases.buy(.pangolin, session: session)
+        let firstResult = await purchases.buy(.blackPanther, session: session)
         precondition(firstResult == false)
         try await purchases.refresh(session: session)
-        precondition(purchases.canBuy(.pangolin), "A lost reserve response must allow the same attempt to resume")
-        precondition(!purchases.canBuy(.platypus))
+        precondition(purchases.canBuy(.blackPanther), "A lost reserve response must allow the same attempt to resume")
+        precondition(!purchases.canBuy(.loneWolf))
         Product.result = .pending
-        let resumedResult = await purchases.buy(.pangolin, session: session)
+        let resumedResult = await purchases.buy(.blackPanther, session: session)
         precondition(resumedResult == false)
         precondition(FitFightAPI.attempts.count == 2 && FitFightAPI.attempts[0] == FitFightAPI.attempts[1])
-        precondition(!purchases.canBuy(.pangolin), "Never present a second purchase sheet for a submitted attempt")
+        precondition(!purchases.canBuy(.blackPanther), "Never present a second purchase sheet for a submitted attempt")
         precondition(Product.presented == 1)
         observer.cancel()
         await observer.value
@@ -132,7 +132,7 @@ struct SpecialPurchaseTests {
         let nextObserver = Task { await restarted.observe(session: session) }
         defer { nextObserver.cancel() }
         for _ in 0..<100 where restarted.products.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
-        precondition(!restarted.canBuy(.pangolin))
+        precondition(!restarted.canBuy(.blackPanther))
         let foreign = Transaction(account: UUID())
         Transaction.continuation?.yield(.verified(foreign))
         try await Task.sleep(for: .milliseconds(30))
@@ -142,7 +142,7 @@ struct SpecialPurchaseTests {
         for _ in 0..<100 where !transaction.finished { try await Task.sleep(for: .milliseconds(10)) }
         precondition(transaction.finished && FitFightAPI.delivered == 1)
         precondition(UserDefaults.standard.data(forKey: "ff.special.purchase.\(userId.uuidString)") == nil)
-        precondition(!restarted.canBuy(.platypus), "Permanent ownership enforces the account limit")
+        precondition(!restarted.canBuy(.loneWolf), "Permanent ownership enforces the account limit")
         nextObserver.cancel()
         await nextObserver.value
 
@@ -161,13 +161,13 @@ struct SpecialPurchaseTests {
         precondition(FitFightAPI.delivered == 2 && !conflict.finished, "Unfulfilled charges must remain recoverable")
         try await recovering.refresh(session: otherSession)
         Product.result = .userCancelled
-        let cancelled = await recovering.buy(.pangolin, session: otherSession)
-        precondition(!cancelled && recovering.canBuy(.platypus), "Apple cancellation must release only this checkout")
+        let cancelled = await recovering.buy(.blackPanther, session: otherSession)
+        precondition(!cancelled && recovering.canBuy(.loneWolf), "Apple cancellation must release only this checkout")
         FitFightAPI.loseReserveResponse = true
-        _ = await recovering.buy(.pangolin, session: otherSession)
+        _ = await recovering.buy(.blackPanther, session: otherSession)
         precondition(recovering.canCancelCheckout)
         await recovering.cancelCheckout(session: otherSession)
-        precondition(!recovering.canCancelCheckout && recovering.canBuy(.platypus))
+        precondition(!recovering.canCancelCheckout && recovering.canBuy(.loneWolf))
         recoveringObserver.cancel()
         await recoveringObserver.value
 
@@ -179,33 +179,33 @@ struct SpecialPurchaseTests {
         defer { failingObserver.cancel() }
         for _ in 0..<100 where failing.products.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
         Product.failure = Product.PurchaseError.purchaseNotAllowed
-        let refused = await failing.buy(.pangolin, session: thirdSession)
-        precondition(!refused && FitFightAPI.status == .available && failing.canBuy(.pangolin) && failing.canBuy(.platypus),
+        let refused = await failing.buy(.blackPanther, session: thirdSession)
+        precondition(!refused && FitFightAPI.status == .available && failing.canBuy(.blackPanther) && failing.canBuy(.loneWolf),
                      "A refused purchase must release the hold")
 
         // Dismissing Apple's sign-in is a cancel, not an error.
         Product.failure = StoreKitError.userCancelled
-        _ = await failing.buy(.pangolin, session: thirdSession)
-        precondition(FitFightAPI.status == .available && failing.canBuy(.platypus) && failing.message.isEmpty,
+        _ = await failing.buy(.blackPanther, session: thirdSession)
+        precondition(FitFightAPI.status == .available && failing.canBuy(.loneWolf) && failing.message.isEmpty,
                      "A dismissed sign-in must release the hold quietly")
 
         // An ambiguous error keeps the hold; the checkout frees itself once the server hold lapses.
         Product.failure = URLError(.networkConnectionLost)
-        _ = await failing.buy(.pangolin, session: thirdSession)
+        _ = await failing.buy(.blackPanther, session: thirdSession)
         Product.failure = nil
-        precondition(FitFightAPI.status == .reserved && !failing.canBuy(.pangolin) && !failing.canBuy(.platypus),
+        precondition(FitFightAPI.status == .reserved && !failing.canBuy(.blackPanther) && !failing.canBuy(.loneWolf),
                      "A possibly charged purchase must keep its hold")
         FitFightAPI.status = .available
         try await failing.refresh(session: thirdSession)
-        precondition(failing.canBuy(.pangolin), "A lapsed server hold must not strand the checkout")
+        precondition(failing.canBuy(.blackPanther), "A lapsed server hold must not strand the checkout")
 
         // A cancel that could not reach the server can be retried by hand.
         Product.result = .userCancelled
         FitFightAPI.failCancel = true
-        _ = await failing.buy(.pangolin, session: thirdSession)
-        precondition(failing.canCancelCheckout && !failing.canBuy(.pangolin))
+        _ = await failing.buy(.blackPanther, session: thirdSession)
+        precondition(failing.canCancelCheckout && !failing.canBuy(.blackPanther))
         await failing.cancelCheckout(session: thirdSession)
-        precondition(!failing.canCancelCheckout && failing.canBuy(.platypus))
+        precondition(!failing.canCancelCheckout && failing.canBuy(.loneWolf))
         print("Special purchase recovery, account binding, pending holds, errors, lapses, cancellation and delivery checks passed")
     }
 }

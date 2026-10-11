@@ -12383,806 +12383,6 @@
                 }
             }
         },
-        "Pangolin": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Pangolin"
-                    }
-                }
-            }
-        },
-        "Packed a snack. Called it endurance.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A pris un goûter. Appelle ça de l’endurance."
-                    }
-                }
-            }
-        },
-        "Platypus": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ornithorynque"
-                    }
-                }
-            }
-        },
-        "Built like a committee. Walks like a legend.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Conçu en réunion. Marche comme une légende."
-                    }
-                }
-            }
-        },
-        "Spotted Quoll": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Chat marsupial tacheté"
-                    }
-                }
-            }
-        },
-        "Spots the finish line. Ignores the warm-up.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Repère l’arrivée. Ignore l’échauffement."
-                    }
-                }
-            }
-        },
-        "Fennec Fox": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Fennec"
-                    }
-                }
-            }
-        },
-        "Heard you were skipping leg day.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A entendu que tu séchais les jambes."
-                    }
-                }
-            }
-        },
-        "Musk Ox": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Bœuf musqué"
-                    }
-                }
-            }
-        },
-        "Built for winter. Dressed for PE.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Taillé pour l’hiver. Habillé pour le sport."
-                    }
-                }
-            }
-        },
-        "Kookaburra": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Kookaburra"
-                    }
-                }
-            }
-        },
-        "Laughs at your excuses. Then takes a break.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Rit de tes excuses. Puis fait une pause."
-                    }
-                }
-            }
-        },
-        "Porcupine": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Porc-épic"
-                    }
-                }
-            }
-        },
-        "Personal space is part of the training plan.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "La distance de sécurité fait partie du programme."
-                    }
-                }
-            }
-        },
-        "Bharal": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Bharal"
-                    }
-                }
-            }
-        },
-        "Your hill is the warm-up.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ta côte, c’est son échauffement."
-                    }
-                }
-            }
-        },
-        "Golden Snub-Nosed Monkey": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Rhinopithèque doré"
-                    }
-                }
-            }
-        },
-        "Golden fur. Questionable pacing.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Pelage doré. Gestion de l’effort discutable."
-                    }
-                }
-            }
-        },
-        "Proboscis Monkey": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Nasique"
-                    }
-                }
-            }
-        },
-        "Wins every race by a nose.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Gagne chaque course d’un nez."
-                    }
-                }
-            }
-        },
-        "Tree Kangaroo": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Kangourou arboricole"
-                    }
-                }
-            }
-        },
-        "Took the stairs. All the way up the tree.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A pris les escaliers. Jusqu’en haut de l’arbre."
-                    }
-                }
-            }
-        },
-        "Gila Monster": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Monstre de Gila"
-                    }
-                }
-            }
-        },
-        "A monster at taking it easy.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un monstre de la récupération."
-                    }
-                }
-            }
-        },
-        "Tarsier": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tarsier"
-                    }
-                }
-            }
-        },
-        "Wide awake. Deeply suspicious of cardio.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Bien réveillé. Très méfiant envers le cardio."
-                    }
-                }
-            }
-        },
-        "Maned Wolf": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Loup à crinière"
-                    }
-                }
-            }
-        },
-        "All legs. No shortcuts.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tout en jambes. Aucun raccourci."
-                    }
-                }
-            }
-        },
-        "Fire Salamander": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Salamandre tachetée"
-                    }
-                }
-            }
-        },
-        "Warming up is a personal brand.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "L’échauffement, c’est sa marque de fabrique."
-                    }
-                }
-            }
-        },
-        "Serval, Easy Pace": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Serval, tranquille"
-                    }
-                }
-            }
-        },
-        "Long legs. Leisurely agenda.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Grandes jambes. Petit programme."
-                    }
-                }
-            }
-        },
-        "Puffin": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Macareux"
-                    }
-                }
-            }
-        },
-        "Flight mode off. Step count on.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Mode avion désactivé. Compteur de pas activé."
-                    }
-                }
-            }
-        },
-        "Numbat, Sprint Mode": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Numbat, mode sprint"
-                    }
-                }
-            }
-        },
-        "Small stripes. Unreasonably big ambitions.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Petites rayures. Ambitions démesurées."
-                    }
-                }
-            }
-        },
-        "Coati, Snooze Mode": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Coati, mode sieste"
-                    }
-                }
-            }
-        },
-        "Yawn first. Personal best later.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "D’abord le bâillement. Le record attendra."
-                    }
-                }
-            }
-        },
-        "Galago": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Galago"
-                    }
-                }
-            }
-        },
-        "Night owl energy. Morning walk regrets.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Énergie nocturne. Regrets à la marche du matin."
-                    }
-                }
-            }
-        },
-        "Frilled Lizard": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Lézard à collerette"
-                    }
-                }
-            }
-        },
-        "Dressed for drama. Stayed for the steps.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Venu pour le spectacle. Resté pour les pas."
-                    }
-                }
-            }
-        },
-        "Okapi": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Okapi"
-                    }
-                }
-            }
-        },
-        "Half stripes. Full commitment to a nap.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "À moitié rayé. À fond pour la sieste."
-                    }
-                }
-            }
-        },
-        "Hoatzin": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Hoazin"
-                    }
-                }
-            }
-        },
-        "Pre-workout is coffee and a long sit.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Avant le sport : café et fauteuil."
-                    }
-                }
-            }
-        },
-        "Quokka": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Quokka"
-                    }
-                }
-            }
-        },
-        "Smiling through a very optional workout.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sourit malgré une séance très facultative."
-                    }
-                }
-            }
-        },
-        "Numbat, Steady Stride": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Numbat, bon rythme"
-                    }
-                }
-            }
-        },
-        "Counts ants on rest days. Steps on the others.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Compte les fourmis au repos. Les pas le reste du temps."
-                    }
-                }
-            }
-        },
-        "Sifaka": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Sifaka"
-                    }
-                }
-            }
-        },
-        "Sideways is still a direction.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "De côté, ça reste une direction."
-                    }
-                }
-            }
-        },
-        "Secretary Bird, On Duty": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Messager sagittaire, en service"
-                    }
-                }
-            }
-        },
-        "Booked your defeat between two meetings.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A calé ta défaite entre deux réunions."
-                    }
-                }
-            }
-        },
-        "Rock Hyrax": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Daman des rochers"
-                    }
-                }
-            }
-        },
-        "Tiny legs. Elephant-sized confidence.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Petites pattes. Confiance d’éléphant."
-                    }
-                }
-            }
-        },
-        "Serval, Sprint Mode": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Serval, mode sprint"
-                    }
-                }
-            }
-        },
-        "Already at the finish. Pretending to stretch.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Déjà à l’arrivée. Fait semblant de s’étirer."
-                    }
-                }
-            }
-        },
-        "Banded Mongoose": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Mangouste rayée"
-                    }
-                }
-            }
-        },
-        "Runs in a pack. Keeps a solo victory speech.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Court en bande. Prépare un discours en solo."
-                    }
-                }
-            }
-        },
-        "Axolotl": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Axolotl"
-                    }
-                }
-            }
-        },
-        "Regrows limbs. Still skips leg day.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ses pattes repoussent. Sèche quand même les jambes."
-                    }
-                }
-            }
-        },
-        "Thorny Devil, Easy Pace": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Diable cornu, tranquille"
-                    }
-                }
-            }
-        },
-        "Prickly about pace. Soft on rest days.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Pointilleux sur l’allure. Souple sur les jours de repos."
-                    }
-                }
-            }
-        },
-        "Coati, Sprint Mode": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Coati, mode sprint"
-                    }
-                }
-            }
-        },
-        "Sniffed out a shortcut. Took the long way.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A flairé un raccourci. A pris le grand tour."
-                    }
-                }
-            }
-        },
-        "Tamandua": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tamandua"
-                    }
-                }
-            }
-        },
-        "Long snout. Short list of excuses.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Long museau. Courte liste d’excuses."
-                    }
-                }
-            }
-        },
-        "Paca": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Paca"
-                    }
-                }
-            }
-        },
-        "Times every lap. Rounds down the snack breaks.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Chronomètre les tours. Arrondit les pauses goûter."
-                    }
-                }
-            }
-        },
-        "Jerboa": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Gerboise"
-                    }
-                }
-            }
-        },
-        "Tiny footprint. Dramatic entrance.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Petite empreinte. Entrée spectaculaire."
-                    }
-                }
-            }
-        },
-        "Thorny Devil, Coffee Break": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Diable cornu, pause café"
-                    }
-                }
-            }
-        },
-        "Sharp outfit. Extremely soft schedule.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tenue piquante. Planning très doux."
-                    }
-                }
-            }
-        },
-        "Kakapo": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Kakapo"
-                    }
-                }
-            }
-        },
-        "Flight cancelled. Walking reluctantly.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Vol annulé. Marche à contrecœur."
-                    }
-                }
-            }
-        },
-        "Secretary Bird, Off Duty": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Messager sagittaire, en pause"
-                    }
-                }
-            }
-        },
-        "This meeting could have been a nap.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Cette réunion aurait pu être une sieste."
-                    }
-                }
-            }
-        },
-        "Markhor": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Markhor"
-                    }
-                }
-            }
-        },
-        "Spiralling horns. Perfectly level coffee.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Cornes en spirale. Café parfaitement stable."
-                    }
-                }
-            }
-        },
         "Taken": {
             "localizations": {
                 "fr": {
@@ -15581,6 +14781,666 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Tes Spéciaux achetés et tes personnages créés apparaissent ici."
+                    }
+                }
+            }
+        },
+        "Black Panther": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Panthère noire"
+                    }
+                }
+            }
+        },
+        "Doesn't count steps. Steps count him.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ne compte pas ses pas. Ses pas le comptent."
+                    }
+                }
+            }
+        },
+        "Lone Wolf": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Loup solitaire"
+                    }
+                }
+            }
+        },
+        "Runs alone. Finishes first.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Court seul. Finit premier."
+                    }
+                }
+            }
+        },
+        "Snow Leopard": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Léopard des neiges"
+                    }
+                }
+            }
+        },
+        "Cold start. Hot finish.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Départ à froid. Arrivée brûlante."
+                    }
+                }
+            }
+        },
+        "Tiger": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tigre"
+                    }
+                }
+            }
+        },
+        "Wraps on. Excuses off.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bandages mis. Excuses au placard."
+                    }
+                }
+            }
+        },
+        "Night Owl": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Oiseau de nuit"
+                    }
+                }
+            }
+        },
+        "Up at 3 a.m. Still ahead of you.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Debout à 3 h du matin. Toujours devant toi."
+                    }
+                }
+            }
+        },
+        "Crocodile": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Crocodile"
+                    }
+                }
+            }
+        },
+        "Smiles at the finish line. Bad sign.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sourit à l’arrivée. Mauvais signe."
+                    }
+                }
+            }
+        },
+        "Peacock": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Paon"
+                    }
+                }
+            }
+        },
+        "Dressed to win. Also wins.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Habillé pour gagner. Et il gagne."
+                    }
+                }
+            }
+        },
+        "Flamingo": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Flamant rose"
+                    }
+                }
+            }
+        },
+        "Stands on one leg. Still out-walks you.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tient sur une patte. Marche quand même plus que toi."
+                    }
+                }
+            }
+        },
+        "Persian Cat": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chat persan"
+                    }
+                }
+            }
+        },
+        "Pearls on. Pinky up. Pace up.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Perles au cou. Petit doigt levé. Allure en hausse."
+                    }
+                }
+            }
+        },
+        "Ostrich": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Autruche"
+                    }
+                }
+            }
+        },
+        "Never buries her head. Only the competition.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ne se cache jamais la tête. Elle enterre la concurrence."
+                    }
+                }
+            }
+        },
+        "Cheetah": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Guépard"
+                    }
+                }
+            }
+        },
+        "Fashionably fast. Never fashionably late.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rapide avec élégance. En retard, jamais."
+                    }
+                }
+            }
+        },
+        "Bald Eagle": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aigle à tête blanche"
+                    }
+                }
+            }
+        },
+        "Spotted your step count from up here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A repéré ton nombre de pas de là-haut."
+                    }
+                }
+            }
+        },
+        "Silverback": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dos argenté"
+                    }
+                }
+            }
+        },
+        "Skips nothing. Especially not leg day.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ne saute rien. Surtout pas la séance jambes."
+                    }
+                }
+            }
+        },
+        "Kangaroo": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Kangourou"
+                    }
+                }
+            }
+        },
+        "Counts jumps as steps. Nobody argues.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte ses sauts comme des pas. Personne ne discute."
+                    }
+                }
+            }
+        },
+        "Bull": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Taureau"
+                    }
+                }
+            }
+        },
+        "Charges first. Asks questions never.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fonce d’abord. Ne pose jamais de questions."
+                    }
+                }
+            }
+        },
+        "Moose": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Élan"
+                    }
+                }
+            }
+        },
+        "Coach says one more lap. Coach is me.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le coach dit encore un tour. Le coach, c’est moi."
+                    }
+                }
+            }
+        },
+        "Bison": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bison"
+                    }
+                }
+            }
+        },
+        "Skipping rope. Never skipping cardio.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Saute à la corde. Ne saute jamais le cardio."
+                    }
+                }
+            }
+        },
+        "Camel": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chameau"
+                    }
+                }
+            }
+        },
+        "Hydrated in 2019. Still going.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Hydraté en 2019. Toujours en route."
+                    }
+                }
+            }
+        },
+        "Panda": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Panda"
+                    }
+                }
+            }
+        },
+        "Bubble tea first. Then domination.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Bubble tea d’abord. Domination ensuite."
+                    }
+                }
+            }
+        },
+        "Capybara": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Capybara"
+                    }
+                }
+            }
+        },
+        "Unbothered. Undefeated.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Imperturbable. Invaincu."
+                    }
+                }
+            }
+        },
+        "Hedgehog": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Hérisson"
+                    }
+                }
+            }
+        },
+        "Prickly before coffee. Fast after.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Piquant avant le café. Rapide après."
+                    }
+                }
+            }
+        },
+        "Ginger Cat": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chat roux"
+                    }
+                }
+            }
+        },
+        "Woke up at noon. Won by dinner.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réveillé à midi. Vainqueur avant le dîner."
+                    }
+                }
+            }
+        },
+        "Alpaca": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Alpaga"
+                    }
+                }
+            }
+        },
+        "Spits on rest days only.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ne crache que les jours de repos."
+                    }
+                }
+            }
+        },
+        "Seal": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Phoque"
+                    }
+                }
+            }
+        },
+        "Warm flippers. Cold competition.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nageoires au chaud. Concurrence au frais."
+                    }
+                }
+            }
+        },
+        "Hamster": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Hamster"
+                    }
+                }
+            }
+        },
+        "Small legs. Unreasonable cardio.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Petites pattes. Cardio déraisonnable."
+                    }
+                }
+            }
+        },
+        "Tree Frog": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rainette"
+                    }
+                }
+            }
+        },
+        "Hops count double. Allegedly.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les sauts comptent double. Paraît-il."
+                    }
+                }
+            }
+        },
+        "Mouse": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Souris"
+                    }
+                }
+            }
+        },
+        "Small steps. So many of them.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Petits pas. Tellement nombreux."
+                    }
+                }
+            }
+        },
+        "Guinea Pig": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cochon d’Inde"
+                    }
+                }
+            }
+        },
+        "Squeaks politely. Walks relentlessly.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Couine poliment. Marche sans relâche."
+                    }
+                }
+            }
+        },
+        "Duck": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Canard"
+                    }
+                }
+            }
+        },
+        "Small duck. Big lift. Bigger quack.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Petit canard. Grosse barre. Coin-coin encore plus gros."
+                    }
+                }
+            }
+        },
+        "Donkey": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Âne"
+                    }
+                }
+            }
+        },
+        "Stubborn about cardio. In a good way.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Têtu sur le cardio. Dans le bon sens."
+                    }
+                }
+            }
+        },
+        "Night Hunters": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chasseurs de nuit"
+                    }
+                }
+            }
+        },
+        "Royals": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Majestés"
+                    }
+                }
+            }
+        },
+        "Gym Bros": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les Costauds"
+                    }
+                }
+            }
+        },
+        "Cozy Club": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Club cocooning"
+                    }
+                }
+            }
+        },
+        "Odd Squad": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Drôle d’équipe"
+                    }
+                }
+            }
+        },
+        "Specials are new: 30 one-of-a-kind animals in five series, each with five step poses.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouveaux Spéciaux : 30 animaux uniques en cinq séries, chacun avec cinq poses selon tes pas."
                     }
                 }
             }

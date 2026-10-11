@@ -83,7 +83,7 @@ query only marks its own tile with `Query failed: ...`.
   would make week 1 look close to 0%.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
   invitations are automatic.
-- **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the
+- **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or `rad`, or the
   admin email). The app always sends `X-FitFight-Auth-Project` with its own
   Supabase project ref. When it names the other FitFight project, the backend
   verifies the token with that project's public Auth endpoint and accepts it only
@@ -445,7 +445,7 @@ Posts include additive `archived` and nullable `archive_reason` fields.
 `GET /api/v1/feedback/{postID}` includes `can_launch_fix`, `can_delete`, and
 `can_archive` for the signed-in viewer. Authors can delete their own posts.
 The launch and archive flags require the existing FitFight admin allowlist:
-confirmed account email `marc@marclamy.com`, username `marc`, or extras in
+confirmed account email `marc@marclamy.com`, username `marc` or `rad`, or extras in
 `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. User-editable metadata and
 identity email copies never grant admin access.
 

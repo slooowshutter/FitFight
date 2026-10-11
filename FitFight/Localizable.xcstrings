@@ -171,16 +171,6 @@
                 }
             }
         },
-        "Reuse a saved description or write a new one.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réutilise une description enregistrée ou écris-en une nouvelle."
-                    }
-                }
-            }
-        },
         "Show all": {
             "localizations": {
                 "fr": {
@@ -590,46 +580,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les tiens"
-                    }
-                }
-            }
-        },
-        "Loading saved descriptions": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Chargement des descriptions enregistrées"
-                    }
-                }
-            }
-        },
-        "Your saved descriptions will appear here.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tes descriptions enregistrées apparaîtront ici."
-                    }
-                }
-            }
-        },
-        "Use this saved description": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Utiliser cette description enregistrée"
-                    }
-                }
-            }
-        },
-        "Couldn’t load your saved descriptions.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Impossible de charger tes descriptions enregistrées."
                     }
                 }
             }
@@ -10184,16 +10134,6 @@
                 }
             }
         },
-        "Write the species, breed or race, accessories, colors, and anything else that should appear.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Écris l’espèce, la race, les accessoires, les couleurs, et tout ce qui doit apparaître."
-                    }
-                }
-            }
-        },
         "Species, breed, accessories, colors…": {
             "localizations": {
                 "fr": {
@@ -10230,16 +10170,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Tu peux prendre une photo avec l’appareil photo quand tu ajoutes des Médias, pas seulement en choisir une dans la photothèque."
-                    }
-                }
-            }
-        },
-        "Couldn’t save your companion. Try again.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Impossible d’enregistrer ton compagnon. Réessaie."
                     }
                 }
             }
@@ -15365,6 +15295,66 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Moins de %lld pas"
+                    }
+                }
+            }
+        },
+        "The Yours tab in the animal picker is now your collection: your Special, the characters you created, and your current animal, with Create your own at the end. Writing a free text-only animal is gone. If you already have one, you keep it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Les tiens du choix d’animal devient ta collection : ton Spécial, les personnages que tu as créés et ton animal actuel, avec Crée le tien à la fin. Il n’est plus possible d’écrire un animal en texte seul. Si tu en as déjà un, tu le gardes."
+                    }
+                }
+            }
+        },
+        "Equipped": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Équipé"
+                    }
+                }
+            }
+        },
+        "Being drawn": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours de dessin"
+                    }
+                }
+            }
+        },
+        "Finish it": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À terminer"
+                    }
+                }
+            }
+        },
+        "Create your own": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Crée le tien"
+                    }
+                }
+            }
+        },
+        "Specials you buy and characters you create live here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tes Spéciaux achetés et tes personnages créés apparaissent ici."
                     }
                 }
             }

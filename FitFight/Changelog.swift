@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 11,
+            notes: "The Yours tab in the animal picker is now your collection: your Special, the characters you created, and your current animal, with Create your own at the end. Writing a free text-only animal is gone. If you already have one, you keep it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
             notes: "Your profile picture is now always your companion. Photo uploads are gone."
         ),
         ReleaseNote(

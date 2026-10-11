@@ -10831,16 +10831,6 @@
                 }
             }
         },
-        "This is how other people see you in fights and Feed. You can change your animal anytime.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "C’est ainsi que les autres te voient dans les combats et le fil. Tu peux changer d’animal à tout moment."
-                    }
-                }
-            }
-        },
         "You can change your animal anytime. Choose another from the grid or describe any animal below.": {
             "localizations": {
                 "fr": {
@@ -13107,12 +13097,22 @@
                 }
             }
         },
-        "One of each. One Special per account. Buy once and keep it, even when you change companions.": {
+        "How others see you in fights and Feed. Change it anytime.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Un seul exemplaire de chaque. Un Spécial par compte. Achetez-le une fois et gardez-le, même en changeant de compagnon."
+                        "value": "C’est ainsi que les autres te voient dans les combats et le fil. Change-le quand tu veux."
+                    }
+                }
+            }
+        },
+        "Only one of each exists, one per person. Buy it once, keep it forever.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un seul exemplaire de chaque, un par personne. Achète-le une fois, garde-le pour toujours."
                     }
                 }
             }
@@ -13127,12 +13127,12 @@
                 }
             }
         },
-        "A purchase is in progress. Your Special is held for 30 minutes. Restore purchases to check it.": {
+        "A purchase is in progress. Your Special is held for 30 minutes. Check it in Settings, Restore purchases.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Un achat est en cours. Votre Spécial est réservé pendant 30 minutes. Restaurez les achats pour vérifier."
+                        "value": "Un achat est en cours. Ton Spécial est réservé pendant 30 minutes. Vérifie dans Réglages, Restaurer les achats."
                     }
                 }
             }

@@ -1180,6 +1180,8 @@ struct CompanionPicker: View {
                 Text("Choose your companion")
                     .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
                     .foregroundStyle(theme.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Spacer()
                 if !animals(in: category).isEmpty {
                     Button {
@@ -1201,7 +1203,7 @@ struct CompanionPicker: View {
                         .disabled(isSaving)
                 }
             }
-            Text("This is how other people see you in fights and Feed. You can change your animal anytime.")
+            Text("How others see you in fights and Feed. Change it anytime.")
                 .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1209,12 +1211,9 @@ struct CompanionPicker: View {
                         selection: $category, fill: true) { $0.name }
             .disabled(isSaving)
             if category == .limited || (category == .all && draft?.isLimited == true) {
-                Text("One of each. One Special per account. Buy once and keep it, even when you change companions.")
+                Text("Only one of each exists, one per person. Buy it once, keep it forever.")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
-                FFButton(title: String(appLocalized: "Restore purchases"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
-                    Task { await purchases.restore(session: session) }
-                }
                 if purchases.canCancelCheckout {
                     FFButton(title: String(appLocalized: "Cancel checkout"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
                         Task { await purchases.cancelCheckout(session: session) }
@@ -1224,7 +1223,7 @@ struct CompanionPicker: View {
                     Text(purchases.message).ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 if purchases.snapshot?.editions.contains(where: { $0.status == .reserved }) == true {
-                    Text("A purchase is in progress. Your Special is held for 30 minutes. Restore purchases to check it.")
+                    Text("A purchase is in progress. Your Special is held for 30 minutes. Check it in Settings, Restore purchases.")
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 ForEach(purchases.snapshot?.conflicts ?? [], id: \.transactionId) { claim in

@@ -354,7 +354,7 @@ function definitions(
     `;
     const totalUsers: AdminDashboardCardDefinition = {
         id: "total_users", title: "Total users", unit: "count", better: true,
-        note: "Now, vs 7 days ago. Deleted accounts are not counted.",
+        note: "Now vs 7 days ago. Deleted accounts are removed from both counts, so the change equals Weekly new users.",
         query: sql`
             select count(*)::float8 as value, count(*) filter (where created_at < ${ago(7)})::float8 as previous
             from public.profiles where deleted_at is null
@@ -457,10 +457,47 @@ function definitions(
     };
 
     switch (section) {
-        case "overview":
+        case "overview": {
+            // Every sync of a person in a live Fight, or one waiting for its final sync, writes a
+            // score snapshot for that Fight, background syncs included. A Fight is contested in a
+            // week when 2 or more people synced steps into it that week. A Fight without a series
+            // counts on its own.
+            const weeklyFightSyncs = sql`
+                with synced as (
+                    select coalesce(f.series_id, f.id) as series_id, s.fight_id, s.user_id,
+                        bool_or(s.created_at >= ${ago(7)}) as recent,
+                        bool_or(s.created_at < ${ago(7)}) as earlier
+                    from private.fight_score_snapshots as s
+                    join (${realFights}) as f on f.id = s.fight_id
+                    where f.state <> 'cancelled' and s.created_at >= ${ago(14)} and s.created_at < ${w.now}
+                    group by 1, s.fight_id, s.user_id
+                )
+                select synced.*,
+                    count(*) filter (where synced.recent) over (partition by synced.fight_id) as recent_fighters,
+                    count(*) filter (where synced.earlier) over (partition by synced.fight_id) as earlier_fighters
+                from synced
+            `;
             return {
                 cards: [
-                    totalUsers, weeklyActive, monthlyActive, weeklyNewUsers, weeklyFightsCreated, liveFights,
+                    {
+                        id: "active_fighters", title: "Weekly active fighters", unit: "count", better: true,
+                        note: "People who synced steps into a Fight that another person also synced into. App-wide and suggested Fights excluded. Last 7 days vs the 7 before.",
+                        query: sql`
+                            select count(distinct e.user_id) filter (where e.recent and e.recent_fighters >= 2)::float8 as value,
+                                count(distinct e.user_id) filter (where e.earlier and e.earlier_fighters >= 2)::float8 as previous
+                            from (${weeklyFightSyncs}) as e
+                        `,
+                    },
+                    totalUsers, weeklyActive, monthlyActive, weeklyNewUsers, weeklyFightsCreated,
+                    {
+                        id: "contested_fights", title: "Weekly contested fights", unit: "count", better: true,
+                        note: "Fights where 2 or more people synced steps. A repeating Fight counts once. App-wide and suggested Fights excluded. Last 7 days vs the 7 before.",
+                        query: sql`
+                            select count(distinct e.series_id) filter (where e.recent_fighters >= 2)::float8 as value,
+                                count(distinct e.series_id) filter (where e.earlier_fighters >= 2)::float8 as previous
+                            from (${weeklyFightSyncs}) as e
+                        `,
+                    },
                     weeklySteps,
                     {
                         id: "health_connected", title: "Synced Apple Health", unit: "count", better: true,
@@ -487,6 +524,7 @@ function definitions(
                     fightsCreatedChart, stepsChart, opensChart,
                 ],
             };
+        }
         case "users":
             return {
                 cards: [
@@ -851,8 +889,9 @@ function definitions(
             };
         }
         case "engagement": {
-            // Fixed 120 days, so these don't move with the chart period.
-            const seen = activitySince(sql`${ago(120)}`);
+            // Fixed spans, so these don't move with the chart period. The lapsed card reads 7 more
+            // days, so its value 7 days ago looks back as far as its value now.
+            const seen = activitySince(sql`${ago(127)}`);
             return {
                 cards: [
                     {
@@ -863,18 +902,17 @@ function definitions(
                     weeklyActive, monthlyActive,
                     {
                         id: "stickiness", title: "Monthly stickiness", unit: "percent", better: true,
-                        note: `Average daily actives divided by monthly actives, last 30 days vs the 30 before.${historyNote(60)}`,
+                        note: `Average daily active users divided by monthly active users, the 30 days before today vs the 30 before.${historyNote(60)}`,
+                        // Whole Paris days: a rolling 30 days touches 31 dates, so it could pass 100%.
                         query: sql`
-                            select case when ${ago(30)}::timestamptz >= ${historyStart} then
-                                    100.0 * (count(distinct (e.user_id, (e.at at time zone 'Europe/Paris')::date)) filter (
-                                        where e.at >= ${ago(30)}) / 30.0)
-                                        / nullif(count(distinct e.user_id) filter (where e.at >= ${ago(30)}), 0) end as value,
-                                case when ${ago(60)}::timestamptz >= ${historyStart} then
-                                    100.0 * (count(distinct (e.user_id, (e.at at time zone 'Europe/Paris')::date)) filter (
-                                        where e.at >= ${ago(60)} and e.at < ${ago(30)}) / 30.0)
-                                        / nullif(count(distinct e.user_id) filter (
-                                            where e.at >= ${ago(60)} and e.at < ${ago(30)}), 0) end as previous
-                            from (${activity}) as e where e.at < ${w.now}
+                            select case when ${w.today}::date - 30 >= ${w.activityFrom}::date then
+                                    100.0 * count(*) filter (where e.day >= ${w.today}::date - 30) / 30.0
+                                        / nullif(count(distinct e.user_id) filter (where e.day >= ${w.today}::date - 30), 0) end as value,
+                                case when ${w.today}::date - 60 >= ${w.activityFrom}::date then
+                                    100.0 * count(*) filter (where e.day < ${w.today}::date - 30) / 30.0
+                                        / nullif(count(distinct e.user_id) filter (where e.day < ${w.today}::date - 30), 0) end as previous
+                            from (${activeDays}) as e
+                            where e.day >= ${w.today}::date - 60 and e.day < ${w.today}::date
                         `,
                     },
                     weeklyOpens,
@@ -913,35 +951,16 @@ function definitions(
                         `,
                     },
                     {
-                        id: "lapsed", title: "Lapsed for 14+ days", unit: "count", better: false,
-                        note: "Opened the app before, not in the last 14 days. Now vs 7 days ago.",
+                        id: "lapsed", title: "Lapsed 14 to 120 days", unit: "count", better: false,
+                        note: `Last opened the app 14 to 120 days ago. Now vs 7 days ago.${historyNote(127)}`,
                         query: sql`
                             with last_open as (
                                 select user_id, max(at) as now_last, max(at) filter (where at < ${ago(7)}) as week_ago_last
                                 from (${seen}) as e where e.at < ${w.now} group by user_id
                             )
-                            select count(*) filter (where now_last < ${ago(14)})::float8 as value,
+                            select count(*) filter (where now_last >= ${ago(120)} and now_last < ${ago(14)})::float8 as value,
                                 count(*) filter (where week_ago_last < ${ago(21)})::float8 as previous
                             from last_open
-                        `,
-                    },
-                    {
-                        id: "active_days", title: "Monthly active days", unit: "days", better: true,
-                        note: `Average days each active person opened the app, last 30 days vs the 30 before.${historyNote(59)}`,
-                        query: sql`
-                            with windows as (
-                                select case when e.day > ${w.today}::date - 30 then 'value' else 'previous' end as period,
-                                    e.user_id
-                                from (${activeDays}) as e
-                                where e.day > ${w.today}::date - 60
-                            )
-                            select case when ${w.today}::date - 29 >= ${w.activityFrom}::date then
-                                    (count(*) filter (where period = 'value'))::float8
-                                        / nullif(count(distinct user_id) filter (where period = 'value'), 0) end as value,
-                                case when ${w.today}::date - 59 >= ${w.activityFrom}::date then
-                                    (count(*) filter (where period = 'previous'))::float8
-                                        / nullif(count(distinct user_id) filter (where period = 'previous'), 0) end as previous
-                            from windows
                         `,
                     },
                 ],
@@ -1086,6 +1105,7 @@ function definitions(
                         query: sql`
                             with seen_days as (
                                 select distinct user_id, (at at time zone 'Europe/Paris')::date as day from (${seen}) as a
+                                where a.at >= ${ago(120)}
                             ), last_open as (
                                 select p.user_id, ${w.today}::date - max(s.day) as days
                                 from public.profiles as p left join seen_days as s using (user_id)
@@ -1100,18 +1120,18 @@ function definitions(
                         `,
                     },
                     {
-                        id: "opens_heatmap", title: "When people open the app, last 30 days", kind: "heatmap", unit: "count", x: "label",
-                        definition: "App opens in the last 30 days by weekday and hour, Paris time. The darker the cell, the more opens.",
+                        id: "opens_heatmap", title: "When people open the app, last 4 weeks", kind: "heatmap", unit: "count", x: "label",
+                        definition: "App opens in the 28 days before today by weekday and hour, Paris time. Each weekday appears 4 times. The darker the cell, the more opens.",
                         example: (r) => (r.peak && r.peak.value > 0
-                            ? `The busiest hour is ${r.peak.y} ${r.peak.x}:00 Paris time, with ${r.count(r.peak.value, "open", "opens")} in 30 days.`
+                            ? `The busiest hour is ${r.peak.y} ${r.peak.x}:00 Paris time, with ${r.count(r.peak.value, "open", "opens")} in 4 weeks.`
                             : null),
-                        note: `Opens by weekday and hour, Paris time.${historyNote(30)}`,
+                        note: `Opens by weekday and hour in the 28 days before today, Paris time.${historyNote(28)}`,
                         query: sql`
                             with counted as (
                                 select extract(isodow from o.at at time zone 'Europe/Paris')::int as d,
                                     extract(hour from o.at at time zone 'Europe/Paris')::int as h, count(*) as n
                                 from (${opens}) as o
-                                where o.at >= ${ago(30)} and o.at < ${w.now}
+                                where (o.at at time zone 'Europe/Paris')::date between ${w.today}::date - 28 and ${w.today}::date - 1
                                 group by 1, 2
                             )
                             select lpad(h::text, 2, '0') as x, to_char('2026-09-20'::date + d, 'Dy') as y,

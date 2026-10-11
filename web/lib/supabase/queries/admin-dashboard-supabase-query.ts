@@ -1304,7 +1304,26 @@ function definitions(
                 ],
             };
         }
-        case "steps":
+        case "steps": {
+            // The joining tiles read at most 28 days before each signup, so history starts 28 days
+            // before the first one instead of at every imported Health day. Complete days end the
+            // day before yesterday.
+            const signupHistory = sql`
+                select * from (${stepHistory(sql`(
+                    select min((created_at at time zone 'Europe/Paris')::date) - 28 from public.profiles
+                )`)}) as h
+                where h.day >= h.joined_day - 28 and h.day < ${w.today}::date - 1
+            `;
+            // People who joined 4 weeks ago or more, by their 4 weeks after signup against the 4
+            // before, with 7 days of data or more on each side.
+            const joiningChange = sql`
+                select user_id, avg(steps) filter (where day < joined_day) as before,
+                    avg(steps) filter (where day >= joined_day) as after
+                from (${signupHistory}) as h
+                where h.joined_day <= ${w.today}::date - 29 and h.day < h.joined_day + 28
+                group by user_id
+                having count(*) filter (where day < joined_day) >= 7 and count(*) filter (where day >= joined_day) >= 7
+            `;
             return {
                 cards: [
                     weeklySteps,
@@ -1330,45 +1349,39 @@ function definitions(
                     },
                     {
                         id: "fight_day_lift", title: "Monthly fight-day lift", unit: "percent", better: true,
-                        note: "Extra steps on days with 12+ hours in a Fight vs other days, app-wide and suggested Fights excluded. The 30 days before yesterday vs the 30 before.",
+                        note: "Median of each person's change on days with 12+ hours in a Fight vs their own other days, 3+ of each. App-wide and suggested Fights excluded. The 30 days before yesterday vs the 30 before.",
+                        // Each person against their own other days: pooled days would compare people
+                        // who fight a lot with people who never fight.
                         query: sql`
-                            with windows as (
+                            with lifts as (
                                 select case when e.day >= ${w.today}::date - 31 then 'value' else 'previous' end as period,
-                                    e.steps, e.in_fight
+                                    avg(e.steps) filter (where e.in_fight) / nullif(avg(e.steps) filter (where not e.in_fight), 0) - 1 as lift
                                 from (${fightDays}) as e
                                 where e.day >= ${w.today}::date - 61
+                                group by 1, e.user_id
+                                having count(*) filter (where e.in_fight) >= 3 and count(*) filter (where not e.in_fight) >= 3
                             )
-                            select 100.0 * (avg(steps) filter (where period = 'value' and in_fight)
-                                    / nullif(avg(steps) filter (where period = 'value' and not in_fight), 0) - 1) as value,
-                                100.0 * (avg(steps) filter (where period = 'previous' and in_fight)
-                                    / nullif(avg(steps) filter (where period = 'previous' and not in_fight), 0) - 1) as previous
-                            from windows
+                            select 100.0 * percentile_cont(0.5) within group (order by lift) filter (where period = 'value') as value,
+                                100.0 * percentile_cont(0.5) within group (order by lift) filter (where period = 'previous') as previous
+                            from lifts
                         `,
                     },
                     {
                         id: "joining_lift", title: "Change after joining", unit: "percent", better: true,
-                        note: "All time. Median of each person's 4 weeks after signup vs the 4 before.",
+                        note: "All time. Median of each person's 4 weeks after signup vs the 4 before. People who joined 4+ weeks ago.",
                         query: sql`
-                            with compared as (
-                                select user_id,
-                                    avg(steps) filter (where day >= joined_day - 28 and day < joined_day) as before,
-                                    avg(steps) filter (where day >= joined_day and day < joined_day + 28) as after
-                                from (${history}) as h group by user_id
-                                having count(*) filter (where day >= joined_day - 28 and day < joined_day) >= 7
-                                    and count(*) filter (where day >= joined_day and day < joined_day + 28) >= 7
-                            )
-                            select percentile_cont(0.5) within group (order by 100.0 * (after / nullif(before, 0) - 1)) as value,
+                            select percentile_cont(0.5) within group (order by 100.0 * (after / before - 1)) as value,
                                 null::float8 as previous
-                            from compared where before > 0
+                            from (${joiningChange}) as compared where before > 0
                         `,
                     },
                     {
                         id: "all_time_steps", title: "All-time steps", unit: "steps", better: true,
-                        note: "Every complete day since each person joined. Now vs 7 days ago.",
+                        note: "Every complete day since each person joined, through the day before yesterday. Now vs 7 days ago.",
                         query: sql`
                             select sum(e.steps)::float8 as value,
-                                sum(e.steps) filter (where e.day < ${w.today}::date - 7)::float8 as previous
-                            from (${steps}) as e
+                                sum(e.steps) filter (where e.day < ${w.today}::date - 8)::float8 as previous
+                            from (${signupHistory}) as e where e.day >= e.joined_day
                         `,
                     },
                 ],
@@ -1425,19 +1438,67 @@ function definitions(
                         }),
                     },
                     {
-                        id: "fight_vs_other_days", title: "Steps on fight days vs other days", kind: "line", unit: "steps", x: "date",
-                        definition: "Average steps per person-day on days when a Fight covered 12 hours or more of the person's day, against their other days. App-wide and suggested Fights do not count.",
+                        id: "fight_lift_by_length", title: "Step lift during fights by length, all time", kind: "bar", unit: "percent", x: "label",
+                        definition: "Finished real Fights with 2 or more fighters, by length. For each fighter: their average steps on days with 12 hours or more in the Fight, against their own average on days without any real Fight in the 8 weeks before they joined it. Days before signup do not count, because people walk more once they join. Each bar is the median change, for fighters with 2 or more Fight days and 7 or more other days. Only complete days. App-wide and suggested Fights are not counted. A bar needs 5 or more people.",
                         example: (r) => {
-                            const fighting = r.at("In a fight");
-                            const other = r.at("Other days");
-                            return fighting === undefined || other === undefined ? null
-                                : `People in a fight walked ${r.format(fighting)} steps a day ${r.when}, against ${r.format(other)} on other days.`;
+                            const high = r.top;
+                            const low = r.rows.reduce<{ x: string; y: number } | undefined>((min, row) => (!min || row.y < min.y ? row : min), undefined);
+                            if (!high || !low) return null;
+                            const change = (y: number) => `${r.format(Math.abs(y))} ${y >= 0 ? "more" : "less"}`;
+                            return high.x === low.x
+                                ? `In fights of ${high.x}, the typical fighter walked ${change(high.y)} than on days without a fight.`
+                                : `In fights of ${high.x}, the typical fighter walked ${change(high.y)} than on days without a fight. In fights of ${low.x}, ${change(low.y)}.`;
                         },
-                        note: `Average steps per person-day${w.bucket === "day" ? "" : ` in each ${w.bucket}`}, on days with 12+ hours in a Fight vs other days.`,
-                        query: perBucket(sql, w, sql`
-                            select d.*, case when d.in_fight then 'In a fight' else 'Other days' end as series
-                            from (${fightDays}) as d
-                        `, sql`avg(e.steps)`, { complete: true, gaps: true, series: ["In a fight", "Other days"] }),
+                        note: "Median change in each fighter's daily steps during a Fight, against their own days without a Fight before it.",
+                        query: sql`
+                            with fighters as (
+                                select m.user_id, f.id as fight_id, greatest(f.starts_at, m.accepted_at) as joined_at, f.ends_at,
+                                    round(extract(epoch from f.ends_at - f.starts_at) / 86400) as length
+                                from (${realFights}) as f
+                                join public.fight_members as m on m.fight_id = f.id and m.finalized_at is not null
+                                where f.state = 'final' and (
+                                    select count(*) from public.fight_members as other
+                                    where other.fight_id = f.id and other.finalized_at is not null
+                                ) >= 2
+                            ),
+                            days as materialized (
+                                select h.user_id, h.day, h.steps, h.day_starts, h.day_ends
+                                from (${stepHistory(sql`(
+                                    select min((created_at at time zone 'Europe/Paris')::date) from public.profiles
+                                )`)}) as h
+                                where h.day >= h.joined_day and h.day < ${w.today}::date - 1
+                                    and h.user_id in (select fighters.user_id from fighters)
+                            ),
+                            -- Days that any real Fight touched, so the baseline holds none of them.
+                            fought as (
+                                select distinct d.user_id, d.day from days as d
+                                join public.fight_members as m on m.user_id = d.user_id
+                                join (${realFights}) as f on f.id = m.fight_id
+                                where (m.state = 'accepted' or m.finalized_at is not null) and f.state not in ('draft', 'cancelled')
+                                    and f.ends_at > d.day_starts and greatest(f.starts_at, m.accepted_at) < d.day_ends
+                            ),
+                            lifts as (
+                                select fi.user_id, fi.length,
+                                    avg(d.steps) filter (where least(fi.ends_at, d.day_ends) - greatest(fi.joined_at, d.day_starts) >= interval '12 hours')
+                                        / nullif(avg(d.steps) filter (where d.day_ends <= fi.joined_at and fo.day is null), 0) as ratio
+                                from fighters as fi
+                                join days as d on d.user_id = fi.user_id
+                                    and d.day_starts >= fi.joined_at - interval '56 days' and d.day_starts < fi.ends_at
+                                left join fought as fo on fo.user_id = d.user_id and fo.day = d.day
+                                group by fi.user_id, fi.fight_id, fi.length
+                                having count(*) filter (where least(fi.ends_at, d.day_ends) - greatest(fi.joined_at, d.day_starts) >= interval '12 hours') >= 2
+                                    and count(*) filter (where d.day_ends <= fi.joined_at and fo.day is null) >= 7
+                            )
+                            select band.x, (100 * (percentile_cont(0.5) within group (order by lifts.ratio) - 1))::float8 as y
+                            from (values
+                                (1, '3 days or less', 0, 3), (2, '4-7 days', 4, 7), (3, '8-14 days', 8, 14),
+                                (4, '15 days or more', 15, 1000000)
+                            ) as band(position, x, low, high)
+                            join lifts on lifts.length between band.low and band.high and lifts.ratio is not null
+                            group by band.position, band.x
+                            having count(distinct lifts.user_id) >= 5
+                            order by band.position
+                        `,
                     },
                     {
                         id: "people_by_average", title: "People by daily average, last 30 days", kind: "bar", unit: "count", x: "label",
@@ -1464,7 +1525,7 @@ function definitions(
                     },
                     {
                         id: "around_joining", title: "Steps around signup, all time", kind: "line", unit: "steps", x: "label",
-                        definition: "Average steps per person on each day around signup, from Apple Health history. Day 0 is the signup day; negative days are before it.",
+                        definition: "Average steps per person on each day around signup, from Apple Health history. Day 0 is the signup day; negative days are before it. The same people on every day: those who joined 4 weeks ago or more, with 7 days of data or more on each side.",
                         example: (r) => {
                             const mean = (low: number, high: number) => {
                                 const days = r.rows.filter((row) => Number(row.x) >= low && Number(row.x) < high);
@@ -1475,31 +1536,27 @@ function definitions(
                             return before === undefined || after === undefined ? null
                                 : `People walked ${r.format(before)} steps a day in the week before signing up and ${r.format(after)} in their first week.`;
                         },
-                        note: "Day 0 is the signup day. Average across everyone with Health history on each day.",
+                        note: "Day 0 is the signup day. People who joined 4+ weeks ago, with 7+ days of data on each side.",
                         query: sql`
-                            select (day - joined_day)::text as x, avg(steps)::float8 as y
-                            from (${history}) as h
-                            where day - joined_day between -28 and 28
-                            group by day - joined_day order by day - joined_day
+                            select (h.day - h.joined_day)::text as x, avg(h.steps)::float8 as y
+                            from (${signupHistory}) as h
+                            where h.day < h.joined_day + 28 and h.user_id in (select compared.user_id from (${joiningChange}) as compared)
+                            group by h.day - h.joined_day order by h.day - h.joined_day
                         `,
                     },
                     {
                         id: "joining_change_distribution", title: "Change after joining, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People by how their average steps changed: the 4 weeks after signup against the 4 weeks before. Only people with 7 or more days of data on each side.",
+                        definition: "People by how their average steps changed: the 4 weeks after signup against the 4 weeks before. Only people who joined 4 weeks ago or more, with 7 or more days of data on each side.",
                         example: (r) => {
                             const up = (r.row("Up 5-20%") ?? 0) + (r.row("Up 20%+") ?? 0);
                             return r.total > 0
-                                ? `${r.count(up, "person walks", "people walk")} at least 5% more since joining, out of ${r.format(r.total)}.`
+                                ? `${r.count(up, "person", "people")} walked at least 5% more in their first 4 weeks, out of ${r.format(r.total)}.`
                                 : null;
                         },
-                        note: "People by their 4 weeks after signup vs the 4 weeks before (7+ days of data each side).",
+                        note: "People who joined 4+ weeks ago, by their 4 weeks after signup vs the 4 before (7+ days of data each side).",
                         query: sql`
                             with compared as (
-                                select 100.0 * (avg(steps) filter (where day >= joined_day and day < joined_day + 28)
-                                    / nullif(avg(steps) filter (where day >= joined_day - 28 and day < joined_day), 0) - 1) as change
-                                from (${history}) as h group by user_id
-                                having count(*) filter (where day >= joined_day - 28 and day < joined_day) >= 7
-                                    and count(*) filter (where day >= joined_day and day < joined_day + 28) >= 7
+                                select 100.0 * (after / nullif(before, 0) - 1) as change from (${joiningChange}) as compared
                             )
                             select band.x, count(compared.change)::float8 as y from (values
                                 (1, 'Down 20%+', -1000000, -20), (2, 'Down 5-20%', -20, -5), (3, 'About the same', -5, 5),
@@ -1521,19 +1578,96 @@ function definitions(
                     },
                 ],
             };
+        }
         case "fights": {
             // A day's state is read at its end, or now for today.
             const instants = sql`
                 select point.bucket, least((point.day + 1)::timestamp at time zone 'Europe/Paris', ${w.now}::timestamptz) as at
                 from (${samplePoints(sql, w)}) as point
             `;
+            // A live Fight at an instant: a round of a real Fight that runs then and has 2 or more people
+            // who had accepted by then. A Fight that nobody joined is not a contest.
+            const liveFighters = (at: AdminDashboardQueryFragment) => sql`
+                select m.fight_id, m.user_id from public.fight_members as m
+                join (${realFights}) as f on f.id = m.fight_id
+                where m.state = 'accepted' and m.accepted_at <= ${at} and f.state not in ('draft', 'cancelled')
+                    and f.starts_at <= ${at} and f.ends_at > ${at}
+                    and (select count(*) from public.fight_members as other
+                        where other.fight_id = f.id and other.state = 'accepted' and other.accepted_at <= ${at}) >= 2
+            `;
+            // The people in a finished real round when it ended. finalized_at stays when someone
+            // later leaves the repeating Fight, which also withdraws the round they left from.
+            const finishedFighters = (from: AdminDashboardQueryFragment) => sql`
+                select f.id as fight_id, f.series_id, f.ends_at as at, f.ends_at - f.starts_at as length,
+                    m.user_id, m.rank, m.final_steps_complete, m.user_id = f.owner_id as owner,
+                    count(*) over (partition by f.id) as size, max(m.rank) over (partition by f.id) as last_rank,
+                    exists (select 1 from private.fight_score_snapshots as s
+                        where s.fight_id = f.id and s.user_id = m.user_id) as synced
+                from (${realFights}) as f
+                join public.fight_members as m on m.fight_id = f.id and m.finalized_at is not null
+                where f.state = 'final' and f.ends_at >= ${from}
+            `;
+            // Fighters who synced steps into a round with 2 or more fighters. They fought again when
+            // they were in another real Fight running in the next 7 days and their phone synced steps
+            // into it after the round ended; the next round counts. A new fight is one they created or
+            // joined in those 7 days.
+            const fightAgain = (from: AdminDashboardQueryFragment, until: AdminDashboardQueryFragment) => sql`
+                select e.*, next.again, next.again_new
+                from (${finishedFighters(from)}) as e
+                cross join lateral (
+                    select count(*) > 0 as again, coalesce(bool_or(
+                        coalesce(g.series_id, g.id) <> coalesce(e.series_id, e.fight_id)
+                            and gm.accepted_at >= e.at and gm.accepted_at < e.at + interval '7 days'
+                            and not exists (
+                                select 1 from public.fights as earlier
+                                join public.fight_members as prior on prior.fight_id = earlier.id and prior.user_id = gm.user_id
+                                where earlier.series_id = g.series_id and earlier.starts_at < g.starts_at
+                                    and prior.state in ('accepted', 'deferred')
+                            )
+                    ), false) as again_new
+                    from public.fight_members as gm
+                    join (${realFights}) as g on g.id = gm.fight_id
+                    where gm.user_id = e.user_id and g.id <> e.fight_id and g.state <> 'cancelled'
+                        and g.starts_at < e.at + interval '7 days' and g.ends_at > e.at
+                        and exists (select 1 from private.fight_score_snapshots as s
+                            where s.fight_id = g.id and s.user_id = e.user_id and s.created_at >= e.at)
+                ) as next
+                where e.synced and e.size >= 2 and e.at < ${until}
+            `;
+            // The winner against the next best fighter with steps through the end. A member without
+            // them ranks last with a stale total, so rank 2 can be far behind or even ahead.
+            const margins = sql`
+                select f.ends_at as at, 100.0 * (ranked.first - ranked.second) / nullif(ranked.first, 0) as margin
+                from (${realFights}) as f
+                cross join lateral (
+                    select max(complete.value) filter (where complete.position = 1) as first,
+                        max(complete.value) filter (where complete.position = 2) as second
+                    from (
+                        select m.final_value as value, row_number() over (order by m.final_value desc) as position
+                        from public.fight_members as m
+                        where m.fight_id = f.id and m.finalized_at is not null and m.final_steps_complete
+                    ) as complete
+                ) as ranked
+                where f.state = 'final' and ranked.second is not null
+            `;
             return {
                 cards: [
-                    liveFights, weeklyFightsCreated,
+                    {
+                        id: "live_fights", title: "Live fights", unit: "count", better: true,
+                        note: "Real Fights running with 2 or more fighters. App-wide and suggested Fights excluded. Now vs 7 days ago.",
+                        query: sql`
+                            select (select count(distinct live.fight_id) from (${liveFighters(sql`${w.now}::timestamptz`)}) as live)::float8 as value,
+                                (select count(distinct live.fight_id) from (${liveFighters(sql`${ago(7)}::timestamptz`)}) as live)::float8 as previous
+                        `,
+                    },
+                    weeklyFightsCreated,
                     {
                         id: "rounds_finished", title: "Weekly rounds finished", unit: "count", better: true,
-                        note: "Last 7 days vs the 7 before.",
-                        query: eventCard(sql, w, 7, sql`select ends_at as at from public.fights where state = 'final'`, count),
+                        note: "Rounds of real Fights that ended, with results or waiting for the last sync. App-wide and suggested Fights excluded. Last 7 days vs the 7 before.",
+                        query: eventCard(sql, w, 7, sql`
+                            select f.ends_at as at from (${realFights}) as f
+                            where f.state in ('live', 'awaiting_final_sync', 'final')
+                        `, count),
                     },
                     {
                         id: "joins", title: "Weekly fight joins", unit: "count", better: true,
@@ -1541,48 +1675,51 @@ function definitions(
                         query: eventCard(sql, w, 7, joins, count),
                     },
                     {
+                        id: "fight_again", title: "Monthly fight-again rate", unit: "percent", better: true,
+                        note: "Share of fighters in real rounds that ended 7 to 37 days ago who were in another real Fight, with synced steps, within 7 days. Vs the 30 days before.",
+                        // The 7 days after a round must be over, so the windows end 7 days ago.
+                        query: eventCard(sql, { ...w, now: ago(7) }, 30, fightAgain(sql`${ago(67)}::timestamptz`, sql`${ago(7)}::timestamptz`),
+                            sql`avg(case when e.again then 100.0 else 0 end)`),
+                    },
+                    {
                         id: "people_in_fights", title: "Users in a live fight", unit: "percent", better: true,
-                        note: "Share of all users, now vs 7 days ago.",
+                        note: "Share of all users in a real Fight running with 2 or more fighters. App-wide and suggested Fights excluded. Now vs 7 days ago.",
                         query: sql`
-                            select 100.0 * (select count(distinct m.user_id) from public.fight_members as m
-                                    join public.fights as f on f.id = m.fight_id
-                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
-                                        and f.starts_at <= ${w.now} and f.ends_at > ${w.now})
+                            select 100.0 * (select count(distinct live.user_id) from (${liveFighters(sql`${w.now}::timestamptz`)}) as live)
                                     / nullif((select count(*) from public.profiles
                                         where deleted_at is null and created_at < ${w.now}), 0) as value,
-                                100.0 * (select count(distinct m.user_id) from public.fight_members as m
-                                    join public.fights as f on f.id = m.fight_id
-                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
-                                        and f.starts_at <= ${ago(7)} and f.ends_at > ${ago(7)})
+                                100.0 * (select count(distinct live.user_id) from (${liveFighters(sql`${ago(7)}::timestamptz`)}) as live)
                                     / nullif((select count(*) from public.profiles
                                         where deleted_at is null and created_at < ${ago(7)}), 0) as previous
                         `,
                     },
+                    // Invites can be accepted and Fights joined or cancelled until a round ends, so
+                    // these cards read rounds that already ended: both windows are then complete.
                     {
                         id: "fighters_per_fight", title: "Monthly fighters per fight", unit: "count", better: true,
-                        note: "Average accepted fighters in Fights that started in the last 30 days, vs the 30 before.",
+                        note: "Average fighters in real Fights that ended in the last 30 days, vs the 30 before.",
                         query: eventCard(sql, w, 30, sql`
-                            select f.starts_at as at, (select count(*) from public.fight_members as m
-                                where m.fight_id = f.id and m.state = 'accepted') as fighters
+                            select f.ends_at as at, (select count(*) from public.fight_members as m
+                                where m.fight_id = f.id and (m.state = 'accepted' or m.finalized_at is not null)) as fighters
                             from (${realFights}) as f where f.state <> 'cancelled'
                         `, sql`avg(e.fighters)`),
                     },
                     {
                         id: "invite_acceptance", title: "Monthly invite acceptance", unit: "percent", better: true,
-                        note: "Share of people invited in the last 30 days who are now in the Fight, vs the 30 before.",
+                        note: "Share of people invited to real Fights that ended in the last 30 days who accepted, vs the 30 before. Join next round counts.",
                         query: eventCard(sql, w, 30, sql`
-                            select event.occurred_at as at, bool_or(m.state = 'accepted') as accepted
+                            select f.ends_at as at, bool_or(event.state in ('accepted', 'deferred')) as accepted
                             from private.fight_membership_events as event
                             join (${realFights}) as f on f.id = event.fight_id
-                            left join public.fight_members as m on m.fight_id = event.fight_id and m.user_id = event.user_id
-                            where event.state = 'invited' and event.occurred_at is not null
-                            group by event.fight_id, event.user_id, event.occurred_at
+                            where f.state <> 'cancelled'
+                            group by event.fight_id, event.user_id, f.ends_at
+                            having bool_or(event.state = 'invited')
                         `, sql`avg(case when e.accepted then 100.0 else 0 end)`),
                     },
                     {
                         id: "cancel_rate", title: "Monthly cancel rate", unit: "percent", better: false,
-                        note: "Share of Fights starting in the last 30 days that were cancelled, vs the 30 before.",
-                        query: eventCard(sql, w, 30, sql`select starts_at as at, state from (${realFights}) as f`,
+                        note: "Share of real Fights due to end in the last 30 days that were cancelled, vs the 30 before.",
+                        query: eventCard(sql, w, 30, sql`select ends_at as at, state from (${realFights}) as f`,
                             sql`avg(case when e.state = 'cancelled' then 100.0 else 0 end)`),
                     },
                     {
@@ -1595,51 +1732,37 @@ function definitions(
                     },
                     {
                         id: "winning_margin", title: "Monthly winning margin", unit: "percent", better: null,
-                        note: "Median lead of the winner over second place, Fights finished in the last 30 days vs the 30 before.",
-                        query: eventCard(sql, w, 30, sql`
-                            select f.ends_at as at, 100.0 * (ranked.first - ranked.second) / nullif(ranked.first, 0) as margin
-                            from public.fights as f
-                            cross join lateral (
-                                select max(m.final_value) filter (where m.rank = 1) as first,
-                                    max(m.final_value) filter (where m.rank = 2) as second
-                                from public.fight_members as m where m.fight_id = f.id and m.state = 'accepted'
-                            ) as ranked
-                            where f.state = 'final' and ranked.second is not null
-                        `, sql`percentile_cont(0.5) within group (order by e.margin)`),
+                        note: "Median lead of the winner over the next fighter with steps through the end, real Fights finished in the last 30 days vs the 30 before.",
+                        query: eventCard(sql, w, 30, margins, sql`percentile_cont(0.5) within group (order by e.margin)`),
                     },
                 ],
                 charts: [
                     fightsCreatedChart,
                     {
                         id: "live_fights_over_time", title: "Live fights", kind: "line", unit: "count", x: "date",
-                        definition: `Fights running at the end of each ${w.bucket}, and now for the last point. The app-wide Fight counts.`,
+                        definition: `Real Fights running with 2 or more fighters at the end of each ${w.bucket}, and now for the last point. App-wide and suggested Fights are not counted.`,
                         example: (r) => {
                             const n = r.latest();
                             return n === undefined ? null : `${r.count(n, "fight is", "fights are")} live now.`;
                         },
-                        note: `At the end of each ${w.bucket}, now for the last one. App-wide Fight included.`,
+                        note: `At the end of each ${w.bucket}, now for the last one. Real Fights with 2+ fighters.`,
                         query: sql`
-                            select point.bucket::text as x, (
-                                select count(*) from public.fights as f
-                                where f.state not in ('draft', 'cancelled') and f.starts_at <= point.at and f.ends_at > point.at
-                            )::float8 as y
+                            select point.bucket::text as x,
+                                (select count(distinct live.fight_id) from (${liveFighters(sql`point.at`)}) as live)::float8 as y
                             from (${instants}) as point order by point.bucket
                         `,
                     },
                     {
                         id: "people_in_fights_over_time", title: "Users in a live fight", kind: "line", unit: "percent", x: "date",
-                        definition: `Share of all users who are in a live Fight, at the end of each ${w.bucket} and now for the last point.`,
+                        definition: `Share of all users who are in a real Fight running with 2 or more fighters, at the end of each ${w.bucket} and now for the last point. App-wide and suggested Fights are not counted.`,
                         example: (r) => {
                             const n = r.latest();
                             return n === undefined ? null : `${r.format(n)} of users are in a live fight now.`;
                         },
-                        note: `Share of all users, at the end of each ${w.bucket}, now for the last one.`,
+                        note: `Share of all users, at the end of each ${w.bucket}, now for the last one. Real Fights with 2+ fighters.`,
                         query: sql`
                             select point.bucket::text as x, (100.0 * (
-                                select count(distinct m.user_id) from public.fight_members as m
-                                join public.fights as f on f.id = m.fight_id
-                                where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
-                                    and f.starts_at <= point.at and f.ends_at > point.at
+                                select count(distinct live.user_id) from (${liveFighters(sql`point.at`)}) as live
                             ) / users.total)::float8 as y
                             from (${instants}) as point
                             cross join lateral (
@@ -1651,12 +1774,60 @@ function definitions(
                     },
                     {
                         id: "rounds_finished_per_bucket", title: `Rounds finished ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Fight rounds that ended with results, in each ${w.bucket}. Every round of a repeating Fight counts.`,
+                        definition: `Rounds of real Fights that ended in each ${w.bucket}, with results or still waiting for the last sync. Every round of a repeating Fight counts. App-wide and suggested Fights are not counted.`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `${r.count(n, "round", "rounds")} finished ${r.when}.`;
                         },
-                        query: perBucket(sql, w, sql`select ends_at as at from public.fights where state = 'final'`, count),
+                        note: "App-wide and suggested Fights excluded.",
+                        query: perBucket(sql, w, sql`
+                            select f.ends_at as at from (${realFights}) as f
+                            where f.state in ('live', 'awaiting_final_sync', 'final') and f.ends_at <= ${w.now}
+                        `, count),
+                    },
+                    {
+                        id: "fight_again_per_bucket", title: `Fight-again rate ${per}`, kind: "line", unit: "percent", x: "date",
+                        definition: `Of the people who synced steps into a real round with 2 or more fighters that ended in each ${w.bucket}, the share who fought again within 7 days: they were in another real Fight running in those 7 days, and their phone synced steps into it after the round ended. Any fight includes the next round of a repeating Fight and Fights they were already in. A new fight is one they created or joined in those 7 days. A ${w.bucket} shows once the 7 days after it are over, and only with 5 or more people. App-wide and suggested Fights are not counted.`,
+                        example: (r) => {
+                            const any = r.at("Any fight");
+                            const fresh = r.at("A new fight");
+                            return any === undefined || fresh === undefined ? null
+                                : `Of the people whose round ended ${r.when}, ${r.format(any)} fought again within 7 days, and ${r.format(fresh)} in a new fight.`;
+                        },
+                        note: `By the ${w.bucket} of each round's end. A ${w.bucket} shows once the 7 days after it are over.`,
+                        query: perBucket(sql, w, sql`
+                            select e.at, e.user_id, v.series, v.done
+                            from (${fightAgain(
+                                sql`${w.start}::date::timestamp at time zone 'Europe/Paris'`,
+                                sql`date_trunc(${w.bucket}::text, (${w.today}::date - 7)::timestamp) at time zone 'Europe/Paris'`,
+                            )}) as e
+                            cross join lateral (values ('Any fight', e.again), ('A new fight', e.again_new)) as v(series, done)
+                        `, sql`case when count(distinct e.user_id) >= 5 then avg(case when e.done then 100.0 else 0 end) end`, {
+                            gaps: true, series: ["Any fight", "A new fight"],
+                        }),
+                    },
+                    {
+                        id: "fighter_sync_at_end", title: `Fighters by sync at round end ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Fighters in real rounds with 2 or more fighters that ended in each ${w.bucket}, by how their steps arrived. Synced to the end: the steps through the end of the round came in. Stopped before the end: the last steps came in before the end and the 24-hour wait for the last sync ran out. Never synced: no steps came in for the round. The chart ends the day before yesterday, once that wait is over for every round. App-wide and suggested Fights are not counted.`,
+                        example: (r) => {
+                            const done = r.at("Synced to the end") ?? 0;
+                            const stopped = r.at("Stopped before the end") ?? 0;
+                            const never = r.at("Never synced") ?? 0;
+                            const all = done + stopped + never;
+                            return all > 0
+                                ? `In rounds that ended ${r.when}, ${r.format(never)} of ${r.count(all, "fighter", "fighters")} never synced and ${r.format(stopped)} stopped before the end.`
+                                : null;
+                        },
+                        note: "Rounds that ended through the day before yesterday, once the wait for the last sync is over.",
+                        // A round's result is settled at most 24 hours after its end, so the chart ends
+                        // the day before yesterday, like complete step days.
+                        query: perBucket(sql, w, sql`
+                            select (e.at at time zone 'Europe/Paris')::date as day,
+                                case when not e.synced then 'Never synced' when e.final_steps_complete then 'Synced to the end'
+                                    else 'Stopped before the end' end as series
+                            from (${finishedFighters(sql`${w.start}::date::timestamp at time zone 'Europe/Paris'`)}) as e
+                            where e.size >= 2
+                        `, count, { complete: true, series: ["Synced to the end", "Stopped before the end", "Never synced"] }),
                     },
                     {
                         id: "invites_and_joins", title: `Invites and joins ${per}`, kind: "line", unit: "count", x: "date",
@@ -1679,23 +1850,62 @@ function definitions(
                     },
                     {
                         id: "fight_sizes", title: "Fight sizes, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Fights that started in the last 30 days, by their number of accepted fighters. Cancelled Fights are not counted.",
+                        definition: "Real Fights that ended in the last 30 days, by their number of fighters. A Fight that has not ended can still gain fighters, so it is not counted yet. Cancelled Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0
-                            ? `${r.top.x}${/^\d/.test(r.top.x) ? " fighters" : ""} is the most common size: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.`
+                            ? `${r.top.x}${/^\d+[-+]/.test(r.top.x) ? " fighters" : ""} is the most common size: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.`
                             : null),
-                        note: "Fights that started in the last 30 days, by accepted fighters.",
+                        note: "Real Fights that ended in the last 30 days, by fighters.",
                         query: sql`
                             with sizes as (
                                 select (select count(*) from public.fight_members as m
-                                    where m.fight_id = f.id and m.state = 'accepted') as fighters
+                                    where m.fight_id = f.id and (m.state = 'accepted' or m.finalized_at is not null)) as fighters
                                 from (${realFights}) as f
-                                where f.state <> 'cancelled' and f.starts_at >= ${ago(30)} and f.starts_at < ${w.now}
+                                where f.state <> 'cancelled' and f.ends_at >= ${ago(30)} and f.ends_at < ${w.now}
                             )
                             select size.x, count(sizes.fighters)::float8 as y from (values
                                 (1, 'Solo', 0, 1), (2, '1v1', 2, 2), (3, '3-5', 3, 5), (4, '6-10', 6, 10), (5, '11+', 11, 1000000)
                             ) as size(position, x, low, high)
                             left join sizes on sizes.fighters between size.low and size.high
                             group by size.position, size.x order by size.position
+                        `,
+                    },
+                    {
+                        id: "who_fights_again", title: "Who fights again, last 90 days", kind: "bar", unit: "percent", x: "label",
+                        definition: "The fight-again rate for groups of fighters: of the people who synced steps into a real round with 2 or more fighters that ended 7 to 97 days ago, the share who were in another real Fight running in the next 7 days and synced steps into it after the round ended. Any fight includes the next round of a repeating Fight. A new fight is one they created or joined in those 7 days. Winners finished first with steps through the end, ties included. A fighter can be in several groups, and counts once for each round. Each label shows its number of fighters. Groups of fewer than 5 people are hidden.",
+                        example: (r) => {
+                            const find = (name: string) => r.rows.find((row) => row.x.startsWith(name))?.y;
+                            const won = find("Winners");
+                            const last = find("Last place");
+                            return won === undefined || last === undefined ? null
+                                : `${r.format(won)} of winners fought again within 7 days, against ${r.format(last)} of people in last place.`;
+                        },
+                        note: "Rounds that ended 7 to 97 days ago. The label shows the number of fighters.",
+                        query: sql`
+                            with grouped as (
+                                select g.position, g.x || ' (' || count(*) || ')' as x,
+                                    avg(case when e.again then 100.0 else 0 end) as again,
+                                    avg(case when e.again_new then 100.0 else 0 end) as again_new
+                                from (${fightAgain(sql`${ago(97)}::timestamptz`, sql`${ago(7)}::timestamptz`)}) as e
+                                cross join lateral (values
+                                    (1, 'Winners', e.rank = 1 and e.final_steps_complete),
+                                    (2, 'Last place', e.rank > 1 and e.rank = e.last_rank),
+                                    (3, '1v1', e.size = 2),
+                                    (4, '3+ fighters', e.size >= 3),
+                                    -- The 2 hours keep a 7-day round that crosses a clock change in the first group.
+                                    (5, 'Up to 7 days', e.length <= interval '7 days 2 hours'),
+                                    (6, 'Over 7 days', e.length > interval '7 days 2 hours'),
+                                    (7, 'Owners', e.owner),
+                                    (8, 'Joiners', not e.owner)
+                                ) as g(position, x, member)
+                                where g.member
+                                group by g.position, g.x
+                                having count(distinct e.user_id) >= 5
+                            )
+                            select grouped.x, v.y::float8 as y, v.series
+                            from grouped
+                            cross join lateral (values (1, 'Any fight', grouped.again), (2, 'A new fight', grouped.again_new))
+                                as v(position, series, y)
+                            order by v.position, grouped.position
                         `,
                     },
                     {
@@ -1714,36 +1924,26 @@ function definitions(
                     },
                     {
                         id: "margins", title: "How close fights end, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "Finished Fights with two or more fighters, by how far the winner was ahead of second place, as a share of the winner's steps.",
+                        definition: "Finished real Fights with two or more fighters who synced through the end, by how far the winner was ahead of the next of them, as a share of the winner's steps. App-wide and suggested Fights are not counted.",
                         example: (r) => {
                             const close = r.row("Under 5%") ?? 0;
                             return r.total > 0
                                 ? `${r.count(close, "fight was", "fights were")} won by less than 5%, out of ${r.format(r.total)} finished fights.`
                                 : null;
                         },
-                        note: "Winner's lead over second place, finished Fights.",
+                        note: "Winner's lead over the next fighter with steps through the end, finished real Fights.",
                         query: sql`
-                            with margins as (
-                                select 100.0 * (ranked.first - ranked.second) / nullif(ranked.first, 0) as margin
-                                from public.fights as f
-                                cross join lateral (
-                                    select max(m.final_value) filter (where m.rank = 1) as first,
-                                        max(m.final_value) filter (where m.rank = 2) as second
-                                    from public.fight_members as m where m.fight_id = f.id and m.state = 'accepted'
-                                ) as ranked
-                                where f.state = 'final' and ranked.second is not null
-                            )
                             select band.x, count(margins.margin)::float8 as y from (values
                                 (1, 'Under 5%', 0, 5), (2, '5-15%', 5, 15), (3, '15-30%', 15, 30),
                                 (4, '30-50%', 30, 50), (5, '50%+', 50, 100.0001)
                             ) as band(position, x, low, high)
-                            left join margins on margins.margin >= band.low and margins.margin < band.high
+                            left join (${margins}) as margins on margins.margin >= band.low and margins.margin < band.high
                             group by band.position, band.x order by band.position
                         `,
                     },
                     {
                         id: "time_to_first_fight", title: "Time from signup to first fight, all users", kind: "bar", unit: "count", x: "label",
-                        definition: "Every user by the time between signing up and first joining a fight. Not yet means they have not joined one. Cancelled Fights do not count.",
+                        definition: "Every user by the number of Paris days between signing up and first joining a fight. Same day means the same Paris date. Not yet means they have not joined one. Cancelled Fights do not count.",
                         example: (r) => {
                             const same = r.row("Same day") ?? 0;
                             const waiting = r.row("Not yet") ?? 0;
@@ -1753,9 +1953,9 @@ function definitions(
                         },
                         query: sql`
                             with waits as (
-                                select extract(epoch from (
+                                select ((
                                     select min(j.accepted_at) from (${fightMemberships}) as j where j.user_id = p.user_id
-                                ) - p.created_at) / 86400 as days
+                                ) at time zone 'Europe/Paris')::date - (p.created_at at time zone 'Europe/Paris')::date as days
                                 from public.profiles as p where p.deleted_at is null
                             )
                             select band.x, (case when band.position = 6 then (select count(*) from waits where days is null)
@@ -1768,26 +1968,31 @@ function definitions(
                     },
                     {
                         id: "top_fighters", title: "Most fights joined, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People who joined the most Fights, all time. App-wide and suggested Fights are not counted.",
+                        definition: "People who joined the most Fights, all time. All rounds of a repeating Fight count as one Fight. App-wide, suggested and cancelled Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} joined ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
-                            select '@' || p.handle as x, count(*)::float8 as y
-                            from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
-                            join public.profiles as p on p.user_id = m.user_id
-                            where m.state = 'accepted' group by p.handle order by 2 desc, 1 limit 10
+                            select '@' || p.handle as x, count(distinct coalesce(j.series_id, j.fight_id))::float8 as y
+                            from (${fightMemberships}) as j join public.profiles as p on p.user_id = j.user_id
+                            group by p.handle order by 2 desc, 1 limit 10
                         `,
                     },
                     {
                         id: "top_winners", title: "Most wins, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People who won the most finished Fights that had at least two fighters, all time.",
-                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} won ${r.count(r.top.y, "fight", "fights")}.` : null),
+                        definition: "People who won the most finished rounds of real Fights, all time. A win counts when the winner and at least one other fighter synced steps through the end and the winner had strictly more steps than everyone else. Ties do not count. App-wide and suggested Fights are not counted.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} won ${r.count(r.top.y, "round", "rounds")}.` : null),
+                        // When nobody has steps through the end, every member gets rank 1, and a member
+                        // without them ranks behind everyone who has them.
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
                             from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
                             join public.profiles as p on p.user_id = m.user_id
-                            where m.state = 'accepted' and m.rank = 1 and f.state = 'final'
-                                and (select count(*) from public.fight_members as other
-                                    where other.fight_id = f.id and other.state = 'accepted') > 1
+                            where m.finalized_at is not null and m.rank = 1 and m.final_steps_complete and f.state = 'final'
+                                and exists (select 1 from public.fight_members as other
+                                    where other.fight_id = f.id and other.user_id <> m.user_id
+                                        and other.finalized_at is not null and other.final_steps_complete)
+                                and not exists (select 1 from public.fight_members as tie
+                                    where tie.fight_id = f.id and tie.user_id <> m.user_id
+                                        and tie.finalized_at is not null and tie.rank = 1)
                             group by p.handle order by 2 desc, 1 limit 10
                         `,
                     },

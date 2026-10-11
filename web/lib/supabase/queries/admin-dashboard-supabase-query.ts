@@ -525,7 +525,22 @@ function definitions(
                 ],
             };
         }
-        case "users":
+        case "users": {
+            // When each person first synced steps into a real Fight that another person also synced
+            // into: the later of the two first syncs. Every sync into a live Fight adds a snapshot.
+            const firstContested = sql`
+                with synced as (
+                    select s.fight_id, s.user_id, min(s.created_at) as first_at
+                    from private.fight_score_snapshots as s
+                    join (${realFights}) as f on f.id = s.fight_id
+                    where f.state <> 'cancelled'
+                    group by s.fight_id, s.user_id
+                )
+                select mine.user_id, min(greatest(mine.first_at, rival.first_at)) as at
+                from synced as mine
+                join synced as rival on rival.fight_id = mine.fight_id and rival.user_id <> mine.user_id
+                group by mine.user_id
+            `;
             return {
                 cards: [
                     totalUsers, weeklyNewUsers,
@@ -534,38 +549,57 @@ function definitions(
                         note: "Last 30 days vs the 30 before.",
                         query: eventCard(sql, w, 30, profiles, count),
                     },
+                    {
+                        id: "activation_rate", title: "Monthly activation rate", unit: "percent", better: true,
+                        note: "Signups who synced steps against someone in a real Fight within 7 days. Signups 7 to 37 days ago vs the 30 days before.",
+                        // A cohort that signed up before the first snapshot has no number: its first
+                        // week was not recorded.
+                        query: sql`
+                            with contested as materialized (${firstContested}),
+                            cohort as (
+                                select p.created_at >= ${ago(37)} as recent,
+                                    coalesce(c.at < p.created_at + interval '7 days', false) as activated
+                                from public.profiles as p
+                                left join contested as c on c.user_id = p.user_id
+                                where p.deleted_at is null and p.created_at >= ${ago(67)} and p.created_at < ${ago(7)}
+                            )
+                            select case when ${ago(37)}::timestamptz >= (select min(created_at) from private.fight_score_snapshots)
+                                    then 100.0 * count(*) filter (where recent and activated)
+                                        / nullif(count(*) filter (where recent), 0) end as value,
+                                case when ${ago(67)}::timestamptz >= (select min(created_at) from private.fight_score_snapshots)
+                                    then 100.0 * count(*) filter (where not recent and activated)
+                                        / nullif(count(*) filter (where not recent), 0) end as previous
+                            from cohort
+                        `,
+                    },
+                    // Equal-age cohorts: every signup had 7 days, so a recent month is not judged early.
+                    // handle_set_at moves on every username change, so the username has no time limit.
                     ...[
                         { id: "onboarding_rate", title: "Monthly username rate", did: "picked a username", condition: sql`p.handle_set_at is not null` },
-                        { id: "health_rate", title: "Monthly Health sync rate", did: "synced Apple Health steps", condition: sql`
-                            p.user_id in (select h.user_id from (${healthUsers}) as h)` },
-                        { id: "fight_rate", title: "Monthly fight join rate", did: "joined a fight", condition: sql`
-                            p.user_id in (select j.user_id from (${fightMemberships}) as j)` },
-                        { id: "referral_rate", title: "Monthly referral rate", did: "came from a referral", condition: sql`
+                        { id: "health_rate", title: "Monthly 7-day Health sync rate", did: "synced Apple Health steps within 7 days", condition: sql`
+                            p.user_id in (
+                                select h.user_id from (${healthUsers}) as h join public.profiles as q on q.user_id = h.user_id
+                                where h.at < q.created_at + interval '7 days'
+                            )` },
+                        { id: "fight_rate", title: "Monthly 7-day fight join rate", did: "joined a fight within 7 days", condition: sql`
+                            p.user_id in (
+                                select j.user_id from (${fightMemberships}) as j join public.profiles as q on q.user_id = j.user_id
+                                where j.accepted_at < q.created_at + interval '7 days'
+                            )` },
+                        { id: "referral_rate", title: "Monthly referral rate", did: "claimed a friend's link within 7 days", condition: sql`
                             p.user_id in (select r.user_id from (${referredSignups}) as r)` },
                     ].map(({ id, title, did, condition }): AdminDashboardCardDefinition => ({
                         id, title, unit: "percent", better: true,
-                        note: `Share of the last 30 days' signups who ${did}, vs the 30 days before.`,
+                        note: `Signups 7 to 37 days ago who ${did}, vs the 30 days before.`,
                         query: sql`
-                            select 100.0 * count(*) filter (where p.created_at >= ${ago(30)} and ${condition})
-                                    / nullif(count(*) filter (where p.created_at >= ${ago(30)}), 0) as value,
-                                100.0 * count(*) filter (where p.created_at < ${ago(30)} and ${condition})
-                                    / nullif(count(*) filter (where p.created_at < ${ago(30)}), 0) as previous
+                            select 100.0 * count(*) filter (where p.created_at >= ${ago(37)} and ${condition})
+                                    / nullif(count(*) filter (where p.created_at >= ${ago(37)}), 0) as value,
+                                100.0 * count(*) filter (where p.created_at < ${ago(37)} and ${condition})
+                                    / nullif(count(*) filter (where p.created_at < ${ago(37)}), 0) as previous
                             from public.profiles as p
-                            where p.deleted_at is null and p.created_at >= ${ago(60)} and p.created_at < ${w.now}
+                            where p.deleted_at is null and p.created_at >= ${ago(67)} and p.created_at < ${ago(7)}
                         `,
                     })),
-                    {
-                        id: "days_to_first_fight", title: "Monthly days to first fight", unit: "days", better: false,
-                        note: "Median, for the last 30 days' signups who joined a fight, vs the 30 days before.",
-                        query: eventCard(sql, w, 30, sql`
-                            select * from (
-                                select p.user_id, p.created_at as at, extract(epoch from (
-                                    select min(j.accepted_at) from (${fightMemberships}) as j where j.user_id = p.user_id
-                                ) - p.created_at) / 86400 as waited
-                                from public.profiles as p where p.deleted_at is null
-                            ) as waits where waits.waited is not null
-                        `, sql`percentile_cont(0.5) within group (order by greatest(e.waited, 0))`),
-                    },
                     {
                         id: "referrals", title: "Monthly referrals", unit: "count", better: true,
                         note: "Signups through a referral link, by signup day. Last 30 days vs the 30 before.",
@@ -630,29 +664,35 @@ function definitions(
                         query: perBucket(sql, w, referredSignups, count),
                     },
                     ...[
-                        { id: "funnel_period", title: "Onboarding funnel, last 30 days' signups", who: "the people who signed up in the last 30 days", scope: sql`p.created_at >= ${ago(30)}` },
-                        { id: "funnel_all", title: "Onboarding funnel, all users", who: "all users", scope: sql`true` },
-                    ].map(({ id, title, who, scope }): AdminDashboardChartDefinition => ({
+                        // Signups with 30 days behind them, judged on those 30 days, so the bars say more
+                        // than the rate cards and young signups do not pull them down. A username change
+                        // moves handle_set_at, so the username has no time limit.
+                        { id: "funnel_first_month", title: "First-month funnel, signups 30 to 120 days ago", who: "the people who signed up 30 to 120 days ago",
+                            within: " in their first 30 days", scope: sql`p.created_at >= ${ago(120)} and p.created_at < ${ago(30)}`, firstMonth: true },
+                        { id: "funnel_all", title: "Onboarding funnel, all users", who: "all users", within: "", scope: sql`p.created_at < ${w.now}`, firstMonth: false },
+                    ].map(({ id, title, who, within, scope, firstMonth }): AdminDashboardChartDefinition => ({
                         id, title, kind: "bar", unit: "count", x: "label",
-                        definition: `How far ${who} got: picking a username, syncing Apple Health steps, joining a first fight, finishing one and joining a second. Rounds of a repeating Fight count as one fight, and cancelled Fights do not count.`,
+                        definition: `How far ${who} got${within}: picking a username, syncing Apple Health steps, joining a first fight, finishing one and joining a second. Rounds of a repeating Fight count as one fight, and cancelled Fights do not count.${firstMonth ? " A username counts whenever it was picked." : ""}`,
                         example: (r) => {
                             const signed = r.row("Signed up");
                             const joined = r.row("Joined a fight");
                             const finished = r.row("Finished a fight");
                             if (signed === undefined || joined === undefined || finished === undefined) return null;
                             const part = r.share(joined, signed);
-                            return part ? `Of ${who} (${r.format(signed)}), ${part} joined a fight and ${r.share(finished, signed)} finished one.` : null;
+                            return part ? `Of ${who} (${r.format(signed)}), ${part} joined a fight and ${r.share(finished, signed)} finished one${within}.` : null;
                         },
                         query: sql`
                             with cohort as (
                                 select p.user_id, p.handle_set_at,
-                                    p.user_id in (select h.user_id from (${healthUsers}) as h) as health,
+                                    p.user_id in (select h.user_id from (${healthUsers}) as h ${firstMonth ? sql`
+                                        join public.profiles as q on q.user_id = h.user_id where h.at < q.created_at + interval '30 days'` : sql``}) as health,
                                     (select count(distinct coalesce(j.series_id, j.fight_id)) from (${fightMemberships}) as j
-                                        where j.user_id = p.user_id) as fights,
-                                    exists (select 1 from (${fightMemberships}) as j
+                                        where j.user_id = p.user_id ${firstMonth ? sql`and j.accepted_at < p.created_at + interval '30 days'` : sql``}) as fights,
+                                    exists (select 1 from (${fightMemberships}) as j ${firstMonth ? sql`
+                                        join public.fights as f on f.id = j.fight_id and f.ends_at < p.created_at + interval '30 days'` : sql``}
                                         where j.user_id = p.user_id and j.state = 'final') as finished
                                 from public.profiles as p
-                                where p.deleted_at is null and p.created_at < ${w.now} and ${scope}
+                                where p.deleted_at is null and ${scope}
                             )
                             select x, y::float8 from (values
                                 (1, 'Signed up', (select count(*) from cohort)),
@@ -693,11 +733,21 @@ function definitions(
                     },
                     {
                         id: "time_zones", title: "Top time zones, all users", kind: "bar", unit: "count", x: "label",
-                        definition: "Each person's saved time zone, a rough guide to where they live.",
-                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.share} of users are in ${r.top.x} (${r.format(r.top.y)}).` : null),
+                        definition: "Each person's saved time zone, a rough guide to where they live. Unknown means no saved time zone. Other adds up the zones after the 11 largest.",
+                        example: (r) => {
+                            const zone = r.rows.find((row) => row.x !== "Unknown" && row.x !== "Other" && row.y > 0);
+                            return zone ? `${r.share(zone.y, r.total)} of users are in ${zone.x} (${r.format(zone.y)}).` : null;
+                        },
+                        // The bars add up to all users, so a share in the example is of everyone.
                         query: sql`
-                            select coalesce(time_zone, 'Unknown') as x, count(*)::float8 as y
-                            from public.profiles where deleted_at is null group by 1 order by 2 desc, 1 limit 12
+                            with zones as (
+                                select coalesce(time_zone, 'Unknown') as zone, count(*) as people,
+                                    row_number() over (order by count(*) desc, coalesce(time_zone, 'Unknown')) as position,
+                                    count(*) over () as zones
+                                from public.profiles where deleted_at is null group by 1
+                            )
+                            select case when position <= 11 or zones <= 12 then zone else 'Other' end as x, sum(people)::float8 as y
+                            from zones group by 1 order by min(position)
                         `,
                     },
                     {
@@ -724,22 +774,48 @@ function definitions(
                     },
                 ],
             };
+        }
         case "retention": {
-            // NOTE: retention follows people whose phone sent Apple Health steps. Their phones sync
+            // NOTE: retention follows people whose phone sent Apple Health steps. Their phones send
             // steps in the background, opened or not, until the app is deleted or Health is turned off.
-            // App opens can't be used while servers still delete them after 7 days. The floor
-            // covers the last 6 signup months, the cards' cohorts and the chart period.
+            // App opens start only with complete sync history, too late for these cohorts. A day counts
+            // once the server has any step row for it, final or not: a sync during the day sends that
+            // day's steps, so a window can end yesterday. A later sync, for example after a reinstall,
+            // sends the last 40 days again and can fill days the phone missed. The floor covers 8
+            // signup months, the cards' cohorts and the chart period.
             const synced = sql`
-                select distinct history.user_id, history.day
-                from (${stepHistory(sql`least(${w.start}::date, ${w.today}::date - 200)`)}) as history
-                where history.day >= history.joined_day
+                select distinct sent.user_id, sent.day from (
+                    select metric.user_id, metric.day from private.activity_metrics as metric
+                    join public.data_sources as source on source.id = metric.source_id
+                    where metric.scope = 'day' and metric.metric = 'steps' and source.provider = 'apple_health'
+                    union all
+                    select legacy.user_id, legacy.day from public.metric_days as legacy
+                    join public.data_sources as source on source.id = legacy.source_id
+                    where legacy.metric = 'steps' and source.provider = 'apple_health'
+                ) as sent
+                where sent.day >= least(${w.start}::date - 6, ${w.today}::date - 280) and sent.day < ${w.today}::date
             `;
             const withHealth = sql`
                 select p.user_id, p.joined_day, p.at from (${profiles}) as p
                 where p.user_id in (select h.user_id from (${healthUsers}) as h)
             `;
+            // When each person first synced steps into a real Fight that another person also synced
+            // into: the later of the two first syncs. Every sync into a live Fight adds a snapshot.
+            const firstContested = sql`
+                with synced as (
+                    select s.fight_id, s.user_id, min(s.created_at) as first_at
+                    from private.fight_score_snapshots as s
+                    join (${realFights}) as f on f.id = s.fight_id
+                    where f.state <> 'cancelled'
+                    group by s.fight_id, s.user_id
+                )
+                select mine.user_id, min(greatest(mine.first_at, rival.first_at)) as at
+                from synced as mine
+                join synced as rival on rival.fight_id = mine.fight_id and rival.user_id <> mine.user_id
+                group by mine.user_id
+            `;
             // Signups of the `span` days that just got past day `to` after signing up, against the
-            // `span` days before them: the share who synced steps `from` to `to` days after.
+            // `span` days before them: the share with steps for a day `from` to `to` days after.
             const rate = (from: number, to: number, span: number) => sql`
                 with active as materialized (${synced}),
                 eligible as (
@@ -760,9 +836,10 @@ function definitions(
                 from eligible as e
                 left join hits as h using (user_id)
             `;
-            // One line per signup week (month): the share who synced steps in each week (30-day
-            // month) after their own signup day, once it has passed. A signup week (month)
-            // appears once its first people reach week (month) 1.
+            // One line per signup week (month): the share with steps for a day in each week (30-day
+            // month) after their own signup day, among the people who got past it. The newest
+            // `cohorts` signup weeks (months) in which someone got past week (month) 1 show. The
+            // newest one or two have nobody there yet, so the floor starts 2 more back.
             const curves = (unit: "week" | "month", cohorts: number) => {
                 const length = unit === "week" ? 7 : 30;
                 return sql`
@@ -774,7 +851,7 @@ function definitions(
                             from (${withHealth}) as h
                         ) as c
                         cross join generate_series(0, ${cohorts - 1}::int) as k
-                        where c.cohort >= date_trunc(${unit}::text, ${w.today}::timestamp) - ${`${cohorts - 1} ${unit}s`}::interval
+                        where c.cohort >= date_trunc(${unit}::text, ${w.today}::timestamp) - ${`${cohorts + 2} ${unit}s`}::interval
                             and c.joined_day + (k + 1) * ${length}::int <= ${w.today}::date
                     ),
                     hits as (
@@ -787,12 +864,11 @@ function definitions(
                         to_char(e.cohort::timestamp, ${unit === "week" ? '"Week of "FMDD Mon' : "FMMonth YYYY"}::text) as series
                     from eligible as e
                     left join hits as h on h.user_id = e.user_id and h.k = e.k
-                    where e.cohort in (select cohort from eligible where k = 1)
+                    where e.cohort in (select distinct cohort from eligible where k = 1 order by cohort desc limit ${cohorts}::int)
                     group by e.cohort, e.k
                     order by e.cohort desc, e.k
                 `;
             };
-            const cohort = w.bucket === "month" ? "month" : "week";
             return {
                 cards: [
                     {
@@ -813,67 +889,139 @@ function definitions(
                         { id: "month_3", title: "Month 3 retention", from: 90, to: 119, span: 30 },
                     ].map(({ id, title, from, to, span }): AdminDashboardCardDefinition => ({
                         id, title, unit: "percent", better: true,
-                        note: `Phone synced steps on days ${from} to ${to} after signup. Latest ${span} days of signups to get there, vs the ${span} before.`,
+                        note: `Phone sent steps for any of days ${from} to ${to} after signup, then or later. Signups whose day ${to} was in the last ${span} days, vs the ${span} before.`,
                         query: rate(from, to, span),
                     })),
                 ],
                 charts: [
                     {
-                        id: "weekly_cohorts", title: "Retention curves, last 8 signup weeks", kind: "line", unit: "percent", x: "label",
-                        definition: "One line per signup week. Each point is the share of that week's signups with Apple Health whose phone still synced steps N weeks later. W0 is their first week and W1 their second.",
+                        id: "weekly_cohorts", title: "Retention curves, 8 signup weeks", kind: "line", unit: "percent", x: "label",
+                        definition: "One line for each of the 8 newest signup weeks with people past W1. The 2 newest weeks are not there yet. Each point is the share of the week's signups with Apple Health whose phone sent steps for any day of week N after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. W0 is days 0 to 6, W1 days 7 to 13. A point counts only the people who got past that week, so the newest point of a line can cover part of its signups.",
                         example: (r) => {
                             const cohort = r.series.find((line) => line.points.some((point) => point.x === "W1"));
                             const kept = cohort?.points.find((point) => point.x === "W1");
                             return cohort && kept
-                                ? `Of the people who signed up in the ${cohort.name.replace("Week of", "week of")}, ${r.format(kept.y)} still synced steps in their second week.`
+                                ? `Of the people who signed up in the ${cohort.name.replace("Week of", "week of")} and got past their second week, ${r.format(kept.y)} sent steps for it.`
                                 : null;
                         },
-                        note: "One line per signup week. W1 is the share whose phone still synced steps 7 to 13 days after signing up.",
+                        note: "The 8 newest signup weeks with people past W1 (days 7 to 13). The newest point of a line counts only the people who got past it.",
                         query: curves("week", 8),
                     },
                     {
-                        id: "monthly_cohorts", title: "Retention curves, last 6 signup months", kind: "line", unit: "percent", x: "label",
-                        definition: "One line per signup month. Each point is the share of that month's signups with Apple Health whose phone still synced steps N months later, in 30-day blocks. M0 is their first month.",
+                        id: "monthly_cohorts", title: "Retention curves, 6 signup months", kind: "line", unit: "percent", x: "label",
+                        definition: "One line for each of the 6 newest signup months with people past M1. The newest month or two are not there yet. Each point is the share of the month's signups with Apple Health whose phone sent steps for any day of month N after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. Months are 30-day blocks: M0 is days 0 to 29, M1 days 30 to 59. A point counts only the people who got past that month, so the newest point of a line can cover part of its signups.",
                         example: (r) => {
                             const cohort = r.series.find((line) => line.points.some((point) => point.x === "M1"));
                             const kept = cohort?.points.find((point) => point.x === "M1");
                             return cohort && kept
-                                ? `Of the people who signed up in ${cohort.name}, ${r.format(kept.y)} still synced steps in their second month.`
+                                ? `Of the people who signed up in ${cohort.name} and got past their second month, ${r.format(kept.y)} sent steps for it.`
                                 : null;
                         },
-                        note: "One line per signup month. M1 is days 30 to 59 after signing up.",
+                        note: "The 6 newest signup months with people past M1 (days 30 to 59). The newest point of a line counts only the people who got past it.",
                         query: curves("month", 6),
                     },
                     {
-                        id: "retention_by_signup", title: `Retention by signup ${cohort}`, kind: "line", unit: "percent", x: "date",
-                        definition: `For each signup ${cohort}: the share of people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34) after signing up. It shows if newer signups stay longer.`,
+                        id: "week_2_by_first_week", title: "Week 2 retention by first-week actions, last 6 months' signups", kind: "bar", unit: "percent", x: "label",
+                        definition: "People who signed up 21 to 180 days ago and whose phone sent Apple Health steps. For each action, the share whose phone sent steps for any of days 14 to 20 after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. Yes: people who did it in their first 7 days. No: the others. Fought someone: synced steps into a real Fight that another person also synced into. Each row leaves out people who signed up before FitFight recorded that action, and shows only when both groups have 10 or more people.",
                         example: (r) => {
-                            const week = r.series.find((line) => line.name === "Week 1")?.points.at(-1);
-                            return week
-                                ? `Of the people who signed up in the ${cohort} starting ${r.day(week.x)}, ${r.format(week.y)} still synced steps in week 1.`
+                            const no = r.series.find((line) => line.name === "No")?.points ?? [];
+                            const gaps = (r.series.find((line) => line.name === "Yes")?.points ?? []).flatMap((yes) => {
+                                const other = no.find((point) => point.x === yes.x);
+                                return other ? [{ x: yes.x, yes: yes.y, no: other.y }] : [];
+                            });
+                            const widest = gaps.reduce<(typeof gaps)[number] | undefined>(
+                                (best, row) => (!best || Math.abs(row.yes - row.no) > Math.abs(best.yes - best.no) ? row : best), undefined);
+                            return widest
+                                ? `${widest.x}: ${r.format(widest.yes)} sent steps for days 14 to 20, against ${r.format(widest.no)} of the others.`
                                 : null;
                         },
-                        note: `Share of each signup ${cohort}'s people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34). People count once they get there.`,
+                        note: "Share with steps for days 14 to 20 after signup, by what people did in their first 7 days. Groups under 10 people are hidden.",
                         query: sql`
                             with active as materialized (${synced}),
+                            contested as materialized (${firstContested}),
                             cohort as (
-                                select h.user_id, h.joined_day, date_trunc(${cohort}::text, h.joined_day::timestamp)::date as bucket
-                                from (${withHealth}) as h
-                                where h.joined_day >= date_trunc(${cohort}::text, ${w.start}::timestamp)::date
+                                select c.user_id, c.at, count(a.user_id) > 0 as kept
+                                from (${withHealth}) as c
+                                left join active as a on a.user_id = c.user_id and a.day between c.joined_day + 14 and c.joined_day + 20
+                                where c.joined_day >= ${w.today}::date - 180 and c.joined_day < ${w.today}::date - 20
+                                group by c.user_id, c.at
                             ),
-                            measured as (
-                                select c.bucket, k.series, k.position,
-                                    100.0 * count(*) filter (where exists (
-                                        select 1 from active as a
-                                        where a.user_id = c.user_id and a.day between c.joined_day + k.low and c.joined_day + k.high
-                                    )) / count(*) as y
+                            -- since: the first row of the table that records the action. Earlier signups
+                            -- could not do it, or it was not recorded.
+                            traits as (
+                                select c.kept, t.position, t.x, case when c.at >= t.since then t.yes end as yes
                                 from cohort as c
-                                cross join (values ('Week 1', 1, 7, 13), ('Week 4', 2, 28, 34)) as k(series, position, low, high)
-                                where c.joined_day + k.high < ${w.today}::date
-                                group by c.bucket, k.series, k.position
+                                cross join lateral (values
+                                    (1, 'Fought someone', (select min(created_at) from private.fight_score_snapshots), c.user_id in (
+                                        select q.user_id from contested as fought join cohort as q on q.user_id = fought.user_id
+                                        where fought.at < q.at + interval '7 days'
+                                    )),
+                                    (2, 'Joined a suggested or app-wide fight',
+                                        (select min(f.created_at) from public.fights as f where f.series_id in (${automaticSeries})), c.user_id in (
+                                        select q.user_id from public.fight_members as m
+                                        join public.fights as f on f.id = m.fight_id
+                                        join cohort as q on q.user_id = m.user_id
+                                        where m.accepted_at < q.at + interval '7 days' and f.series_id in (${automaticSeries})
+                                    )),
+                                    (3, 'Added a friend', (select min(created_at) from private.profile_friendships), c.user_id in (
+                                        select q.user_id from private.profile_friendships as friend
+                                        join cohort as q on q.user_id in (friend.user_low, friend.user_high)
+                                        where friend.accepted_at < q.at + interval '7 days'
+                                    )),
+                                    (4, 'Posted, commented or reacted', (select min(created_at) from public.fight_posts), c.user_id in (
+                                        select q.user_id from public.fight_posts as post join cohort as q on q.user_id = post.author_id
+                                        where post.created_at < q.at + interval '7 days'
+                                        union all
+                                        select q.user_id from public.fight_post_comments as comment join cohort as q on q.user_id = comment.author_id
+                                        where comment.created_at < q.at + interval '7 days'
+                                        union all
+                                        select q.user_id from public.fight_post_reactions as reaction join cohort as q on q.user_id = reaction.user_id
+                                        where reaction.created_at < q.at + interval '7 days'
+                                    )),
+                                    (5, 'Allowed push', (select min(created_at) from private.device_installations), c.user_id in (
+                                        select q.user_id from private.device_installations as device join cohort as q on q.user_id = device.user_id
+                                        where device.created_at < q.at + interval '7 days'
+                                    )),
+                                    (6, 'Used a friend''s link', (select min(created_at) from private.referrals),
+                                        c.user_id in (select r.user_id from (${referredSignups}) as r))
+                                ) as t(position, x, since, yes)
+                            ),
+                            grouped as (
+                                select t.position, t.x, t.yes, 100.0 * count(*) filter (where t.kept) / count(*) as y,
+                                    min(count(*)) over (partition by t.position) as smaller,
+                                    count(*) over (partition by t.position) as sides
+                                from traits as t
+                                where t.yes is not null
+                                group by t.position, t.x, t.yes
                             )
-                            select bucket::text as x, y::float8 as y, series from measured order by position, bucket
+                            select x, y::float8 as y, case when yes then 'Yes' else 'No' end as series
+                            from grouped where smaller >= 10 and sides = 2
+                            order by yes desc, position
                         `,
+                    },
+                    {
+                        id: "retention_by_signup", title: `Week 1 and week 4 retention ${per}`, kind: "line", unit: "percent", x: "date",
+                        definition: `People whose week 1 (days 7 to 13 after signup) or week 4 (days 28 to 34) ended in each ${w.bucket}: the share whose phone sent steps for any of those days, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. It shows if newer signups stay longer.`,
+                        example: (r) => {
+                            const week = r.at("Week 1");
+                            return week === undefined ? null : `Of the people whose week 1 ended ${r.when}, ${r.format(week)} sent steps for it.`;
+                        },
+                        note: `Each point counts the people whose week 1 or week 4 ended in that ${w.bucket}.`,
+                        // `at` is the last day of the week, so the chart runs through yesterday like the cards.
+                        query: perBucket(sql, w, sql`
+                            with active as materialized (${synced}),
+                            eligible as (
+                                select h.user_id, h.joined_day, k.series, k.low, k.high
+                                from (${withHealth}) as h
+                                cross join (values ('Week 1', 7, 13), ('Week 4', 28, 34)) as k(series, low, high)
+                                where h.joined_day + k.high >= ${w.start}::date and h.joined_day + k.high < ${w.today}::date
+                            )
+                            select (e.joined_day + e.high)::timestamp at time zone 'Europe/Paris' as at, e.series,
+                                count(a.user_id) > 0 as kept
+                            from eligible as e
+                            left join active as a on a.user_id = e.user_id and a.day between e.joined_day + e.low and e.joined_day + e.high
+                            group by e.user_id, e.series, e.joined_day, e.high
+                        `, sql`avg(case when e.kept then 100.0 else 0 end)`, { gaps: true, series: ["Week 1", "Week 4"] }),
                     },
                     {
                         id: "health_signups_per_bucket", title: `Signups with Apple Health ${per}`, kind: "bar", unit: "count", x: "date",

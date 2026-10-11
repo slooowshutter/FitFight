@@ -82,14 +82,17 @@ query only marks its own tile with `Query failed: ...`.
   A result with a failed tile is not reused.
 - **Retention:** follows people whose phone sent Apple Health steps (a
   `data_sources` row is not proof: Fight actions create one). Someone is retained in
-  a week (or 30-day month) counted from their own signup day when their phone
-  synced steps that week: background syncs run without an open until the app is
-  deleted or Health is turned off. A person counts for a week only once it has
-  passed. Charts draw one line per signup week (last 8) and month (last 6).
-  Cards take the signups of the latest 28 days (weeks) or 30 days (months) that
-  got past that week or month, against the span before. App opens are not used
-  yet: the servers the app talks to still delete sync reports after 7 days, which
-  would make week 1 look close to 0%.
+  a week (or 30-day month) counted from their own signup day when the server has
+  their Apple Health steps for any day of it, final or not: background syncs run
+  without an open until the app is deleted or Health is turned off, and each sync
+  sends the last 40 days, today included. So a week can end yesterday, and a sync
+  after a gap (a reinstall) can still fill missed days. A person counts for a week
+  only once it has passed. Charts draw one line for each of the 8 newest signup
+  weeks and 6 newest signup months with someone past week (month) 1; the newest
+  point of a line counts only the people past it. Cards take the signups of the
+  latest 28 days (weeks) or 30 days (months) that got past that week or month,
+  against the span before. App opens are not used: complete sync history starts
+  only on 2 Oct 2026.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights (once
   suggested, from the admin action, even after the suggestion is removed), whose
   invitations are automatic.

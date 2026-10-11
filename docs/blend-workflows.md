@@ -344,7 +344,7 @@ StoreKit's unfinished transaction stream recovers undelivered purchases.
 
 | Workflow | Published ID | Pinned version | Provider input labels | Output labels |
 | --- | --- | --- | --- | --- |
-| Avatar | `c405d12d-fa25-4e67-8d4d-8336e741cbbc` | `ff4f26b1-48f3-4352-bd7d-913e3a481aa4` | `describe_your_animal` | `avatar` |
+| Avatar | `c405d12d-fa25-4e67-8d4d-8336e741cbbc` | `56ebf8a4-7a91-47d9-a041-438c6dec4118` | `describe_your_animal` | `avatar` |
 | Five Fitness Levels | `fa770c5b-25ba-46cc-a758-a08aeebc1c92` | `cf9177c3-9ba5-4a53-87df-e8e304490f43` | `character_portrait`, `identity_details` | `resting`, `soft`, `average`, `fit`, `strong` |
 | Group Photo | `f740d71e-06fe-41d4-a92d-a85c90abd3f9` | `2d6e0596-14c5-4ba2-948f-642bae407815` | `character_portraits`, `scene`, `cast_roster` | `group_photo` |
 

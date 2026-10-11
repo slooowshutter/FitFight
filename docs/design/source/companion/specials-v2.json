@@ -1800,5 +1800,127 @@
                 "file": ".context/specials-v6/chinchilla.png"
             }
         ]
+    },
+    "v7": {
+        "date": "2026-10-11",
+        "workflow": "FitFight Animal Avatars (published c405d12d, version 56ebf8a4, locked kit)",
+        "rule": "Odd Squad series. Worn accessories only, nothing held, so the detail survives the five fitness poses. Duck redo without the overhead barbell.",
+        "succeeded": 8,
+        "planned": 8,
+        "totalCostUsd": 0.69,
+        "specials": [
+            {
+                "key": "duck-1",
+                "id": "special-duck",
+                "series": "odd-squad",
+                "name": "Duck",
+                "signatureDetail": "a small black weightlifting belt around the waist",
+                "attitude": "Tiny but absolutely furious.",
+                "caption": "Small duck. Big lift. Bigger quack.",
+                "description": "A small white duck with an orange beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small black weightlifting belt around the waist. Tiny but absolutely furious.",
+                "runId": "60d3ca27-1615-4cc7-bb53-7b4f350911d6",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/fbbeb9e4-c367-4a7f-ae8f-32c44b52c3d3",
+                "file": ".context/specials-v7/duck-1.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/fbbeb9e4-c367-4a7f-ae8f-32c44b52c3d3.webp"
+            },
+            {
+                "key": "duck-2",
+                "id": "special-duck",
+                "series": "odd-squad",
+                "name": "Duck",
+                "signatureDetail": "a tiny gold chain necklace",
+                "attitude": "Tiny but absolutely furious.",
+                "caption": "Small duck. Big lift. Bigger quack.",
+                "description": "A small white duck with an orange beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny gold chain necklace. Tiny but absolutely furious.",
+                "runId": "8a0dbf62-8f79-45aa-a9de-eb21cb43d261",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/5180822b-1c0e-4ab7-b6b8-230bd0b93cab",
+                "file": ".context/specials-v7/duck-2.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/5180822b-1c0e-4ab7-b6b8-230bd0b93cab.webp"
+            },
+            {
+                "key": "pigeon",
+                "id": "special-pigeon",
+                "series": "odd-squad",
+                "name": "Pigeon",
+                "signatureDetail": "a small fanny pack worn across the chest",
+                "attitude": "Strutting, nosy, weirdly confident.",
+                "caption": "Walks everywhere. Pays for nothing.",
+                "description": "A plump grey city pigeon with an iridescent green-purple neck and orange eyes, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small fanny pack worn across the chest. Strutting, nosy, weirdly confident.",
+                "runId": "cb061446-be13-45f2-83e3-a6b718a8539d",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/c88f0088-9abd-4608-8b58-77d7107cd87c",
+                "file": ".context/specials-v7/pigeon.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/c88f0088-9abd-4608-8b58-77d7107cd87c.webp"
+            },
+            {
+                "key": "opossum",
+                "id": "special-opossum",
+                "series": "odd-squad",
+                "name": "Opossum",
+                "signatureDetail": "a tiny propeller beanie hat",
+                "attitude": "Wide-eyed, slightly panicked, trying his best.",
+                "caption": "Plays dead on rest days.",
+                "description": "A small scruffy grey opossum with a white face, pink nose and a bare pink tail. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny propeller beanie hat. Wide-eyed, slightly panicked, trying his best.",
+                "runId": "c316650d-87c0-4745-a8bb-ebaf62a1e43a",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/596fc409-8d19-45bd-82c0-df97ab80c908",
+                "file": ".context/specials-v7/opossum.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/596fc409-8d19-45bd-82c0-df97ab80c908.webp"
+            },
+            {
+                "key": "turkey",
+                "id": "special-turkey",
+                "series": "odd-squad",
+                "name": "Turkey",
+                "signatureDetail": "a small paper party hat",
+                "attitude": "Relieved, a little smug.",
+                "caption": "Survived November. Now unstoppable.",
+                "description": "A round turkey with a red wattle and a fanned brown tail, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small paper party hat. Relieved, a little smug.",
+                "runId": "79c22841-2459-419f-8a53-56629a5636ac",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/66f5aa5a-0951-460d-92bd-510cd4d8d5ea",
+                "file": ".context/specials-v7/turkey.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/66f5aa5a-0951-460d-92bd-510cd4d8d5ea.webp"
+            },
+            {
+                "key": "seagull",
+                "id": "special-seagull",
+                "series": "odd-squad",
+                "name": "Seagull",
+                "signatureDetail": "small dark sunglasses",
+                "attitude": "Shifty, opportunistic, totally guilty.",
+                "caption": "Steals chips. Steals the lead.",
+                "description": "A scrappy white and grey seagull with a yellow beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: small dark sunglasses. Shifty, opportunistic, totally guilty.",
+                "runId": "512f1929-22ff-44d5-aad2-decdd468a6aa",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/8affaf9d-9a9d-4fc6-9e19-399b4b8df70d",
+                "file": ".context/specials-v7/seagull.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/8affaf9d-9a9d-4fc6-9e19-399b4b8df70d.webp"
+            },
+            {
+                "key": "mole",
+                "id": "special-mole",
+                "series": "odd-squad",
+                "name": "Mole",
+                "signatureDetail": "tiny thick round glasses",
+                "attitude": "Squinting, determined, a bit lost.",
+                "caption": "Can't see the finish. Gets there anyway.",
+                "description": "A small velvety dark grey mole with a pink star-like nose and big pink digging paws. Nothing held in the hands or wings, no headband. One worn signature detail only: tiny thick round glasses. Squinting, determined, a bit lost.",
+                "runId": "ce30fb7b-127d-4f1f-b41b-86df25644f1d",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d2efb376-df2d-47b8-9a22-6152691b4695",
+                "file": ".context/specials-v7/mole.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/d2efb376-df2d-47b8-9a22-6152691b4695.webp"
+            },
+            {
+                "key": "donkey",
+                "id": "special-donkey",
+                "series": "odd-squad",
+                "name": "Donkey",
+                "signatureDetail": "a small straw sun hat with ear holes",
+                "attitude": "Stubborn, deadpan, unimpressed.",
+                "caption": "Stubborn about cardio. In a good way.",
+                "description": "A small grey donkey with long ears and a fluffy fringe. Nothing held in the hands or wings, no headband. One worn signature detail only: a small straw sun hat with ear holes. Stubborn, deadpan, unimpressed.",
+                "runId": "29f41905-a8cd-4da6-a1e1-d49d79b36087",
+                "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/3844163c-27cf-4b4c-b4cb-3cea296daf17",
+                "file": ".context/specials-v7/donkey.png",
+                "thumb": "https://raw.githubusercontent.com/slooowshutter/FitFight/whitehorse/apple-store-payments-review/docs/design/source/kit/specials-thumbs/3844163c-27cf-4b4c-b4cb-3cea296daf17.webp"
+            }
+        ]
     }
 }

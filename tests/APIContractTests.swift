@@ -111,6 +111,12 @@ struct APIContractTests {
         let releasedProfile = try decoder.decode(Build201Profile.self, from: limitedData)
         precondition(limitedCompanion.companionId == "limited-pangolin")
         precondition(releasedProfile.companionId == "limited-pangolin" && releasedProfile.companionPrompt == nil)
+        // The second Specials roster reaches builds that only know the first one; the id stays an opaque string.
+        withCompanionJSON["companion_id"] = "limited-black-panther"
+        let rosterData = try JSONSerialization.data(withJSONObject: withCompanionJSON)
+        let rosterCompanion = try decoder.decode(FitFightProfile.self, from: rosterData)
+        let rosterReleased = try decoder.decode(Build201Profile.self, from: rosterData)
+        precondition(rosterCompanion.companionId == "limited-black-panther" && rosterReleased.companionId == "limited-black-panther")
         withCompanionJSON["companion_id"] = "custom"
         withCompanionJSON["companion_prompt"] = "a cream frenchie with gold sunglasses"
         let customCompanion = try decoder.decode(FitFightProfile.self,

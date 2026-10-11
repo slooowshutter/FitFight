@@ -171,6 +171,7 @@ enum ScreenshotExport {
                     .environmentObject(feed)
                     .environmentObject(companions)
                     .environmentObject(SpecialPurchases())
+                    .environmentObject(CustomCharacterPurchases())
                     .environmentObject(AccountPreferencesStore())
                     .environment(\.ffTheme, store.theme)
                     .environment(\.colorScheme, store.theme.colorScheme)
@@ -195,7 +196,7 @@ enum ScreenshotExport {
                 ("review", AnyView(NewFightView(opening: .create, initialStep: 4)), .newFight),
                 ("you", AnyView(YouView()), .you),
                 ("picker", AnyView(CompanionPicker(selection: .badger)), .you),
-                ("picker-limited", AnyView(CompanionPicker(selection: .limitedPangolin)), .you),
+                ("picker-limited", AnyView(CompanionPicker(selection: .limitedBlackPanther)), .you),
                 ("feed", AnyView(FeedView()), .feed),
                 ("compose", AnyView(FeedComposeSheet()), .feed),
             ]
@@ -221,7 +222,7 @@ enum ScreenshotExport {
                 )
             }
             let longNameCompanions = CompanionStore()
-            longNameCompanions.selection = .limitedSecretaryBirdStride
+            longNameCompanions.selection = .limitedBaldEagle
             for width in [CGFloat(375), 393] {
                 for size in [DynamicTypeSize.large, .accessibility3] {
                     write(
@@ -412,6 +413,8 @@ enum ScreenshotExport {
             .environmentObject(session)
             .environmentObject(HealthKitStepsStore())
             .environmentObject(FeedStore())
+            .environmentObject(SpecialPurchases())
+            .environmentObject(CustomCharacterPurchases())
             .environment(\.ffTheme, theme)
             .environment(\.colorScheme, theme.colorScheme)
             .environment(\.ffStaticRender, true)

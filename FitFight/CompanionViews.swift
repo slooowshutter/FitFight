@@ -3,46 +3,36 @@ import SwiftUI
 enum StockCompanion: String, CaseIterable, Identifiable {
     case badger, raccoon, redPanda = "red-panda", otter, rabbit, fox, bear, boar, sloth, dog, goat, turtle
 
-    case limitedPangolin = "limited-pangolin"
-    case limitedPlatypus = "limited-platypus"
-    case limitedSpottedQuoll = "limited-spotted-quoll"
-    case limitedFennecFox = "limited-fennec-fox"
-    case limitedMuskOx = "limited-musk-ox"
-    case limitedKookaburra = "limited-kookaburra"
-    case limitedPorcupine = "limited-porcupine"
-    case limitedBharal = "limited-bharal"
-    case limitedGoldenSnubNosedMonkey = "limited-golden-snub-nosed-monkey"
-    case limitedProboscisMonkey = "limited-proboscis-monkey"
-    case limitedTreeKangaroo = "limited-tree-kangaroo"
-    case limitedGilaMonster = "limited-gila-monster"
-    case limitedTarsier = "limited-tarsier"
-    case limitedManedWolf = "limited-maned-wolf"
-    case limitedFireSalamander = "limited-fire-salamander"
-    case limitedServalStroll = "limited-serval-stroll"
-    case limitedPuffin = "limited-puffin"
-    case limitedNumbatSprint = "limited-numbat-sprint"
-    case limitedCoatiSnooze = "limited-coati-snooze"
-    case limitedGalago = "limited-galago"
-    case limitedFrilledLizard = "limited-frilled-lizard"
-    case limitedOkapi = "limited-okapi"
-    case limitedHoatzin = "limited-hoatzin"
-    case limitedQuokka = "limited-quokka"
-    case limitedNumbatStride = "limited-numbat-stride"
-    case limitedSifaka = "limited-sifaka"
-    case limitedSecretaryBirdStride = "limited-secretary-bird-stride"
-    case limitedRockHyrax = "limited-rock-hyrax"
-    case limitedServalSprint = "limited-serval-sprint"
-    case limitedBandedMongoose = "limited-banded-mongoose"
-    case limitedAxolotl = "limited-axolotl"
-    case limitedThornyDevilStroll = "limited-thorny-devil-stroll"
-    case limitedCoatiSprint = "limited-coati-sprint"
-    case limitedTamandua = "limited-tamandua"
-    case limitedPaca = "limited-paca"
-    case limitedJerboa = "limited-jerboa"
-    case limitedThornyDevilCoffee = "limited-thorny-devil-coffee"
-    case limitedKakapo = "limited-kakapo"
-    case limitedSecretaryBirdSnooze = "limited-secretary-bird-snooze"
-    case limitedMarkhor = "limited-markhor"
+    case limitedBlackPanther = "limited-black-panther"
+    case limitedLoneWolf = "limited-lone-wolf"
+    case limitedSnowLeopard = "limited-snow-leopard"
+    case limitedTiger = "limited-tiger"
+    case limitedNightOwl = "limited-night-owl"
+    case limitedCrocodile = "limited-crocodile"
+    case limitedPeacock = "limited-peacock"
+    case limitedFlamingo = "limited-flamingo"
+    case limitedPersianCat = "limited-persian-cat"
+    case limitedOstrich = "limited-ostrich"
+    case limitedCheetah = "limited-cheetah"
+    case limitedBaldEagle = "limited-bald-eagle"
+    case limitedSilverback = "limited-silverback"
+    case limitedKangaroo = "limited-kangaroo"
+    case limitedBull = "limited-bull"
+    case limitedMoose = "limited-moose"
+    case limitedBison = "limited-bison"
+    case limitedCamel = "limited-camel"
+    case limitedPanda = "limited-panda"
+    case limitedCapybara = "limited-capybara"
+    case limitedHedgehog = "limited-hedgehog"
+    case limitedGingerCat = "limited-ginger-cat"
+    case limitedAlpaca = "limited-alpaca"
+    case limitedSeal = "limited-seal"
+    case limitedHamster = "limited-hamster"
+    case limitedTreeFrog = "limited-tree-frog"
+    case limitedMouse = "limited-mouse"
+    case limitedGuineaPig = "limited-guinea-pig"
+    case limitedDuck = "limited-duck"
+    case limitedDonkey = "limited-donkey"
 
     var isLimited: Bool { rawValue.hasPrefix("limited-") }
     var productId: String { "com.fitfight.mvp.special.\(rawValue.replacingOccurrences(of: "limited-", with: "").replacingOccurrences(of: "-", with: "_"))" }
@@ -64,46 +54,36 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         case .dog: String(appLocalized: "Dog")
         case .goat: String(appLocalized: "Goat")
         case .turtle: String(appLocalized: "Turtle")
-        case .limitedPangolin: String(appLocalized: "Pangolin")
-        case .limitedPlatypus: String(appLocalized: "Platypus")
-        case .limitedSpottedQuoll: String(appLocalized: "Spotted Quoll")
-        case .limitedFennecFox: String(appLocalized: "Fennec Fox")
-        case .limitedMuskOx: String(appLocalized: "Musk Ox")
-        case .limitedKookaburra: String(appLocalized: "Kookaburra")
-        case .limitedPorcupine: String(appLocalized: "Porcupine")
-        case .limitedBharal: String(appLocalized: "Bharal")
-        case .limitedGoldenSnubNosedMonkey: String(appLocalized: "Golden Snub-Nosed Monkey")
-        case .limitedProboscisMonkey: String(appLocalized: "Proboscis Monkey")
-        case .limitedTreeKangaroo: String(appLocalized: "Tree Kangaroo")
-        case .limitedGilaMonster: String(appLocalized: "Gila Monster")
-        case .limitedTarsier: String(appLocalized: "Tarsier")
-        case .limitedManedWolf: String(appLocalized: "Maned Wolf")
-        case .limitedFireSalamander: String(appLocalized: "Fire Salamander")
-        case .limitedServalStroll: String(appLocalized: "Serval, Easy Pace")
-        case .limitedPuffin: String(appLocalized: "Puffin")
-        case .limitedNumbatSprint: String(appLocalized: "Numbat, Sprint Mode")
-        case .limitedCoatiSnooze: String(appLocalized: "Coati, Snooze Mode")
-        case .limitedGalago: String(appLocalized: "Galago")
-        case .limitedFrilledLizard: String(appLocalized: "Frilled Lizard")
-        case .limitedOkapi: String(appLocalized: "Okapi")
-        case .limitedHoatzin: String(appLocalized: "Hoatzin")
-        case .limitedQuokka: String(appLocalized: "Quokka")
-        case .limitedNumbatStride: String(appLocalized: "Numbat, Steady Stride")
-        case .limitedSifaka: String(appLocalized: "Sifaka")
-        case .limitedSecretaryBirdStride: String(appLocalized: "Secretary Bird, On Duty")
-        case .limitedRockHyrax: String(appLocalized: "Rock Hyrax")
-        case .limitedServalSprint: String(appLocalized: "Serval, Sprint Mode")
-        case .limitedBandedMongoose: String(appLocalized: "Banded Mongoose")
-        case .limitedAxolotl: String(appLocalized: "Axolotl")
-        case .limitedThornyDevilStroll: String(appLocalized: "Thorny Devil, Easy Pace")
-        case .limitedCoatiSprint: String(appLocalized: "Coati, Sprint Mode")
-        case .limitedTamandua: String(appLocalized: "Tamandua")
-        case .limitedPaca: String(appLocalized: "Paca")
-        case .limitedJerboa: String(appLocalized: "Jerboa")
-        case .limitedThornyDevilCoffee: String(appLocalized: "Thorny Devil, Coffee Break")
-        case .limitedKakapo: String(appLocalized: "Kakapo")
-        case .limitedSecretaryBirdSnooze: String(appLocalized: "Secretary Bird, Off Duty")
-        case .limitedMarkhor: String(appLocalized: "Markhor")
+        case .limitedBlackPanther: String(appLocalized: "Black Panther")
+        case .limitedLoneWolf: String(appLocalized: "Lone Wolf")
+        case .limitedSnowLeopard: String(appLocalized: "Snow Leopard")
+        case .limitedTiger: String(appLocalized: "Tiger")
+        case .limitedNightOwl: String(appLocalized: "Night Owl")
+        case .limitedCrocodile: String(appLocalized: "Crocodile")
+        case .limitedPeacock: String(appLocalized: "Peacock")
+        case .limitedFlamingo: String(appLocalized: "Flamingo")
+        case .limitedPersianCat: String(appLocalized: "Persian Cat")
+        case .limitedOstrich: String(appLocalized: "Ostrich")
+        case .limitedCheetah: String(appLocalized: "Cheetah")
+        case .limitedBaldEagle: String(appLocalized: "Bald Eagle")
+        case .limitedSilverback: String(appLocalized: "Silverback")
+        case .limitedKangaroo: String(appLocalized: "Kangaroo")
+        case .limitedBull: String(appLocalized: "Bull")
+        case .limitedMoose: String(appLocalized: "Moose")
+        case .limitedBison: String(appLocalized: "Bison")
+        case .limitedCamel: String(appLocalized: "Camel")
+        case .limitedPanda: String(appLocalized: "Panda")
+        case .limitedCapybara: String(appLocalized: "Capybara")
+        case .limitedHedgehog: String(appLocalized: "Hedgehog")
+        case .limitedGingerCat: String(appLocalized: "Ginger Cat")
+        case .limitedAlpaca: String(appLocalized: "Alpaca")
+        case .limitedSeal: String(appLocalized: "Seal")
+        case .limitedHamster: String(appLocalized: "Hamster")
+        case .limitedTreeFrog: String(appLocalized: "Tree Frog")
+        case .limitedMouse: String(appLocalized: "Mouse")
+        case .limitedGuineaPig: String(appLocalized: "Guinea Pig")
+        case .limitedDuck: String(appLocalized: "Duck")
+        case .limitedDonkey: String(appLocalized: "Donkey")
         }
     }
 
@@ -121,53 +101,68 @@ enum StockCompanion: String, CaseIterable, Identifiable {
         case .dog: String(appLocalized: "Always up for a walk.")
         case .goat: String(appLocalized: "Takes the uphill route.")
         case .turtle: String(appLocalized: "Never out of the race.")
-        case .limitedPangolin: String(appLocalized: "Packed a snack. Called it endurance.")
-        case .limitedPlatypus: String(appLocalized: "Built like a committee. Walks like a legend.")
-        case .limitedSpottedQuoll: String(appLocalized: "Spots the finish line. Ignores the warm-up.")
-        case .limitedFennecFox: String(appLocalized: "Heard you were skipping leg day.")
-        case .limitedMuskOx: String(appLocalized: "Built for winter. Dressed for PE.")
-        case .limitedKookaburra: String(appLocalized: "Laughs at your excuses. Then takes a break.")
-        case .limitedPorcupine: String(appLocalized: "Personal space is part of the training plan.")
-        case .limitedBharal: String(appLocalized: "Your hill is the warm-up.")
-        case .limitedGoldenSnubNosedMonkey: String(appLocalized: "Golden fur. Questionable pacing.")
-        case .limitedProboscisMonkey: String(appLocalized: "Wins every race by a nose.")
-        case .limitedTreeKangaroo: String(appLocalized: "Took the stairs. All the way up the tree.")
-        case .limitedGilaMonster: String(appLocalized: "A monster at taking it easy.")
-        case .limitedTarsier: String(appLocalized: "Wide awake. Deeply suspicious of cardio.")
-        case .limitedManedWolf: String(appLocalized: "All legs. No shortcuts.")
-        case .limitedFireSalamander: String(appLocalized: "Warming up is a personal brand.")
-        case .limitedServalStroll: String(appLocalized: "Long legs. Leisurely agenda.")
-        case .limitedPuffin: String(appLocalized: "Flight mode off. Step count on.")
-        case .limitedNumbatSprint: String(appLocalized: "Small stripes. Unreasonably big ambitions.")
-        case .limitedCoatiSnooze: String(appLocalized: "Yawn first. Personal best later.")
-        case .limitedGalago: String(appLocalized: "Night owl energy. Morning walk regrets.")
-        case .limitedFrilledLizard: String(appLocalized: "Dressed for drama. Stayed for the steps.")
-        case .limitedOkapi: String(appLocalized: "Half stripes. Full commitment to a nap.")
-        case .limitedHoatzin: String(appLocalized: "Pre-workout is coffee and a long sit.")
-        case .limitedQuokka: String(appLocalized: "Smiling through a very optional workout.")
-        case .limitedNumbatStride: String(appLocalized: "Counts ants on rest days. Steps on the others.")
-        case .limitedSifaka: String(appLocalized: "Sideways is still a direction.")
-        case .limitedSecretaryBirdStride: String(appLocalized: "Booked your defeat between two meetings.")
-        case .limitedRockHyrax: String(appLocalized: "Tiny legs. Elephant-sized confidence.")
-        case .limitedServalSprint: String(appLocalized: "Already at the finish. Pretending to stretch.")
-        case .limitedBandedMongoose: String(appLocalized: "Runs in a pack. Keeps a solo victory speech.")
-        case .limitedAxolotl: String(appLocalized: "Regrows limbs. Still skips leg day.")
-        case .limitedThornyDevilStroll: String(appLocalized: "Prickly about pace. Soft on rest days.")
-        case .limitedCoatiSprint: String(appLocalized: "Sniffed out a shortcut. Took the long way.")
-        case .limitedTamandua: String(appLocalized: "Long snout. Short list of excuses.")
-        case .limitedPaca: String(appLocalized: "Times every lap. Rounds down the snack breaks.")
-        case .limitedJerboa: String(appLocalized: "Tiny footprint. Dramatic entrance.")
-        case .limitedThornyDevilCoffee: String(appLocalized: "Sharp outfit. Extremely soft schedule.")
-        case .limitedKakapo: String(appLocalized: "Flight cancelled. Walking reluctantly.")
-        case .limitedSecretaryBirdSnooze: String(appLocalized: "This meeting could have been a nap.")
-        case .limitedMarkhor: String(appLocalized: "Spiralling horns. Perfectly level coffee.")
+        case .limitedBlackPanther: String(appLocalized: "Doesn't count steps. Steps count him.")
+        case .limitedLoneWolf: String(appLocalized: "Runs alone. Finishes first.")
+        case .limitedSnowLeopard: String(appLocalized: "Cold start. Hot finish.")
+        case .limitedTiger: String(appLocalized: "Wraps on. Excuses off.")
+        case .limitedNightOwl: String(appLocalized: "Up at 3 a.m. Still ahead of you.")
+        case .limitedCrocodile: String(appLocalized: "Smiles at the finish line. Bad sign.")
+        case .limitedPeacock: String(appLocalized: "Dressed to win. Also wins.")
+        case .limitedFlamingo: String(appLocalized: "Stands on one leg. Still out-walks you.")
+        case .limitedPersianCat: String(appLocalized: "Pearls on. Pinky up. Pace up.")
+        case .limitedOstrich: String(appLocalized: "Never buries her head. Only the competition.")
+        case .limitedCheetah: String(appLocalized: "Fashionably fast. Never fashionably late.")
+        case .limitedBaldEagle: String(appLocalized: "Spotted your step count from up here.")
+        case .limitedSilverback: String(appLocalized: "Skips nothing. Especially not leg day.")
+        case .limitedKangaroo: String(appLocalized: "Counts jumps as steps. Nobody argues.")
+        case .limitedBull: String(appLocalized: "Charges first. Asks questions never.")
+        case .limitedMoose: String(appLocalized: "Coach says one more lap. Coach is me.")
+        case .limitedBison: String(appLocalized: "Skipping rope. Never skipping cardio.")
+        case .limitedCamel: String(appLocalized: "Hydrated in 2019. Still going.")
+        case .limitedPanda: String(appLocalized: "Bubble tea first. Then domination.")
+        case .limitedCapybara: String(appLocalized: "Unbothered. Undefeated.")
+        case .limitedHedgehog: String(appLocalized: "Prickly before coffee. Fast after.")
+        case .limitedGingerCat: String(appLocalized: "Woke up at noon. Won by dinner.")
+        case .limitedAlpaca: String(appLocalized: "Spits on rest days only.")
+        case .limitedSeal: String(appLocalized: "Warm flippers. Cold competition.")
+        case .limitedHamster: String(appLocalized: "Small legs. Unreasonable cardio.")
+        case .limitedTreeFrog: String(appLocalized: "Hops count double. Allegedly.")
+        case .limitedMouse: String(appLocalized: "Small steps. So many of them.")
+        case .limitedGuineaPig: String(appLocalized: "Squeaks politely. Walks relentlessly.")
+        case .limitedDuck: String(appLocalized: "Small duck. Big lift. Bigger quack.")
+        case .limitedDonkey: String(appLocalized: "Stubborn about cardio. In a good way.")
+        }
+    }
+
+    var series: SpecialSeries? {
+        switch self {
+        case .limitedBlackPanther, .limitedLoneWolf, .limitedSnowLeopard, .limitedTiger, .limitedNightOwl, .limitedCrocodile: .nightHunters
+        case .limitedPeacock, .limitedFlamingo, .limitedPersianCat, .limitedOstrich, .limitedCheetah, .limitedBaldEagle: .royals
+        case .limitedSilverback, .limitedKangaroo, .limitedBull, .limitedMoose, .limitedBison, .limitedCamel: .gymBros
+        case .limitedPanda, .limitedCapybara, .limitedHedgehog, .limitedGingerCat, .limitedAlpaca, .limitedSeal: .cozyClub
+        case .limitedHamster, .limitedTreeFrog, .limitedMouse, .limitedGuineaPig, .limitedDuck, .limitedDonkey: .oddSquad
+        default: nil
         }
     }
 
     func effortImage(stage: CompanionEffortStage?) -> String {
-        // Specials have no effort forms yet.
-        guard let stage, !isLimited else { return image }
+        guard let stage else { return image }
         return "\(image)-effort-\(stage.rawValue)"
+    }
+}
+
+/// Specials come in series of six, shown in this order.
+enum SpecialSeries: CaseIterable {
+    case nightHunters, royals, gymBros, cozyClub, oddSquad
+
+    var name: String {
+        switch self {
+        case .nightHunters: String(appLocalized: "Night Hunters")
+        case .royals: String(appLocalized: "Royals")
+        case .gymBros: String(appLocalized: "Gym Bros")
+        case .cozyClub: String(appLocalized: "Cozy Club")
+        case .oddSquad: String(appLocalized: "Odd Squad")
+        }
     }
 }
 
@@ -317,20 +312,6 @@ final class CompanionStore: ObservableObject {
                 showingPicker = false
             }
         }
-        persist()
-    }
-
-    func loadSavedPrompts(session: SessionStore) async throws {
-        guard !CompanionPreview.isEnabled, let ownerId,
-              session.profile?.userId == ownerId else { return }
-        let prompts = try await session.companionPrompts()
-        try Task.checkCancellation()
-        guard self.ownerId == ownerId, session.profile?.userId == ownerId else {
-            throw CancellationError()
-        }
-        // Keep locally pending choices while refreshing the account's saved library.
-        savedPrompts = prompts + savedPrompts.filter { !prompts.contains($0) }
-        if customPrompt.isEmpty { customPrompt = savedPrompts.first ?? "" }
         persist()
     }
 
@@ -594,6 +575,8 @@ struct CompanionIntroduction: View {
     @Environment(\.ffStaticRender) private var staticRender
     @State private var fitnessImages: [String: URL] = [:]
     @State private var showingLevels = false
+    /// The picker lives on the root sheet, so it opens only after the levels drawer has dismissed.
+    @State private var pickerAfterLevels = false
 
     var body: some View {
         Group {
@@ -680,8 +663,16 @@ struct CompanionIntroduction: View {
                 return
             }
         }
-        .sheet(isPresented: $showingLevels) {
-            CompanionLevelsSheet(status: steps.status) { levelArt($0) }
+        .sheet(isPresented: $showingLevels, onDismiss: {
+            guard pickerAfterLevels else { return }
+            pickerAfterLevels = false
+            companions.pickerStartsWithCustom = false
+            companions.showingPicker = true
+        }) {
+            CompanionLevelsSheet(status: steps.status, change: {
+                pickerAfterLevels = true
+                showingLevels = false
+            }) { levelArt($0) }
                 .fitFightTheme(theme)
                 .presentationBackground(theme.overlay)
                 .presentationCornerRadius(theme.radius.shell)
@@ -752,12 +743,19 @@ struct CompanionIntroduction: View {
 
     @ViewBuilder
     private var youCharacter: some View {
-        // Specials have no effort forms yet, and a custom animal needs all five fitness images.
-        if surface == .fights && (companions.isCustom ? !fitnessImages.isEmpty : !companions.selection.isLimited) {
-            Button { showingLevels = true } label: { levelArt(youEffort) }
+        // Every companion opens the drawer on Fights, so Change animal is always reachable.
+        if surface == .fights {
+            Button { showingLevels = true } label: { youArt }
                 .buttonStyle(FFPressStyle())
                 .accessibilityLabel(String(appLocalized: "Companion levels"))
-        } else if companions.isCustom {
+        } else {
+            youArt
+        }
+    }
+
+    @ViewBuilder
+    private var youArt: some View {
+        if companions.isCustom {
             RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, effort: youEffort)
@@ -813,6 +811,7 @@ struct CompanionIntroduction: View {
 /// Opened from the companion on Fights: every effort form, the steps it starts at, and what today's next one needs.
 struct CompanionLevelsSheet<Art: View>: View {
     let status: HealthKitStepsStore.Status
+    let change: () -> Void
     @ViewBuilder var art: (CompanionEffortStage) -> Art
     @Environment(\.dismiss) private var dismiss
     @Environment(\.ffTheme) private var theme
@@ -827,6 +826,11 @@ struct CompanionLevelsSheet<Art: View>: View {
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    Button(String(appLocalized: "Change animal"), action: change)
+                    .ffType(.buttonSmall)
+                    .foregroundStyle(theme.mossText)
+                    .buttonStyle(FFHapticPlainStyle())
+                    .frame(minHeight: 44)
                     if let next = CompanionEffortStage(rawValue: current.rawValue + 1) {
                         FFCard {
                             HStack(spacing: 14) {
@@ -861,7 +865,7 @@ struct CompanionLevelsSheet<Art: View>: View {
                             if stage != .rest { FFDivider() }
                             HStack(spacing: 14) {
                                 art(stage)
-                                    .frame(width: 56, height: 64)
+                                    .frame(width: 84, height: 96)
                                     .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(stage.name)
@@ -897,15 +901,11 @@ struct CompanionLevelsSheet<Art: View>: View {
 }
 
 struct CompanionScene: View {
-    var name = "race"
-
     var body: some View {
-        Image("Companion-\(name)")
+        Image("Companion-race")
             .resizable()
             .scaledToFit()
-            .accessibilityLabel(name == "race"
-                ? String(appLocalized: "Rabbit, Turtle, Fox and Badger running together")
-                : String(appLocalized: "Rabbit, Fox, Badger and Turtle playing tennis"))
+            .accessibilityLabel(String(appLocalized: "Rabbit, Turtle, Fox and Badger running together"))
     }
 }
 
@@ -1018,6 +1018,8 @@ struct CompanionStage: View {
     @Binding var selection: StockCompanion?
     var label: (StockCompanion) -> String? = { _ in nil }
     var disabled = false
+    /// Height of everything else on the screen. When set, the stage takes the rest and centres the animal in it.
+    var reserved: CGFloat?
     @Environment(\.ffTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.ffStaticRender) private var staticRender
@@ -1027,29 +1029,11 @@ struct CompanionStage: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            GeometryReader { proxy in
-                let width = proxy.size.width * 0.62
-                if staticRender {
-                    // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
-                    let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
-                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
-                        .fixedSize()
-                        .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
-                        .frame(width: proxy.size.width, alignment: .leading)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width) } }
-                            .scrollTargetLayout()
-                    }
-                    .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
-                    .scrollTargetBehavior(.viewAligned)
-                    .scrollPosition(id: $selection, anchor: .center)
-                    .animation(reduceMotion ? nil : .snappy, value: selection)
-                    .disabled(disabled)
-                }
+            if let reserved {
+                stage.containerRelativeFrame(.vertical) { height, _ in max(320, height - reserved) }
+            } else {
+                stage.frame(height: 320)
             }
-            .frame(height: 320)
-            .clipped()
             ScrollViewReader { reader in
                 ScrollView(.horizontal, showsIndicators: false) {
                     thumbnails
@@ -1065,6 +1049,31 @@ struct CompanionStage: View {
             }
         }
         .padding(.horizontal, -20)
+    }
+
+    private var stage: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width * 0.62
+            if staticRender {
+                // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
+                let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
+                HStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
+                    .fixedSize()
+                    .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
+                    .frame(width: proxy.size.width, alignment: .leading)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
+                        .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $selection, anchor: .center)
+                .animation(reduceMotion ? nil : .snappy, value: selection)
+                .disabled(disabled)
+            }
+        }
+        .clipped()
     }
 
     private var thumbnails: some View {
@@ -1092,7 +1101,7 @@ struct CompanionStage: View {
         .padding(.horizontal, 20)
     }
 
-    private func page(_ animal: StockCompanion, width: CGFloat) -> some View {
+    private func page(_ animal: StockCompanion, width: CGFloat, height: CGFloat) -> some View {
         VStack(spacing: 4) {
             Image(animal.image)
                 .resizable()
@@ -1115,7 +1124,8 @@ struct CompanionStage: View {
             }
             .opacity(selection == animal ? 1 : 0)
         }
-        .frame(width: width)
+        // The page fills the stage height, so the animal sits centred in any spare space.
+        .frame(width: width, height: height)
         .scaleEffect(selection == animal ? 1 : 0.9)
         .accessibilityElement(children: .combine)
         .id(animal)
@@ -1130,22 +1140,18 @@ struct CompanionPicker: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
-    @Environment(\.ffStaticRender) private var staticRender
     @State private var draft: StockCompanion?
     @State private var pickingCustom: Bool
     @State private var customPrompt: String
     @State private var category: CompanionCategory
     @State private var isSaving = false
     @State private var error = ""
-    @State private var libraryError = ""
-    @State private var loadingLibrary = false
+    @State private var library: [FitFightAILibraryEntry] = []
     @State private var loadingEditions = false
     @State private var editionsError = ""
     @State private var showingGeneration = false
     @State private var showingGrid = false
-    @FocusState private var promptFocused: Bool
 
-    private let promptLimit = 1000
     private let startWithCustom: Bool
 
     init(selection: StockCompanion, required: Bool = false, isCustom: Bool = false, prompt: String = "", startWithCustom: Bool = false) {
@@ -1168,8 +1174,10 @@ struct CompanionPicker: View {
                 Text("Choose your companion")
                     .font(.custom("Nunito-ExtraBold", size: 26, relativeTo: .title))
                     .foregroundStyle(theme.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Spacer()
-                if !animals(in: category).isEmpty {
+                if category != .yours && !animals(in: category).isEmpty {
                     Button {
                         showingGrid.toggle()
                     } label: {
@@ -1189,7 +1197,7 @@ struct CompanionPicker: View {
                         .disabled(isSaving)
                 }
             }
-            Text("This is how other people see you in fights and Feed. You can change your animal anytime.")
+            Text("How others see you in fights and Feed. Change it anytime.")
                 .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1197,12 +1205,9 @@ struct CompanionPicker: View {
                         selection: $category, fill: true) { $0.name }
             .disabled(isSaving)
             if category == .limited || (category == .all && draft?.isLimited == true) {
-                Text("One of each. One Special per account. Buy once and keep it, even when you change companions.")
+                Text("Only one of each exists, one per person. Buy it once, keep it forever.")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
-                FFButton(title: String(appLocalized: "Restore purchases"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
-                    Task { await purchases.restore(session: session) }
-                }
                 if purchases.canCancelCheckout {
                     FFButton(title: String(appLocalized: "Cancel checkout"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
                         Task { await purchases.cancelCheckout(session: session) }
@@ -1212,7 +1217,7 @@ struct CompanionPicker: View {
                     Text(purchases.message).ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 if purchases.snapshot?.editions.contains(where: { $0.status == .reserved }) == true {
-                    Text("A purchase is in progress. Your Special is held for 30 minutes. Restore purchases to check it.")
+                    Text("A purchase is in progress. Your Special is held for 30 minutes. Check it in Settings, Restore purchases.")
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 ForEach(purchases.snapshot?.conflicts ?? [], id: \.transactionId) { claim in
@@ -1233,170 +1238,172 @@ struct CompanionPicker: View {
                 }
             }
             let visible = animals(in: category)
-            if !visible.isEmpty && !showingGrid {
+            if category != .yours && !visible.isEmpty && !showingGrid {
                 CompanionStage(
                     animals: visible,
                     selection: Binding(get: { pickingCustom ? nil : draft }, set: { animal in
                         guard let animal else { return }
-                        promptFocused = false
                         draft = animal
                         pickingCustom = false
                         error = ""
                     }),
                     label: specialLabel,
-                    disabled: isSaving || purchases.isBusy
+                    disabled: isSaving || purchases.isBusy,
+                    reserved: category == .limited || draft?.isLimited == true ? 280 : 240
                 )
             }
-            if !visible.isEmpty && showingGrid {
+            if category != .yours && !visible.isEmpty && showingGrid {
+                // Specials are grouped under a small header per series; All stays one grid.
+                let groups: [(title: String?, animals: [StockCompanion])] = category == .limited
+                    ? SpecialSeries.allCases.map { series -> (title: String?, animals: [StockCompanion]) in (series.name, visible.filter { $0.series == series }) }.filter { !$0.animals.isEmpty }
+                    : [(nil, visible)]
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
-                    ForEach(visible) { animal in
-                        let edition = status(animal)
+                    ForEach(groups, id: \.animals) { group in
+                        Section {
+                            ForEach(group.animals) { animal in
+                                let edition = status(animal)
+                                Button {
+                                    draft = animal
+                                    pickingCustom = false
+                                    error = ""
+                                } label: {
+                                    VStack(spacing: 3) {
+                                        Image(animal.image)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 104)
+                                            .clipped()
+                                        Text(animal.name)
+                                            .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
+                                            .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
+                                            .lineLimit(2, reservesSpace: true)
+                                            .minimumScaleFactor(0.8)
+                                        // Every tile reserves the status line so limited and regular animals stay the same size.
+                                        Text(specialLabel(animal) ?? " ")
+                                            .ffType(.caption)
+                                            .foregroundStyle(theme.textSecondary)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.7)
+                                            .accessibilityHidden(!animal.isLimited)
+                                    }
+                                    .padding(8)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                    .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
+                                                in: RoundedRectangle(cornerRadius: theme.radius.card))
+                                    .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                                    .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                                }
+                                .buttonStyle(FFHapticPlainStyle())
+                                .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
+                                .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
+                            }
+                        } header: {
+                            if let title = group.title {
+                                Text(title)
+                                    .ffType(.label)
+                                    .foregroundStyle(theme.textSecondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 4)
+                                    .accessibilityAddTraits(.isHeader)
+                            }
+                        }
+                    }
+                }
+            }
+            if category == .yours {
+                let owned = animals(in: .yours)
+                let characters = characterPurchases.snapshot?.characters.filter { $0.status != .refunded } ?? []
+                if characters.isEmpty && !owned.contains(where: \.isLimited) {
+                    Text("Specials you buy and characters you create live here.")
+                        .ffType(.body)
+                        .foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 150 : 96), spacing: 10)], spacing: 10) {
+                    ForEach(owned) { animal in
+                        let selected = draft == animal && !pickingCustom
                         Button {
                             draft = animal
                             pickingCustom = false
                             error = ""
                         } label: {
-                            VStack(spacing: 3) {
-                                Image(animal.image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 104)
-                                    .clipped()
-                                Text(animal.name)
-                                    .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
-                                    .foregroundStyle(draft == animal && !pickingCustom ? theme.mossText : theme.text)
-                                    .lineLimit(2, reservesSpace: true)
-                                    .minimumScaleFactor(0.8)
-                                // Every tile reserves the status line so limited and regular animals stay the same size.
-                                Text(specialLabel(animal) ?? " ")
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                                    .accessibilityHidden(!animal.isLimited)
+                            collectionTile(
+                                name: animal.name,
+                                caption: equippedStock == animal ? String(appLocalized: "Equipped") : specialLabel(animal),
+                                selected: selected
+                            ) {
+                                Image(animal.image).resizable().scaledToFit()
                             }
-                            .padding(8)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                            .background(draft == animal && !pickingCustom ? theme.mossWash : theme.card,
-                                        in: RoundedRectangle(cornerRadius: theme.radius.card))
-                            .ffBorder(draft == animal && !pickingCustom ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
-                            .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
                         }
                         .buttonStyle(FFHapticPlainStyle())
-                        .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
-                        .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
+                        .disabled(isSaving)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
                     }
-                }
-            }
-            if category == .yours {
-                Text("Reuse a saved description or write a new one.")
-                    .ffType(.body)
-                    .foregroundStyle(theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if loadingLibrary {
-                    ProgressView().accessibilityLabel(String(appLocalized: "Loading saved descriptions"))
-                }
-                if !libraryError.isEmpty {
-                    Text(libraryError)
-                        .ffType(.caption)
-                        .foregroundStyle(theme.emberText)
-                } else if !loadingLibrary && companions.savedPrompts.isEmpty {
-                    Text("Your saved descriptions will appear here.")
-                        .ffType(.body)
-                        .foregroundStyle(theme.textSecondary)
-                }
-                ForEach(companions.savedPrompts, id: \.self) { prompt in
-                    Button {
-                        customPrompt = prompt
-                        Task { await saveCustom() }
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text(prompt)
-                                .ffType(.body)
-                                .lineLimit(3)
-                                .multilineTextAlignment(.leading)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: companions.isCustom && companions.customPrompt == prompt
-                                  ? "checkmark.circle.fill" : "arrow.uturn.backward")
+                    ForEach(characters) { character in
+                        let entry = library.first { $0.requestID == character.requestID && $0.workflow == .fitness }
+                        let resting = entry?.images.first { $0.stage == "resting" }
+                        let equipped = companions.isCustom && entry?.images.contains { $0.url == session.profile?.companionImageURL } == true
+                        Button {
+                            if character.status == .complete, let entry {
+                                Task { await equip(entry) }
+                            } else {
+                                showingGeneration = true
+                            }
+                        } label: {
+                            collectionTile(
+                                name: character.description ?? entry?.description ?? String(appLocalized: "Your character"),
+                                caption: character.phase == .complete ? (equipped ? String(appLocalized: "Equipped") : nil)
+                                    : character.phase == .choosing ? String(appLocalized: "Pick one")
+                                    : [.portraits, .poses].contains(character.phase) ? String(appLocalized: "Being drawn")
+                                    : String(appLocalized: "Finish it"),
+                                selected: equipped && pickingCustom
+                            ) {
+                                if let resting {
+                                    RemotePhoto(url: resting.url, contentMode: .fit) { theme.control }
+                                } else if let portrait = character.portraitURL ?? character.candidateURLs.first {
+                                    RemotePhoto(url: portrait, contentMode: .fit) { theme.control }
+                                } else if character.status == .generating || character.status == .complete {
+                                    ProgressView().tint(theme.gold)
+                                } else {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 28, weight: .semibold))
+                                        .foregroundStyle(theme.mossText)
+                                }
+                            }
                         }
-                        .foregroundStyle(theme.mossText)
-                        .padding(16)
-                        .frame(minHeight: 44)
-                        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card))
-                        .ffBorder(theme.hairline, radius: theme.radius.card)
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(isSaving)
+                        .accessibilityAddTraits(equipped ? .isSelected : [])
                     }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .disabled(isSaving)
-                    .accessibilityLabel(prompt)
-                    .accessibilityHint(String(appLocalized: "Use this saved description"))
-                    .accessibilityAddTraits(companions.isCustom && companions.customPrompt == prompt ? .isSelected : [])
-                }
-            }
-            if category == .yours {
-                FFField(
-                    label: String(appLocalized: "Your animal"),
-                    state: promptFocused ? .focused : .normal,
-                    help: String(appLocalized: "Write the species, breed or race, accessories, colors, and anything else that should appear."),
-                    counter: "\(customPrompt.count)/\(promptLimit)",
-                    minHeight: 140
-                ) {
-                    if staticRender {
-                        Text("Species, breed, accessories, colors…")
-                            .foregroundStyle(theme.textFaint)
-                            .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
-                    } else {
-                        TextField(
-                            String(appLocalized: "Species, breed, accessories, colors…"),
-                            text: $customPrompt,
-                            axis: .vertical
-                        )
-                        .focused($promptFocused)
-                        .accessibilityLabel(String(appLocalized: "Your animal"))
-                        .lineLimit(5...12)
-                        .textInputAutocapitalization(.sentences)
-                        .onChange(of: customPrompt) { _, value in
-                            if value.count > promptLimit { customPrompt = String(value.prefix(promptLimit)) }
+                    // Paid characters stay hidden while sales are off, except for an account that already bought one.
+                    if CompanionPreview.isEnabled || characterPurchases.snapshot.map({ $0.purchasesEnabled || !$0.characters.isEmpty }) == true {
+                        Button {
+                            showingGeneration = true
+                        } label: {
+                            collectionTile(
+                                name: String(appLocalized: "Create your own"),
+                                caption: characterPurchases.product?.displayPrice,
+                                selected: false
+                            ) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 28, weight: .semibold))
+                                    .foregroundStyle(theme.mossText)
+                                    .frame(width: 64, height: 64)
+                                    .background(theme.mossWash, in: Circle())
+                            }
                         }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(isSaving)
                     }
                 }
-                if !error.isEmpty {
+                if !error.isEmpty && (draft == nil || pickingCustom) {
                     Text(error)
                         .ffType(.caption)
                         .foregroundStyle(theme.emberText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                FFButton(
-                    title: String(appLocalized: "Save companion"),
-                    kind: .primary,
-                    enabled: canSaveCustom,
-                    busy: isSaving,
-                    fullWidth: true,
-                    action: { Task { await saveCustom() } }
-                )
-                // Paid characters stay hidden while sales are off, except for an account that already bought one.
-                if let store = characterPurchases.snapshot, store.purchasesEnabled || !store.characters.isEmpty {
-                    FFButton(
-                        title: String(localized: "Create character"),
-                        kind: .secondary,
-                        enabled: !isSaving && !CompanionPreview.isEnabled,
-                        fullWidth: true
-                    ) {
-                        promptFocused = false
-                        showingGeneration = true
-                    }
-                }
             }
-            #if DEBUG && targetEnvironment(simulator)
-            if CompanionPreview.isEnabled {
-                FFSection(title: String(appLocalized: "Artwork study")) {
-                    CompanionScene(name: "tennis")
-                    Text("Fixed demo cast. Artwork study only; this is not a Feed post.")
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                }
-            }
-            #endif
         }
         .safeAreaInset(edge: .bottom) {
             if let draft, !pickingCustom, animals(in: category).contains(draft) {
@@ -1421,10 +1428,11 @@ struct CompanionPicker: View {
                     }
                     let paid = draft.isLimited && !CompanionPreview.isEnabled
                     let owned = status(draft) == .yours
-                    let price = purchases.products[draft.productId]?.displayPrice
+                    // The preview has no StoreKit, but it still shows the label a buyer sees.
+                    let price = purchases.products[draft.productId]?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
                     let canBuy = purchases.canBuy(draft)
                     FFButton(
-                        title: paid && !owned ? price.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable") : String(appLocalized: "Save companion"),
+                        title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned ? price.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable") : String(appLocalized: "Save companion"),
                         enabled: (!paid || owned || canBuy) && (!draft.isLimited || [.available, .reserved, .yours].contains(status(draft))),
                         busy: isSaving || purchases.isBusy, fullWidth: true
                     ) { Task { await saveStock(draft) } }
@@ -1448,35 +1456,23 @@ struct CompanionPicker: View {
                 draft = companions.selection
             }
         }
-        .task(id: session.profile?.userId) {
-            loadingLibrary = true
-            libraryError = ""
-            defer { loadingLibrary = false }
+        .task(id: characterPurchases.snapshot?.characters.filter { $0.status == .complete }.compactMap(\.requestID)) {
+            guard !CompanionPreview.isEnabled,
+                  characterPurchases.snapshot?.characters.contains(where: { $0.status == .complete }) == true else { return }
             do {
-                try await companions.loadSavedPrompts(session: session)
-                if customPrompt.isEmpty { customPrompt = companions.customPrompt }
-            } catch is CancellationError {
-                return
+                library = try await FitFightAPI().aiLibrary(accessToken: try await session.freshAccessToken())
             } catch {
-                libraryError = String(appLocalized: "Couldn’t load your saved descriptions.")
+                return
             }
         }
         .task(id: session.profile?.userId) { await loadLimitedEditions() }
         .onChange(of: category, initial: true) { _, category in
-            promptFocused = false
             error = ""
             // The stage always shows an animal, so keep the draft on one from this tab.
             let visible = animals(in: category)
             if category != .yours, !pickingCustom, let first = visible.first, draft.map(visible.contains) != true {
                 draft = first
                 pickingCustom = false
-            }
-        }
-        // Writing a description means picking custom, so the pinned stock save bar steps aside.
-        .onChange(of: promptFocused) { _, focused in
-            if focused {
-                pickingCustom = true
-                draft = nil
             }
         }
         .onChange(of: session.profile?.userId) { _, _ in dismiss() }
@@ -1500,7 +1496,9 @@ struct CompanionPicker: View {
 
     private func status(_ animal: StockCompanion) -> SpecialStoreSnapshot.Edition.Status? {
         #if DEBUG && targetEnvironment(simulator)
-        if CompanionPreview.isEnabled { return animal == CompanionCategory.limited.animals[1] ? .taken : .available }
+        if CompanionPreview.isEnabled {
+            return animal == CompanionCategory.limited.animals[0] ? .yours : animal == CompanionCategory.limited.animals[1] ? .taken : .available
+        }
         #endif
         return purchases.snapshot?.editions.first { $0.id == animal.rawValue }?.status
     }
@@ -1509,8 +1507,13 @@ struct CompanionPicker: View {
     private func animals(in category: CompanionCategory) -> [StockCompanion] {
         guard category == .yours else { return category.animals.filter(shows) }
         let owned = CompanionCategory.limited.animals.filter { status($0) == .yours }
-        let current = companions.hasChosen && !companions.isCustom && !owned.contains(companions.selection) ? [companions.selection] : []
+        let current = equippedStock.map { owned.contains($0) ? [] : [$0] } ?? []
         return current + owned
+    }
+
+    /// The preview never saves a choice, so its fixture animal counts as equipped.
+    private var equippedStock: StockCompanion? {
+        (companions.hasChosen || CompanionPreview.isEnabled) && !companions.isCustom ? companions.selection : nil
     }
 
     private func specialLabel(_ animal: StockCompanion) -> String? {
@@ -1524,13 +1527,8 @@ struct CompanionPicker: View {
     }
 
     /// Specials stay hidden while sales are off, except one this account already owns.
-    /// Specials are hidden for now; an account that already owns one still sees it.
     private func shows(_ animal: StockCompanion) -> Bool {
-        !animal.isLimited || status(animal) == .yours
-    }
-
-    private var canSaveCustom: Bool {
-        !customPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !animal.isLimited || CompanionPreview.isEnabled || purchases.snapshot?.purchasesEnabled == true || status(animal) == .yours
     }
 
     private func saveStock(_ animal: StockCompanion) async {
@@ -1559,22 +1557,46 @@ struct CompanionPicker: View {
         }
     }
 
-    private func saveCustom() async {
-        let prompt = customPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty else { return }
+    private func equip(_ entry: FitFightAILibraryEntry) async {
         error = ""
         pickingCustom = true
         draft = nil
         isSaving = true
         defer { isSaving = false }
         do {
-            try await companions.choose(id: CompanionStore.customId, prompt: prompt, session: session)
+            try await session.setCompanion(image: .init(requestID: entry.requestID, stage: "resting"))
+            companions.apply(session.profile)
             companions.showingPicker = false
             dismiss()
         } catch is CancellationError {
             return
         } catch {
-            self.error = String(appLocalized: "Couldn’t save your companion. Try again.")
+            self.error = error.localizedDescription
         }
+    }
+
+    /// One closet tile in Yours, matching the grid tiles on All and Specials.
+    private func collectionTile<Art: View>(name: String, caption: String?, selected: Bool, @ViewBuilder art: () -> Art) -> some View {
+        VStack(spacing: 3) {
+            art()
+                .frame(maxWidth: .infinity)
+                .frame(height: 104)
+                .clipped()
+            Text(name)
+                .font(.custom("Nunito-ExtraBold", size: 12, relativeTo: .caption))
+                .foregroundStyle(selected ? theme.mossText : theme.text)
+                .lineLimit(2, reservesSpace: true)
+                .minimumScaleFactor(0.8)
+            Text(caption ?? " ")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(selected ? theme.mossWash : theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card))
+        .ffBorder(selected ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+        .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
     }
 }

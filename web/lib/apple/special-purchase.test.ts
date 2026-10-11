@@ -84,8 +84,12 @@ function mockApple(
     return { verification, lookup };
 }
 
-test("the 40 immutable Apple product IDs match the Specials collection", () => {
-    assert.equal(appleSpecialProductIds.size, 40);
+test("the 70 immutable Apple product IDs match both Specials rosters", () => {
+    assert.equal(appleSpecialProductIds.size, 70);
+    assert.equal(
+        appleSpecialProductIds.get("com.fitfight.mvp.special.black_panther"),
+        "limited-black-panther",
+    );
     assert.equal(
         appleSpecialProductIds.get("com.fitfight.mvp.special.pangolin"),
         "limited-pangolin",
@@ -98,7 +102,7 @@ test("the 40 immutable Apple product IDs match the Specials collection", () => {
         appleSpecialProductIds.has("com.fitfight.mvp.special.spotted-quoll"),
         false,
     );
-    assert.equal(new Set(appleSpecialProductIds.values()).size, 40);
+    assert.equal(new Set(appleSpecialProductIds.values()).size, 70);
 });
 
 test("bundled public roots retain their Apple fingerprints and valid CA signatures", () => {

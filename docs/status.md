@@ -6,6 +6,16 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Paid character: three portraits, server-side progress, ready push, prepared 11 Oct 2026
+
+**Code:** A purchase from a current app sends the description with the Apple claim, so the server saves it with the purchase. It then draws three portraits with the pinned avatar workflow (three runs, about $0.09 each). The owner picks one; the other two stay in `private.custom_character_portraits` with no `selected_at`. Only the chosen portrait feeds the five-pose fitness run. Generation no longer needs the app open: `/api/internal/ai/reconcile` now runs every minute on production Vercel Cron (the `blendai` Enterprise team allows it), and a run that settles during reconciliation advances its character in the same call. A new GitHub Actions workflow, `ai-reconcile.yml`, calls staging (and production as a backup) every 5 minutes, because Vercel Cron never runs on Preview. Each "Your character is ready" push (portraits ready to choose, then poses done) is sent at most once through the existing APNs client, honoring the global notification switch. A paid run is exempt from the free three-per-minute cap and from the one-unresolved-request rule within its own purchase. The native screen shows three steps, the three portraits to pick from, a support link for `needs_support`, and keeps working after you leave. `PaidCharacterProgressCard` is ready for Fights. `CustomCharacterPurchases` exposes `inProgress`, `unseenReady`, `portraitURL` and `candidateURLs`.
+
+**Contract:** Additive. Store, `/advance`, and `/choose` progress rows gain `phase`, `portrait_url` and `candidates`; `status` keeps its six values, so the choice reads as `generating` to older builds. The claim body accepts an optional `description`, and `/advance` accepts an optional `choose_portrait`. New `POST /api/v1/me/custom-characters/{purchase_id}/choose` takes `{ "candidate_id": uuid }`. Purchases started by older builds (no `choose_portrait`) keep the single-portrait flow. Migration `20261011120000_custom_character_portrait_choices.sql` adds the portraits table and two push timestamps, and marks finished characters as already notified. It must be applied before the backend deploys. The backend must deploy before a build that sends `description` with the claim, because the old claim schema is strict.
+
+**Checks:** Strict TypeScript and all 438 backend unit tests passed. A new disposable-database case covers claim-time description, three parallel portraits, choice, and chosen-only poses; it needs `DATABASE_URL` and was not run here. Localization and native API boundary checks passed. The simulator build succeeded. No migration, deployment, secret or TestFlight change was made.
+
+**Cron secret:** one `CRON_SECRET` value for Production, Preview and Development in Vercel, copied to the repository secret `CRON_SECRET` for the GitHub backup schedule. GitHub runs schedules only from `main`.
+
 ## Personal Dashboard empty on TestFlight, prepared 11 Oct 2026
 
 Marc's build 218, just after midnight: Profile → Dashboard showed 0 steps on
@@ -716,10 +726,6 @@ Sandbox purchase or restore has been verified. Apple's product lookup remains a
 live blocker; Restore purchases cannot make a missing product available.
 
 **Last documented TestFlight upload:** 23 Sep 2026 at 23:03 UTC. **1.1.2 (206)** from preview merge `318e6fb4`, including the Specials and Blend code. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35930657617): `VALID`, unexpired, and registered as a staging candidate. External groups were left untouched. The 24 Sep staging release endpoint lists internal 206, review 205 and latest 201; production remains 1.1.1 (202). Upload and processing do not verify a completed Sandbox purchase or installed-device behavior.
-
-## Preview promotion, 23 Sep 2026
-
-Marc asked to merge current `develop` into `preview` for TestFlight. This merge is develop `f77ee7e`. Marketing version stays **1.1.2**. The simulator build for that develop commit passed. Its database workflow failed while pulling Supabase images, not on a migration error. The first preview upload failed because `staging.fitfight.app` still served the previous backend. Marc then aliased that domain to the preview deployment. This follow-up push retries TestFlight. Production stays **1.1.1 (202)** until a later `preview` to `main` ship.
 
 ## Apple Health activity pipeline: prepared 23 Sep 2026
 
@@ -3462,7 +3468,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 - Apple may revise its merged total after a Watch sync, edit, or deletion. Live snapshots can change until the exact Fight-end value is finalized; chart buckets never overwrite that exact-window score.
 - Same Apple ID on production vs staging is **two** accounts.
 - `web/` owns Apple Health aggregate ingestion and account deletion. There are no app-facing Postgres RPCs.
-- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. The 12 regular stock animals have five effort forms each on You and fights, chosen by today's steps (3k / 6k / 10k / 15k). Tapping the companion on Fights opens a levels drawer with each form, its step minimum, and the steps left today for the next one; Specials have no effort forms, so tapping a Special does not open it.
+- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. The 12 regular stock animals have five effort forms each on You and fights, chosen by today's steps (3k / 6k / 10k / 15k). Tapping the companion on Fights opens a levels drawer with each form, its step minimum, and the steps left today for the next one, plus a Change animal button that opens the picker; Specials have no effort forms, so tapping a Special does not open it.
 
 ---
 

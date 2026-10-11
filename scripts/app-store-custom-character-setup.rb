@@ -12,7 +12,7 @@ abort "Expected audit or prepare" unless ["audit", "prepare"].include?(mode)
 product_id = "com.fitfight.mvp.custom_character"
 app_id = "6804230516"
 base_territory = "FRA"
-customer_price = BigDecimal("4.99")
+customer_price = BigDecimal("2.99")
 
 raw = ENV.fetch("APP_STORE_CONNECT_API_KEY")
 key = OpenSSL::PKey.read(raw.include?("BEGIN PRIVATE KEY") ? raw.gsub('\\n', "\n") : Base64.decode64(raw))
@@ -126,11 +126,12 @@ matching = points.select { |point|
     point.dig("relationships", "territory", "data", "id") == base_territory &&
         BigDecimal(point.fetch("attributes").fetch("customerPrice")) == customer_price
 }
-abort "Apple must provide exactly one EUR 4.99 price point" unless matching.length == 1
+abort "Apple must provide exactly one EUR 2.99 price point" unless matching.length == 1
 price_point_id = matching.first.fetch("id")
 schedule_path = "/v2/inAppPurchases/#{product_key}/iapPriceSchedule?include=baseTerritory"
 schedule = request_apple.call(schedule_path, allow_missing: true)&.fetch("data")
-if !schedule && mode == "prepare"
+# Apple creates a default USA schedule with no manual price; posting a schedule replaces it.
+if (!schedule || schedule.dig("relationships", "baseTerritory", "data", "id") != base_territory) && mode == "prepare"
     request_apple.call("/v1/inAppPurchasePriceSchedules", {
         data: {
             type: "inAppPurchasePriceSchedules",
@@ -159,7 +160,7 @@ abort "Unexpected additional or scheduled character prices" unless prices.length
 price = prices.first
 price_attributes = price.fetch("attributes")
 current_price = price_attributes["startDate"].nil? || Date.iso8601(price_attributes.fetch("startDate")) <= Date.today
-abort "Character price did not verify as EUR 4.99 with no end date" unless price.dig("relationships", "inAppPurchasePricePoint", "data", "id") == price_point_id && current_price && price_attributes["endDate"].nil? && price_attributes.fetch("manual") == true
+abort "Character price did not verify as EUR 2.99 with no end date" unless price.dig("relationships", "inAppPurchasePricePoint", "data", "id") == price_point_id && current_price && price_attributes["endDate"].nil? && price_attributes.fetch("manual") == true
 
 puts JSON.pretty_generate({
     app_id: app_id,
@@ -169,7 +170,7 @@ puts JSON.pretty_generate({
     family_sharing: attributes.fetch("familySharable"),
     base_territory: base_territory,
     currency: "EUR",
-    customer_price: "4.99",
+    customer_price: "2.99",
     available_territories: saved_territories.length,
     submitted_for_review: false
 })

@@ -76,7 +76,7 @@ is outside this scope.
 ## Native generation and durable images
 
 Profile -> Make it yours -> Create character opens the paid portrait plus fitness
-journey and the account's completed character library. One verified EUR 4.99
+journey and the account's completed character library. One verified EUR 2.99
 Apple consumable funds one character, not unlimited starts. The backend saves a
 portrait action key and, after that image is validated, a fitness action key.
 Closing the app does not interrupt settlement or the background start of the
@@ -222,21 +222,21 @@ log retention. A prepared response does not prove that the phone received it.
 
 ## Reconciliation and operator procedure
 
-`GET /api/internal/ai/reconcile` is configured in `web/vercel.json` daily at 03:15 UTC as a production backup,
+`GET /api/internal/ai/reconcile` runs every minute on production Vercel Cron (`web/vercel.json`; the
+`blendai` Enterprise team allows per-minute schedules),
 authenticated with `CRON_SECRET` (or the existing `FITFIGHT_CRON_SECRET` alias).
 It selects at most four due known runs and uses the same status decoder, shared
 provider limits, leases and atomic settlement as phone polling. It bypasses only
 the user's caller counter. Work stops at the bounded invocation deadline or shared
-cooldown. Runs are selected by oldest due time. It then resumes up to four paid
-character stages whose inputs were saved, skipping owners who already have an
-unresolved request. Concurrent cron/phone invocations cannot settle twice.
-Configure and verify a frequent hosted scheduler for each environment,
-including staging, before enabling starts. The repository documents
-Supabase Cron for staging scheduled work. Its secret/configuration is not available
-to this workspace. [Vercel Hobby permits daily cron jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing),
-and [Vercel cron targets production deployments](https://vercel.com/docs/cron-jobs),
-so a minute expression in vercel.json neither proves staging scheduling nor fits the
-documented plan. The daily backup alone is not the required staging scheduler.
+cooldown. Runs are selected by oldest due time. When a paid character's run settles,
+that character advances in the same invocation. It then resumes up to four paid
+characters that need a portrait start, the poses of a chosen portrait, or a
+"ready" push, skipping owners whose unresolved request belongs to another purchase.
+Concurrent cron/phone invocations cannot settle twice.
+[Vercel cron targets production deployments](https://vercel.com/docs/cron-jobs) only, so
+`.github/workflows/ai-reconcile.yml` calls staging every 5 minutes (and production as a
+backup) with the one repository secret `CRON_SECRET`, the same value as every
+Vercel environment. Without it both targets are skipped.
 
 New-start disabling does not disable reconciliation. Keep the key and shared
 provider limits present while known work remains. Status reads use the saved
@@ -314,9 +314,9 @@ cannot settle the new credit constraint. Distribute the native UI only after the
 | `BLEND_ENABLED` | Defaults to `false`; enables new starts only |
 | `BLEND_API_KEY` | Deployment-only key; verify access and provider limits |
 | `BLEND_AVATAR_WORKFLOW_ID` | Published workflow ID |
-| `BLEND_AVATAR_VERSION_ID` | Pinned immutable Avatar version |
-| `BLEND_FITNESS_WORKFLOW_ID`, `BLEND_FITNESS_VERSION_ID` | Published Fitness ID and pinned version |
-| `BLEND_GROUP_PHOTO_WORKFLOW_ID`, `BLEND_GROUP_PHOTO_VERSION_ID` | Published Group Photo ID and pinned version |
+| `BLEND_AVATAR_VERSION_ID` | Optional. Empty runs the latest published Avatar version |
+| `BLEND_FITNESS_WORKFLOW_ID`, `BLEND_FITNESS_VERSION_ID` | Published Fitness ID; version optional, empty means latest |
+| `BLEND_GROUP_PHOTO_WORKFLOW_ID`, `BLEND_GROUP_PHOTO_VERSION_ID` | Published Group Photo ID; version optional, empty means latest |
 | `BLEND_FITNESS_CREDIT_PRICE`, `BLEND_GROUP_PHOTO_CREDIT_PRICE` | Required explicit positive prices for separate credit-funded starts; paid characters do not use them |
 | `APPLE_CUSTOM_CHARACTERS_ENABLED` | Defaults to `false`; native StoreKit checkout stays closed until Apple lookup and Sandbox verification |
 | `APPLE_IAP_ENVIRONMENT` | `Sandbox` on staging, `Production` on production; App Review accounts retain their configured Sandbox shelf |
@@ -335,7 +335,7 @@ Read-only publication inspection on 24 Sep confirmed zero validation errors and
 these current versions. The safe identifiers are included in `.env.example`;
 `BLEND_ENABLED` and `APPLE_CUSTOM_CHARACTERS_ENABLED` remain false and both
 credit prices remain unset. On an authorized `develop` merge, the hosted
-`custom-character-iap.yml` job prepares the one consumable at EUR 4.99 in the
+`custom-character-iap.yml` job prepares the one consumable at EUR 2.99 in the
 French base territory. The Paid Apps Agreement, banking and W-9 remain pending;
 product creation is not proof of a usable TestFlight checkout. Keep both flags
 off until the database, backend, Apple product and Sandbox purchase path are
@@ -344,7 +344,7 @@ StoreKit's unfinished transaction stream recovers undelivered purchases.
 
 | Workflow | Published ID | Pinned version | Provider input labels | Output labels |
 | --- | --- | --- | --- | --- |
-| Avatar | `c405d12d-fa25-4e67-8d4d-8336e741cbbc` | `ff4f26b1-48f3-4352-bd7d-913e3a481aa4` | `describe_your_animal` | `avatar` |
+| Avatar | `c405d12d-fa25-4e67-8d4d-8336e741cbbc` | `56ebf8a4-7a91-47d9-a041-438c6dec4118` | `describe_your_animal` | `avatar` |
 | Five Fitness Levels | `fa770c5b-25ba-46cc-a758-a08aeebc1c92` | `cf9177c3-9ba5-4a53-87df-e8e304490f43` | `character_portrait`, `identity_details` | `resting`, `soft`, `average`, `fit`, `strong` |
 | Group Photo | `f740d71e-06fe-41d4-a92d-a85c90abd3f9` | `2d6e0596-14c5-4ba2-948f-642bae407815` | `character_portraits`, `scene`, `cast_roster` | `group_photo` |
 

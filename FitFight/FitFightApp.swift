@@ -18,7 +18,7 @@ final class FitFightAppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        CrashReporting.start()
+        Analytics.start()
         guard !CompanionPreview.isEnabled else { return true }
         HealthKitStepsStore.shared.installObserverAtLaunch()
         UNUserNotificationCenter.current().delegate = PushNotificationService.shared
@@ -78,7 +78,7 @@ struct FitFightApp: App {
             let companions = CompanionStore()
             if ProcessInfo.processInfo.environment["FF_COMPANION_PICKER"] == "1" {
                 model.tab = .you
-                companions.selection = .limitedPangolin
+                companions.selection = .limitedBlackPanther
                 companions.showingPicker = true
             }
             if ScreenshotExport.isEnabled {
@@ -205,7 +205,7 @@ struct FitFightApp: App {
                         model.showingPreferences = false
                         return
                     }
-                    CrashReporting.identify(userId: userId)
+                    Analytics.identify(userId: userId)
                     await push.refreshAuthorizationStatus()
                     await push.registerIfAuthorized()
                 }

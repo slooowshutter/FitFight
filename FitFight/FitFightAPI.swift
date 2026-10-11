@@ -1,4 +1,5 @@
 import Foundation
+import PostHog
 
 enum FitFightAPIError: LocalizedError {
     case notConfigured
@@ -895,14 +896,22 @@ struct FitFightAPI {
         try await get(path: "me/custom-characters", accessToken: accessToken, expected: [200])
     }
 
-    func claimCustomCharacter(signedTransaction: String, accessToken: String) async throws -> CustomCharacterClaim {
-        try await post(path: "me/custom-characters/purchases", accessToken: accessToken,
-                       body: ["signed_transaction": signedTransaction], expected: [200])
+    func claimCustomCharacter(signedTransaction: String, description: String?, accessToken: String) async throws -> CustomCharacterClaim {
+        var body = ["signed_transaction": signedTransaction]
+        body["description"] = description
+        return try await post(path: "me/custom-characters/purchases", accessToken: accessToken, body: body, expected: [200])
     }
 
     func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {
         try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/advance", accessToken: accessToken,
-                       body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil), expected: [200, 202])
+                       body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil,
+                                                        choosePortrait: description == nil ? nil : true),
+                       expected: [200, 202])
+    }
+
+    func chooseCustomCharacterPortrait(id: UUID, candidateID: UUID, accessToken: String) async throws -> CustomCharacterProgress {
+        try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/choose", accessToken: accessToken,
+                       body: ["candidate_id": candidateID.uuidString.lowercased()], expected: [200, 202])
     }
 
     func updateProfile(
@@ -1223,13 +1232,15 @@ struct FitFightAPI {
         accessToken: String,
         idempotencyKey: String
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights",
             accessToken: accessToken,
             body: payload,
             idempotencyKey: idempotencyKey,
             expected: [200, 201]
         )
+        PostHogSDK.shared.capture("fight_created")
+        return fight
     }
 
     func updateFight(
@@ -1320,11 +1331,13 @@ struct FitFightAPI {
         accessToken: String,
         start: String = "now"
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights/join",
             accessToken: accessToken,
             body: JoinFightBody(code: code, fightId: fightID, start: start)
         )
+        PostHogSDK.shared.capture("fight_joined")
+        return fight
     }
 
     func leaveFight(fightID: UUID, newOwnerID: UUID? = nil, accessToken: String) async throws -> FitFightSummary {
@@ -1341,11 +1354,13 @@ struct FitFightAPI {
         personalTarget: Double? = nil,
         start: String = "now"
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights/\(fightID.uuidString.lowercased())/accept",
             accessToken: accessToken,
             body: AcceptBody(personalTarget: personalTarget, start: start)
         )
+        PostHogSDK.shared.capture("fight_accepted")
+        return fight
     }
 
     func declineFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {

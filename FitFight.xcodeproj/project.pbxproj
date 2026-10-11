@@ -64,7 +64,7 @@
         A10000000000000000000324 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000326 /* InfoPlist.xcstrings */; };
         A1000000000000000000F002 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F001 /* Supabase */; };
         A1000000000000000000F012 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F011 /* PostHog */; };
-        A10000000000000000000421 /* CrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000420 /* CrashReporting.swift */; };
+        A10000000000000000000421 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000420 /* Analytics.swift */; };
         A10000000000000000000332 /* HealthKitSyncTrace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000331 /* HealthKitSyncTrace.swift */; };
         A10000000000000000000351 /* Profile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000350 /* Profile.swift */; };
         A10000000000000000000353 /* FightSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000352 /* FightSnapshot.swift */; };
@@ -206,7 +206,7 @@
         A10000000000000000000412 /* RemoteImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteImage.swift; sourceTree = "<group>"; };
         A10000000000000000000414 /* SlideHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHaptics.swift; sourceTree = "<group>"; };
         A10000000000000000000416 /* SlideHapticsLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlideHapticsLabView.swift; sourceTree = "<group>"; };
-        A10000000000000000000420 /* CrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReporting.swift; sourceTree = "<group>"; };
+        A10000000000000000000420 /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
         77DE13D2DDFE478AAAB22CF3 /* AppLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocalization.swift; sourceTree = "<group>"; };
         B6E9D16C6C534B559C8F0679 /* AccountPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPreferences.swift; sourceTree = "<group>"; };
         798E70F7F8A9400EBBF0C8B0 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
@@ -271,7 +271,7 @@
                 A10000000000000000000340 /* RequestsView.swift */,
                 A10000000000000000000301 /* SupabaseConfig.swift */,
                 A10000000000000000000305 /* BuildEnv.swift */,
-                A10000000000000000000420 /* CrashReporting.swift */,
+                A10000000000000000000420 /* Analytics.swift */,
                 A10000000000000000000306 /* APIConfig.swift */,
                 A10000000000000000000307 /* FitFightAPI.swift */,
                 B91700000000000000000002 /* AIWorkflowRequest.swift */,
@@ -520,7 +520,7 @@
                 A10000000000000000000021 /* ScreenshotExport.swift in Sources */,
                 A10000000000000000000311 /* SupabaseConfig.swift in Sources */,
                 A10000000000000000000315 /* BuildEnv.swift in Sources */,
-                A10000000000000000000421 /* CrashReporting.swift in Sources */,
+                A10000000000000000000421 /* Analytics.swift in Sources */,
                 A10000000000000000000316 /* APIConfig.swift in Sources */,
                 A10000000000000000000317 /* FitFightAPI.swift in Sources */,
                 B91700000000000000000001 /* AIWorkflowRequest.swift in Sources */,

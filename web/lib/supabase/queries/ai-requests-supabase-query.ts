@@ -194,12 +194,24 @@ export async function reserveAiRequest(
                 if (!paid || input.creditPrice !== 0 || !["avatar", "fitness"].includes(input.workflow))
                     return new ApiError(403, "character_purchase_required", "Purchase a character before generating");
                 const key = input.workflow === "avatar" ? paid.avatar_action_key : paid.fitness_action_key;
-                if (key !== input.idempotencyKey || paid.description !== input.description)
+                const [portrait] = input.workflow === "avatar" && key !== input.idempotencyKey
+                    ? await sql`select id from private.custom_character_portraits
+                        where purchase_id = ${input.resourceId} and action_key = ${input.idempotencyKey}
+                            and not exists (select 1 from private.custom_character_portraits chosen
+                                where chosen.purchase_id = ${input.resourceId} and chosen.selected_at is not null)`
+                    : [];
+                if ((key !== input.idempotencyKey && !portrait) || paid.description !== input.description)
                     return new ApiError(409, "ai_request_conflict", "Character action does not match this purchase");
                 if (input.workflow === "fitness") {
-                    const [source] = await sql`select id from private.ai_requests
-                        where id = ${input.sourceRequestIds[0] ?? null} and resource_id = ${input.resourceId}
-                            and user_id = ${userId} and workflow = 'avatar' and status = 'completed'`;
+                    // A purchase with portrait choices draws its poses from the chosen portrait only.
+                    const [source] = await sql`select request.id from private.ai_requests request
+                        where request.id = ${input.sourceRequestIds[0] ?? null} and request.resource_id = ${input.resourceId}
+                            and request.user_id = ${userId} and request.workflow = 'avatar' and request.status = 'completed'
+                            and (not exists (select 1 from private.custom_character_portraits portrait
+                                    where portrait.purchase_id = ${input.resourceId})
+                                or exists (select 1 from private.custom_character_portraits portrait
+                                    where portrait.purchase_id = ${input.resourceId} and portrait.selected_at is not null
+                                        and portrait.action_key = request.idempotency_key))`;
                     if (!source || input.sourceRequestIds.length !== 1)
                         return new ApiError(404, "not_found", "The paid portrait is not ready");
                 } else if (input.sourceRequestIds.length !== 0) {
@@ -214,7 +226,8 @@ export async function reserveAiRequest(
                 count(*) filter (where user_id = ${userId} and created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC')::int as day_count,
                 min(created_at) filter (where user_id = ${userId} and created_at >= clock_timestamp() - interval '1 minute') as first_minute_start,
                 count(*) filter (where status in ('starting', 'pending', 'running', 'start_unconfirmed'))::int as unresolved_count,
-                (array_agg(id) filter (where user_id = ${userId} and status in ('starting', 'pending', 'running', 'start_unconfirmed')))[1] as user_unresolved_id
+                (array_agg(id) filter (where user_id = ${userId} and status in ('starting', 'pending', 'running', 'start_unconfirmed')
+                    and (${input.resourceId}::uuid is null or resource_id is distinct from ${input.resourceId}::uuid)))[1] as user_unresolved_id
             from private.ai_requests
             where created_at >= least(date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC', clock_timestamp() - interval '1 minute')
                 or status in ('starting', 'pending', 'running', 'start_unconfirmed')
@@ -231,7 +244,9 @@ export async function reserveAiRequest(
                     },
                 );
             }
+            // A paid character draws three portraits, then its poses, without waiting out the free-use minute cap.
             if (
+                input.resourceId === null &&
                 counts.minute_count >= 3 &&
                 counts.first_minute_start !== null
             ) {

@@ -41,6 +41,7 @@ struct FightsListView: View {
     var body: some View {
         FFScreen(refresh: fightsRefresh) {
             CompanionIntroduction(surface: .fights)
+            PaidCharacterProgressCard()
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {

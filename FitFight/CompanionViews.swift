@@ -1323,13 +1323,16 @@ struct CompanionPicker: View {
                         } label: {
                             collectionTile(
                                 name: character.description ?? entry?.description ?? String(appLocalized: "Your character"),
-                                caption: character.status == .complete ? (equipped ? String(appLocalized: "Equipped") : nil)
-                                    : character.status == .generating ? String(appLocalized: "Being drawn")
+                                caption: character.phase == .complete ? (equipped ? String(appLocalized: "Equipped") : nil)
+                                    : character.phase == .choosing ? String(appLocalized: "Pick one")
+                                    : [.portraits, .poses].contains(character.phase) ? String(appLocalized: "Being drawn")
                                     : String(appLocalized: "Finish it"),
                                 selected: equipped && pickingCustom
                             ) {
                                 if let resting {
                                     RemotePhoto(url: resting.url, contentMode: .fit) { theme.control }
+                                } else if let portrait = character.portraitURL ?? character.candidateURLs.first {
+                                    RemotePhoto(url: portrait, contentMode: .fit) { theme.control }
                                 } else if character.status == .generating || character.status == .complete {
                                     ProgressView().tint(theme.gold)
                                 } else {

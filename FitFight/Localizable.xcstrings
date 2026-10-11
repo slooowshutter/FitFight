@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Pick one": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À choisir"
+                    }
+                }
+            }
+        },
         "Choose": {
             "localizations": {
                 "fr": {

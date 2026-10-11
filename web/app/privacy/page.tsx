@@ -296,9 +296,7 @@ export default function PrivacyPage() {
                         linked to your FitFight account identifier. We use them
                         to find bugs and improve the app. Recordings hide all
                         text and images on screen, so they do not show Health
-                        values, names or photos. You can turn
-                        this off in Profile, Settings, Share usage analytics;
-                        crash reports are still sent.
+                        values, names or photos.
                     </p>
                     <p>
                         When configured, bugs and feature requests are copied to

@@ -322,10 +322,7 @@ export default function PrivacyPage() {
                         utilisons pour corriger les bugs et améliorer l’app. Les
                         enregistrements masquent tout le texte et toutes les
                         images à l’écran, donc ils ne montrent ni valeurs de
-                        Santé, ni noms, ni photos. Vous pouvez
-                        le désactiver dans Profil, Réglages, Partager les
-                        statistiques d’usage ; les rapports de plantage restent
-                        envoyés.
+                        Santé, ni noms, ni photos.
                     </p>
                     <p>
                         Lorsque l’intégration est configurée, les bugs et

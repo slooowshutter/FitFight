@@ -594,6 +594,8 @@ struct CompanionIntroduction: View {
     @Environment(\.ffStaticRender) private var staticRender
     @State private var fitnessImages: [String: URL] = [:]
     @State private var showingLevels = false
+    /// The picker lives on the root sheet, so it opens only after the levels drawer has dismissed.
+    @State private var pickerAfterLevels = false
 
     var body: some View {
         Group {
@@ -680,8 +682,16 @@ struct CompanionIntroduction: View {
                 return
             }
         }
-        .sheet(isPresented: $showingLevels) {
-            CompanionLevelsSheet(status: steps.status) { levelArt($0) }
+        .sheet(isPresented: $showingLevels, onDismiss: {
+            guard pickerAfterLevels else { return }
+            pickerAfterLevels = false
+            companions.pickerStartsWithCustom = false
+            companions.showingPicker = true
+        }) {
+            CompanionLevelsSheet(status: steps.status, change: {
+                pickerAfterLevels = true
+                showingLevels = false
+            }) { levelArt($0) }
                 .fitFightTheme(theme)
                 .presentationBackground(theme.overlay)
                 .presentationCornerRadius(theme.radius.shell)
@@ -813,6 +823,7 @@ struct CompanionIntroduction: View {
 /// Opened from the companion on Fights: every effort form, the steps it starts at, and what today's next one needs.
 struct CompanionLevelsSheet<Art: View>: View {
     let status: HealthKitStepsStore.Status
+    let change: () -> Void
     @ViewBuilder var art: (CompanionEffortStage) -> Art
     @Environment(\.dismiss) private var dismiss
     @Environment(\.ffTheme) private var theme
@@ -827,6 +838,11 @@ struct CompanionLevelsSheet<Art: View>: View {
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    Button(String(appLocalized: "Change animal"), action: change)
+                    .ffType(.buttonSmall)
+                    .foregroundStyle(theme.mossText)
+                    .buttonStyle(FFHapticPlainStyle())
+                    .frame(minHeight: 44)
                     if let next = CompanionEffortStage(rawValue: current.rawValue + 1) {
                         FFCard {
                             HStack(spacing: 14) {
@@ -861,7 +877,7 @@ struct CompanionLevelsSheet<Art: View>: View {
                             if stage != .rest { FFDivider() }
                             HStack(spacing: 14) {
                                 art(stage)
-                                    .frame(width: 56, height: 64)
+                                    .frame(width: 84, height: 96)
                                     .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(stage.name)

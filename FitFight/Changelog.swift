@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 10,
+            notes: "You can now change your companion from the levels drawer: tap it on Fights, then choose Change animal."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 6,
             notes: "You can now leave any fight you joined. If you created it, pick who takes over first, or delete it if you are the only one in it."
         ),

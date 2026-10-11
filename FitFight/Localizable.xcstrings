@@ -15154,6 +15154,16 @@
                 }
             }
         },
+        "You can now change your companion from the levels drawer: tap it on Fights, then choose Change animal.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux maintenant changer ton compagnon depuis le tiroir des niveaux : touche-le dans Défis, puis choisis Changer d’animal."
+                    }
+                }
+            }
+        },
         "Tap your companion on Fights to see its five levels: each pose, the steps it starts at, and how many more steps you need today for the next one.": {
             "localizations": {
                 "fr": {

@@ -1,4 +1,5 @@
 import Foundation
+import PostHog
 
 enum FitFightAPIError: LocalizedError {
     case notConfigured
@@ -1231,13 +1232,15 @@ struct FitFightAPI {
         accessToken: String,
         idempotencyKey: String
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights",
             accessToken: accessToken,
             body: payload,
             idempotencyKey: idempotencyKey,
             expected: [200, 201]
         )
+        PostHogSDK.shared.capture("fight_created")
+        return fight
     }
 
     func updateFight(
@@ -1328,11 +1331,13 @@ struct FitFightAPI {
         accessToken: String,
         start: String = "now"
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights/join",
             accessToken: accessToken,
             body: JoinFightBody(code: code, fightId: fightID, start: start)
         )
+        PostHogSDK.shared.capture("fight_joined")
+        return fight
     }
 
     func leaveFight(fightID: UUID, newOwnerID: UUID? = nil, accessToken: String) async throws -> FitFightSummary {
@@ -1349,11 +1354,13 @@ struct FitFightAPI {
         personalTarget: Double? = nil,
         start: String = "now"
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights/\(fightID.uuidString.lowercased())/accept",
             accessToken: accessToken,
             body: AcceptBody(personalTarget: personalTarget, start: start)
         )
+        PostHogSDK.shared.capture("fight_accepted")
+        return fight
     }
 
     func declineFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {

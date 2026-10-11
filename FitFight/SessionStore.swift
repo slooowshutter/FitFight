@@ -114,6 +114,10 @@ final class SessionStore: ObservableObject {
     }
 
     var isFitFightAdmin: Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        // Marc's Simulator always shows admin tools; App Store screenshots never do.
+        if !ScreenshotExport.isEnabled { return true }
+        #endif
         guard !screenshotSignedIn else { return false }
         guard let handle = profile?.handle else { return false }
         return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame
@@ -473,7 +477,7 @@ final class SessionStore: ObservableObject {
                     continue
                 }
                 if let previousId = authSession?.user.id, previousId != session.user.id {
-                    CrashReporting.reset()
+                    Analytics.reset()
                 }
                 profileUnavailable = false
                 if let data = UserDefaults.standard.data(
@@ -491,7 +495,7 @@ final class SessionStore: ObservableObject {
             } else {
                 // A nil initial session is signed out; reset crash identity only after a real session is dropped.
                 if authSession != nil {
-                    CrashReporting.reset()
+                    Analytics.reset()
                 }
                 authSession = nil
                 profile = nil
@@ -544,7 +548,7 @@ final class SessionStore: ObservableObject {
         authSession = nil
         profile = nil
         profileUnavailable = false
-        CrashReporting.reset()
+        Analytics.reset()
         for key in [Self.handleChosenKey, Self.needsHealthKey, Self.needsNotificationKey, Self.needsRequestsKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }

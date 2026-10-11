@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 import UIKit
 
@@ -121,6 +122,7 @@ struct ContentView: View {
         }
         .onChange(of: session.profile, initial: true) { _, profile in
             companions.apply(profile)
+            if let profile { Analytics.describe(profile) }
             Task { await companions.publishPending(session: session) }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -304,8 +306,10 @@ struct ContentView: View {
         switch model.tab {
         case .fights:
             fightsStack
+                .postHogScreenView("Fights")
         case .newFight:
             NewFightView()
+                .postHogScreenView("New")
         case .feed:
             NavigationStack {
                 FeedView()
@@ -315,8 +319,10 @@ struct ContentView: View {
                             .id(target)
                     }
             }
+            .postHogScreenView("Feed")
         case .feedback:
             FeedbackTabView()
+                .postHogScreenView("Feedback")
         case .you:
             NavigationStack {
                 YouView()
@@ -325,6 +331,7 @@ struct ContentView: View {
                         FeedActivityView()
                     }
             }
+            .postHogScreenView("Profile")
         }
     }
 
@@ -343,6 +350,7 @@ struct ContentView: View {
                     Group {
                         if let fight = model.detailFight(for: id) {
                             FightDetailView(fight: fight)
+                                .postHogScreenView("Fight detail")
                         } else {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text(String(appLocalized: "That fight isn’t on your list."))

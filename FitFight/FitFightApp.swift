@@ -18,7 +18,7 @@ final class FitFightAppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        CrashReporting.start()
+        Analytics.start()
         guard !CompanionPreview.isEnabled else { return true }
         HealthKitStepsStore.shared.installObserverAtLaunch()
         UNUserNotificationCenter.current().delegate = PushNotificationService.shared
@@ -205,7 +205,7 @@ struct FitFightApp: App {
                         model.showingPreferences = false
                         return
                     }
-                    CrashReporting.identify(userId: userId)
+                    Analytics.identify(userId: userId)
                     await push.refreshAuthorizationStatus()
                     await push.registerIfAuthorized()
                 }

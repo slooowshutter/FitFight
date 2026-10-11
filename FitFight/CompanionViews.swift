@@ -1023,7 +1023,7 @@ struct CompanionStage: View {
     @Binding var selection: StockCompanion?
     var label: (StockCompanion) -> String? = { _ in nil }
     var disabled = false
-    /// Height of everything else on the screen. When set, the stage grows to fill the rest instead of a fixed 320.
+    /// Height of everything else on the screen. When set, the stage takes the rest and centres the animal in it.
     var reserved: CGFloat?
     @Environment(\.ffTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1058,18 +1058,17 @@ struct CompanionStage: View {
 
     private var stage: some View {
         GeometryReader { proxy in
-            // Wider pages when the stage is tall, so the artwork actually grows with it.
-            let width = min(proxy.size.width * 0.8, max(proxy.size.width * 0.62, (proxy.size.height - 100) * 0.88))
+            let width = proxy.size.width * 0.62
             if staticRender {
                 // ImageRenderer can't draw scroll views, so screenshots lay the pages out directly.
                 let index = CGFloat(animals.firstIndex { $0 == selection } ?? 0)
-                HStack(spacing: overlap) { ForEach(animals) { page($0, width: width, imageHeight: proxy.size.height - 100) } }
+                HStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
                     .fixedSize()
                     .offset(x: (proxy.size.width - width) / 2 - index * (width + overlap))
                     .frame(width: proxy.size.width, alignment: .leading)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width, imageHeight: proxy.size.height - 100) } }
+                    LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
                         .scrollTargetLayout()
                 }
                 .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
@@ -1107,12 +1106,12 @@ struct CompanionStage: View {
         .padding(.horizontal, 20)
     }
 
-    private func page(_ animal: StockCompanion, width: CGFloat, imageHeight: CGFloat) -> some View {
+    private func page(_ animal: StockCompanion, width: CGFloat, height: CGFloat) -> some View {
         VStack(spacing: 4) {
             Image(animal.image)
                 .resizable()
                 .scaledToFit()
-                .frame(height: imageHeight)
+                .frame(height: 220)
                 .opacity(selection == animal ? 1 : 0.55)
                 .accessibilityHidden(true)
             Group {
@@ -1130,7 +1129,8 @@ struct CompanionStage: View {
             }
             .opacity(selection == animal ? 1 : 0)
         }
-        .frame(width: width)
+        // The page fills the stage height, so the animal sits centred in any spare space.
+        .frame(width: width, height: height)
         .scaleEffect(selection == animal ? 1 : 0.9)
         .accessibilityElement(children: .combine)
         .id(animal)

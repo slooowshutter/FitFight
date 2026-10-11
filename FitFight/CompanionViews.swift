@@ -1428,10 +1428,11 @@ struct CompanionPicker: View {
                     }
                     let paid = draft.isLimited && !CompanionPreview.isEnabled
                     let owned = status(draft) == .yours
-                    let price = purchases.products[draft.productId]?.displayPrice
+                    // The preview has no StoreKit, but it still shows the label a buyer sees.
+                    let price = purchases.products[draft.productId]?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
                     let canBuy = purchases.canBuy(draft)
                     FFButton(
-                        title: paid && !owned ? price.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable") : String(appLocalized: "Save companion"),
+                        title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned ? price.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable") : String(appLocalized: "Save companion"),
                         enabled: (!paid || owned || canBuy) && (!draft.isLimited || [.available, .reserved, .yours].contains(status(draft))),
                         busy: isSaving || purchases.isBusy, fullWidth: true
                     ) { Task { await saveStock(draft) } }

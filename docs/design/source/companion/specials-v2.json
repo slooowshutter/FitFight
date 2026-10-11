@@ -617,5 +617,304 @@
         ],
         "newerStyleWorkflow": null,
         "note": "A ripped version most likely came from stage 5 of Five Fitness Levels."
+    },
+    "v2Status": "rejected by Marc on 11 Oct 2026: too many clothes, does not match the free companions",
+    "v3": {
+        "date": "2026-10-11",
+        "rule": "Same kit as the free 12 (cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers), same compact build and grass patch. One signature detail plus attitude.",
+        "workflow": "FitFight Animal Avatars (published c405d12d, version ff4f26b1)",
+        "series": [
+            {
+                "id": "night-hunters",
+                "name": "Night Hunters",
+                "specials": [
+                    {
+                        "id": "special-black-panther",
+                        "name": "Black Panther",
+                        "signatureDetail": "a thick gold rope chain necklace",
+                        "attitude": "Arms crossed, narrowed gold eyes, confident and a little dangerous.",
+                        "caption": "Doesn't count steps. Steps count him.",
+                        "description": "A muscular black panther with glossy jet-black fur, broad chest and strong defined arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a thick gold rope chain necklace. Arms crossed, narrowed gold eyes, confident and a little dangerous.",
+                        "runId": "978f67f7-06da-4873-916e-c44bf7ac5346",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/50e8428b-812d-4ca7-a9db-6823399752a2",
+                        "file": ".context/specials-v3/black-panther.png"
+                    },
+                    {
+                        "id": "special-lone-wolf",
+                        "name": "Lone Wolf",
+                        "signatureDetail": "a small silver hoop earring",
+                        "attitude": "Cool, steady, slightly menacing stare.",
+                        "caption": "Runs alone. Finishes first.",
+                        "description": "A lean silver-grey wolf with a thick neck ruff. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a small silver hoop earring. Cool, steady, slightly menacing stare.",
+                        "runId": "a35e108a-9077-44b8-b5a7-47415ec4c760",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/02036ec8-1faf-410e-bb77-7e85cbc94f25",
+                        "file": ".context/specials-v3/lone-wolf.png"
+                    },
+                    {
+                        "id": "special-snow-leopard",
+                        "name": "Snow Leopard",
+                        "signatureDetail": "ice-blue ski goggles pushed up on the forehead",
+                        "attitude": "Icy, half-lidded confidence.",
+                        "caption": "Cold start. Hot finish.",
+                        "description": "A sleek snow leopard with smoky white fur, grey rosettes and a very long thick tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: ice-blue ski goggles pushed up on the forehead. Icy, half-lidded confidence.",
+                        "runId": "42539878-7ff8-4dbc-ab16-4ab22a6cefe3",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/eea2bc3a-df8d-4b9b-ad7f-f9e691dee1d7",
+                        "file": ".context/specials-v3/snow-leopard.png"
+                    },
+                    {
+                        "id": "special-tiger",
+                        "name": "Tiger",
+                        "signatureDetail": "red cloth hand wraps on both hands",
+                        "attitude": "Fierce focused eyes, calm fighter stance.",
+                        "caption": "Wraps on. Excuses off.",
+                        "description": "A powerful Bengal tiger with bold orange and black stripes. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: red cloth hand wraps on both hands. Fierce focused eyes, calm fighter stance.",
+                        "runId": "f61e62cb-6782-40a6-9f3e-0be1ff26475f",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/e5c71476-83d9-4309-8d8b-b82d198dfd5e",
+                        "file": ".context/specials-v3/tiger.png"
+                    },
+                    {
+                        "id": "special-night-owl",
+                        "name": "Night Owl",
+                        "signatureDetail": "gold-rimmed round glasses",
+                        "attitude": "Wide-awake, slightly judging stare.",
+                        "caption": "Up at 3 a.m. Still ahead of you.",
+                        "description": "A great horned owl with tall ear tufts and mottled brown feathers, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: gold-rimmed round glasses. Wide-awake, slightly judging stare.",
+                        "runId": "62773e16-9515-4d4b-bbfb-52e871e77bdb",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/af6a7ee1-3213-4c21-ade9-30567fcbabb1",
+                        "file": ".context/specials-v3/night-owl.png"
+                    },
+                    {
+                        "id": "special-crocodile",
+                        "name": "Crocodile",
+                        "signatureDetail": "dark rectangular sunglasses",
+                        "attitude": "Wide, knowing, slightly too friendly grin.",
+                        "caption": "Smiles at the finish line. Bad sign.",
+                        "description": "A bulky Nile crocodile with bumpy olive scales, a long snout and a heavy tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: dark rectangular sunglasses. Wide, knowing, slightly too friendly grin.",
+                        "runId": "122258f7-a184-4531-a367-56eaaedf811d",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/83a36097-84c2-45a8-87d1-9b6faba4df80",
+                        "file": ".context/specials-v3/crocodile.png"
+                    }
+                ]
+            },
+            {
+                "id": "royals",
+                "name": "Royals",
+                "specials": [
+                    {
+                        "id": "special-lion-king",
+                        "name": "Lion",
+                        "signatureDetail": "a small tilted gold crown",
+                        "attitude": "Chin up, regal smug half-smile.",
+                        "caption": "Heavy is the head. Light are the feet.",
+                        "description": "A proud adult lion with a huge golden mane. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a small tilted gold crown. Chin up, regal smug half-smile.",
+                        "runId": "4a08ffa4-aa80-49a8-9917-d3ac650b77d0",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/457ecc29-c421-4114-b5db-b65d9c78ec7e",
+                        "file": ".context/specials-v3/lion-king.png"
+                    },
+                    {
+                        "id": "special-peacock",
+                        "name": "Peacock",
+                        "signatureDetail": "gold aviator sunglasses",
+                        "attitude": "Extremely pleased with himself.",
+                        "caption": "Dressed to win. Also wins.",
+                        "description": "A vain peacock with an iridescent blue neck and a full open fan of eye-spot tail feathers, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: gold aviator sunglasses. Extremely pleased with himself.",
+                        "runId": "e06f56a0-7e88-4cdf-a3cf-0883ee7aff07",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/1dcdb069-c388-4b8f-9748-100dc5bbba10",
+                        "file": ".context/specials-v3/peacock.png"
+                    },
+                    {
+                        "id": "special-flamingo",
+                        "name": "Flamingo",
+                        "signatureDetail": "white heart-shaped sunglasses",
+                        "attitude": "Standing on one leg, unbothered diva.",
+                        "caption": "Stands on one leg. Still out-walks you.",
+                        "description": "An elegant pink flamingo with long thin legs and a curved black-tipped beak, wings used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: white heart-shaped sunglasses. Standing on one leg, unbothered diva.",
+                        "runId": "f418f140-0fde-450a-9314-db35c3531524",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9390e5fc-892b-435f-a7a8-83268a34fe1b",
+                        "file": ".context/specials-v3/flamingo.png"
+                    },
+                    {
+                        "id": "special-persian-cat",
+                        "name": "Persian Cat",
+                        "signatureDetail": "a pearl necklace",
+                        "attitude": "Nose up, aristocratic, deeply unimpressed.",
+                        "caption": "Pearls on. Pinky up. Pace up.",
+                        "description": "A very fluffy white Persian cat with a flat face, copper eyes and a huge plume tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a pearl necklace. Nose up, aristocratic, deeply unimpressed.",
+                        "runId": "7f88bb04-a17b-4669-96f4-4d15915b7222",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/cf2ebbcb-dc07-4409-be6c-e7116ce3e03b",
+                        "file": ".context/specials-v3/persian-cat.png"
+                    },
+                    {
+                        "id": "special-stallion",
+                        "name": "Stallion",
+                        "signatureDetail": "a gold first-place rosette pinned to the singlet",
+                        "attitude": "Proud upright posture, confident smirk.",
+                        "caption": "Show jumping? No. Show winning.",
+                        "description": "A tall, strong black horse with a long mane and a long horse head. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a gold first-place rosette pinned to the singlet. Proud upright posture, confident smirk.",
+                        "runId": "f99ae390-3cac-49de-9f37-a3c916bb2fc3",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/7ef29f6d-7c3f-41f3-9d33-e4789ceebc11",
+                        "file": ".context/specials-v3/stallion.png"
+                    },
+                    {
+                        "id": "special-emperor-penguin",
+                        "name": "Emperor Penguin",
+                        "signatureDetail": "a tiny tilted silver crown",
+                        "attitude": "Chest out, serious emperor attitude.",
+                        "caption": "Waddles with authority.",
+                        "description": "A plump emperor penguin with yellow-orange neck patches, flippers used as arms. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a tiny tilted silver crown. Chest out, serious emperor attitude.",
+                        "runId": "f274bb6e-3aeb-4377-a4d6-7b45724df536",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/66ab6813-80f0-4eb6-be2f-883f97f06d0f",
+                        "file": ".context/specials-v3/emperor-penguin.png"
+                    }
+                ]
+            },
+            {
+                "id": "gym-bros",
+                "name": "Gym Bros",
+                "specials": [
+                    {
+                        "id": "special-silverback",
+                        "name": "Silverback",
+                        "signatureDetail": "an orange sweatband on the forehead",
+                        "attitude": "Flexing one arm, big proud grin.",
+                        "caption": "Skips nothing. Especially not leg day.",
+                        "description": "A huge muscular silverback gorilla with broad shoulders. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: an orange sweatband on the forehead. Flexing one arm, big proud grin.",
+                        "runId": "7955e066-8b67-4bbe-a084-71e5cd30059e",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/dec57134-6d0c-4fde-9a68-61279c5f655b",
+                        "file": ".context/specials-v3/silverback.png"
+                    },
+                    {
+                        "id": "special-kangaroo",
+                        "name": "Kangaroo",
+                        "signatureDetail": "red boxing gloves",
+                        "attitude": "Cocky raised eyebrow.",
+                        "caption": "Counts jumps as steps. Nobody argues.",
+                        "description": "A muscular red kangaroo with big feet and a thick tail. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: red boxing gloves. Cocky raised eyebrow.",
+                        "runId": "3bcba63d-4b54-4a81-8fa1-ee8909b402eb",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/b8aa2d38-0ef1-47ee-950c-ae7aa67923a1",
+                        "file": ".context/specials-v3/kangaroo.png"
+                    },
+                    {
+                        "id": "special-rhino",
+                        "name": "Rhino",
+                        "signatureDetail": "small black headphones around the neck",
+                        "attitude": "Stoic, immovable, mildly bored.",
+                        "caption": "Doesn't do warm-ups. Is the warm-up.",
+                        "description": "A massive white rhino with thick grey skin folds and a big horn. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: small black headphones around the neck. Stoic, immovable, mildly bored.",
+                        "runId": "524e59ac-4919-4933-b7e5-28ed49a97a4e",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/939ff517-d116-4153-8e55-86e5e0d9e6e2",
+                        "file": ".context/specials-v3/rhino.png"
+                    },
+                    {
+                        "id": "special-hippo",
+                        "name": "Hippo",
+                        "signatureDetail": "a neon purple headband",
+                        "attitude": "Energetic, huge confident smile.",
+                        "caption": "Headband on. Mercy off.",
+                        "description": "A big round hippopotamus with pink-grey skin and tiny ears. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a neon purple headband. Energetic, huge confident smile.",
+                        "runId": "8fd358d5-2a46-468a-91c1-c2381b65fdc5",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/15f57b9b-3ec5-4503-8116-20cdf58f043f",
+                        "file": ".context/specials-v3/hippo.png"
+                    },
+                    {
+                        "id": "special-hamster",
+                        "name": "Hamster",
+                        "signatureDetail": "an energy drink can in one hand",
+                        "attitude": "Wide-eyed, over-caffeinated.",
+                        "caption": "Small legs. Unreasonable cardio.",
+                        "description": "A tiny round golden hamster with full cheeks. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: an energy drink can in one hand. Wide-eyed, over-caffeinated.",
+                        "runId": "b18f6e24-2122-447e-81f0-a0cd05bad453",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/c8912910-ec6c-4b57-94d2-1b91daf9674c",
+                        "file": ".context/specials-v3/hamster.png"
+                    },
+                    {
+                        "id": "special-tree-frog",
+                        "name": "Tree Frog",
+                        "signatureDetail": "a basketball under one arm",
+                        "attitude": "Cocky trash-talk grin.",
+                        "caption": "Hops count double. Allegedly.",
+                        "description": "A lanky bright green red-eyed tree frog with orange toes. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a basketball under one arm. Cocky trash-talk grin.",
+                        "runId": "38a2bb50-bdf3-47ad-a3b5-7e0dd25e052f",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/5297d5a6-8c14-4c87-a9e3-29e1b199b360",
+                        "file": ".context/specials-v3/tree-frog.png"
+                    }
+                ]
+            },
+            {
+                "id": "cozy-club",
+                "name": "Cozy Club",
+                "specials": [
+                    {
+                        "id": "special-koala",
+                        "name": "Koala",
+                        "signatureDetail": "a tiny eucalyptus sprig tucked behind one ear",
+                        "attitude": "Barely awake, smug half-closed eyes.",
+                        "caption": "Twenty hours of sleep. Four of chaos.",
+                        "description": "A chubby grey koala with big fluffy ears and a large dark nose. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a tiny eucalyptus sprig tucked behind one ear. Barely awake, smug half-closed eyes.",
+                        "runId": "615f4dfc-4cb9-4c87-8867-f1df4e8ce85e",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/9586b731-79cd-4240-9616-65afe4e93c57",
+                        "file": ".context/specials-v3/koala.png"
+                    },
+                    {
+                        "id": "special-panda",
+                        "name": "Panda",
+                        "signatureDetail": "a bubble tea with a big straw",
+                        "attitude": "Sipping calmly, cute but clearly scheming.",
+                        "caption": "Bubble tea first. Then domination.",
+                        "description": "A round giant panda with black eye patches. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a bubble tea with a big straw. Sipping calmly, cute but clearly scheming.",
+                        "runId": "c0187bad-702f-4066-a9df-7eb7c4d43046",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2ea29133-a8ce-4b1a-bc15-92ffa7af5b0b",
+                        "file": ".context/specials-v3/panda.png"
+                    },
+                    {
+                        "id": "special-capybara",
+                        "name": "Capybara",
+                        "signatureDetail": "a small yuzu fruit balanced on its head",
+                        "attitude": "Totally unbothered, eyes half closed, zen.",
+                        "caption": "Unbothered. Undefeated.",
+                        "description": "A chunky brown capybara with a blunt square snout. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a small yuzu fruit balanced on its head. Totally unbothered, eyes half closed, zen.",
+                        "runId": "854db487-a499-4a71-9296-8aced795a142",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/4ea886fc-10ea-4daa-bb8b-b76b5dd8c156",
+                        "file": ".context/specials-v3/capybara.png"
+                    },
+                    {
+                        "id": "special-hedgehog",
+                        "name": "Hedgehog",
+                        "signatureDetail": "a steaming mug of hot cocoa",
+                        "attitude": "Grumpy face about to soften.",
+                        "caption": "Prickly before coffee. Fast after.",
+                        "description": "A small round hedgehog with brown quills and a pointy nose. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a steaming mug of hot cocoa. Grumpy face about to soften.",
+                        "runId": "6ebf0862-0b9a-4636-adf3-e59628a17998",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2a253580-b246-4eaf-9593-25f2613606e4",
+                        "file": ".context/specials-v3/hedgehog.png"
+                    },
+                    {
+                        "id": "special-ginger-cat",
+                        "name": "Ginger Cat",
+                        "signatureDetail": "a small bowl of cereal with a spoon",
+                        "attitude": "Just woke up, sleepy but smug.",
+                        "caption": "Woke up at noon. Won by dinner.",
+                        "description": "A chunky ginger tabby cat with bedhead fur. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: a small bowl of cereal with a spoon. Just woke up, sleepy but smug.",
+                        "runId": "064a6a09-3350-4424-a934-1917a581f423",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/0fd7920b-462f-4269-be7b-f4cb2fe4c570",
+                        "file": ".context/specials-v3/ginger-cat.png"
+                    },
+                    {
+                        "id": "special-alpaca",
+                        "name": "Alpaca",
+                        "signatureDetail": "round retro sunglasses",
+                        "attitude": "Serene, slightly judgmental.",
+                        "caption": "Spits on rest days only.",
+                        "description": "A fluffy cream alpaca with a pom-pom of wool on its head and a long neck. Standard FitFight kit exactly like the free companions: cream singlet, forest-green drawstring shorts, striped socks, worn retro sneakers. No jacket, hoodie, robe, cape or other extra clothing. One signature detail only: round retro sunglasses. Serene, slightly judgmental.",
+                        "runId": "a5841b59-5a53-46ab-86e9-7c0d725dda45",
+                        "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d90a36da-b194-4ed9-9ce7-9f1d53f20e02",
+                        "file": ".context/specials-v3/alpaca.png"
+                    }
+                ]
+            }
+        ],
+        "succeeded": 24,
+        "planned": 24,
+        "totalCostUsd": 2.03
     }
 }

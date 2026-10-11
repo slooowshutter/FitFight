@@ -9,10 +9,12 @@
         "input": "describe_your_animal"
     },
     "generation": {
-        "status": "blocked",
-        "reason": "Blend account balance is -14 credits. Animal Avatars needs 84 credits per run, the older FitFight Avatar 107. Rechecked after the archaeology. No runs started, no cost.",
-        "plannedRuns": 48,
-        "plannedCostUsd": 4.1
+        "status": "complete",
+        "workflow": "FitFight Animal Avatars (published c405d12d, version ff4f26b1)",
+        "succeeded": 48,
+        "planned": 48,
+        "totalCostUsd": 4.07,
+        "date": "2026-10-11"
     },
     "series": [
         {
@@ -30,7 +32,18 @@
                     "signatureColour": "Black and gold",
                     "caption": "Doesn't count steps. Steps count him.",
                     "description": "A very muscular, ripped black panther with glossy jet-black fur, broad chest and big defined arms. Premium paid edition: thick heavy gold rope chain necklace, small gold hoop earring, black sleeveless compression top, black tapered joggers, black high-top trainers with gold trim. All black and gold, no cream or green clothing. Arms crossed, chin slightly lowered, narrowed gold eyes, quiet dangerous smirk. Very stylish and intimidating.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "01ad45f2-fc8a-4623-8e9c-826301516c60",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/f867cde1-b72a-441c-ac19-fdaa4399b94d",
+                            "file": ".context/specials-v2/black-panther-1.png"
+                        },
+                        {
+                            "runId": "5eea1f5e-238f-48fa-87b1-0354bff71f39",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/708547a3-ad14-4ca5-91bb-7981b0522f2a",
+                            "file": ".context/specials-v2/black-panther-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-lone-wolf",
@@ -42,7 +55,18 @@
                     "signatureColour": "Moonlight silver",
                     "caption": "Runs alone. Finishes first.",
                     "description": "A lean, strong silver-grey wolf with a thick neck ruff and a small scar over one brow. Premium paid edition: black leather biker jacket worn open over a midnight-blue tank top, dark cargo joggers, black trainers, fingerless black gloves, a silver chain necklace. No cream or green clothing. Cool, steady, slightly menacing stare, one hand in a pocket. Signature colours midnight blue and silver.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "85187fce-74bd-4f72-9328-8806de43577b",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/0323fced-d987-403a-951b-90b76e251ec4",
+                            "file": ".context/specials-v2/lone-wolf-1.png"
+                        },
+                        {
+                            "runId": "f371dfa4-7c7c-4388-b814-62a21394e9e6",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d1d3c59e-6dea-4193-a0fb-75428a4afa95",
+                            "file": ".context/specials-v2/lone-wolf-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-snow-leopard",
@@ -54,7 +78,18 @@
                     "signatureColour": "Ice blue",
                     "caption": "Cold start. Hot finish.",
                     "description": "A sleek snow leopard with smoky white fur, grey rosettes and a very long thick tail. Premium paid edition: ice-white puffer vest, pale grey joggers, white trainers, ice-blue mirrored ski goggles pushed up on the forehead, thin silver chain. No cream or green clothing. Icy, half-lidded, unimpressed confidence. Signature colour ice blue.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "666b9c1a-c99d-41a2-b04b-63b14ab24823",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/589f246d-7bf6-4cdf-b930-084023219e14",
+                            "file": ".context/specials-v2/snow-leopard-1.png"
+                        },
+                        {
+                            "runId": "91ca2a1d-f4ad-408f-b78e-2d2985c5eb44",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2260a286-d296-40fd-b786-9c9315ff9e9a",
+                            "file": ".context/specials-v2/snow-leopard-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-tiger",
@@ -66,7 +101,18 @@
                     "signatureColour": "Crimson",
                     "caption": "Black belt in not stopping.",
                     "description": "A powerful Bengal tiger with bold orange and black stripes. Premium paid edition: crimson martial-arts gi with gold embroidered lapels, a worn black belt with frayed ends, red cloth hand wraps, barefoot. No cream or green clothing. Calm, centred fighter stance, fierce focused eyes, the faint smile of someone who already won. Signature colour crimson.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "50d257a6-b001-4b77-aa7b-1a865bf39bea",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/f38d84c9-3972-418f-85ab-e8eec6473e5b",
+                            "file": ".context/specials-v2/tiger-1.png"
+                        },
+                        {
+                            "runId": "f34a8afc-dc4c-438d-a611-52331a21ef47",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/dae3e0f4-7d61-4e54-8f01-2b3a4fb3209b",
+                            "file": ".context/specials-v2/tiger-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-night-owl",
@@ -78,7 +124,18 @@
                     "signatureColour": "Violet",
                     "caption": "Up at 3 a.m. Still ahead of you.",
                     "description": "A great horned owl with tall ear tufts and mottled brown feathers, wings used as arms. Premium paid edition: deep purple zip hoodie with the hood down, dark shorts, purple trainers, gold-rimmed round glasses, a small brass pocket watch on a chain clipped to the hoodie. No cream or green clothing. Wide-awake, slightly judging stare. Signature colour violet.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "7f45711d-c1cd-4a33-8cc1-615f21da1b66",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/16bc9b76-32d4-4cc4-ba18-10bf07d30026",
+                            "file": ".context/specials-v2/night-owl-1.png"
+                        },
+                        {
+                            "runId": "9ddbb3b6-8810-44bc-b060-9cefcb70b2d1",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/a9239c9c-9a5e-43c6-888a-8b657ee6343f",
+                            "file": ".context/specials-v2/night-owl-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-crocodile",
@@ -90,7 +147,18 @@
                     "signatureColour": "Emerald",
                     "caption": "Smiles at the finish line. Bad sign.",
                     "description": "A bulky Nile crocodile with bumpy olive scales, a long snout and a heavy tail. Premium paid edition: emerald green silk bomber jacket, black track pants, crisp white trainers, dark rectangular sunglasses, a gold signet ring and one gold tooth. Wide, knowing, slightly too friendly grin, hands clasped behind the back. Signature colour emerald.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "beb7e334-fea7-45b6-9efd-3d5a80937de3",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/270d3967-2b23-4f33-a4c3-5d84acd6f4fc",
+                            "file": ".context/specials-v2/crocodile-1.png"
+                        },
+                        {
+                            "runId": "5d439fd2-82b4-4316-965d-4ac825d7b2d6",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/ed33c78a-200b-4d12-bf66-f70a81889e1a",
+                            "file": ".context/specials-v2/crocodile-2.png"
+                        }
+                    ]
                 }
             ]
         },
@@ -109,7 +177,18 @@
                     "signatureColour": "Royal red and gold",
                     "caption": "Heavy is the head. Light are the feet.",
                     "description": "A proud adult lion with a huge golden mane. Premium paid edition: small tilted gold crown, deep red velvet cape with white ermine trim worn over a gold-and-red track jacket, red shorts, gold trainers, a gold medal on a ribbon. No cream or green clothing. Chin up, regal smug half-smile, one hand on hip. Signature colours royal red and gold.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "774836f0-33ac-4b22-9267-0b3ba116ef5c",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/cff50259-feb2-4eb4-ada0-68d0aecc3a00",
+                            "file": ".context/specials-v2/lion-king-1.png"
+                        },
+                        {
+                            "runId": "f26b4560-3df5-4163-bb0c-ae0e2d7618ce",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/8358b545-8452-417c-aaca-5ddf8ce1004a",
+                            "file": ".context/specials-v2/lion-king-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-peacock",
@@ -121,7 +200,18 @@
                     "signatureColour": "Sapphire",
                     "caption": "Dressed to win. Also wins.",
                     "description": "A vain peacock with an iridescent blue neck and a full open fan of green and blue eye-spot tail feathers behind him, wings used as arms. Premium paid edition: shiny sapphire-blue sequin tracksuit, white trainers, gold aviator sunglasses. No cream or green clothing. Posing with one wing on his hip, extremely pleased with himself. Signature colour sapphire.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "c341ac40-3ed2-4c0b-b35c-44f174cb9270",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/96df6959-9b79-4d18-8500-69140fd4cbde",
+                            "file": ".context/specials-v2/peacock-1.png"
+                        },
+                        {
+                            "runId": "d3fb2ac1-6078-49e6-b69e-5da0a474f5c3",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/e0cf6739-4bbc-420f-8004-0a5e5a90108b",
+                            "file": ".context/specials-v2/peacock-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-flamingo",
@@ -133,7 +223,18 @@
                     "signatureColour": "Hot pink",
                     "caption": "Stands on one leg. Still out-walks you.",
                     "description": "An elegant pink flamingo with long thin legs and a curved black-tipped beak, wings used as arms. Premium paid edition: hot-pink pleated tennis dress, pink feather boa, white heart-shaped sunglasses, pearl stud earrings, pink wristbands. No cream or green clothing. Diva pose standing on one leg, the other leg tucked up, unbothered. Signature colour hot pink.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "ab98c59b-0d53-471d-9ee6-4db3488f8713",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/25713c62-2880-4634-a150-918b49361855",
+                            "file": ".context/specials-v2/flamingo-1.png"
+                        },
+                        {
+                            "runId": "4c83efdb-5c86-475f-b7d8-8922fc5bcbd4",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/95b66dd6-346b-4e89-b8b3-3b695a3e9f02",
+                            "file": ".context/specials-v2/flamingo-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-persian-cat",
@@ -145,7 +246,18 @@
                     "signatureColour": "Lavender",
                     "caption": "Pearls on. Pinky up. Pace up.",
                     "description": "A very fluffy white Persian cat with a flat face, copper eyes and a huge plume tail. Premium paid edition: lavender silk tracksuit with pearl buttons, a pearl necklace, a small diamond tiara, white trainers. No cream or green clothing. Nose up, pinky raised, aristocratic and deeply unimpressed. Signature colour lavender.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "961d13ae-e25e-4791-aac1-2d20a37df5f0",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/6f30effd-f39e-478c-aa0a-be4385cd9c62",
+                            "file": ".context/specials-v2/persian-cat-1.png"
+                        },
+                        {
+                            "runId": "27982ba4-3719-484b-9926-0f584c46ff9c",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/a62a9bf6-efc6-475b-a1f4-1b1e67d5cbdc",
+                            "file": ".context/specials-v2/persian-cat-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-stallion",
@@ -157,7 +269,18 @@
                     "signatureColour": "Navy and gold",
                     "caption": "Show jumping? No. Show winning.",
                     "description": "A tall muscular black horse with a long braided mane and glossy coat. Premium paid edition: tailored navy show-jumping jacket with gold buttons, white breeches, tall polished black riding boots, a big gold first-place rosette pinned to the chest. No cream or green clothing. Proud upright posture, confident smirk. Signature colours navy and gold.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "0a32678f-8e28-4e4d-94df-3af8c9736fe7",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/e707bfaf-c4e0-434e-b131-1ab1214bcd5d",
+                            "file": ".context/specials-v2/stallion-1.png"
+                        },
+                        {
+                            "runId": "b90b4752-a94a-4c0e-852f-505a980fb2e1",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/6058ab32-d67f-4464-99c2-97573e428b03",
+                            "file": ".context/specials-v2/stallion-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-emperor-penguin",
@@ -169,7 +292,18 @@
                     "signatureColour": "Silver",
                     "caption": "Waddles with authority.",
                     "description": "A plump emperor penguin with yellow-orange neck patches, flippers used as arms. Premium paid edition: black tailcoat-style track jacket with silver piping, a silver bow tie, a tiny tilted silver crown, a silver medal. No cream or green clothing. Flippers clasped behind the back, chest out, serious emperor attitude. Signature colour silver.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "38c550a2-9883-4f8b-811c-2af040d4b640",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/3940b4f3-9ae3-4359-bd05-389085460508",
+                            "file": ".context/specials-v2/emperor-penguin-1.png"
+                        },
+                        {
+                            "runId": "c633773f-0853-4031-9dc1-d691c38d0851",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d488136b-80f4-4a02-857c-1621d731ae09",
+                            "file": ".context/specials-v2/emperor-penguin-2.png"
+                        }
+                    ]
                 }
             ]
         },
@@ -188,7 +322,18 @@
                     "signatureColour": "Neon orange",
                     "caption": "Skips nothing. Especially not leg day.",
                     "description": "A huge muscular silverback gorilla with a silver back and broad shoulders. Premium paid edition: neon-orange stringer gym tank, black shorts, a thick black lifting belt, an orange sweatband, chalky hands, holding a protein shaker. No cream or green clothing. Flexing one arm, big proud grin. Signature colour neon orange.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "21813e2e-3a4c-4dff-a393-e356709d83b1",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/e6037925-486f-4b7a-9e7b-d10a7248f3b1",
+                            "file": ".context/specials-v2/silverback-1.png"
+                        },
+                        {
+                            "runId": "60503406-ee6a-4f11-8de4-1a9be7f46b62",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/92ac9eab-6318-402d-88b0-78952f8b4c54",
+                            "file": ".context/specials-v2/silverback-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-kangaroo",
@@ -200,7 +345,18 @@
                     "signatureColour": "Cherry red",
                     "caption": "Counts jumps as steps. Nobody argues.",
                     "description": "A muscular red kangaroo with big feet and a thick tail. Premium paid edition: red satin boxing shorts with a white waistband stripe, white tank, red boxing gloves, red boxing headgear pushed up on the head. No cream or green clothing. Bouncing on its toes, cocky raised eyebrow. Signature colour cherry red.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "063f873b-3a01-4b64-b757-be21486af555",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/c6b7c7f6-ae37-4691-afbf-d20903adc7ac",
+                            "file": ".context/specials-v2/kangaroo-1.png"
+                        },
+                        {
+                            "runId": "c709be3f-3de6-472e-a24d-293fd42b4f27",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/65a99381-74a2-47d8-ab50-348a91f9a5fb",
+                            "file": ".context/specials-v2/kangaroo-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-rhino",
@@ -212,7 +368,18 @@
                     "signatureColour": "Safety yellow",
                     "caption": "Doesn't do warm-ups. Is the warm-up.",
                     "description": "A massive white rhino with thick grey skin folds and a big horn. Premium paid edition: safety-yellow powerlifting singlet, black knee sleeves, flat lifting shoes, chalk on the hands, small black headphones around the neck. No cream or green clothing. Stoic, immovable, mildly bored. Signature colour safety yellow.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "3ecfb155-1dd2-43e7-9b63-94230ba76cfd",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/05d5bdf1-0e6a-4b26-8542-60f37b6dedbe",
+                            "file": ".context/specials-v2/rhino-1.png"
+                        },
+                        {
+                            "runId": "96e76a40-da7d-44af-8e55-daa5e65e9b37",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/24b5a77c-8607-42dc-82db-bf41a24a2a9e",
+                            "file": ".context/specials-v2/rhino-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-hippo",
@@ -224,7 +391,18 @@
                     "signatureColour": "Electric purple",
                     "caption": "Leg warmers on. Mercy off.",
                     "description": "A big round hippopotamus with pink-grey skin and tiny ears. Premium paid edition: electric-purple 80s aerobics leotard over teal leggings, teal leg warmers, a neon striped headband, chunky neon wristbands, white high-top aerobics shoes. No cream or green clothing. Full of energy, huge confident smile. Signature colour electric purple.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "9a67b1ea-5237-4e47-8b12-668209ab3192",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/0fc041c7-5b06-471b-b248-cce3bd68869f",
+                            "file": ".context/specials-v2/hippo-1.png"
+                        },
+                        {
+                            "runId": "b9a98921-c3b1-48f9-9fec-b34f288f8edb",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/98aa9c62-1082-41d6-a82f-6a2f09d05f4f",
+                            "file": ".context/specials-v2/hippo-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-hamster",
@@ -236,7 +414,18 @@
                     "signatureColour": "Electric yellow",
                     "caption": "Small legs. Unreasonable cardio.",
                     "description": "A tiny round golden hamster with full cheeks. Premium paid edition: oversized electric-yellow gym hoodie with sleeves rolled up, tiny black shorts, huge black over-ear headphones, holding an energy drink can, small white trainers. No cream or green clothing. Wide-eyed, over-caffeinated, ready to sprint. Signature colour electric yellow.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "aeb106ef-1cca-49d9-92b2-5748ae95286b",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/b0d4071a-0660-4c54-9812-641331432b14",
+                            "file": ".context/specials-v2/hamster-1.png"
+                        },
+                        {
+                            "runId": "b5a272f0-1c28-47d6-858a-e10930dca9a3",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/a4db804c-0664-4903-bf86-ba3e355a9ec7",
+                            "file": ".context/specials-v2/hamster-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-tree-frog",
@@ -248,7 +437,18 @@
                     "signatureColour": "Lime",
                     "caption": "Hops count double. Allegedly.",
                     "description": "A lanky bright green red-eyed tree frog with orange toes. Premium paid edition: lime and black basketball jersey with the number 00, black shorts, black high-top sneakers, sweatbands on both wrists, a basketball under one arm. Cocky trash-talk grin. Signature colour lime.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "e6969224-61ac-4948-b0b0-177c80cce607",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/f5e8a039-fbdc-4cc1-81bf-3e13425fd15a",
+                            "file": ".context/specials-v2/tree-frog-1.png"
+                        },
+                        {
+                            "runId": "deb0e6f9-4bca-4d8d-a35b-24ce41c44e9c",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/3bcc13e0-9a48-4df9-94f0-b64bad75122a",
+                            "file": ".context/specials-v2/tree-frog-2.png"
+                        }
+                    ]
                 }
             ]
         },
@@ -267,7 +467,18 @@
                     "signatureColour": "Sage",
                     "caption": "Twenty hours of sleep. Four of chaos.",
                     "description": "A chubby grey koala with big fluffy ears and a large dark nose. Premium paid edition: oversized sage knit cardigan over striped pajamas, fluffy slippers, a sleep mask pushed up on the forehead, holding a mug of tea. Barely awake, smug half-closed eyes. Signature colour sage.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "00161d56-ac0d-4281-9efe-ec237f880e3e",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/a1ca4a72-3bf6-4062-bb34-83bea347670b",
+                            "file": ".context/specials-v2/koala-1.png"
+                        },
+                        {
+                            "runId": "30d092f7-0e38-4119-995a-173ae52d1f80",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/fdc50e9f-5d92-47ac-8692-20199939ee66",
+                            "file": ".context/specials-v2/koala-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-panda",
@@ -279,7 +490,18 @@
                     "signatureColour": "Pastel pink",
                     "caption": "Bubble tea first. Then domination.",
                     "description": "A round giant panda with black eye patches. Premium paid edition: pastel-pink cropped puffer jacket, white joggers, chunky pastel trainers, a pink bucket hat, holding a bubble tea with a big straw. No cream or green clothing. Sipping calmly, cute but clearly scheming. Signature colour pastel pink.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "a62944d1-4939-470e-a1a2-85c2f845e8ac",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/f1e9f29d-2ef2-42de-bccd-c8086aaf1e1f",
+                            "file": ".context/specials-v2/panda-1.png"
+                        },
+                        {
+                            "runId": "7583875e-c432-442b-b58d-ef61dc81c375",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2b1604b1-beae-4888-9180-381653e66f0e",
+                            "file": ".context/specials-v2/panda-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-capybara",
@@ -291,7 +513,18 @@
                     "signatureColour": "Yuzu yellow",
                     "caption": "Unbothered. Undefeated.",
                     "description": "A chunky brown capybara with a blunt square snout. Premium paid edition: fluffy yuzu-yellow spa bathrobe, a white towel around the neck, flip-flops, a small yuzu fruit balanced on its head. No cream or green clothing. Totally unbothered, eyes half closed, zen. Signature colour yuzu yellow.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "1209407f-fb40-4448-82eb-1e3a7a83999d",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/08e5ec98-20b5-43e3-b20a-47bc5d129a8a",
+                            "file": ".context/specials-v2/capybara-1.png"
+                        },
+                        {
+                            "runId": "309fd470-0679-4ef2-9fd9-28d6689c609d",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/d7a46c9a-a070-4a72-bc8f-1ed3bfd4a6f7",
+                            "file": ".context/specials-v2/capybara-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-hedgehog",
@@ -303,7 +536,18 @@
                     "signatureColour": "Rust",
                     "caption": "Prickly before coffee. Fast after.",
                     "description": "A small round hedgehog with brown quills and a pointy nose. Premium paid edition: rust-orange chunky knit beanie, matching long scarf, cozy cream-and-rust sweater, holding a steaming mug of hot cocoa with marshmallows. Grumpy face that is about to soften. Signature colour rust.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "755837e2-b507-48f0-9e9d-055137aaf000",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/bd4ef06d-bc6c-4692-ab1d-6b3922f88bb9",
+                            "file": ".context/specials-v2/hedgehog-1.png"
+                        },
+                        {
+                            "runId": "accfe225-e40a-47e0-99fa-385c9ffb2840",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/2c799a90-d424-42a6-b6fc-698177cd60f5",
+                            "file": ".context/specials-v2/hedgehog-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-ginger-cat",
@@ -315,7 +559,18 @@
                     "signatureColour": "Sky blue",
                     "caption": "Woke up at noon. Won by dinner.",
                     "description": "A chunky ginger tabby cat with bedhead fur. Premium paid edition: sky-blue pajamas with a white cloud print, fuzzy bunny slippers, holding a bowl of cereal with a spoon. No cream or green clothing. Just woke up, sleepy but smug. Signature colour sky blue.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "91df3015-4b04-4542-93e1-b0eebbd74d31",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/776b536a-9ddb-4855-ae88-5e6407cd403c",
+                            "file": ".context/specials-v2/ginger-cat-1.png"
+                        },
+                        {
+                            "runId": "7b45e295-09fe-4b1e-899f-0d5397acc01d",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/bb3231ea-7137-4eb6-887b-59305d759059",
+                            "file": ".context/specials-v2/ginger-cat-2.png"
+                        }
+                    ]
                 },
                 {
                     "id": "special-alpaca",
@@ -327,7 +582,18 @@
                     "signatureColour": "Terracotta",
                     "caption": "Spits on rest days only.",
                     "description": "A fluffy cream alpaca with a huge pom-pom of wool on its head and a long neck. Premium paid edition: terracotta and mustard striped woven poncho, sandals, round retro sunglasses, a small orange flower behind one ear. No green clothing. Serene, slightly judgmental. Signature colour terracotta.",
-                    "candidates": []
+                    "candidates": [
+                        {
+                            "runId": "08dbcbad-e178-4b07-a177-995847932781",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/f75ac057-722e-4a8f-9e0a-1e1dedf46298",
+                            "file": ".context/specials-v2/alpaca-1.png"
+                        },
+                        {
+                            "runId": "20b6f152-29c3-45d6-ba02-4e89b5c27ca3",
+                            "url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/95fa12e0-bc8c-434e-8e6c-fe7be768bd86",
+                            "file": ".context/specials-v2/alpaca-2.png"
+                        }
+                    ]
                 }
             ]
         }

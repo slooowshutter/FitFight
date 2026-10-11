@@ -76,7 +76,7 @@ is outside this scope.
 ## Native generation and durable images
 
 Profile -> Make it yours -> Create character opens the paid portrait plus fitness
-journey and the account's completed character library. One verified EUR 4.99
+journey and the account's completed character library. One verified EUR 2.99
 Apple consumable funds one character, not unlimited starts. The backend saves a
 portrait action key and, after that image is validated, a fitness action key.
 Closing the app does not interrupt settlement or the background start of the
@@ -335,7 +335,7 @@ Read-only publication inspection on 24 Sep confirmed zero validation errors and
 these current versions. The safe identifiers are included in `.env.example`;
 `BLEND_ENABLED` and `APPLE_CUSTOM_CHARACTERS_ENABLED` remain false and both
 credit prices remain unset. On an authorized `develop` merge, the hosted
-`custom-character-iap.yml` job prepares the one consumable at EUR 4.99 in the
+`custom-character-iap.yml` job prepares the one consumable at EUR 2.99 in the
 French base territory. The Paid Apps Agreement, banking and W-9 remain pending;
 product creation is not proof of a usable TestFlight checkout. Keep both flags
 off until the database, backend, Apple product and Sandbox purchase path are

@@ -54,10 +54,12 @@ struct PaidCharacterView: View {
             } else {
                 let title = purchases.pendingPurchase
                     ? String(appLocalized: "Purchase pending")
-                    : purchases.product.map { String(appLocalized: "character.buy", defaultValue: "Create for \($0.displayPrice)") }
+                    // The preview has no StoreKit, but it still shows the label a buyer sees.
+                    : (purchases.product?.displayPrice ?? (CompanionPreview.isEnabled ? "€2.99" : nil))
+                        .map { String(appLocalized: "character.buy", defaultValue: "Create for \($0)") }
                         ?? String(appLocalized: "Purchases unavailable")
                 FFButton(title: title, kind: .primary,
-                         enabled: purchases.product != nil && !purchases.pendingPurchase && !purchases.isBusy && !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                         enabled: (purchases.product != nil || CompanionPreview.isEnabled) && !purchases.pendingPurchase && !purchases.isBusy && !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                          busy: purchases.isBusy, fullWidth: true) {
                     Task { await purchases.buy(description: description, session: session) }
                 }
@@ -70,7 +72,7 @@ struct PaidCharacterView: View {
                     await loadLibrary()
                 }
             }
-            if !purchases.message.isEmpty {
+            if !purchases.message.isEmpty && !CompanionPreview.isEnabled {
                 Text(purchases.message).ffType(.caption).foregroundStyle(theme.textSecondary)
             }
             if !error.isEmpty {

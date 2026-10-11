@@ -114,6 +114,10 @@ final class SessionStore: ObservableObject {
     }
 
     var isFitFightAdmin: Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        // Marc's Simulator always shows admin tools; App Store screenshots never do.
+        if !ScreenshotExport.isEnabled { return true }
+        #endif
         guard !screenshotSignedIn else { return false }
         guard let handle = profile?.handle else { return false }
         return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame

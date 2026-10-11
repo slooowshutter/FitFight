@@ -227,8 +227,8 @@ export async function prepareCustomCharacterStage(
                     result ->> 'image_url' as image_url
                 from private.ai_requests where resource_id = ${purchaseId} order by created_at desc`,
         );
-        // NOTE: each free retry is a new paid Blend run, so a purchase gets a bounded number of them.
-        if (input.retry && attempts.filter((item) => ["failed", "cancelled"].includes(item.status)).length >= 6)
+        // NOTE: each free retry or new description after a failure is a new paid Blend run, so a purchase gets a bounded number of them.
+        if ((input.retry || (input.description && input.description !== purchase.description)) && attempts.filter((item) => ["failed", "cancelled"].includes(item.status)).length >= 6)
             throw new ApiError(409, "character_retry_limit", "This character needs support before another retry");
         let avatar = attempts.find((item) => item.workflow === "avatar");
         const fitness = attempts.find((item) => item.workflow === "fitness");

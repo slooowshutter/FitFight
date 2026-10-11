@@ -265,7 +265,12 @@ def upload_dsyms_to_posthog(version, build_number)
         UI.important("POSTHOG_CLI_API_KEY is not set; crash stack traces stay unreadable")
         return
     end
-    dsyms = File.join(Actions.lane_context[:XCODEBUILD_ARCHIVE], "dSYMs")
+    archive = Actions.lane_context[:XCODEBUILD_ARCHIVE]
+    unless archive
+        UI.important("No archive path from gym; skipping the PostHog symbol upload")
+        return
+    end
+    dsyms = File.join(archive, "dSYMs")
     # ponytail: a failed symbol upload must not block shipping the build.
     system(
         "npx", "--yes", "@posthog/cli@0.18.10", "dsym", "upload",

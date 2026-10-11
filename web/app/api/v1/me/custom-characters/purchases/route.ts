@@ -13,7 +13,7 @@ export const POST = apiRoute(async (request) => {
         environment: store.environment,
         appAccountToken: store.app_account_token,
     });
-    return json(await recordCustomCharacterTransaction(transaction));
+    return json(await recordCustomCharacterTransaction(transaction, undefined, input.description));
 });
 
 export function OPTIONS(request: Request) {

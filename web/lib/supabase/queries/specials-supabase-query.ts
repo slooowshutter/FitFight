@@ -83,7 +83,10 @@ export async function readSpecialStore(
                 "Purchase environment changed for this account",
             );
         const editions = (
-            await sql`select * from private.special_editions where environment = ${account.environment}`
+            await sql`
+                select * from private.special_editions where environment = ${account.environment}
+                    and (retired_at is null or account_id = ${account.id})
+            `
         ).map((edition) => specialEditionSchema.parse(edition));
         const conflicts = await sql`
             select outcome, transaction_id, companion_id from private.special_transactions
@@ -280,7 +283,9 @@ export async function recordSpecialTransaction(
         const assignable =
             !hasAnother &&
             (belongs ||
-                (edition.state === "available" && (!revoked || !previous)));
+                (edition.retired_at === null &&
+                    edition.state === "available" &&
+                    (!revoked || !previous)));
         const outcome = stale
             ? previous.outcome
             : revoked

@@ -59,7 +59,7 @@ function requestResponse(request: AiRequestRecord): AiRunResponse {
             {
                 request_id: request.id,
                 workflow_id: request.workflow_version.workflowId,
-                version_id: request.workflow_version.versionId,
+                version_id: request.workflow_version.versionId ?? null,
             },
             { request_id: request.id },
         );
@@ -87,7 +87,7 @@ export async function startAiRun(
         correlateAiRequest({
             user_id: userId,
             workflow_id: config.version.workflowId,
-            version_id: config.version.versionId,
+            version_id: config.version.versionId ?? null,
         });
     const reservation = await deps.reserve(
         userId,
@@ -121,7 +121,7 @@ export async function startAiRun(
     const diagnostic = {
         request_id: request.id,
         workflow_id: request.workflow_version.workflowId,
-        version_id: request.workflow_version.versionId,
+        version_id: request.workflow_version.versionId ?? null,
     };
     correlateAiRequest(
         {
@@ -274,7 +274,7 @@ export async function readAiRun(
     const diagnostic = {
         request_id: request.id,
         workflow_id: request.workflow_version.workflowId,
-        version_id: request.workflow_version.versionId,
+        version_id: request.workflow_version.versionId ?? null,
         run_id: request.run_handle?.runId ?? null,
     };
     correlateAiRequest({ user_id: userId, ...diagnostic }, "observed");

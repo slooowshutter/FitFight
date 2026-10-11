@@ -896,14 +896,22 @@ struct FitFightAPI {
         try await get(path: "me/custom-characters", accessToken: accessToken, expected: [200])
     }
 
-    func claimCustomCharacter(signedTransaction: String, accessToken: String) async throws -> CustomCharacterClaim {
-        try await post(path: "me/custom-characters/purchases", accessToken: accessToken,
-                       body: ["signed_transaction": signedTransaction], expected: [200])
+    func claimCustomCharacter(signedTransaction: String, description: String?, accessToken: String) async throws -> CustomCharacterClaim {
+        var body = ["signed_transaction": signedTransaction]
+        body["description"] = description
+        return try await post(path: "me/custom-characters/purchases", accessToken: accessToken, body: body, expected: [200])
     }
 
     func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {
         try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/advance", accessToken: accessToken,
-                       body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil), expected: [200, 202])
+                       body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil,
+                                                        choosePortrait: description == nil ? nil : true),
+                       expected: [200, 202])
+    }
+
+    func chooseCustomCharacterPortrait(id: UUID, candidateID: UUID, accessToken: String) async throws -> CustomCharacterProgress {
+        try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/choose", accessToken: accessToken,
+                       body: ["candidate_id": candidateID.uuidString.lowercased()], expected: [200, 202])
     }
 
     func updateProfile(

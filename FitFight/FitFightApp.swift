@@ -78,7 +78,7 @@ struct FitFightApp: App {
             let companions = CompanionStore()
             if ProcessInfo.processInfo.environment["FF_COMPANION_PICKER"] == "1" {
                 model.tab = .you
-                companions.selection = .limitedPangolin
+                companions.selection = .limitedBlackPanther
                 companions.showingPicker = true
             }
             if ScreenshotExport.isEnabled {

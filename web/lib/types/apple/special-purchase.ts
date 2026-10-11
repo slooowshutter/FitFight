@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-    limitedCompanionIdSchema,
-    limitedCompanionIdValues,
+    specialCompanionIdSchema,
+    specialCompanionIdValues,
 } from "@/lib/types/companions/companion";
 
 export const applePurchaseEnvironmentValues = [
@@ -12,8 +12,9 @@ export const applePurchaseEnvironmentSchema = z.enum(
     applePurchaseEnvironmentValues,
 );
 
+/** Retired Specials stay mapped so refunds and restores of earlier Sandbox purchases still record. */
 export const appleSpecialProductIds = new Map(
-    limitedCompanionIdValues.map((id) => [
+    specialCompanionIdValues.map((id) => [
         `com.fitfight.mvp.special.${id.slice("limited-".length).replaceAll("-", "_")}`,
         id,
     ]),
@@ -29,7 +30,7 @@ export const applePurchaseCredentialsSchema = z.object({
 export const appleSpecialPurchaseContextSchema = z.object({
     environment: applePurchaseEnvironmentSchema,
     appAccountToken: z.string().uuid(),
-    companionId: limitedCompanionIdSchema,
+    companionId: specialCompanionIdSchema,
 });
 
 export const appleSpecialTransactionSchema = z

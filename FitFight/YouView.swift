@@ -8,6 +8,7 @@ struct YouView: View {
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var preferences: AccountPreferencesStore
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var purchases: SpecialPurchases
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
@@ -232,6 +233,14 @@ struct YouView: View {
                     navRow(String(appLocalized: "Edit profile")) { showingEditProfile = true }
                     FFDivider()
                     navRow(String(appLocalized: "Your companion")) { companions.showingPicker = true }
+                    FFDivider()
+                    FFGroupedRow(
+                        title: String(appLocalized: "Restore purchases"),
+                        subtitle: purchases.message.isEmpty ? nil : purchases.message,
+                        enabled: !purchases.isBusy,
+                        subtitleTone: .neutral,
+                        action: { Task { await purchases.restore(session: session) } }
+                    )
                 }
             }
             FFSection(title: String(appLocalized: "Apple Health")) {

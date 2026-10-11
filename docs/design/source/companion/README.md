@@ -45,21 +45,19 @@ Before implementation: decide when to generate the scene, what membership or cus
 
 All three cases need authenticated ownership checks, validated requests and provider responses, persistent generation status, and protection against duplicate paid submissions. Server business logic belongs under `web/`; database access belongs in `web/lib/supabase/queries/`. No app-facing Postgres RPCs and no provider keys in iOS.
 
-## Specials, 20 Sep 2026
+## Specials, 11 Oct 2026
 
-Marc supplied 40 individual animal illustrations, including distinct poses of
-Numbat, Serval, Coati, Secretary Bird, and Thorny Devil. Each photo is its own
-Special. `limited-editions.json` records the original filename, stable ID,
-English/French name and caption, source dimensions, and portrait crop in original
-image pixels. Optimized source JPGs remain under `originals/limited/`.
+Thirty Specials in five series of six replace the first forty, which were never
+sold: Night Hunters, Royals, Gym Bros, Cozy Club, and Odd Squad.
+`limited-editions.json` records each stable ID, series, and English/French name
+and caption; the earlier roster remains in git history. Like the regular animals,
+every Special has a portrait, a 300 by 300 head avatar, and five effort poses.
+`scripts/import-specials.py` turns the generated art (`portrait.png`,
+`effort-1.png` to `effort-5.png` per ID) into those imagesets on the 352 by 400
+transparent canvas, filling any missing art with a reported placeholder.
 
-The app uses transparent RGBA PNGs: full images fit within 640 by 960 pixels and
-avatar crops are 300 by 300 pixels. `prepare-limited-assets.py` uses ISNet and
-alpha matting (first run in a disposable cloud CI job, since removed), with a small mask correction to preserve
-the pangolin's pale sock. It extracts the supplied artwork without generating
-new characters. Transparent pixels discard unused RGB data. The cutouts were
-inspected on both Night and Day backgrounds, including clothing, quills, horns,
-feathers, and seated props. They are not an activity-driven pose set.
+The first roster's IDs stay valid on profiles and their edition rows are kept,
+marked `retired_at`, so they are never offered again.
 
 All and Specials show these images while sales are on. A tap previews the name
 and caption above Buy or Save; it does not change the account. The caption

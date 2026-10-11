@@ -49,7 +49,7 @@ function receipt(account: string, transactionId = "200000001") {
         transactionId,
         originalTransactionId: transactionId,
         bundleId: "com.fitfight.mvp",
-        productId: "com.fitfight.mvp.special.pangolin",
+        productId: "com.fitfight.mvp.special.black_panther",
         environment: "Sandbox",
         type: "Non-Consumable",
         inAppOwnershipType: "PURCHASED",
@@ -62,7 +62,20 @@ function receipt(account: string, transactionId = "200000001") {
     });
 }
 
-test("concurrent checkouts hold one edition, release only the matching cancellation, and lapse unpaid holds", async (context) => {
+test("the shelf offers the current roster; retired editions stay stored but unsold", async (context) => {
+    const { users } = await specialUsers(context, 1);
+    const store = await readSpecialStore(users[0], database);
+    assert.equal(store.editions.length, 30);
+    assert.equal(
+        store.editions.some((row) => row.id === "limited-pangolin"),
+        false,
+    );
+    const [retired] =
+        await database`select count(*)::int as count from private.special_editions where environment = 'Sandbox' and retired_at is not null`;
+    assert.equal(retired.count, 40);
+});
+
+test("concurrent checkouts hold one edition,release only the matching cancellation, and lapse unpaid holds", async (context) => {
     const { users } = await specialUsers(context);
     const attempts = users.map(() => randomUUID());
     const results = await Promise.allSettled(
@@ -71,7 +84,7 @@ test("concurrent checkouts hold one edition, release only the matching cancellat
                 user,
                 {
                     action: "reserve",
-                    companion_id: "limited-pangolin",
+                    companion_id: "limited-black-panther",
                     attempt_id: attempts[index],
                 },
                 database,
@@ -86,7 +99,7 @@ test("concurrent checkouts hold one edition, release only the matching cancellat
     const loser = 1 - winner;
     const request = {
         action: "reserve" as const,
-        companion_id: "limited-pangolin" as const,
+        companion_id: "limited-black-panther" as const,
         attempt_id: attempts[winner],
     };
     await specialCheckout(users[winner], request, database);
@@ -101,7 +114,7 @@ test("concurrent checkouts hold one edition, release only the matching cancellat
     await assert.rejects(
         specialCheckout(
             users[winner],
-            { ...request, companion_id: "limited-platypus" },
+            { ...request, companion_id: "limited-lone-wolf" },
             database,
         ),
         { code: "special_limit" },
@@ -121,7 +134,7 @@ test("concurrent checkouts hold one edition, release only the matching cancellat
     );
     assert.equal(
         (await readSpecialStore(users[winner], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "reserved",
     );
@@ -135,10 +148,10 @@ test("concurrent checkouts hold one edition, release only the matching cancellat
         { ...request, attempt_id: attempts[loser] },
         database,
     );
-    await database`update private.special_editions set updated_at = now() - interval '31 minutes' where companion_id = 'limited-pangolin' and environment = 'Sandbox'`;
+    await database`update private.special_editions set updated_at = now() - interval '31 minutes' where companion_id = 'limited-black-panther' and environment = 'Sandbox'`;
     assert.equal(
         (await readSpecialStore(users[loser], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "available",
         "An unpaid hold lapses after 30 minutes",
@@ -154,11 +167,15 @@ test("verified ownership survives switching and repeats; conflicting charges are
     const { users, accounts } = await specialUsers(context);
     const transaction = receipt(accounts[0]);
     await assert.rejects(
-        updateProfile(users[0], { companion_id: "limited-pangolin" }, admin),
+        updateProfile(
+            users[0],
+            { companion_id: "limited-black-panther" },
+            admin,
+        ),
         { code: "special_purchase_required" },
     );
     await assert.rejects(
-        database`update public.profiles set companion_id = 'limited-pangolin' where id = ${users[0]}`,
+        database`update public.profiles set companion_id = 'limited-black-panther' where id = ${users[0]}`,
         (error: unknown) =>
             error instanceof postgres.PostgresError &&
             error.message.includes("special_purchase_required"),
@@ -168,7 +185,7 @@ test("verified ownership survives switching and repeats; conflicting charges are
         users[0],
         {
             action: "reserve",
-            companion_id: "limited-pangolin",
+            companion_id: "limited-black-panther",
             attempt_id: attemptId,
         },
         database,
@@ -178,10 +195,14 @@ test("verified ownership survives switching and repeats; conflicting charges are
         "owned",
     );
     await recordSpecialTransaction(transaction, database);
-    await updateProfile(users[0], { companion_id: "limited-pangolin" }, admin);
+    await updateProfile(
+        users[0],
+        { companion_id: "limited-black-panther" },
+        admin,
+    );
     assert.equal(
         (await readProfile(users[0], admin)).companion_id,
-        "limited-pangolin",
+        "limited-black-panther",
     );
     await updateProfile(
         users[0],
@@ -195,13 +216,13 @@ test("verified ownership survives switching and repeats; conflicting charges are
     );
     assert.equal(
         (await readSpecialStore(users[0], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "yours",
     );
     assert.equal(
         (await readSpecialStore(users[1], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "taken",
     );
@@ -209,14 +230,14 @@ test("verified ownership survives switching and repeats; conflicting charges are
         users[0],
         {
             action: "cancel",
-            companion_id: "limited-pangolin",
+            companion_id: "limited-black-panther",
             attempt_id: attemptId,
         },
         database,
     );
     assert.equal(
         (await readSpecialStore(users[0], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "yours",
     );
@@ -230,14 +251,18 @@ test("verified ownership survives switching and repeats; conflicting charges are
         1,
     );
     await assert.rejects(
-        updateProfile(users[1], { companion_id: "limited-pangolin" }, admin),
+        updateProfile(
+            users[1],
+            { companion_id: "limited-black-panther" },
+            admin,
+        ),
         { code: "special_purchase_required" },
     );
     const secondAnimal = appleSpecialTransactionSchema.parse({
         ...transaction,
         transactionId: "200000003",
         originalTransactionId: "200000003",
-        productId: "com.fitfight.mvp.special.platypus",
+        productId: "com.fitfight.mvp.special.lone_wolf",
     });
     assert.equal(
         (await recordSpecialTransaction(secondAnimal, database)).outcome,
@@ -252,7 +277,11 @@ test("refunds, stale delivery, reversal, and deletion cannot resell an edition",
     const { users, accounts } = await specialUsers(context);
     const transaction = receipt(accounts[0]);
     await recordSpecialTransaction(transaction, database);
-    await updateProfile(users[0], { companion_id: "limited-pangolin" }, admin);
+    await updateProfile(
+        users[0],
+        { companion_id: "limited-black-panther" },
+        admin,
+    );
     const refunded = {
         ...transaction,
         signedDate: transaction.signedDate + 2000,
@@ -270,7 +299,7 @@ test("refunds, stale delivery, reversal, and deletion cannot resell an edition",
             users[1],
             {
                 action: "reserve",
-                companion_id: "limited-pangolin",
+                companion_id: "limited-black-panther",
                 attempt_id: randomUUID(),
             },
             database,
@@ -283,7 +312,7 @@ test("refunds, stale delivery, reversal, and deletion cannot resell an edition",
     );
     assert.equal(
         (await readSpecialStore(users[0], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "yours",
     );
@@ -298,7 +327,7 @@ test("refunds, stale delivery, reversal, and deletion cannot resell an edition",
     assert.equal(account.user_id, null);
     assert.equal(
         (await readSpecialStore(users[1], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "taken",
     );
@@ -307,7 +336,7 @@ test("refunds, stale delivery, reversal, and deletion cannot resell an edition",
             users[1],
             {
                 action: "reserve",
-                companion_id: "limited-pangolin",
+                companion_id: "limited-black-panther",
                 attempt_id: randomUUID(),
             },
             database,
@@ -325,7 +354,7 @@ test("disabled sales and payment environments cannot be bypassed by client input
                 users[0],
                 {
                     action: "reserve",
-                    companion_id: "limited-pangolin",
+                    companion_id: "limited-black-panther",
                     attempt_id: randomUUID(),
                 },
                 database,
@@ -344,7 +373,7 @@ test("disabled sales and payment environments cannot be bypassed by client input
     );
     await recordSpecialTransaction(receipt(accounts[0]), database);
     const [production] =
-        await database`select state from private.special_editions where environment = 'Production' and companion_id = 'limited-pangolin'`;
+        await database`select state from private.special_editions where environment = 'Production' and companion_id = 'limited-black-panther'`;
     assert.equal(production.state, "available");
     await assert.rejects(
         database.begin(async (sql) => {
@@ -359,7 +388,7 @@ test("disabled sales and payment environments cannot be bypassed by client input
 test("a simultaneous cancellation and verified charge cannot leave a paid edition available", async (context) => {
     const { users, accounts } = await specialUsers(context, 1);
     const attempt = {
-        companion_id: "limited-pangolin" as const,
+        companion_id: "limited-black-panther" as const,
         attempt_id: randomUUID(),
     };
     await specialCheckout(
@@ -373,7 +402,7 @@ test("a simultaneous cancellation and verified charge cannot leave a paid editio
     ]);
     assert.equal(
         (await readSpecialStore(users[0], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "yours",
     );
@@ -388,7 +417,7 @@ test("refund arriving before purchase delivery retires the edition and can be re
     );
     assert.equal(
         (await readSpecialStore(users[0], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "refunded",
     );
@@ -397,7 +426,7 @@ test("refund arriving before purchase delivery retires the edition and can be re
             users[1],
             {
                 action: "reserve",
-                companion_id: "limited-pangolin",
+                companion_id: "limited-black-panther",
                 attempt_id: randomUUID(),
             },
             database,
@@ -410,7 +439,7 @@ test("refund arriving before purchase delivery retires the edition and can be re
     );
     assert.equal(
         (await readSpecialStore(users[0], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "yours",
     );
@@ -435,12 +464,11 @@ test("original and transaction identities cannot be rebound, including concurren
     const changedAnimal = appleSpecialTransactionSchema.parse({
         ...transaction,
         appAccountToken: saved.account_id,
-        productId: "com.fitfight.mvp.special.platypus",
+        productId: "com.fitfight.mvp.special.lone_wolf",
     });
-    await assert.rejects(
-        recordSpecialTransaction(changedAnimal, database),
-        { code: "special_account" },
-    );
+    await assert.rejects(recordSpecialTransaction(changedAnimal, database), {
+        code: "special_account",
+    });
     await assert.rejects(
         recordSpecialTransaction(
             {
@@ -484,7 +512,7 @@ test("production keeps configured App Review accounts on a separate Sandbox shel
             users[1],
             {
                 action: "reserve",
-                companion_id: "limited-pangolin",
+                companion_id: "limited-black-panther",
                 attempt_id: randomUUID(),
             },
             database,
@@ -507,11 +535,11 @@ test("production keeps configured App Review accounts on a separate Sandbox shel
         );
         await updateProfile(
             users[0],
-            { companion_id: "limited-pangolin" },
+            { companion_id: "limited-black-panther" },
             admin,
         );
         const [production] =
-            await database`select state, account_id from private.special_editions where environment = 'Production' and companion_id = 'limited-pangolin'`;
+            await database`select state, account_id from private.special_editions where environment = 'Production' and companion_id = 'limited-black-panther'`;
         assert.deepEqual(
             { state: production.state, account_id: production.account_id },
             { state: "reserved", account_id: accounts[1] },
@@ -530,13 +558,13 @@ test("a refund for a charge lost as a conflict never retires the Special", async
             user,
             {
                 action: "reserve",
-                companion_id: "limited-pangolin",
+                companion_id: "limited-black-panther",
                 attempt_id: randomUUID(),
             },
             database,
         );
     const lapse = () =>
-        database`update private.special_editions set updated_at = now() - interval '31 minutes' where companion_id = 'limited-pangolin' and environment = 'Sandbox'`;
+        database`update private.special_editions set updated_at = now() - interval '31 minutes' where companion_id = 'limited-black-panther' and environment = 'Sandbox'`;
     await reserve(users[0]);
     await lapse();
     await reserve(users[1]);
@@ -548,7 +576,7 @@ test("a refund for a charge lost as a conflict never retires the Special", async
     await lapse();
     assert.equal(
         (await readSpecialStore(users[2], database)).editions.find(
-            (row) => row.id === "limited-pangolin",
+            (row) => row.id === "limited-black-panther",
         )?.status,
         "available",
     );
@@ -570,7 +598,7 @@ test("a refund for a charge lost as a conflict never retires the Special", async
         users[0],
         {
             action: "reserve",
-            companion_id: "limited-platypus",
+            companion_id: "limited-lone-wolf",
             attempt_id: randomUUID(),
         },
         database,
@@ -581,14 +609,14 @@ test("deleting an account frees its hold, and resuming a checkout restarts its 3
     const { users } = await specialUsers(context);
     const request = {
         action: "reserve" as const,
-        companion_id: "limited-pangolin" as const,
+        companion_id: "limited-black-panther" as const,
         attempt_id: randomUUID(),
     };
     await specialCheckout(users[0], request, database);
-    await database`update private.special_editions set updated_at = now() - interval '29 minutes' where companion_id = 'limited-pangolin' and environment = 'Sandbox'`;
+    await database`update private.special_editions set updated_at = now() - interval '29 minutes' where companion_id = 'limited-black-panther' and environment = 'Sandbox'`;
     await specialCheckout(users[0], request, database);
     const [edition] =
-        await database`select updated_at > now() - interval '1 minute' as fresh from private.special_editions where companion_id = 'limited-pangolin' and environment = 'Sandbox'`;
+        await database`select updated_at > now() - interval '1 minute' as fresh from private.special_editions where companion_id = 'limited-black-panther' and environment = 'Sandbox'`;
     assert.equal(edition.fresh, true);
     await deleteAccount(users[0], database);
     await specialCheckout(

@@ -28,6 +28,41 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 11,
+            notes: "Specials are new: 30 one-of-a-kind animals in five series, each with five step poses."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "The Yours tab in the animal picker is now your collection: your Special, the characters you created, and your current animal, with Create your own at the end. Writing a free text-only animal is gone. If you already have one, you keep it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "A paid character now starts with three portraits to choose from. Pick your favourite and FitFight draws its five fitness poses, even with the app closed, then notifies you when it is ready."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "Your profile picture is now always your companion. Photo uploads are gone."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "Specials are back in the animal picker: 40 one-of-a-kind animals, each owned by only one person."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 10,
             notes: "You can now change your companion from the levels drawer: tap it on Fights, then choose Change animal."
         ),

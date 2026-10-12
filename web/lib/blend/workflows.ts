@@ -18,7 +18,6 @@ export function blendProviderConfiguration() {
         );
     const env = parsed.data;
     return {
-        enabled: env.BLEND_ENABLED === "true",
         limits: {
             globalDailyStarts: env.BLEND_GLOBAL_DAILY_STARTS,
             globalConcurrentRuns: env.BLEND_GLOBAL_CONCURRENT_RUNS,

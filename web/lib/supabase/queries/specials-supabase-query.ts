@@ -24,7 +24,6 @@ export async function readSpecialStore(
 ): Promise<SpecialStore> {
     const configured = specialsConfigurationSchema.safeParse({
         environment: process.env.APPLE_IAP_ENVIRONMENT,
-        enabled: process.env.APPLE_SPECIALS_ENABLED,
         reviewers: process.env.APPLE_IAP_REVIEW_USER_IDS,
     });
     if (!configured.success)
@@ -101,7 +100,7 @@ export async function readSpecialStore(
         return specialStoreSchema.parse({
             app_account_token: account.id,
             environment: account.environment,
-            purchases_enabled: configuration.enabled === "true",
+            purchases_enabled: true,
             editions: editions.map((edition) => ({
                 id: edition.companion_id,
                 product_id: productIds.get(edition.companion_id),
@@ -128,12 +127,6 @@ export async function specialCheckout(
     database: Sql = createDatabaseClient(),
 ): Promise<void> {
     const store = await readSpecialStore(userId, database);
-    if (input.action === "reserve" && !store.purchases_enabled)
-        throw new ApiError(
-            503,
-            "special_unavailable",
-            "Special purchases are not available yet",
-        );
     await database.begin(async (sql) => {
         const profiles =
             await sql`select id from public.profiles where id = ${userId} and deleted_at is null for update`;

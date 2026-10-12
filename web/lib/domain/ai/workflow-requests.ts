@@ -104,8 +104,8 @@ export async function startAiRun(
             requestHash: createHash("sha256")
                 .update(JSON.stringify(input))
                 .digest("hex"),
-            version: config?.enabled ? config.version : null,
-            creditPrice: config?.enabled ? config.creditPrice : null,
+            version: config?.version ?? null,
+            creditPrice: config?.creditPrice ?? null,
             sourceRequestIds:
                 input.workflow === "avatar"
                     ? []
@@ -115,7 +115,7 @@ export async function startAiRun(
                             (character) => character.avatar_request_id,
                         ),
         },
-        config?.enabled ? config.limits : null,
+        config?.limits ?? null,
     );
     const request = reservation.request;
     const diagnostic = {

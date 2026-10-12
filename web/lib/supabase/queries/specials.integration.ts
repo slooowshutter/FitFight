@@ -17,7 +17,6 @@ const env = databaseTestEnvironmentSchema.parse(process.env);
 process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
 process.env.SUPABASE_SECRET_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";
-process.env.APPLE_SPECIALS_ENABLED = "true";
 const database = postgres(env.DATABASE_URL, { max: 5 });
 const admin = createClient(
     env.SUPABASE_TEST_URL,
@@ -345,25 +344,8 @@ test("refunds, stale delivery, reversal, and deletion cannot resell an edition",
     );
 });
 
-test("disabled sales and payment environments cannot be bypassed by client input", async (context) => {
-    const { users, accounts } = await specialUsers(context, 1);
-    process.env.APPLE_SPECIALS_ENABLED = "false";
-    try {
-        await assert.rejects(
-            specialCheckout(
-                users[0],
-                {
-                    action: "reserve",
-                    companion_id: "limited-black-panther",
-                    attempt_id: randomUUID(),
-                },
-                database,
-            ),
-            { code: "special_unavailable" },
-        );
-    } finally {
-        process.env.APPLE_SPECIALS_ENABLED = "true";
-    }
+test("payment environments cannot be bypassed by client input", async (context) => {
+    const { accounts } = await specialUsers(context, 1);
     await assert.rejects(
         recordSpecialTransaction(
             { ...receipt(accounts[0]), environment: "Production" },

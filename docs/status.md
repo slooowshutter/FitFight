@@ -6,6 +6,15 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## No on/off switches for paid features: 12 Oct 2026
+
+Marc removed the `APPLE_SPECIALS_ENABLED`, `APPLE_CUSTOM_CHARACTERS_ENABLED` and
+`BLEND_ENABLED` environment switches. Sales are open wherever the Apple keys are
+configured, and Blend starts wherever its key and workflow ids are configured.
+Apple's own review is the gate: unapproved products never load in StoreKit, so
+the app shows "Purchases unavailable" until approval. `purchases_enabled` stays in
+the API (always `true`) for older builds.
+
 ## Paid character: three portraits, server-side progress, ready push, prepared 11 Oct 2026
 
 **Code:** A purchase from a current app sends the description with the Apple claim, so the server saves it with the purchase. It then draws three portraits with the pinned avatar workflow (three runs, about $0.09 each). The owner picks one; the other two stay in `private.custom_character_portraits` with no `selected_at`. Only the chosen portrait feeds the five-pose fitness run. Generation no longer needs the app open: `/api/internal/ai/reconcile` now runs every minute on production Vercel Cron (the `blendai` Enterprise team allows it), and a run that settles during reconciliation advances its character in the same call. A new GitHub Actions workflow, `ai-reconcile.yml`, calls staging (and production as a backup) every 5 minutes, because Vercel Cron never runs on Preview. Each "Your character is ready" push (portraits ready to choose, then poses done) is sent at most once through the existing APNs client, honoring the global notification switch. A paid run is exempt from the free three-per-minute cap and from the one-unresolved-request rule within its own purchase. The native screen shows three steps, the three portraits to pick from, a support link for `needs_support`, and keeps working after you leave. `PaidCharacterProgressCard` is ready for Fights. `CustomCharacterPurchases` exposes `inProgress`, `unseenReady`, `portraitURL` and `candidateURLs`.

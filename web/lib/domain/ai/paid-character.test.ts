@@ -42,7 +42,6 @@ test("paid character routes require authentication and reject caller-owned purch
 test("paid portrait and fitness starts require no operator credit price", () => {
     const previous = {
         BLEND_API_KEY: process.env.BLEND_API_KEY,
-        BLEND_ENABLED: process.env.BLEND_ENABLED,
         BLEND_GLOBAL_DAILY_STARTS: process.env.BLEND_GLOBAL_DAILY_STARTS,
         BLEND_GLOBAL_CONCURRENT_RUNS: process.env.BLEND_GLOBAL_CONCURRENT_RUNS,
         BLEND_REQUESTS_PER_MINUTE: process.env.BLEND_REQUESTS_PER_MINUTE,
@@ -55,7 +54,6 @@ test("paid portrait and fitness starts require no operator credit price", () => 
     try {
         Object.assign(process.env, {
             BLEND_API_KEY: "bai_test-only-blend-key",
-            BLEND_ENABLED: "true",
             BLEND_GLOBAL_DAILY_STARTS: "100",
             BLEND_GLOBAL_CONCURRENT_RUNS: "10",
             BLEND_REQUESTS_PER_MINUTE: "100",

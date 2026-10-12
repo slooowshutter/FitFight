@@ -182,9 +182,8 @@ the shared Blend request cap and honor observed remaining/reset/cooldown headers
 Attempt counters are conservative and are not refunded after provider failure.
 They cap attempts, not monetary spending.
 
-The backend looks up the action before checking whether new starts are enabled or
-configured. Recovery still works with `BLEND_ENABLED=false` or removed start
-configuration. New reservations and provider submissions remain blocked. Reusing a
+The backend looks up the action before checking whether new starts are
+configured. Recovery still works with removed start configuration. New reservations and provider submissions remain blocked. Reusing a
 key with changed input is a conflict. A different action while one is unresolved
 returns `ai_in_progress` with the owned request ID.
 
@@ -311,14 +310,12 @@ cannot settle the new credit constraint. Distribute the native UI only after the
 
 | Variable | Requirement |
 | --- | --- |
-| `BLEND_ENABLED` | Defaults to `false`; enables new starts only |
 | `BLEND_API_KEY` | Deployment-only key; verify access and provider limits |
 | `BLEND_AVATAR_WORKFLOW_ID` | Published workflow ID |
 | `BLEND_AVATAR_VERSION_ID` | Optional. Empty runs the latest published Avatar version |
 | `BLEND_FITNESS_WORKFLOW_ID`, `BLEND_FITNESS_VERSION_ID` | Published Fitness ID; version optional, empty means latest |
 | `BLEND_GROUP_PHOTO_WORKFLOW_ID`, `BLEND_GROUP_PHOTO_VERSION_ID` | Published Group Photo ID; version optional, empty means latest |
 | `BLEND_FITNESS_CREDIT_PRICE`, `BLEND_GROUP_PHOTO_CREDIT_PRICE` | Required explicit positive prices for separate credit-funded starts; paid characters do not use them |
-| `APPLE_CUSTOM_CHARACTERS_ENABLED` | Defaults to `false`; native StoreKit checkout stays closed until Apple lookup and Sandbox verification |
 | `APPLE_IAP_ENVIRONMENT` | `Sandbox` on staging, `Production` on production; App Review accounts retain their configured Sandbox shelf |
 | `BLEND_GLOBAL_DAILY_STARTS` | Required positive shared daily cap |
 | `BLEND_GLOBAL_CONCURRENT_RUNS` | Required positive unresolved-capacity cap |
@@ -333,8 +330,7 @@ grants and provider spending policy still require an explicit decision before us
 
 Read-only publication inspection on 24 Sep confirmed zero validation errors and
 these current versions. The safe identifiers are included in `.env.example`;
-`BLEND_ENABLED` and `APPLE_CUSTOM_CHARACTERS_ENABLED` remain false and both
-credit prices remain unset. On an authorized `develop` merge, the hosted
+both credit prices remain unset. On an authorized `develop` merge, the hosted
 `custom-character-iap.yml` job prepares the one consumable at EUR 2.99 in the
 French base territory. The Paid Apps Agreement, banking and W-9 remain pending;
 product creation is not proof of a usable TestFlight checkout. Keep both flags

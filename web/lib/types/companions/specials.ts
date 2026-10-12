@@ -7,7 +7,6 @@ import {
 
 export const specialsConfigurationSchema = z.object({
     environment: applePurchaseEnvironmentSchema,
-    enabled: z.enum(["true", "false"]),
     /** Comma-separated user IDs App Review signs in with; on production they buy on the Sandbox shelf. */
     reviewers: z
         .string()

@@ -272,8 +272,7 @@ export default function PrivacyPage() {
                         </li>
                         <li>
                             publish a few anonymous, aggregate figures on
-                            fitfight.app, such as the total Steps recorded and
-                            the typical change in daily Steps after joining.
+                            fitfight.app, such as the total Steps recorded.
                             They never identify a person;
                         </li>
                         <li>answer support requests; and</li>

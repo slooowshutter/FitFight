@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing/landing-page";
 import { appDownload } from "@/lib/releases/app-download";
-import {
-    readCachedJoiningLift,
-    readCachedTotalSteps,
-} from "@/lib/supabase/queries/total-steps-supabase-query";
+import { readCachedTotalSteps } from "@/lib/supabase/queries/total-steps-supabase-query";
 
 import "../landing.css";
 
@@ -17,17 +14,13 @@ export const metadata: Metadata = {
 };
 
 export default async function FrenchHomePage() {
-    const [{ totalSteps }, { joiningLift }] = await Promise.all([
-        readCachedTotalSteps(),
-        readCachedJoiningLift(),
-    ]);
+    const { totalSteps } = await readCachedTotalSteps();
 
     return (
         <LandingPage
             language="fr"
             download={appDownload()}
             totalSteps={totalSteps}
-            joiningLift={joiningLift}
         />
     );
 }

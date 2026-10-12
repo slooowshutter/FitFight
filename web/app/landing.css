@@ -366,20 +366,6 @@ body:has(.lp) {
     font-size: 14px;
 }
 
-.lp-hero-note {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--line);
-    color: var(--tertiary);
-    font-size: 12px;
-}
-
-/* Gold means progress: the extra steps people walk after joining */
-.lp-hero-note strong {
-    color: var(--gold);
-    font-weight: 800;
-}
-
 /* Read by screen readers only: the visible total counts up from zero */
 .lp-sr {
     position: absolute;

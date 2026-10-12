@@ -26,15 +26,12 @@ export function LandingPage({
     language,
     download,
     totalSteps,
-    joiningLift,
 }: {
     language: SiteLanguage;
     download: { isStaging: boolean; url: string };
     totalSteps: number;
-    joiningLift: number | null;
 }) {
     const copy = landingCopy[language];
-    const lift = Math.round(joiningLift ?? 0);
     const statement = copy.what.statement;
     const downloadButton = (kind: "header" | "hero") =>
         download.isStaging ? (
@@ -120,18 +117,6 @@ export function LandingPage({
                                 </span>
                             </b>
                             <span>{copy.totalSteps.caption}</span>
-                            {lift >= 1 ? (
-                                <p
-                                    className="lp-hero-note"
-                                    title={copy.joiningLift.detail(lift)}
-                                >
-                                    {copy.joiningLift.before}
-                                    <strong>
-                                        {copy.joiningLift.amount(lift)}
-                                    </strong>
-                                    {copy.joiningLift.after}
-                                </p>
-                            ) : null}
                         </div>
                     </div>
                     <div className="lp-hero-phone">

@@ -292,10 +292,8 @@ export default function PrivacyPage() {
                         </li>
                         <li>
                             publier quelques chiffres anonymes et agrégés sur
-                            fitfight.app, comme le total des pas enregistrés et
-                            l’évolution typique des pas quotidiens après
-                            l’inscription. Ils n’identifient jamais une
-                            personne ;
+                            fitfight.app, comme le total des pas enregistrés.
+                            Ils n’identifient jamais une personne ;
                         </li>
                         <li>répondre aux demandes d’assistance ;</li>
                         <li>

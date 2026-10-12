@@ -1550,8 +1550,8 @@ struct CompanionPicker: View {
                 }
             }
             try await companions.choose(id: animal.rawValue, prompt: nil, session: session)
+            // Closing through the binding only: a second dismiss() can hit the screen underneath and leave it untappable.
             companions.showingPicker = false
-            dismiss()
         } catch is CancellationError {
             return
         } catch {
@@ -1570,7 +1570,6 @@ struct CompanionPicker: View {
             try await session.setCompanion(image: .init(requestID: entry.requestID, stage: "resting"))
             companions.apply(session.profile)
             companions.showingPicker = false
-            dismiss()
         } catch is CancellationError {
             return
         } catch {

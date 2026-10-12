@@ -23,6 +23,12 @@ final class AdminDashboardStore: ObservableObject {
     private var fresh: [String: Int] = [:]
     /// The running preload, by server, period, bucket and generation.
     private var preloading: (id: String, task: Task<Void, Never>)?
+    /// The chip, period and bucket, kept with the payloads so a return to Admin shows what it left.
+    @Published var sectionID = "overview"
+    /// The period of the charts over time only. Cards and breakdowns name their own fixed span.
+    @Published var timeframe = AdminDashboardView.Timeframe.month
+    /// The bucket of the charts over time. Auto lets the server pick by period.
+    @Published var granularity = AdminDashboardView.Granularity.auto
 
     func isLoading(_ server: AdminDashboardView.Server, _ section: String, request: String) -> Bool {
         loads["\(server.rawValue)-\(section)-\(request)"] != nil
@@ -45,7 +51,7 @@ final class AdminDashboardStore: ObservableObject {
         let request = "\(days)-\(bucket ?? "auto")"
         await load(section, server: server, days: days, bucket: bucket, session: session)
         // A failed first section (not the admin, offline) would fail the others too.
-        guard answered["\(server.rawValue)-\(section)"] == request else { return }
+        guard !Task.isCancelled, answered["\(server.rawValue)-\(section)"] == request else { return }
         var waiting = sections.map(\.id).filter { $0 != section }[...]
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<2 {
@@ -91,7 +97,9 @@ final class AdminDashboardStore: ObservableObject {
                 payloads[key] = result
                 answered[key] = request
                 fresh[key] = generation
-                failures[key] = nil
+                if failures[key]?.request == request {
+                    failures[key] = nil
+                }
                 if let listed = result.sections {
                     sections = listed
                 }
@@ -132,11 +140,6 @@ struct AdminDashboardView: View {
     /// Starts on Production and remembers the switch. A new key, so a Staging choice saved by
     /// an earlier build doesn't stick.
     @AppStorage("fitfight.admin-dashboard.environment") private var server = Server.production
-    @State private var sectionID = "overview"
-    /// The period of the charts over time only. Cards and breakdowns name their own fixed span.
-    @State private var timeframe = Timeframe.month
-    /// The bucket of the charts over time. Auto lets the server pick by period.
-    @State private var granularity = Granularity.auto
     /// The chart whose page is open.
     @State private var openChartID: String?
     /// Cards tapped to show the exact value instead of the rounded-down one.
@@ -165,12 +168,14 @@ struct AdminDashboardView: View {
         case auto, day, week, month
     }
 
-    private var request: String { "\(days)-\(granularity.rawValue)" }
+    private var sectionID: String { store.sectionID }
 
-    private var bucket: String? { granularity == .auto ? nil : granularity.rawValue }
+    private var request: String { "\(days)-\(store.granularity.rawValue)" }
+
+    private var bucket: String? { store.granularity == .auto ? nil : store.granularity.rawValue }
 
     private var days: Int {
-        switch timeframe {
+        switch store.timeframe {
         case .week: return 7
         case .month: return 30
         case .quarter: return 90
@@ -254,7 +259,7 @@ struct AdminDashboardView: View {
                 ForEach(store.sections, id: \.id) { item in
                     let on = item.id == sectionID
                     Button {
-                        sectionID = item.id
+                        store.sectionID = item.id
                     } label: {
                         Text(verbatim: item.title)
                             .ffType(.caption)
@@ -309,7 +314,7 @@ struct AdminDashboardView: View {
         let trends = dashboard.charts.filter { $0.xKind == "date" }
         if !trends.isEmpty {
             groupTitle("Over time")
-            FFSegmented(items: Timeframe.allCases, selection: $timeframe) { item in
+            FFSegmented(items: Timeframe.allCases, selection: $store.timeframe) { item in
                 switch item {
                 case .week: "7D"
                 case .month: "30D"
@@ -318,7 +323,7 @@ struct AdminDashboardView: View {
                 case .all: "All"
                 }
             }
-            FFSegmented(items: Granularity.allCases, selection: $granularity) { item in
+            FFSegmented(items: Granularity.allCases, selection: $store.granularity) { item in
                 switch item {
                 case .auto: "Auto"
                 case .day: "Day"

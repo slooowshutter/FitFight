@@ -29,6 +29,27 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 12,
+            notes: "On a slow connection, refreshing now stops after 30 seconds and shows Try again instead of spinning."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "FitFight now asks once for the Apple Health activity types added since you connected, so all your activity syncs."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "Background sync does less work: one upload covers every Apple Health update, at most once every 15 minutes."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
             notes: "Specials are no longer one of a kind: anyone can buy any Special, and you can collect as many as you like. Each one is bought once and stays yours."
         ),
         ReleaseNote(

@@ -15434,6 +15434,46 @@
                     }
                 }
             }
+        },
+        "Refreshing took too long. Check your internet connection.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’actualisation a pris trop de temps. Vérifie ta connexion internet."
+                    }
+                }
+            }
+        },
+        "On a slow connection, refreshing now stops after 30 seconds and shows Try again instead of spinning.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Avec une connexion lente, l’actualisation s’arrête maintenant après 30 secondes et affiche Réessayer au lieu de tourner sans fin."
+                    }
+                }
+            }
+        },
+        "FitFight now asks once for the Apple Health activity types added since you connected, so all your activity syncs.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight te demande maintenant une fois l’accès aux types d’activité Apple Health ajoutés depuis ta connexion, pour que toute ton activité se synchronise."
+                    }
+                }
+            }
+        },
+        "Background sync does less work: one upload covers every Apple Health update, at most once every 15 minutes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La synchronisation en arrière-plan travaille moins : un seul envoi couvre toutes les mises à jour d’Apple Health, au plus une fois toutes les 15 minutes."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

@@ -152,6 +152,7 @@ struct FightsListView: View {
         FFRefreshConfig(
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
+            error: model.refreshError,
             action: {
                 await model.refreshFights(session: session, steps: steps, trigger: .manual)
             }

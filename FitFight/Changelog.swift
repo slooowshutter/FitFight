@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 12,
+            notes: "On the companion stage, swiping back now brings the animal in from the left, instead of flying it across the screen from the right."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
             notes: "On a slow connection, refreshing now stops after 30 seconds and shows Try again instead of spinning."
         ),
         ReleaseNote(

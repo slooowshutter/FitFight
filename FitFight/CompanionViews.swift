@@ -1079,13 +1079,14 @@ struct CompanionStage: View {
                     .frame(width: proxy.size.width, alignment: .leading)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
+                    // NOTE: Not lazy. A lazy stack rebuilds the page you scroll back to and slides it in
+                    // from the far side of the screen. The thumbnails below already load every animal.
+                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
                         .scrollTargetLayout()
                 }
                 .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned)
                 .scrollPosition(id: $selection, anchor: .center)
-                .animation(reduceMotion ? nil : .snappy, value: selection)
                 .disabled(disabled)
             }
         }
@@ -1143,6 +1144,7 @@ struct CompanionStage: View {
         // The page fills the stage height, so the animal sits centred in any spare space.
         .frame(width: width, height: height)
         .scaleEffect(selection == animal ? 1 : 0.9)
+        .animation(reduceMotion ? nil : .snappy, value: selection)
         .accessibilityElement(children: .combine)
         .id(animal)
     }

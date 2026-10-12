@@ -1057,6 +1057,38 @@ paths:
             }
         }
     }
+    /admin/recent-syncs:
+        get:
+            operationId: readRecentSyncs
+            summary: Admin only. Accounts whose Apple Health upload reached this server's database in the last 7 days.
+            description: The staging app shows the count and the names on Fights, so the admin can ask testers who still sync to staging to move to the App Store version.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Newest sync first. Deleted accounts are left out. Cache-Control is no-store.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [people]
+                                properties:
+                                    people:
+                                        type: array
+                                        items:
+                                            type: object
+                                            required: [user_id, handle, display_name, last_synced_at]
+                                            properties:
+                                                user_id: { type: string, format: uuid }
+                                                handle: { type: string }
+                                                display_name: { type: string }
+                                                last_synced_at: { type: string, format: date-time }
+                "401":
+                    description: Missing or invalid session
+                "403":
+                    description: Not the FitFight admin
     "/me/capabilities": {
         "get": {
             "operationId": "readFightCapabilities",

@@ -116,6 +116,17 @@ query only marks its own tile with `Query failed: ...`.
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
 
+## Recent syncs (prepared 12 Oct 2026)
+
+`GET /api/v1/admin/recent-syncs` returns `{ "people": [...] }` with `user_id`,
+`handle`, `display_name` and `last_synced_at` for every account whose Apple
+Health upload reached this server's database in the last 7 days, newest first.
+It reads `public.data_sources.last_success_at` (provider `apple_health`), which
+every Steps and activity upload sets, and leaves out deleted accounts. Only the
+FitFight admin (`isFitFightAdmin`) can read it; anyone else gets 403. The staging
+app shows it to the admin on Fights, through the preview server, to find testers
+who still sync to staging instead of using the App Store version.
+
 ## Activity pipeline (prepared 23 Sep 2026)
 
 This branch adds `private.activity_raw` for durable received totals, individual

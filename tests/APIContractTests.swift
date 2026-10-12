@@ -201,7 +201,11 @@ struct APIContractTests {
         precondition(!dashboard.charts[0].series[0].previous && dashboard.charts[0].series[1].previous)
         precondition(dashboard.charts[1].xKind == "label" && dashboard.charts[1].cells.isEmpty)
         precondition(dashboard.charts[2].kind == "heatmap" && dashboard.charts[2].cells.count == 6)
-        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard passed")
+        let syncs = try serverDecoder.decode(FitFightRecentSyncs.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("admin-recent-syncs.json")))
+        precondition(syncs.people.map(\.handle) == ["marc", "lea"] && syncs.people[1].displayName == "Léa")
+        precondition(syncs.people[0].lastSyncedAt == parseServerDate("2026-10-12T09:15:00Z"))
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, recent syncs passed")
     }
 }
 

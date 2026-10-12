@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 enum MetricKind: String, Codable, Hashable {
     case steps
@@ -233,6 +234,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var isRefreshingFights = false
     @Published private(set) var refreshPhase: FightRefreshPhase = .idle
     @Published private(set) var refreshLine = 0
+    @Published private(set) var refreshError: String?
 
     var refreshStatusText: String {
         refreshPhase.statusText(line: refreshLine)
@@ -254,6 +256,7 @@ final class AppModel: ObservableObject {
     private var discoveryTask: Task<Void, Never>?
     private var discoveryGeneration = 0
     private var refreshTask: Task<Void, Never>?
+    private var refreshBackgroundTask = UIBackgroundTaskIdentifier.invalid
     private var refreshLineTask: Task<Void, Never>?
     private var refreshUserID: UUID?
     private var pendingRefresh: (
@@ -527,6 +530,7 @@ final class AppModel: ObservableObject {
         }
         isRefreshingFights = true
         refreshPhase = .readingHealth
+        refreshError = nil
         refreshUserID = session.authSession?.user.id ?? session.client.auth.currentUser?.id
         let work = Task { @MainActor in
             defer {
@@ -551,7 +555,7 @@ final class AppModel: ObservableObject {
                 if let pending = self.pendingRefresh {
                     current = pending
                 }
-            } while self.pendingRefresh != nil
+            } while self.pendingRefresh != nil && !Task.isCancelled
         }
         refreshTask = work
         guard !Task.isCancelled else { return }
@@ -571,6 +575,14 @@ final class AppModel: ObservableObject {
     ) async {
         let userID = session.authSession?.user.id ?? session.client.auth.currentUser?.id
         let trace = HealthKitSyncTrace(trigger: trigger)
+        // If the user leaves the app mid-refresh, iOS lets it finish instead of freezing it until the next open.
+        refreshBackgroundTask = UIApplication.shared.beginBackgroundTask(withName: "FitFight refresh") {
+            MainActor.assumeIsolated {
+                self.refreshTask?.cancel()
+                self.endRefreshBackgroundTask()
+            }
+        }
+        defer { endRefreshBackgroundTask() }
 
         await holdRefreshPhase(.readingHealth) {
             await steps.refresh(requestAccess: requestAccess, trace: trace)
@@ -580,6 +592,15 @@ final class AppModel: ObservableObject {
             steps.completeAttempt(trace, session: session, userID: userID)
             return
         }
+        // The network part stops after 30 seconds, so a stalled connection cannot keep the spinner turning.
+        // The limit starts after the Health read, because the Health permission sheet waits for the user.
+        let refresh = refreshTask
+        let limit = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            self.refreshError = String(appLocalized: "Refreshing took too long. Check your internet connection.")
+            refresh?.cancel()
+        }
+        defer { limit.cancel() }
         if session.authSession != nil {
             await holdRefreshPhase(.uploading) {
                 await steps.syncToBackend(session: session, trigger: trigger, trace: trace)
@@ -594,6 +615,12 @@ final class AppModel: ObservableObject {
             await refreshFromServer(session: session, trace: trace)
         }
         steps.completeAttempt(trace, session: session, userID: userID)
+    }
+
+    private func endRefreshBackgroundTask() {
+        guard refreshBackgroundTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(refreshBackgroundTask)
+        refreshBackgroundTask = .invalid
     }
 
     private func holdRefreshPhase(_ phase: FightRefreshPhase, work: () async -> Void) async {

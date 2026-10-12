@@ -1,10 +1,51 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **11 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Lighter background sync and refresh time limits, prepared 12 Oct 2026
+
+Marc saw about 200 background sync attempts per person each day in
+`private.healthkit_sync_attempts`. 84% of the background attempts only waited
+for another upload, and 7% stopped at the 25-second limit, often after iOS
+suspended the app. Some attempts and refreshes lasted minutes or hours. 3,131
+activity syncs failed with HealthKit error 5 (authorization not determined).
+
+**Code (native only):**
+
+- An observer call answers HealthKit at once and records nothing while a sync
+  runs, or for 15 minutes after a successful Steps upload. One upload reads
+  every type, so no data is skipped.
+- Requests that carry a sync trace time out after 15 seconds without data.
+- A foreground or manual refresh stops its network part after 30 seconds.
+  Fights, a Fight and Profile then show "Refreshing took too long" with Try
+  again. The limit starts after the HealthKit read, so the permission sheet does
+  not count.
+- A refresh holds an iOS background task, so leaving the app lets it finish.
+- A cancelled sync caller now cancels the shared sync.
+- A foreground refresh shows the Health permission sheet again when some read
+  types were never requested. iOS lists only the new types.
+- HealthKit error 6 (phone locked) records `protected_data_unavailable`, not
+  `sync_failed`.
+- Three 1.1.3 release notes, in English and French.
+
+**Contract:** no API, response or database change. The diagnostics endpoint
+receives fewer attempts.
+
+**Verification (local):** `scripts/check_localizations.py` and
+`scripts/check_native_api_boundary.py` passed. Swift 6.0.3 on Linux parsed every
+changed Swift file. It compiled and ran `scripts/test_native_state.py` with a
+stand-in for the Apple-only `AppLocalization.swift`: all 127 checks passed,
+including 2 new ones, and `develop` failed both new checks. A stub check compiled
+the changed `syncToBackend` and showed that a cancelled caller stops the shared
+sync. No iOS simulator build ran, because CI compiles iOS only on a pull request.
+
+**Still needed:** the iOS simulator build in CI, a TestFlight check of the
+permission sheet and the Try again notice, and the attempts queries after the
+release.
 
 ## TestFlight syncs card for the admin, prepared 12 Oct 2026
 

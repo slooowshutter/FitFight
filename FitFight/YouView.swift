@@ -159,6 +159,7 @@ struct YouView: View {
         FFRefreshConfig(
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
+            error: model.refreshError,
             action: {
                 await refreshOwnProfile(trigger: .manual)
             }

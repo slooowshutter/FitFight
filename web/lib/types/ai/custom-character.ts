@@ -3,10 +3,6 @@ import { applePurchaseEnvironmentSchema } from "@/lib/types/apple/special-purcha
 import { customCharacterProductId } from "@/lib/types/apple/custom-character-purchase";
 import { aiRequestStateValues } from "@/lib/types/ai/request";
 
-export const customCharacterConfigurationSchema = z.object({
-    enabled: z.enum(["true", "false"]).default("false"),
-});
-
 export const customCharacterPurchaseRowSchema = z.object({
     id: z.string().uuid(),
     account_id: z.string().uuid(),

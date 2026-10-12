@@ -47,6 +47,24 @@ sync. No iOS simulator build ran, because CI compiles iOS only on a pull request
 permission sheet and the Try again notice, and the attempts queries after the
 release.
 
+## Specials for everyone, one consumable, prepared 12 Oct 2026
+
+**Product (Marc):** Specials are no longer one of a kind. Anyone can buy any Special, an account can own many, and there are no holds, Taken, or one-per-account limit. Every Special is one charge of the consumable `com.fitfight.mvp.special` (EUR 0.99, being created in App Store Connect by someone else); the server records which Special each charge unlocked.
+
+**Code:** Migration `20261012150000_specials_for_everyone.sql` adds `private.special_purchases` (account, environment, `companion_id`, unique transaction id, `revoked_at`, evidence) and widens `private.require_special_ownership` so a profile may equip a Special when the account owns it through a non-revoked purchase or an edition already owned under the old model. Nothing is deleted; `special_editions` and `special_transactions` keep every row. New `POST /api/v1/me/specials/purchases` takes `{ companion_id, signed_transaction }`, verifies the consumable against Apple's current record for this account token, and returns the existing `SpecialClaimResult`. A replay returns the Special the charge first unlocked. App Store refund notifications revoke that one purchase and unequip the Special only when no other ownership remains. The native picker saves the chosen Special before Apple's sheet, shows "Buy for" with StoreKit's price or "Yours", and keeps the picker open after buying. An unfinished charge whose choice was lost unlocks the next Special picked without paying again. Restore purchases finishes unfinished charges and re-reads the server.
+
+**Compatibility:** Additive. `GET /api/v1/me/specials` keeps every field and adds `product_id`; editions now report only `available` or `yours` (never `taken`, `reserved` or `refunded`), and `purchases_enabled` stays `true`. Older builds (206 to 222, production 210) still decode it and can equip owned Specials. Their `POST /checkout` `reserve` now returns `410 special_update_required` with "Update FitFight to buy Specials." before Apple can charge; `cancel` returns `{ saved: true }`. Legacy per-Special non-consumables (Sandbox only) still record through `/transactions` and notifications, never newly sold. Deploy order: migration, backend, then the app.
+
+**Checks:** Strict TypeScript and all 443 backend unit tests passed. Native Special purchase, companion state, localization and API boundary checks passed; the companion preview simulator build succeeded. The rewritten `specials.integration.ts` needs the disposable database (`npm run test:database`) and was not run here. No migration, deployment, App Store or TestFlight change was made.
+
+## No on/off switches for paid features: 12 Oct 2026
+
+Marc removed the `APPLE_SPECIALS_ENABLED`, `APPLE_CUSTOM_CHARACTERS_ENABLED` and
+`BLEND_ENABLED` environment switches. Sales are open wherever the Apple keys are
+configured, and Blend starts wherever its key and workflow ids are configured.
+Apple's own review is the gate: unapproved products never load in StoreKit, so
+the app shows "Purchases unavailable" until approval. `purchases_enabled` stays in
+the API (always `true`) for older builds.
 ## TestFlight syncs card for the admin, prepared 12 Oct 2026
 
 On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes

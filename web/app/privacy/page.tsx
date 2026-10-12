@@ -229,10 +229,9 @@ export default function PrivacyPage() {
                         receive your card or bank details. We send Apple a
                         random purchase account identifier and keep verified
                         transaction identifiers, the purchased Special, purchase
-                        time, price and currency when provided, and ownership,
-                        refund and reservation status. These records let us
-                        deliver and restore purchases and prevent the same
-                        exclusive companion from being sold twice.
+                        time, price and currency when provided, and ownership
+                        and refund status. These records let us deliver and
+                        restore purchases.
                     </p>
                     <p>
                         A purchase belongs to the FitFight account used at

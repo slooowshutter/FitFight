@@ -26,7 +26,6 @@ const input = createAiRunRequestSchema.parse({
 });
 const env = {
     BLEND_API_KEY: "bai_test_key",
-    BLEND_ENABLED: "true",
     BLEND_AVATAR_WORKFLOW_ID: version.workflowId,
     BLEND_AVATAR_VERSION_ID: version.versionId,
     BLEND_GLOBAL_DAILY_STARTS: "100",
@@ -222,8 +221,7 @@ test("accepted run followed by persistence failure stays uncertain and retains r
     );
 });
 
-test("known run reads use owner-scoped storage and the original version, including while starts are disabled", async () => {
-    process.env.BLEND_ENABLED = "false";
+test("known run reads use owner-scoped storage and the original version, even after a newer version is configured", async () => {
     process.env.BLEND_AVATAR_VERSION_ID = "new-version";
     try {
         const record = requestRecord({ status: "pending", run_handle: run });
@@ -249,7 +247,6 @@ test("known run reads use owner-scoped storage and the original version, includi
         );
         assert.equal(response.status, "running");
     } finally {
-        process.env.BLEND_ENABLED = "true";
         process.env.BLEND_AVATAR_VERSION_ID = version.versionId;
     }
 });
@@ -484,8 +481,9 @@ test("AI routes authenticate before request parsing or paid-work admission", asy
     );
 });
 
-test("disabled starts still recover an existing action key", async () => {
-    process.env.BLEND_ENABLED = "false";
+test("removed start configuration still recovers an existing action key", async () => {
+    const workflowId = process.env.BLEND_AVATAR_WORKFLOW_ID;
+    delete process.env.BLEND_AVATAR_WORKFLOW_ID;
     try {
         const result = await startAiRun(
             userId,
@@ -502,7 +500,7 @@ test("disabled starts still recover an existing action key", async () => {
         );
         assert.equal(result.request_id, requestId);
     } finally {
-        process.env.BLEND_ENABLED = "true";
+        process.env.BLEND_AVATAR_WORKFLOW_ID = workflowId;
     }
 });
 

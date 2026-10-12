@@ -56,7 +56,6 @@ export const createAiRunRequestSchema = z.discriminatedUnion("workflow", [
 
 export const blendEnvironmentSchema = z.object({
     BLEND_API_KEY: blendApiKeySchema,
-    BLEND_ENABLED: z.enum(["true", "false"]).default("false"),
     BLEND_GLOBAL_DAILY_STARTS: z.coerce.number().int().positive().max(100_000),
     BLEND_GLOBAL_CONCURRENT_RUNS: z.coerce.number().int().positive().max(1000),
     BLEND_REQUESTS_PER_MINUTE: z.coerce.number().int().positive().max(100_000),

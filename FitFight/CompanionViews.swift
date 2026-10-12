@@ -451,22 +451,36 @@ final class CompanionStore: ObservableObject {
 struct CompanionCharacter: View {
     let animal: StockCompanion
     var effort: CompanionEffortStage?
+    /// Off when a parent button owns the tap, so the inner greeting cannot swallow it.
+    var greets = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.ffStaticRender) private var staticRender
     @State private var greeting = false
 
     var body: some View {
+        if greets {
+            greetingButton
+        } else {
+            artwork
+        }
+    }
+
+    private var artwork: some View {
+        Image(animal.effortImage(stage: effort))
+            .resizable()
+            .scaledToFit()
+            .rotationEffect(.degrees(greeting ? -3 : 0), anchor: .bottom)
+            .scaleEffect(greeting ? 1.025 : 1, anchor: .bottom)
+            .padding(4)
+            .contentShape(Rectangle())
+    }
+
+    private var greetingButton: some View {
         Button {
             guard !reduceMotion, !staticRender, !greeting else { return }
             withAnimation(.easeInOut(duration: 0.18)) { greeting = true }
         } label: {
-            Image(animal.effortImage(stage: effort))
-                .resizable()
-                .scaledToFit()
-                .rotationEffect(.degrees(greeting ? -3 : 0), anchor: .bottom)
-                .scaleEffect(greeting ? 1.025 : 1, anchor: .bottom)
-                .padding(4)
-                .contentShape(Rectangle())
+            artwork
         }
         .buttonStyle(.plain)
         .accessibilityLabel(String(appLocalized: "companion.greet", defaultValue: "Say hello to \(animal.name)"))
@@ -761,7 +775,7 @@ struct CompanionIntroduction: View {
         if companions.isCustom {
             RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
-            CompanionCharacter(animal: companions.selection, effort: youEffort)
+            CompanionCharacter(animal: companions.selection, effort: youEffort, greets: surface != .fights)
         }
     }
 

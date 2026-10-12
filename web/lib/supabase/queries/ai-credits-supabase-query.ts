@@ -3,12 +3,12 @@ import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     aiAllowanceSchema,
-    aiCreditPricesSchema,
     aiBalanceEventSchema,
     aiCreditBalanceSchema,
     type AiBalanceChange,
     type AiCreditAdjustment,
 } from "@/lib/types/ai/credits";
+import { blendConfiguration } from "@/lib/types/ai/workflow";
 
 /** The caller's transaction must also commit the associated request transition. */
 export async function appendAiBalanceEvent(
@@ -75,20 +75,11 @@ export async function readAiAllowance(
     `;
     if (!row)
         throw new ApiError(404, "not_found", "This account is not available.");
-    const prices = aiCreditPricesSchema.safeParse({
-        fitness_price: process.env.BLEND_FITNESS_CREDIT_PRICE,
-        group_photo_price: process.env.BLEND_GROUP_PHOTO_CREDIT_PRICE,
-    });
-    if (!prices.success)
-        throw new ApiError(
-            503,
-            "ai_unavailable",
-            "This feature is temporarily unavailable on our side.",
-        );
     return aiAllowanceSchema.parse({
         ...row,
-        fitness_price: prices.data.fitness_price ?? null,
-        group_photo_price: prices.data.group_photo_price ?? null,
+        fitness_price: blendConfiguration.workflows.fitness.creditPrice ?? null,
+        group_photo_price:
+            blendConfiguration.workflows.group_photo.creditPrice ?? null,
     });
 }
 

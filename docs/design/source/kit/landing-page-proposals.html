@@ -640,11 +640,11 @@
             .rd-hero-center { padding: 52px 0 24px; text-align: center; }
             .rd-hero-grid { display: grid; }
             .rd-stat { display: grid; gap: 4px; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--hair); }
-            .rd-stat-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; }
             .rd-stat b { color: var(--mossText); font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; }
             .rd-stat > span { color: var(--text2); font-size: 14px; }
+            .rd-note { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); color: var(--text3); font-size: 12px; font-weight: 700; }
             /* Gold means progress: the extra steps people walk after joining */
-            .rd-lift { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--gold); font-size: 12px; font-weight: 800; white-space: nowrap; }
+            .rd-note strong { color: var(--gold); font-weight: 800; }
             .rd-hero-center .rd-copy { justify-items: center; }
             .rd-hero-center .rd-copy .h1 { max-width: 15ch; text-wrap: balance; }
             .rd-hero-center .rd-copy .h1 span { white-space: nowrap; }
@@ -656,7 +656,7 @@
                 .rd-hero-center { padding-top: 40px; text-align: left; }
                 .rd-hero-grid { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 72px; }
                 .rd-hero-center .rd-copy { justify-items: start; }
-                .rd-hero-center .rd-cta, .rd-hero-center .rd-meta, .rd-stat-top { justify-content: flex-start; }
+                .rd-hero-center .rd-cta, .rd-hero-center .rd-meta { justify-content: flex-start; }
                 .rd-hero-center .rd-copy .h1 { max-width: 12ch; font-size: clamp(64px, 6vw, 84px); }
                 .rd-hero-ph { margin-top: 0; }
                 .rd-hero-ph .phone-wrap { --s: 0.76; }
@@ -1315,8 +1315,9 @@
                             <div class="rd-cta">${storeBtn()}<a class="btn ghost" href="#how">Try it ${icon("down", 18, 2.2)}</a></div>
                             <p class="rd-meta">Free<i></i>iPhone<i></i>Apple Health</p>
                             <div class="rd-stat">
-                                <div class="rd-stat-top"><b class="rd-total">${fmt(TOTAL_STEPS)}</b><span class="rd-lift" title="The typical member walks 18% more a day in their first 4 weeks than in the 4 weeks before joining.">${icon("up", 12, 2.8)}18% more steps after joining</span></div>
+                                <b class="rd-total">${fmt(TOTAL_STEPS)}</b>
                                 <span>steps recorded since people joined FitFight</span>
+                                <p class="rd-note" title="The typical member walks 18% more a day in their first 4 weeks than in the 4 weeks before joining.">The typical member walks <strong>18% more</strong> when using FitFight.</p>
                             </div></div>`;
                         const livePhone = `${phone(scrFights(0), { tab: "fights", live: true, cls: "live" })}<p class="rd-hint">${icon("sparkle", 14)}Tap the tabs. This is the real app.</p>`;
                         const hero = `<section class="rd-hero rd-hero-center" id="top"><div class="wrap rd-hero-grid">${copy}<div class="rd-ph rd-hero-ph">${livePhone}</div></div></section>`;
@@ -1356,7 +1357,7 @@
 
             const RD1 = raceDay({
                 name: "Race Day",
-                when: "The pick, as on the site: text left and phone right on computers, the steps total with a small gold pill under the buttons.",
+                when: "The pick, as on the site: text left and phone right on computers, the steps total and a footnote under the buttons.",
             });
 
             // Picker: one landing page at a time, same data in all of them.

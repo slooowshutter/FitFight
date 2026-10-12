@@ -25,9 +25,9 @@ const en = {
         caption: "steps recorded since people joined FitFight",
     },
     joiningLift: {
-        value: (lift: number) => `+${lift}%`,
-        caption:
-            "more steps a day for the typical member in their first 4 weeks than before joining",
+        value: (lift: number) => `${lift}% more steps after joining`,
+        detail: (lift: number) =>
+            `The typical member walks ${lift}% more a day in their first 4 weeks than in the 4 weeks before joining.`,
     },
     what: {
         eyebrow: "What it is",
@@ -426,9 +426,10 @@ const fr: typeof en = {
         caption: "pas enregistrés depuis que chacun a rejoint FitFight",
     },
     joiningLift: {
-        value: (lift: number) => `+${lift}\u202f%`,
-        caption:
-            "de pas en plus par jour pour le membre type sur ses 4 premières semaines, par rapport à avant",
+        value: (lift: number) =>
+            `${lift}\u202f% de pas en plus après l’inscription`,
+        detail: (lift: number) =>
+            `Le membre type marche ${lift}\u202f% de plus par jour pendant ses 4 premières semaines que pendant les 4 semaines avant son inscription.`,
     },
     what: {
         eyebrow: "Le principe",

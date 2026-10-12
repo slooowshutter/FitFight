@@ -107,8 +107,8 @@ export function LandingPage({
                                 <span key={item}>{item}</span>
                             ))}
                         </p>
-                        <div className="lp-hero-stats">
-                            <p className="lp-hero-stat">
+                        <div className="lp-hero-stat">
+                            <div className="lp-hero-stat-top">
                                 <b>
                                     <span aria-hidden="true">
                                         <TotalStepsCount
@@ -120,14 +120,21 @@ export function LandingPage({
                                         {formatSteps(totalSteps, language)}
                                     </span>
                                 </b>
-                                <span>{copy.totalSteps.caption}</span>
-                            </p>
-                            {lift >= 1 ? (
-                                <p className="lp-hero-stat lp-lift">
-                                    <b>{copy.joiningLift.value(lift)}</b>
-                                    <span>{copy.joiningLift.caption}</span>
-                                </p>
-                            ) : null}
+                                {lift >= 1 ? (
+                                    <span
+                                        className="lp-lift"
+                                        title={copy.joiningLift.detail(lift)}
+                                    >
+                                        <Icon
+                                            name="up"
+                                            size={12}
+                                            weight={2.8}
+                                        />
+                                        {copy.joiningLift.value(lift)}
+                                    </span>
+                                ) : null}
+                            </div>
+                            <span>{copy.totalSteps.caption}</span>
                         </div>
                     </div>
                     <div className="lp-hero-phone">

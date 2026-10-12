@@ -24,9 +24,10 @@ staging. The pricing card shows Specials (EUR 0.99) and Make it yours
 in `web/public/landing/`. The old home page styles and `total-steps.css` are
 removed. No API, database, app or release setting changed.
 
-**Published figures (Marc chose option A, 12 Oct 2026):** next to the steps
-recorded, the hero shows in gold the typical change in daily steps after
-joining. It is the same figure as the admin "Change after joining" card (the
+**Published figures (Marc chose option A, 12 Oct 2026):** a small gold pill
+next to the steps recorded shows the typical change in daily steps after
+joining ("18% more steps after joining"; the exact definition is in its
+tooltip). It is the same figure as the admin "Change after joining" card (the
 median person's 4 weeks after signup vs the 4 weeks before), read live with a
 1-hour cache and hidden when it rounds below 1%. The privacy policy, English and
 French, effective 12 Oct 2026, now says FitFight may publish anonymous,

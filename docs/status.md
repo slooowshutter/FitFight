@@ -1,10 +1,36 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **11 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
 
 ---
+
+## Race Day home page: prepared 12 Oct 2026
+
+Marc picked the Race Day landing page design (round 2, design 6) and asked to
+ship it with a wider hero and the phone only, without the race art.
+
+**Code:** `/` and `/fr` now render one shared page from `web/components/landing/`
+in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
+Feedback and Profile screens), steps recorded, what it is, the goal, how it
+works (the five New fight steps, nothing is saved), companions (pick one of the
+12 animals and see its five poses), fight options, pricing, FAQ with search,
+and a closing card. All people, fights and posts are fictional. The download
+buttons keep the App Store link in production and the TestFlight dialog on
+staging. The pricing card shows Specials (EUR 0.99) and Make it yours
+(EUR 4.99) as coming later. Images are WebP copies of the bundled app artwork
+in `web/public/landing/`. The old home page styles and `total-steps.css` are
+removed. No API, database, app or release setting changed.
+
+**Verification (local):** web typecheck, all 438 unit tests and the CI privacy
+disclosure check passed. A production build kept `/` and `/fr` static with
+hourly revalidation. Against `next start` and a disposable Postgres, both
+languages rendered at 393 and 1440 pixels wide with the sample steps total;
+the phone tabs, the New fight steps, the companion picker, the FAQ search and
+the staging TestFlight dialog worked in Chrome.
+
+**Live deployment:** none. Nothing is merged or deployed.
 
 ## Admin dashboard: card pages and sync time percentiles, prepared 11 Oct 2026
 

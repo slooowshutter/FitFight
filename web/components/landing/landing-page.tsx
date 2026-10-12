@@ -108,33 +108,30 @@ export function LandingPage({
                             ))}
                         </p>
                         <div className="lp-hero-stat">
-                            <div className="lp-hero-stat-top">
-                                <b>
-                                    <span aria-hidden="true">
-                                        <TotalStepsCount
-                                            totalSteps={totalSteps}
-                                            language={language}
-                                        />
-                                    </span>
-                                    <span className="lp-sr">
-                                        {formatSteps(totalSteps, language)}
-                                    </span>
-                                </b>
-                                {lift >= 1 ? (
-                                    <span
-                                        className="lp-lift"
-                                        title={copy.joiningLift.detail(lift)}
-                                    >
-                                        <Icon
-                                            name="up"
-                                            size={12}
-                                            weight={2.8}
-                                        />
-                                        {copy.joiningLift.value(lift)}
-                                    </span>
-                                ) : null}
-                            </div>
+                            <b>
+                                <span aria-hidden="true">
+                                    <TotalStepsCount
+                                        totalSteps={totalSteps}
+                                        language={language}
+                                    />
+                                </span>
+                                <span className="lp-sr">
+                                    {formatSteps(totalSteps, language)}
+                                </span>
+                            </b>
                             <span>{copy.totalSteps.caption}</span>
+                            {lift >= 1 ? (
+                                <p
+                                    className="lp-hero-note"
+                                    title={copy.joiningLift.detail(lift)}
+                                >
+                                    {copy.joiningLift.before}
+                                    <strong>
+                                        {copy.joiningLift.amount(lift)}
+                                    </strong>
+                                    {copy.joiningLift.after}
+                                </p>
+                            ) : null}
                         </div>
                     </div>
                     <div className="lp-hero-phone">

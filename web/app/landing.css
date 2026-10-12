@@ -353,14 +353,6 @@ body:has(.lp) {
     border-top: 1px solid var(--hairline);
 }
 
-.lp-hero-stat-top {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 6px 12px;
-}
-
 .lp-hero-stat b {
     color: var(--moss-text);
     font-size: 40px;
@@ -374,18 +366,18 @@ body:has(.lp) {
     font-size: 14px;
 }
 
-/* Gold means progress: the extra steps people walk after joining */
-.lp-lift {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--gold) 14%, transparent);
-    color: var(--gold);
+.lp-hero-note {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    color: var(--tertiary);
     font-size: 12px;
+}
+
+/* Gold means progress: the extra steps people walk after joining */
+.lp-hero-note strong {
+    color: var(--gold);
     font-weight: 800;
-    white-space: nowrap;
 }
 
 /* Read by screen readers only: the visible total counts up from zero */
@@ -415,8 +407,7 @@ body:has(.lp) {
     }
 
     .lp-cta,
-    .lp-meta,
-    .lp-hero-stat-top {
+    .lp-meta {
         justify-content: flex-start;
     }
 

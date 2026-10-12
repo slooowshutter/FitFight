@@ -373,6 +373,96 @@ struct AdminDashboardView: View {
     }
 }
 
+/// Fights on the staging build, admin only: how many people synced to staging in the last 7 days.
+/// They should be on the App Store version, so the admin can ask them to switch. Like the Admin
+/// tab, it reads the preview server, which always runs the newest `preview` backend on staging data.
+struct RecentSyncsCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var people: [FitFightRecentSyncs.Person]?
+    @State private var failure: String?
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            FFCard {
+                HStack(spacing: 13) {
+                    Text(verbatim: people.map { "\($0.count)" } ?? "-")
+                        .font(.ff(22, 800))
+                        .foregroundStyle(theme.text)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Synced on TestFlight").ffType(.heading).foregroundStyle(theme.text)
+                        Text(verbatim: failure ?? "Last 7 days. Tap for the names.")
+                            .ffType(.caption)
+                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .disabled(people?.isEmpty ?? true)
+        .task { await load() }
+        .sheet(isPresented: $showing) {
+            RecentSyncsSheet(people: people ?? [])
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func load() async {
+        do {
+            let token = try await session.freshAccessToken()
+            people = try await FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+                .recentSyncs(accessToken: token).people
+            failure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            failure = error.localizedDescription
+        }
+    }
+}
+
+private struct RecentSyncsSheet: View {
+    let people: [FitFightRecentSyncs.Person]
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSheetHeader(title: "Synced on TestFlight") { dismiss() }
+            Text(verbatim: "Last 7 days, newest first. They should use the App Store version.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            ScrollView {
+                FFGroupedRows {
+                    ForEach(people) { person in
+                        if person.id != people.first?.id { FFDivider() }
+                        FFGroupedRow(
+                            title: person.displayName,
+                            subtitle: "@\(person.handle)",
+                            subtitleTone: .neutral,
+                            trailing: AnyView(
+                                Text(verbatim: model.formatLastSync(person.lastSyncedAt))
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
+    }
+}
+
 /// One server chart. Unknown kinds draw as bars, unknown units read as counts. A chart over
 /// time reads out the latest bucket, or on its page the bucket under the finger.
 private struct AdminChart: View {

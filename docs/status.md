@@ -6,6 +6,47 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## TestFlight syncs card for the admin, prepared 12 Oct 2026
+
+On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes
+before. That person should use the App Store version, which uses production.
+Marc asked for a number on Fights, only in the staging app, with the names on tap.
+
+**Code:** new `GET /api/v1/admin/recent-syncs` lists every account whose Apple
+Health upload reached the server's database in the last 7 days
+(`data_sources.last_success_at`, provider `apple_health`). Newest sync is first,
+and deleted accounts are left out. Only the FitFight admin (`marc`, `rad`) can
+read it. Anyone else gets 403. On the staging build, the admin's Fights tab shows
+a card under the header: the count, "Synced on TestFlight" and "Last 7 days". A
+tap opens the names, usernames and the time since each last sync. The card reads
+the preview server, like the Admin tab. App Store builds, other people, the
+companion preview and screenshots do not get the card, and it takes no space for
+them. Admin only, so the copy is English only and there is no release note.
+
+**Contract:** additive route in `contracts/openapi.yaml`, with
+`contracts/fixtures/admin-recent-syncs.json`. No existing route, response or
+table changes, and there is no migration. Older builds never call the route.
+Read-only `/api/app-release` at 10:16 UTC on 12 Oct: staging latest 1.1.1 (201),
+review and internal 1.1.3 (222); production latest 1.1.2 (210), no candidates;
+`enforced: false` on both. The preview server answered 404 for the new route,
+as expected before deployment.
+
+**Verification (local):** web typecheck and all 439 unit tests passed. A local
+Supabase stack (CLI 2.115.0, as in CI) applied every migration and passed all 100
+database tests, including the new `recent-syncs.integration.ts`. It checks the
+7-day window, deleted accounts, the order, 401 without a session, 403 for a
+non-admin and 200 for the admin. It failed when the window was 9 days and when
+the admin check was removed. Swift 6.4 on Linux compiled and ran the native
+contract test with the new fixture, using a stand-in for the Apple-only
+localization file. It failed on a renamed field. The changed Swift files parse,
+and the localization, native API boundary and contract YAML checks passed. Not
+run: the iOS simulator build (macOS CI) and a device check.
+
+**Live deployment:** Marc asked for a PR into `develop` on 12 Oct. Nothing is
+merged or deployed. A `preview` merge
+deploys the route to the preview server and uploads a staging TestFlight build
+with the card. `main` is not needed, because App Store builds never show it.
+
 ## Admin dashboard: card pages and sync time percentiles, prepared 11 Oct 2026
 
 Marc asked to see a definition and an example for each card, like the charts.

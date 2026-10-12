@@ -235,3 +235,25 @@ struct FitFightAdminDashboard: Decodable {
         case charts
     }
 }
+
+/// `GET /api/v1/admin/recent-syncs`: accounts whose Apple Health upload reached the server's
+/// database in the last 7 days, newest first. Here for tests/APIContractTests.swift, like the dashboard.
+struct FitFightRecentSyncs: Decodable {
+    struct Person: Decodable, Identifiable {
+        let userId: UUID
+        let handle: String
+        let displayName: String
+        let lastSyncedAt: Date
+
+        var id: UUID { userId }
+
+        enum CodingKeys: String, CodingKey {
+            case userId = "user_id"
+            case handle
+            case displayName = "display_name"
+            case lastSyncedAt = "last_synced_at"
+        }
+    }
+
+    let people: [Person]
+}

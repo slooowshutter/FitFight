@@ -1297,6 +1297,10 @@ struct FitFightAPI {
         )
     }
 
+    func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
+        try await get(path: "admin/recent-syncs", accessToken: accessToken)
+    }
+
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
         let list: FitFightJoinableList = try await get(
             path: "fights/suggested",

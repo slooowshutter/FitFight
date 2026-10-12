@@ -1,10 +1,52 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **10 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **11 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Admin dashboard: card pages and sync time percentiles, prepared 11 Oct 2026
+
+Marc asked to see a definition and an example for each card, like the charts.
+He asked for cards with only the name, the number and the change, and for all
+the details on a tap. He also asked for more percentiles on the sync time
+chart, lower and higher than P50 and P90.
+
+**Server:** every card now has a `definition` and an `example`. The definition
+says what the card measures and what it compares with. The example reads the
+number in a sentence, for instance "52 people opened the app in the last 7
+days, against 47 in the 7 days before." A card without a value has no example.
+The App section's sync time chart is now "Sync time: P10 to P99", with seven
+lines: P10, P25, P50, P75, P90, P95 and P99. Chart and card sentences now say
+"1 day" and "1 time" when a value shows as 1.
+
+**App:** a card shows its name, its rounded number and its change. Its note
+moved to the card's page. A tap opens that page: the card name in the bar, the
+exact number, the change, the previous number, "What it shows", "In numbers",
+and the note with the query time. Before, a tap switched the card to the exact
+number. The chart page and the card page share one view. Admin only, no release
+note.
+
+**Compatibility:** additive. The two card fields are optional in
+`contracts/openapi.yaml`. The fixture has one card with the texts and one
+without, and the native contract test decodes both. Older builds ignore the new
+fields and keep the note on the card. The new percentiles reach every build,
+because the server defines the chart.
+
+**Verification (local):** web typecheck passed. The dashboard database test
+passed on Postgres 16 with all 61 migrations. It now also checks that every
+card has a definition, that a card has an example only when it has a value,
+that no sentence prints `undefined` or `NaN`, that the app opens card reads as
+a full sentence, and that the sync time chart has the seven lines in order.
+Every card sentence was read with fake values (1, 0, negative, 1.04 and large)
+and on a seeded copy. The Swift files were parsed with Swift 6.3.3 on Linux,
+and the native contract test compiled and passed there. The SwiftUI views
+compile only in CI.
+
+**Live deployment:** not merged or deployed. After a `preview` merge, the
+preview server sends the texts and the new percentiles to every build. The card
+page needs a new TestFlight build.
 
 ## Admin access for username rad, prepared 11 Oct 2026
 

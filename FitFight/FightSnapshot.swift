@@ -138,6 +138,10 @@ struct FitFightAdminDashboard: Decodable {
         /// nil when neither direction is good or bad.
         let higherIsBetter: Bool?
         let note: String?
+        /// What the card measures, for its detail page. nil from servers before 11 Oct 2026.
+        let definition: String?
+        /// A sentence that reads the card's number, when there is one.
+        let example: String?
 
         enum CodingKeys: String, CodingKey {
             case id
@@ -147,6 +151,8 @@ struct FitFightAdminDashboard: Decodable {
             case unit
             case higherIsBetter = "higher_is_better"
             case note
+            case definition
+            case example
         }
     }
 

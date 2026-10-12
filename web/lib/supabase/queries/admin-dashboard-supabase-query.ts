@@ -70,11 +70,13 @@ function dayCard(
 
 /**
  * One point per bucket from the chart start through today (the day before yesterday for
- * `complete` rows, which carry a civil `day`; other rows carry `at`). Counts fill empty buckets
- * with 0; `gaps` leaves them out, for averages and shares. `series` lists the values of the rows'
- * `series` column in legend order, so a series keeps its place and colour whatever the period.
- * With `since`, the chart starts at the first bucket that starts on or after that day, because
- * an earlier bucket holds only part of its rows.
+ * `complete` rows, which carry a civil `day`; other rows carry `at`). A `complete` chart leaves
+ * out a bucket that ends today, on a Monday for weeks and the 1st for months: its last day,
+ * yesterday, is not complete, but the app and the example would read that bucket as whole.
+ * Counts fill empty buckets with 0; `gaps` leaves them out, for averages and shares. `series`
+ * lists the values of the rows' `series` column in legend order, so a series keeps its place and
+ * colour whatever the period. With `since`, the chart starts at the first bucket that starts on
+ * or after that day, because an earlier bucket holds only part of its rows.
  */
 function perBucket(
     sql: Sql,
@@ -91,8 +93,9 @@ function perBucket(
     const day = complete ? sql`e.day` : sql`(e.at at time zone 'Europe/Paris')::date`;
     return sql`
         with buckets as (
-            select generate_series(${firstDay}::timestamp, date_trunc(${w.bucket}::text, ${lastDay}::timestamp),
-                ('1 ' || ${w.bucket}::text)::interval)::date as bucket
+            select bucket::date as bucket from generate_series(${firstDay}::timestamp, date_trunc(${w.bucket}::text, ${lastDay}::timestamp),
+                ('1 ' || ${w.bucket}::text)::interval) as series(bucket)
+            ${complete ? sql`where bucket + ('1 ' || ${w.bucket}::text)::interval <> ${w.today}::date::timestamp` : sql``}
         ),
         listed as (
             ${series
@@ -171,7 +174,6 @@ function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): Adm
         format,
         count: (value, one, many) => `${format(value, "count")} ${value === 1 ? one : many}`,
         share,
-        day,
         period,
     };
 }
@@ -195,11 +197,14 @@ function definitions(
         from public.profiles where deleted_at is null
     `;
     const historyStart = sql`(${w.activityFrom}::date::timestamp at time zone 'Europe/Paris')`;
-    // Activity tiles that read days before complete sync history name its first day.
-    const historyNote = (days: number) =>
-        Date.parse(`${w.today}T00:00:00Z`) - days * 86_400_000 < Date.parse(`${w.activityFrom}T00:00:00Z`)
-            ? ` Sync history starts ${Number(w.activityFrom.slice(8))} ${months[Number(w.activityFrom.slice(5, 7)) - 1]}.`
+    // A tile that reads days before the first day of complete data says so, with that day.
+    const startsLate = (days: number, from: string, sentence: (day: string) => string) =>
+        Date.parse(`${w.today}T00:00:00Z`) - days * 86_400_000 < Date.parse(`${from}T00:00:00Z`)
+            ? ` ${sentence(`${Number(from.slice(8))} ${months[Number(from.slice(5, 7)) - 1]}`)}`
             : "";
+    const historyNote = (days: number) => startsLate(days, w.activityFrom, (day) => `Sync history starts ${day}.`);
+    const stepsNote = (days: number) =>
+        startsLate(days, w.stepsFrom, (day) => `Signups from ${day}: earlier phones sent only Fight days.`);
     // NOTE: the stages tell an open from other foreground reports. A launch or a return from the
     // background reads today's steps first (today_total) once the phone asked for Apple Health. It
     // counts even a second after a Health wake, because HealthKit wakes the app as it launches, so no
@@ -765,13 +770,17 @@ function definitions(
                 ],
             };
         case "retention": {
-            // NOTE: retention follows people whose phone sent Apple Health steps. Their phones send
-            // steps in the background, opened or not, until the app is deleted or Health is turned off.
-            // App opens start only with complete sync history, too late for these cohorts. A day counts
-            // once the server has any step row for it, final or not: a sync during the day sends that
-            // day's steps, so a window can end yesterday. A later sync, for example after a reinstall,
-            // sends the last 40 days again and can fill days the phone missed. The floor covers 8
-            // signup months, the cards' cohorts and the chart period.
+            // NOTE: retention follows people whose phone sent Apple Health steps. Since the activity
+            // sync, their phones send every day's steps in the background, opened or not, until the
+            // app is deleted or Health is turned off. Before it, phones sent steps only for days in a
+            // Fight, and the first activity sync imported the whole Health history: an earlier signup
+            // counted only if they fought, and counted as retained everywhere if they kept the app
+            // until then. So every tile reads only signups from stepsFrom. App opens start only with
+            // complete sync history, too late for these cohorts. A day counts once the server has any
+            // step row for it, final or not: a sync during the day sends that day's steps, so a window
+            // can end yesterday. A later sync, for example after a reinstall, sends the last 40 days
+            // again and can fill days the phone missed. The floor covers 8 signup months, the cards'
+            // cohorts and the chart period.
             const synced = sql`
                 select distinct sent.user_id, sent.day from (
                     select metric.user_id, metric.day from private.activity_metrics as metric
@@ -788,6 +797,7 @@ function definitions(
                 select p.user_id, p.joined_day, p.at from (${profiles}) as p
                 where p.user_id in (select h.user_id from (${healthUsers}) as h)
             `;
+            const periodDays = Math.round((Date.parse(w.today) - Date.parse(w.start)) / 86_400_000);
             // Signups of the `span` days that just got past day `to` after signing up, against the
             // `span` days before them: the share with steps for a day `from` to `to` days after.
             const rate = (from: number, to: number, span: number) => sql`
@@ -803,10 +813,12 @@ function definitions(
                     join active as a on a.user_id = e.user_id
                         and a.day between e.joined_day + ${from}::int and e.joined_day + ${to}::int
                 )
-                select 100.0 * count(h.user_id) filter (where not e.previous)
-                        / nullif(count(*) filter (where not e.previous), 0) as value,
-                    100.0 * count(h.user_id) filter (where e.previous)
-                        / nullif(count(*) filter (where e.previous), 0) as previous
+                select case when ${w.today}::date - ${to + span}::int >= ${w.stepsFrom}::date then
+                        100.0 * count(h.user_id) filter (where not e.previous)
+                            / nullif(count(*) filter (where not e.previous), 0) end as value,
+                    case when ${w.today}::date - ${to + 2 * span}::int >= ${w.stepsFrom}::date then
+                        100.0 * count(h.user_id) filter (where e.previous)
+                            / nullif(count(*) filter (where e.previous), 0) end as previous
                 from eligible as e
                 left join hits as h using (user_id)
             `;
@@ -826,6 +838,7 @@ function definitions(
                         ) as c
                         cross join generate_series(0, ${cohorts - 1}::int) as k
                         where c.cohort >= date_trunc(${unit}::text, ${w.today}::timestamp) - ${`${cohorts + 2} ${unit}s`}::interval
+                            and c.cohort >= ${w.stepsFrom}::date
                             and c.joined_day + (k + 1) * ${length}::int <= ${w.today}::date
                     ),
                     hits as (
@@ -847,10 +860,12 @@ function definitions(
                 cards: [
                     {
                         id: "signups_with_health", title: "Monthly signups with Health", unit: "count", better: true,
-                        note: "The people retention follows: their phone sent Apple Health steps. The 30 days before today vs the 30 before.",
+                        note: `The people retention follows: their phone sent Apple Health steps. The 30 days before today vs the 30 before.${stepsNote(60)}`,
                         query: sql`
-                            select count(*) filter (where c.joined_day >= ${w.today}::date - 30)::float8 as value,
-                                count(*) filter (where c.joined_day < ${w.today}::date - 30)::float8 as previous
+                            select case when ${w.today}::date - 30 >= ${w.stepsFrom}::date then
+                                    count(*) filter (where c.joined_day >= ${w.today}::date - 30) end::float8 as value,
+                                case when ${w.today}::date - 60 >= ${w.stepsFrom}::date then
+                                    count(*) filter (where c.joined_day < ${w.today}::date - 30) end::float8 as previous
                             from (${withHealth}) as c
                             where c.joined_day >= ${w.today}::date - 60 and c.joined_day < ${w.today}::date
                         `,
@@ -863,14 +878,14 @@ function definitions(
                         { id: "month_3", title: "Month 3 retention", from: 90, to: 119, span: 30 },
                     ].map(({ id, title, from, to, span }): AdminDashboardCardDefinition => ({
                         id, title, unit: "percent", better: true,
-                        note: `Phone sent steps for any of days ${from} to ${to} after signup, then or later. Signups whose day ${to} was in the last ${span} days, vs the ${span} before.`,
+                        note: `Phone sent steps for any of days ${from} to ${to} after signup, then or later. Signups whose day ${to} was in the last ${span} days, vs the ${span} before.${stepsNote(to + 2 * span)}`,
                         query: rate(from, to, span),
                     })),
                 ],
                 charts: [
                     {
                         id: "weekly_cohorts", title: "Retention curves, 8 signup weeks", kind: "line", unit: "percent", x: "label",
-                        definition: "One line for each of the 8 newest signup weeks with people past W1. The 2 newest weeks are not there yet. Each point is the share of the week's signups with Apple Health whose phone sent steps for any day of week N after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. W0 is days 0 to 6, W1 days 7 to 13. A point counts only the people who got past that week, so the newest point of a line can cover part of its signups.",
+                        definition: `One line for each of the 8 newest signup weeks with people past W1. The 2 newest weeks are not there yet. Each point is the share of the week's signups with Apple Health whose phone sent steps for any day of week N after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. W0 is days 0 to 6, W1 days 7 to 13. A point counts only the people who got past that week, so the newest point of a line can cover part of its signups.${startsLate(77, w.stepsFrom, (day) => `Signup weeks that start before ${day} are left out: earlier phones sent steps only for days in a Fight.`)}`,
                         example: (r) => {
                             const cohort = r.series.find((line) => line.points.some((point) => point.x === "W1"));
                             const kept = cohort?.points.find((point) => point.x === "W1");
@@ -878,12 +893,12 @@ function definitions(
                                 ? `Of the people who signed up in the ${cohort.name.replace("Week of", "week of")} and got past their second week, ${r.format(kept.y)} sent steps for it.`
                                 : null;
                         },
-                        note: "The 8 newest signup weeks with people past W1 (days 7 to 13). The newest point of a line counts only the people who got past it.",
+                        note: `The 8 newest signup weeks with people past W1 (days 7 to 13). The newest point of a line counts only the people who got past it.${stepsNote(77)}`,
                         query: curves("week", 8),
                     },
                     {
                         id: "monthly_cohorts", title: "Retention curves, 6 signup months", kind: "line", unit: "percent", x: "label",
-                        definition: "One line for each of the 6 newest signup months with people past M1. The newest month or two are not there yet. Each point is the share of the month's signups with Apple Health whose phone sent steps for any day of month N after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. Months are 30-day blocks: M0 is days 0 to 29, M1 days 30 to 59. A point counts only the people who got past that month, so the newest point of a line can cover part of its signups.",
+                        definition: `One line for each of the 6 newest signup months with people past M1. The newest month or two are not there yet. Each point is the share of the month's signups with Apple Health whose phone sent steps for any day of month N after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. Months are 30-day blocks: M0 is days 0 to 29, M1 days 30 to 59. A point counts only the people who got past that month, so the newest point of a line can cover part of its signups.${startsLate(279, w.stepsFrom, (day) => `Signup months that start before ${day} are left out: earlier phones sent steps only for days in a Fight.`)}`,
                         example: (r) => {
                             const cohort = r.series.find((line) => line.points.some((point) => point.x === "M1"));
                             const kept = cohort?.points.find((point) => point.x === "M1");
@@ -891,12 +906,12 @@ function definitions(
                                 ? `Of the people who signed up in ${cohort.name} and got past their second month, ${r.format(kept.y)} sent steps for it.`
                                 : null;
                         },
-                        note: "The 6 newest signup months with people past M1 (days 30 to 59). The newest point of a line counts only the people who got past it.",
+                        note: `The 6 newest signup months with people past M1 (days 30 to 59). The newest point of a line counts only the people who got past it.${stepsNote(279)}`,
                         query: curves("month", 6),
                     },
                     {
                         id: "week_2_by_first_week", title: "Week 2 retention by first-week actions, last 6 months' signups", kind: "bar", unit: "percent", x: "label",
-                        definition: "People who signed up 21 to 180 days ago and whose phone sent Apple Health steps. For each action, the share whose phone sent steps for any of days 14 to 20 after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. Yes: people who did it in their first 7 days. No: the others. Fought someone: synced steps into a real Fight that another person also synced into. Each row leaves out people who signed up before FitFight recorded that action, and shows only when both groups have 10 or more people.",
+                        definition: `People who signed up 21 to 180 days ago and whose phone sent Apple Health steps. For each action, the share whose phone sent steps for any of days 14 to 20 after signup, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. Yes: people who did it in their first 7 days. No: the others. Fought someone: synced steps into a real Fight that another person also synced into. Each row leaves out people who signed up before FitFight recorded that action, and shows only when both groups have 10 or more people.${stepsNote(180)}`,
                         example: (r) => {
                             const no = r.series.find((line) => line.name === "No")?.points ?? [];
                             const gaps = (r.series.find((line) => line.name === "Yes")?.points ?? []).flatMap((yes) => {
@@ -909,7 +924,7 @@ function definitions(
                                 ? `${widest.x}: ${r.format(widest.yes)} sent steps for days 14 to 20, against ${r.format(widest.no)} of the others.`
                                 : null;
                         },
-                        note: "Share with steps for days 14 to 20 after signup, by what people did in their first 7 days. Groups under 10 people are hidden.",
+                        note: `Share with steps for days 14 to 20 after signup, by what people did in their first 7 days. Groups under 10 people are hidden.${stepsNote(180)}`,
                         query: sql`
                             with active as materialized (${synced}),
                             contested as materialized (${firstContested}),
@@ -917,7 +932,7 @@ function definitions(
                                 select c.user_id, c.at, count(a.user_id) > 0 as kept
                                 from (${withHealth}) as c
                                 left join active as a on a.user_id = c.user_id and a.day between c.joined_day + 14 and c.joined_day + 20
-                                where c.joined_day >= ${w.today}::date - 180 and c.joined_day < ${w.today}::date - 20
+                                where c.joined_day >= greatest(${w.today}::date - 180, ${w.stepsFrom}::date) and c.joined_day < ${w.today}::date - 20
                                 group by c.user_id, c.at
                             ),
                             -- since: the first row of the table that records the action. Earlier signups
@@ -975,13 +990,14 @@ function definitions(
                     },
                     {
                         id: "retention_by_signup", title: `Week 1 and week 4 retention ${per}`, kind: "line", unit: "percent", x: "date",
-                        definition: `People whose week 1 (days 7 to 13 after signup) or week 4 (days 28 to 34) ended in each ${w.bucket}: the share whose phone sent steps for any of those days, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. It shows if newer signups stay longer.`,
+                        definition: `People whose week 1 (days 7 to 13 after signup) or week 4 (days 28 to 34) ended in each ${w.bucket}: the share whose phone sent steps for any of those days, then or later: a sync after a gap, for example after a reinstall, also sends the missed days. It shows if newer signups stay longer.${startsLate(periodDays + 34, w.stepsFrom, (day) => `A point shows only when all its people signed up from ${day}: earlier phones sent steps only for days in a Fight.`)}`,
                         example: (r) => {
                             const week = r.at("Week 1");
                             return week === undefined ? null : `Of the people whose week 1 ended ${r.when}, ${r.format(week)} sent steps for it.`;
                         },
-                        note: `Each point counts the people whose week 1 or week 4 ended in that ${w.bucket}.`,
-                        // `at` is the last day of the week, so the chart runs through yesterday like the cards.
+                        note: `Each point counts the people whose week 1 or week 4 ended in that ${w.bucket}.${stepsNote(periodDays + 34)}`,
+                        // `at` is the last day of the week, so the chart runs through yesterday like the cards. A
+                        // bucket whose first day could be the end of an earlier signup's week is left out.
                         query: perBucket(sql, w, sql`
                             with active as materialized (${synced}),
                             eligible as (
@@ -989,6 +1005,7 @@ function definitions(
                                 from (${withHealth}) as h
                                 cross join (values ('Week 1', 7, 13), ('Week 4', 28, 34)) as k(series, low, high)
                                 where h.joined_day + k.high >= ${w.start}::date and h.joined_day + k.high < ${w.today}::date
+                                    and date_trunc(${w.bucket}::text, (h.joined_day + k.high)::timestamp)::date - k.high >= ${w.stepsFrom}::date
                             )
                             select (e.joined_day + e.high)::timestamp at time zone 'Europe/Paris' as at, e.series,
                                 count(a.user_id) > 0 as kept
@@ -999,21 +1016,26 @@ function definitions(
                     },
                     {
                         id: "health_signups_per_bucket", title: `Signups with Apple Health ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Signups whose phone sent Apple Health steps, in each ${w.bucket}. These are the people retention follows.`,
+                        definition: `Signups whose phone sent Apple Health steps, in each ${w.bucket}. These are the people retention follows.${startsLate(periodDays, w.stepsFrom, (day) => `The chart starts with the first ${w.bucket} from ${day}: earlier phones sent steps only for days in a Fight.`)}`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `${r.count(n, "person", "people")} signed up and synced Apple Health steps ${r.when}.`;
                         },
-                        note: "The people retention follows.",
-                        query: perBucket(sql, w, withHealth, count),
+                        note: `The people retention follows.${stepsNote(periodDays)}`,
+                        query: perBucket(sql, w, withHealth, count, { since: w.stepsFrom }),
                     },
                 ],
             };
         }
         case "engagement": {
             // Fixed spans, so these don't move with the chart period. The lapsed card reads 7 more
-            // days, so its value 7 days ago looks back as far as its value now.
+            // days, so its value 7 days ago looks back as far as its value now. Unlike the other
+            // activity tiles, these two read days before complete sync history: until then the
+            // server kept a person's reports from only the 7 days before their newest one, so the
+            // last open of someone whose phone kept syncing for 7 more days is missing.
             const seen = activitySince(sql`${ago(127)}`);
+            const missingOpens = (days: number) => startsLate(days, w.activityFrom, (day) =>
+                `Before ${day}, a person's last open is missing when their phone kept syncing for 7 days after it.`);
             return {
                 cards: [
                     {
@@ -1074,7 +1096,7 @@ function definitions(
                     },
                     {
                         id: "lapsed", title: "Lapsed 14 to 120 days", unit: "count", better: false,
-                        note: `Last opened the app 14 to 120 days ago. Now vs 7 days ago.${historyNote(127)}`,
+                        note: `Last opened the app 14 to 120 days ago. Now vs 7 days ago.${missingOpens(127)}`,
                         query: sql`
                             with last_open as (
                                 select user_id, max(at) as now_last, max(at) filter (where at < ${ago(7)}) as week_ago_last
@@ -1215,15 +1237,15 @@ function definitions(
                     },
                     {
                         id: "recency", title: "Days since last open, all users", kind: "bar", unit: "count", x: "label",
-                        definition: "Every user by the days since they last opened the app. Never means no open recorded in the last 120 days.",
+                        definition: `Every user by the days since they last opened the app. Never means no open recorded in the last 120 days.${missingOpens(120) && `${missingOpens(120)} No older open was kept either, so that person counts in Never.`}`,
                         example: (r) => {
                             const today = r.row("Today") ?? 0;
                             const never = r.row("Never") ?? 0;
                             return r.total > 0
-                                ? `${r.count(today, "person", "people")} opened the app today, and ${r.format(never)} have no open in the last 120 days.`
+                                ? `${r.count(today, "person", "people")} opened the app today, and ${r.format(never)} have no recorded open in the last 120 days.`
                                 : null;
                         },
-                        note: "Never: no open recorded in the last 120 days.",
+                        note: `Never: no open recorded in the last 120 days.${missingOpens(120)}`,
                         query: sql`
                             with seen_days as (
                                 select distinct user_id, (at at time zone 'Europe/Paris')::date as day from (${seen}) as a
@@ -1371,19 +1393,13 @@ function definitions(
                                 : `The average person walked ${r.format(mean)} steps a day ${r.when}, and the middle person ${r.format(median)}.`;
                         },
                         note: `${w.bucket === "day" ? "" : `Over the person-days in each ${w.bucket}. `}A gap means a few big walkers pull the mean up.`,
-                        query: sql`
-                            with bucketed as (
-                                select date_trunc(${w.bucket}::text, s.day::timestamp)::date as bucket,
-                                    avg(s.steps) as mean, percentile_cont(0.5) within group (order by s.steps) as median
-                                from (${recentSteps}) as s
-                                where s.day >= ${w.start}::date
-                                group by 1
-                            )
-                            select bucketed.bucket::text as x, value.y::float8 as y, value.series
-                            from bucketed cross join lateral (values (1, 'Mean', bucketed.mean), (2, 'Median', bucketed.median))
-                                as value(position, series, y)
-                            order by value.position, bucketed.bucket
-                        `,
+                        // Each person-day is one row of each line, so the line picks its measure.
+                        query: perBucket(sql, w, sql`
+                            select s.day, s.steps, line.series from (${recentSteps}) as s
+                            cross join (values ('Mean'), ('Median')) as line(series)
+                        `, sql`case when e.series = 'Mean' then avg(e.steps) else percentile_cont(0.5) within group (order by e.steps) end`, {
+                            complete: true, gaps: true, series: ["Mean", "Median"],
+                        }),
                     },
                     {
                         id: "walkers_per_bucket", title: `People with step data ${per}`, kind: "line", unit: "count", x: "date",
@@ -1499,7 +1515,7 @@ function definitions(
                     },
                     {
                         id: "around_joining", title: "Steps around signup, all time", kind: "line", unit: "steps", x: "label",
-                        definition: "Average steps per person on each day around signup, from Apple Health history. Day 0 is the signup day; negative days are before it. The same people on every day: those who joined 4 weeks ago or more, with 7 days of data or more on each side.",
+                        definition: "Average steps per person on each day around signup, from Apple Health history. Day 0 is the signup day; negative days are before it. People who joined 4 weeks ago or more, with step data on every day from signup to day 27 and on 7 or more of the 28 days before, so the days after signup average the same people.",
                         example: (r) => {
                             const mean = (low: number, high: number) => {
                                 const days = r.rows.filter((row) => Number(row.x) >= low && Number(row.x) < high);
@@ -1510,11 +1526,20 @@ function definitions(
                             return before === undefined || after === undefined ? null
                                 : `People walked ${r.format(before)} steps a day in the week before signing up and ${r.format(after)} in their first week.`;
                         },
-                        note: "Day 0 is the signup day. People who joined 4+ weeks ago, with 7+ days of data on each side.",
+                        note: "Day 0 is the signup day. People who joined 4+ weeks ago, with data on every day from signup to day 27 and 7+ days before.",
+                        // The people of joiningChange whose phone sent steps for all 28 days after signup, so
+                        // the later days do not average only the people who kept the app.
                         query: sql`
+                            with history as (
+                                select * from (${signupHistory}) as h
+                                where h.joined_day <= ${w.today}::date - 29 and h.day < h.joined_day + 28
+                            ),
+                            kept as (
+                                select user_id from history group by user_id
+                                having count(*) filter (where day < joined_day) >= 7 and count(*) filter (where day >= joined_day) = 28
+                            )
                             select (h.day - h.joined_day)::text as x, avg(h.steps)::float8 as y
-                            from (${signupHistory}) as h
-                            where h.day < h.joined_day + 28 and h.user_id in (select compared.user_id from (${joiningChange}) as compared)
+                            from history as h join kept using (user_id)
                             group by h.day - h.joined_day order by h.day - h.joined_day
                         `,
                     },
@@ -1584,12 +1609,15 @@ function definitions(
             // Fighters who synced steps into a round with 2 or more fighters. They fought again when
             // they were in another real Fight running in the next 7 days and their phone synced steps
             // into it after the round ended; the next round counts. A new fight is one they created or
-            // joined in those 7 days.
+            // joined in those 7 days. One join for all fighters, because a lateral per fighter scanned
+            // every Fight again.
             const fightAgain = (from: AdminDashboardQueryFragment, until: AdminDashboardQueryFragment) => sql`
-                select e.*, next.again, next.again_new
-                from (${finishedFighters(from)}) as e
-                cross join lateral (
-                    select count(*) > 0 as again, coalesce(bool_or(
+                with fighters as (
+                    select * from (${finishedFighters(from)}) as e
+                    where e.synced and e.size >= 2 and e.at < ${until}
+                ),
+                next as (
+                    select e.fight_id, e.user_id, coalesce(bool_or(
                         coalesce(g.series_id, g.id) <> coalesce(e.series_id, e.fight_id)
                             and gm.accepted_at >= e.at and gm.accepted_at < e.at + interval '7 days'
                             and not exists (
@@ -1599,14 +1627,18 @@ function definitions(
                                     and prior.state in ('accepted', 'deferred')
                             )
                     ), false) as again_new
-                    from public.fight_members as gm
+                    from fighters as e
+                    join public.fight_members as gm on gm.user_id = e.user_id
                     join (${realFights}) as g on g.id = gm.fight_id
-                    where gm.user_id = e.user_id and g.id <> e.fight_id and g.state <> 'cancelled'
+                    where g.id <> e.fight_id and g.state <> 'cancelled'
                         and g.starts_at < e.at + interval '7 days' and g.ends_at > e.at
                         and exists (select 1 from private.fight_score_snapshots as s
                             where s.fight_id = g.id and s.user_id = e.user_id and s.created_at >= e.at)
-                ) as next
-                where e.synced and e.size >= 2 and e.at < ${until}
+                    group by e.fight_id, e.user_id
+                )
+                select e.*, next.fight_id is not null as again, coalesce(next.again_new, false) as again_new
+                from fighters as e
+                left join next on next.fight_id = e.fight_id and next.user_id = e.user_id
             `;
             // The winner against the next best fighter with steps through the end. A member without
             // them ranks last with a stale total, so rank 2 can be far behind or even ahead.
@@ -1844,7 +1876,7 @@ function definitions(
                         `,
                     },
                     {
-                        id: "who_fights_again", title: "Who fights again, last 90 days", kind: "bar", unit: "percent", x: "label",
+                        id: "who_fights_again", title: "Who fights again, rounds 7 to 97 days ago", kind: "bar", unit: "percent", x: "label",
                         definition: "The fight-again rate for groups of fighters: of the people who synced steps into a real round with 2 or more fighters that ended 7 to 97 days ago, the share who were in another real Fight running in the next 7 days and synced steps into it after the round ended. Any fight includes the next round of a repeating Fight. A new fight is one they created or joined in those 7 days. Winners finished first with steps through the end, ties included. A fighter can be in several groups, and counts once for each round. Each label shows its number of fighters. Groups of fewer than 5 people are hidden.",
                         example: (r) => {
                             const find = (name: string) => r.rows.find((row) => row.x.startsWith(name))?.y;
@@ -1999,11 +2031,11 @@ function definitions(
             };
         }
         case "growth": {
-            // NOTE: each steps sync adds an activity_raw total for that day, because today's total ends
-            // at the server time of the sync, so its payload is new. A Paris day with one is a day the
-            // phone sent steps, opened or not, and a later sync never fills the days between. Builds
-            // before the activity sync sent steps only for live Fights, so this starts with complete
-            // sync history.
+            // NOTE: the daily steps upload after each steps sync adds an activity_raw total for that day,
+            // because today's total ends at the server time of the sync, so its payload is new. A Paris
+            // day with one is a day the phone sent steps, opened or not, and a later sync never fills
+            // the days between. Builds before the activity sync sent steps only for live Fights, so this
+            // starts with complete sync history.
             const syncDays = (floor: AdminDashboardQueryFragment) => sql`
                 select distinct raw.user_id, (raw.created_at at time zone 'Europe/Paris')::date as day, p.joined_day
                 from private.activity_raw as raw
@@ -2015,20 +2047,23 @@ function definitions(
             `;
             // How each signup came, decided by the 7 days after it like referredSignups: they joined a
             // real Fight that someone else owns, else claimed a friend's link. A deferred join also sets
-            // accepted_at, and a later leave keeps it.
+            // accepted_at, and a later leave keeps it. One join for all signups, because a lateral per
+            // signup scanned every Fight again.
             const arrivals = sql`
+                with joined as (
+                    select distinct on (m.user_id) m.user_id, m.fight_id
+                    from public.fight_members as m
+                    join (${realFights}) as f on f.id = m.fight_id
+                    join public.profiles as signup on signup.user_id = m.user_id
+                    where f.owner_id <> m.user_id and m.accepted_at < signup.created_at + interval '7 days'
+                    order by m.user_id, m.accepted_at, m.fight_id
+                )
                 select p.user_id, p.at, p.joined_day, joined.fight_id,
                     case when joined.fight_id is not null then 'Joined a friend''s fight'
                         when p.user_id in (select r.user_id from (${referredSignups}) as r) then 'Friend''s link'
                         else 'On their own' end as series
                 from (${profiles}) as p
-                left join lateral (
-                    select m.fight_id from public.fight_members as m
-                    join (${realFights}) as f on f.id = m.fight_id
-                    where m.user_id = p.user_id and f.owner_id <> p.user_id
-                        and m.accepted_at < p.created_at + interval '7 days'
-                    order by m.accepted_at limit 1
-                ) as joined on true
+                left join joined on joined.user_id = p.user_id
             `;
             const span = w.bucket === "month" ? 30 : 7;
             return {
@@ -2057,24 +2092,27 @@ function definitions(
                     },
                     {
                         id: "viral_rate", title: "Monthly viral rate", unit: "percent", better: true,
-                        note: `New users who came through a friend, per 100 older users whose phone sent steps. The 30 days before today vs the 30 before.${historyNote(60)}`,
+                        note: `New users who came through a friend, per 100 older users whose phone sent steps. Signups 7 to 37 days ago vs the 30 days before.${historyNote(67)}`,
+                        // The 7 days after a signup decide its source, so the windows end 7 days ago,
+                        // and the older users' steps cover the same days.
                         query: sql`
                             with active as (
                                 select s.user_id,
-                                    bool_or(s.day >= ${w.today}::date - 30 and s.joined_day < ${w.today}::date - 30) as recent,
-                                    bool_or(s.day < ${w.today}::date - 30 and s.joined_day < ${w.today}::date - 60) as earlier
-                                from (${syncDays(sql`${w.today}::date - 60`)}) as s
+                                    bool_or(s.day >= ${w.today}::date - 37 and s.day < ${w.today}::date - 7
+                                        and s.joined_day < ${w.today}::date - 37) as recent,
+                                    bool_or(s.day < ${w.today}::date - 37 and s.joined_day < ${w.today}::date - 67) as earlier
+                                from (${syncDays(sql`${w.today}::date - 67`)}) as s
                                 group by s.user_id
                             ),
                             brought as (
-                                select a.joined_day >= ${w.today}::date - 30 as recent from (${arrivals}) as a
+                                select a.joined_day >= ${w.today}::date - 37 as recent from (${arrivals}) as a
                                 where a.series <> 'On their own'
-                                    and a.joined_day >= ${w.today}::date - 60 and a.joined_day < ${w.today}::date
+                                    and a.joined_day >= ${w.today}::date - 67 and a.joined_day < ${w.today}::date - 7
                             )
-                            select case when ${w.today}::date - 30 >= ${w.activityFrom}::date then
+                            select case when ${w.today}::date - 37 >= ${w.activityFrom}::date then
                                     100.0 * (select count(*) from brought where recent)
                                         / nullif((select count(*) from active where recent), 0) end as value,
-                                case when ${w.today}::date - 60 >= ${w.activityFrom}::date then
+                                case when ${w.today}::date - 67 >= ${w.activityFrom}::date then
                                     100.0 * (select count(*) from brought where not recent)
                                         / nullif((select count(*) from active where earlier), 0) end as previous
                         `,
@@ -2143,19 +2181,29 @@ function definitions(
                     },
                     {
                         id: "recruiting_fights", title: "Fights that brought new users, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "Real Fights, all rounds of a repeating Fight together, by the new users who joined them within 7 days of signing up. A person counts once, for the first such Fight. Each label shows the Fight's name and its owner now. App-wide and suggested Fights do not count.",
+                        definition: "Real Fights, all rounds of a repeating Fight together, by the new users who joined them within 7 days of signing up. A person counts once, for the first such Fight. Each label shows the Fight's name, its join code, because names repeat, and its owner now. App-wide and suggested Fights do not count.",
                         example: (r) => (r.top && r.top.y > 0
                             ? `${r.top.x} brought ${r.count(r.top.y, "new person", "new people")} to FitFight.`
                             : null),
+                        // The app keys label bars by their text, so each Fight needs its own label: the
+                        // join code, or the start day for a Fight without a series.
                         query: sql`
-                            select left(coalesce(series.name, f.name), 28) || ' by ' || coalesce('@' || owner.handle, 'a deleted account') as x,
-                                count(*)::float8 as y
-                            from (${arrivals}) as a
-                            join public.fights as f on f.id = a.fight_id
-                            left join public.fight_series as series on series.id = f.series_id
+                            with brought as (
+                                select coalesce(f.series_id, f.id) as fight_key, count(*) as people
+                                from (${arrivals}) as a
+                                join public.fights as f on f.id = a.fight_id
+                                group by 1
+                            )
+                            select left(coalesce(series.name, f.name), 28)
+                                    || ' (' || coalesce(series.join_code, to_char(f.starts_at at time zone 'Europe/Paris', 'FMDD Mon YYYY'))
+                                    || ') by ' || coalesce('@' || owner.handle, 'a deleted account') as x,
+                                brought.people::float8 as y
+                            from brought
+                            left join public.fight_series as series on series.id = brought.fight_key
+                            left join public.fights as f on f.id = brought.fight_key
                             left join public.profiles as owner
                                 on owner.user_id = coalesce(series.owner_id, f.owner_id) and owner.deleted_at is null
-                            group by 1 order by 2 desc, 1 limit 10
+                            order by 2 desc, 1 limit 10
                         `,
                     },
                 ],
@@ -2443,13 +2491,13 @@ function definitions(
             // Cards read 14 days and charts over time their period, so older rows are skipped in WHERE.
             const floor = sql`least(${w.start}::date::timestamp at time zone 'Europe/Paris', ${ago(14)}::timestamptz)`;
             // NOTE: each report is one trace, and most traces are not syncs: the Fights refresh after a
-            // background sync or an action, the upload of other activity, and each extra Apple Health
-            // wake that joins a running sync send their own trace. A steps sync ran when the trace has
-            // its first stage (local_state, since 6 Sep 2026) or a steps upload; a locked phone stops it
-            // before that stage. It saved the steps when an upload succeeded, whatever the Fights
-            // refresh or the activity wait did after it, and attempt_expired always means cancelled.
+            // background sync or an action, the daily steps upload, and each extra Apple Health wake
+            // that joins a running sync send their own trace. A steps sync ran when the trace has its
+            // first stage (local_state, since 6 Sep 2026) or a steps upload; a locked phone stops it
+            // before that stage. Its upload succeeded whatever the Fights refresh or the wait for the
+            // daily steps upload did after it, and attempt_expired always means cancelled.
             const syncs = sql`
-                select a.user_id, a.started_at as at, a.trigger, a.error_code, a.stages,
+                select a.user_id, a.started_at as at, a.trigger, a.error_code, a.stages, a.day_count,
                     case when a.stages @> '[{"stage": "upload", "outcome": "succeeded"}]' then 'Succeeded'
                         when a.outcome = 'cancelled' or a.error_code = 'attempt_expired' then 'Cancelled'
                         else 'Failed' end as result
@@ -2458,17 +2506,61 @@ function definitions(
                     and (a.stages @> '[{"stage": "local_state"}]' or a.stages @> '[{"stage": "upload"}]'
                         or a.error_code = 'protected_data_unavailable')
             `;
-            // From the first stage of the steps sync to the end of the upload that saved them, so a wait
-            // for a running sync, the Fights refresh and the upload of other activity are left out.
-            const syncTimes = sql`
-                select s.at, (
+            // NOTE: since the activity sync (staging 1.1.2 (206), production 210), the steps upload holds
+            // only Fight totals (day_count 0). Once it succeeds, the app uploads the day totals in its own
+            // trace with the same trigger: healthkit_activity, then one activity_upload per page, and the
+            // first page holds the last 40 days, steps first. A trace without a page had no Apple Health
+            // data in 40 days. Earlier builds sent the day totals in the steps upload. So each sync counts
+            // once for its daily steps: by its daily steps trace once its upload succeeded, else by
+            // itself. The time runs from the first stage of the sync that started the daily steps trace,
+            // its user's latest successful one in the 10 minutes before, to the end of the first page.
+            const daySyncs = sql`
+                with steps as (${syncs}),
+                uploads as (
+                    select a.user_id, a.started_at as at, a.outcome, a.error_code,
+                        jsonb_path_query_first(a.stages, '$[*] ? (@.stage == "activity_upload")') as page
+                    from private.healthkit_sync_attempts as a
+                    where a.started_at >= greatest(${historyStart}, ${floor})
+                        and a.stages @> '[{"stage": "healthkit_activity"}]'
+                        and not (a.stages @> '[{"stage": "local_state"}]' or a.stages @> '[{"stage": "upload"}]')
+                ),
+                paired as (
+                    select merged.*, max(merged.sync_start) over (
+                        partition by merged.user_id order by merged.at, merged.kind rows unbounded preceding
+                    ) as latest_sync
+                    from (
+                        select 'sync' as kind, s.user_id, s.at, null::text as outcome, null::text as error_code,
+                            null::jsonb as page,
+                            s.at + make_interval(secs => coalesce((jsonb_path_query_first(s.stages,
+                                '$[*] ? (@.stage == "local_state")') ->> 'started_ms')::float8, 0) / 1000) as sync_start
+                        from steps as s where s.result = 'Succeeded' and coalesce(s.day_count, 0) = 0
+                        union all
+                        select 'upload', u.user_id, u.at, u.outcome, u.error_code, u.page, null
+                        from uploads as u
+                    ) as merged
+                )
+                select s.at, s.result, coalesce(replace(s.error_code, '_', ' '), 'no code') as reason, (
                     select (min((stage ->> 'started_ms')::float8 + (stage ->> 'duration_ms')::float8)
                             filter (where stage ->> 'stage' = 'upload' and stage ->> 'outcome' = 'succeeded')
                         - coalesce(min((stage ->> 'started_ms')::float8) filter (where stage ->> 'stage' = 'local_state'), 0)
                     ) / 1000
                     from jsonb_array_elements(s.stages) as stage
+                    where s.result = 'Succeeded'
                 ) as seconds
-                from (${syncs}) as s where s.result = 'Succeeded'
+                from steps as s
+                where s.result <> 'Succeeded' or s.day_count > 0
+                union all
+                select p.at,
+                    case when p.page ->> 'outcome' = 'succeeded' then 'Succeeded'
+                        when p.page ->> 'outcome' = 'cancelled' or p.outcome = 'cancelled' or p.error_code = 'attempt_expired'
+                            then 'Cancelled'
+                        else 'Failed' end,
+                    case when p.page is null and p.outcome = 'succeeded' then 'daily steps: no Apple Health data in 40 days'
+                        else 'daily steps: ' || coalesce(replace(p.error_code, '_', ' '), 'no code') end,
+                    case when p.page ->> 'outcome' = 'succeeded' and p.latest_sync >= p.at - interval '10 minutes' then
+                        extract(epoch from p.at - p.latest_sync)
+                            + ((p.page ->> 'started_ms')::float8 + (p.page ->> 'duration_ms')::float8) / 1000 end
+                from paired as p where p.kind = 'upload'
             `;
             // Any report shows the build a person runs, sync or not.
             const reports = sql`
@@ -2498,8 +2590,8 @@ function definitions(
                     },
                     {
                         id: "sync_success", title: "Weekly sync success", unit: "percent", better: true,
-                        note: `Share of Apple Health steps syncs that saved the steps, last 7 days vs the 7 before. Refreshes and other reports that are not syncs are left out.${historyNote(14)}`,
-                        query: eventCard(sql, w, 7, syncs, sql`avg(case when e.result = 'Succeeded' then 100.0 else 0 end)`, historyStart),
+                        note: `Share of Apple Health steps syncs whose daily steps reached the server, last 7 days vs the 7 before. Refreshes and other reports that are not syncs are left out.${historyNote(14)}`,
+                        query: eventCard(sql, w, 7, daySyncs, sql`avg(case when e.result = 'Succeeded' then 100.0 else 0 end)`, historyStart),
                     },
                     {
                         id: "background_syncs", title: "Weekly background syncs", unit: "count", better: true,
@@ -2508,26 +2600,24 @@ function definitions(
                     },
                     {
                         id: "sync_time", title: "Weekly median sync time", unit: "seconds", better: false,
-                        note: `Syncs that saved steps, from the start of the steps sync until the server saved them. Last 7 days vs the 7 before.${historyNote(14)}`,
-                        query: eventCard(sql, w, 7, syncTimes, sql`percentile_cont(0.5) within group (order by e.seconds)`, historyStart),
+                        note: `Syncs whose daily steps reached the server, from the start of the steps sync until the server saved the daily steps. Last 7 days vs the 7 before.${historyNote(14)}`,
+                        query: eventCard(sql, w, 7, sql`select * from (${daySyncs}) as s where s.seconds is not null`,
+                            sql`percentile_cont(0.5) within group (order by e.seconds)`, historyStart),
                     },
                     {
                         // NOTE: the app registers a phone only once push is allowed, always as authorized, and
                         // never reports a later change in iOS Settings. Sign-out, a move to the other server
-                        // and Apple's refusal of the token (mostly a deleted app) revoke the row.
+                        // and Apple's refusal of the token (mostly a deleted app) revoke the row. A new
+                        // registration clears revoked_at and can move the row to another account, and no
+                        // history is kept, so there is no value for 7 days ago.
                         id: "push_share", title: "Registered for push", unit: "percent", better: true,
-                        note: "Share of users with a phone that allowed push and is still registered, now vs 7 days ago. Push turned off later in iOS Settings still counts.",
+                        note: "Share of users with a phone that allowed push and is still registered, now. Push turned off later in iOS Settings still counts.",
                         query: sql`
-                            select 100.0 * count(device.user_id) filter (where device.active) / nullif(count(*), 0) as value,
-                                100.0 * count(device.user_id) filter (where device.active_before and p.created_at < ${ago(7)})
-                                    / nullif(count(*) filter (where p.created_at < ${ago(7)}), 0) as previous
+                            select 100.0 * count(device.user_id) / nullif(count(*), 0) as value, null::float8 as previous
                             from public.profiles as p
                             left join (
-                                select user_id, bool_or(revoked_at is null) as active,
-                                    bool_or(created_at < ${ago(7)} and (revoked_at is null or revoked_at >= ${ago(7)})) as active_before
-                                from private.device_installations
-                                where permission_status in ('authorized', 'provisional', 'ephemeral')
-                                group by user_id
+                                select distinct user_id from private.device_installations
+                                where permission_status in ('authorized', 'provisional', 'ephemeral') and revoked_at is null
                             ) as device on device.user_id = p.user_id
                             where p.deleted_at is null
                         `,
@@ -2576,14 +2666,14 @@ function definitions(
                 charts: [
                     {
                         id: "sync_outcomes", title: `Sync outcomes ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Apple Health steps syncs in each ${w.bucket}, by result. Succeeded: the server saved the steps. Cancelled: the app stopped the sync, mostly at the 25-second limit of a background wake. Refreshes and other reports that are not syncs are left out.`,
+                        definition: `Apple Health steps syncs in each ${w.bucket}, by whether their daily steps reached the server. A sync uploads the Fight totals; once that works, the app uploads the day totals of the last 40 days, steps first, in its own report (builds before the activity sync sent them with the Fight totals). Each sync counts once. Succeeded: the server saved the daily steps. Failed: the sync or the daily steps upload failed, or Apple Health had no data for 40 days. Cancelled: the app stopped the sync, mostly at the 25-second limit of a background wake. Refreshes and other reports that are not syncs are left out.`,
                         example: (r) => {
                             const ok = r.at("Succeeded") ?? 0;
                             const all = ok + (r.at("Failed") ?? 0) + (r.at("Cancelled") ?? 0);
                             const part = r.share(ok, all);
                             return part ? `${part} of syncs succeeded ${r.when}: ${r.format(ok)} of ${r.format(all)}.` : null;
                         },
-                        query: perBucket(sql, w, sql`select at, result as series from (${syncs}) as s`, count, {
+                        query: perBucket(sql, w, sql`select at, result as series from (${daySyncs}) as s`, count, {
                             gaps: true, series: ["Succeeded", "Failed", "Cancelled"], since: w.activityFrom,
                         }),
                     },
@@ -2604,17 +2694,17 @@ function definitions(
                     },
                     {
                         id: "sync_durations", title: "Sync time: P50 and P90", kind: "line", unit: "seconds", x: "date",
-                        definition: "How long a steps sync takes, from its start until the server saved the steps. Only syncs that saved steps. P50 is the typical sync; only 10% take longer than P90.",
+                        definition: "How long it takes for a steps sync's daily steps to reach the server, from the start of the sync until the server saved the daily steps. Only syncs whose daily steps were saved, and only when the daily steps upload started within 10 minutes of its sync. P50 is the typical sync; only 10% take longer than P90.",
                         example: (r) => {
                             const typical = r.at("P50");
                             const slow = r.at("P90");
                             return typical === undefined || slow === undefined ? null
                                 : `A typical sync took ${r.format(typical)} ${r.when}, and 10% took ${r.format(slow)} or more.`;
                         },
-                        note: `Across each ${w.bucket}'s syncs that saved steps.`,
+                        note: `Across each ${w.bucket}'s syncs whose daily steps reached the server.`,
                         // Each sync is one row of each line, so the line picks the percentile.
                         query: perBucket(sql, w, sql`
-                            with timed as (${syncTimes})
+                            with timed as (select * from (${daySyncs}) as s where s.seconds is not null)
                             select at, seconds, 'P50' as series from timed
                             union all select at, seconds, 'P90' from timed
                         `, sql`percentile_cont(case when e.series = 'P50' then 0.5 else 0.9 end) within group (order by e.seconds)`, {
@@ -2654,13 +2744,12 @@ function definitions(
                     },
                     {
                         id: "sync_error_codes", title: "Sync problems by reason, last 7 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Steps syncs in the last 7 days that did not save the steps: failed ones by their error, and cancelled ones in one bar. Together they make the Failed and Cancelled bars of Sync outcomes.",
+                        definition: "Steps syncs in the last 7 days whose daily steps did not reach the server: failed ones by their error, with \"daily steps\" first when the daily steps upload failed, and cancelled ones in one bar. Together they make the Failed and Cancelled bars of Sync outcomes.",
                         example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common sync problem: ${r.count(r.top.y, "time", "times")} in 7 days.` : null),
                         query: sql`
-                            select case when s.result = 'Cancelled' then 'cancelled'
-                                    else coalesce(replace(s.error_code, '_', ' '), 'no code') end as x,
+                            select case when s.result = 'Cancelled' then 'cancelled' else s.reason end as x,
                                 count(*)::float8 as y
-                            from (${syncs}) as s
+                            from (${daySyncs}) as s
                             where s.result <> 'Succeeded' and s.at >= ${ago(7)} and s.at < ${w.now}
                             group by 1 order by 2 desc, 1
                         `,
@@ -2741,7 +2830,7 @@ function definitions(
                     },
                     {
                         id: "last_sync_age", title: "Time since last Apple Health sync, now", kind: "bar", unit: "count", x: "label",
-                        definition: "People whose phone sent Apple Health steps, by the time since the server last saved steps from their phone, now. Every sync saves today's steps.",
+                        definition: "People whose phone sent Apple Health steps, by the time since the server last saved their daily steps, now. The daily steps upload after each sync saves today's steps.",
                         example: (r) => {
                             const recent = (r.row("Under 1 hour") ?? 0) + (r.row("1-6 hours") ?? 0);
                             const part = r.share(recent, r.total);
@@ -2750,8 +2839,8 @@ function definitions(
                                 : null;
                         },
                         // NOTE: data_sources.last_success_at moves on every Fight create, join or accept, sync or not.
-                        // A day row changes on each sync (its observed_through and input move), so its
-                        // updated_at is the last saved sync; the 23 Sep copies of legacy days keep their own.
+                        // A day row changes on each daily steps upload (its observed_through and input move), so
+                        // its updated_at is the last saved upload; the 23 Sep copies of legacy days keep their own.
                         query: sql`
                             with ages as (
                                 select greatest(0, extract(epoch from (${w.now} - max(saved.updated_at))) / 3600) as hours
@@ -2817,7 +2906,15 @@ export async function readAdminDashboard(
     // them, so staging history stays short until Marc points that domain at `preview`; then move
     // its date to the first full day after the switch.
     const activityFrom = { production: "2026-10-02", staging: "2026-10-02" }[environment];
-    const w: AdminDashboardWindow = { now, today, start: range.start, bucket: range.bucket, activityFrom, environment };
+    // NOTE: until a server and its phones ran the activity sync, phones sent steps only for days
+    // in a Fight, and their first activity sync imported the whole Health history. Production got
+    // the pipeline on 26 Sep 2026 (7978eeb) and released build 1.1.2 (210) on 28 Sep. Staging got
+    // it on 23 Sep, and TestFlight build 1.1.2 (206), the first with the activity sync, on 24 Sep
+    // at 01:03 Paris.
+    const stepsFrom = { production: "2026-09-28", staging: "2026-09-24" }[environment];
+    const w: AdminDashboardWindow = {
+        now, today, start: range.start, bucket: range.bucket, activityFrom, stepsFrom, environment,
+    };
     const { cards, charts } = definitions(database, w, section);
     const failure = (error: unknown) => `Query failed: ${error instanceof Error ? error.message : String(error)}`;
     // NOTE: tiles take turns on the pool's connections, so each note's time is the tile's own

@@ -31,9 +31,10 @@ It caches the last answer per API address and keeps it when the call fails.
 
 ## Admin dashboard (prepared 29 Sep 2026)
 
-`GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>[&bucket=day|week|month]` feeds the Admin tab
-in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement`,
-`steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
+`GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>[&bucket=day|week|month][&refresh=true]`
+feeds the Admin tab in Profile -> Dashboard. Sections, in chip order: `overview`,
+`growth`, `retention`, `users`, `engagement`, `steps`, `fights`, `revenue`, `social`,
+`app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
 query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
 chart by adding one definition, delete one by removing it. Every payload also
@@ -42,21 +43,34 @@ chips from that list, so section, card and chart changes need no app release
 (builds from 30 Sep 2026 on; earlier builds have a fixed chip list). A failing
 query only marks its own tile with `Query failed: ...`.
 
-- **Windows (10 Oct 2026):** cards have fixed spans named in their titles, so the
+- **Windows (12 Oct 2026):** cards have fixed spans named in their titles, so the
   app's period never changes them. "Weekly" is the last 7 days against the 7
   before, "Monthly" the last 30 against the 30 before (rolling for events,
   complete Paris days for Steps); a card without either word is now against 7
-  days ago. `days` sets only the charts over time (`x_kind` date): Paris days from
-  the later of today minus `days` and the first signup, at least 7 days, in whole
-  days (up to 62), weeks (up to 366) or months, with no previous-period overlay.
-  `bucket` (the app's Day, Week or Month choice) overrides that bucket. Each metric
-  is computed per bucket: counts add up, people count once per bucket, averages
-  and shares use every person-day in it, and DAU is the daily average. Activity
-  tiles use sync history from its first complete day (`activityFrom`: 2 Oct 2026,
-  the first full day after production stopped deleting sync reports): a card
-  window that starts earlier has no number, and charts over time start there,
-  WAU 6 days and MAU 29 days later. Every other chart names its own span ("last
-  30 days", "all time", "now").
+  days ago. The previous value is like-for-like: the same span, cohorts of the
+  same age and the same rules. A rate decided by the 7 days after signup reads
+  signups 7 to 37 days ago against the 30 days before. A state with no history
+  ("Registered for push", "Sync errors now", "Weekly newest-build share") has no
+  previous value. Only the charts over time (`x_kind` date) follow `days` and
+  `bucket`: Paris days from the later of today minus `days` and the first signup,
+  at least 7 days, in whole days (up to 62), weeks (up to 366) or months, with no
+  previous-period overlay. `bucket` (the app's Day, Week or Month choice)
+  overrides that bucket. Each metric is computed per bucket: counts add up, people
+  count once per bucket, averages and shares use every person-day in it, and DAU
+  is the daily average. Activity tiles use sync history from its first complete
+  day (`activityFrom`: 2 Oct 2026, the first full day after production stopped
+  deleting sync reports): a card window that starts earlier has no number, and
+  charts over time start there, WAU 6 days and MAU 29 days later. Every other
+  chart names its own span in its title ("last 30 days", "rounds 7 to 97 days
+  ago", "all time", "now"). Days are Paris days.
+- **Lapsed exception:** Lapsed 14 to 120 days and Days since last open read 127
+  and 120 days of opens, before complete sync history, and keep their number.
+  Before 2 Oct 2026, the server kept a person's reports only from the 7 days
+  before their newest one (and only the newest 100), so a person's last open is
+  missing when their phone kept syncing for 7 days after it. Lapsed then
+  undercounts, and that person counts in Never. Both notes say so until their
+  windows start on 2 Oct or later (30 Jan 2027 for the chart, 6 Feb 2027 for the
+  card).
 - **Chart pages (10 Oct 2026):** every chart carries a `definition` (what it
   measures) and an `example` sentence that reads one current number off it: the
   newest complete day, week or month, or now for totals and states. Both are built
@@ -64,38 +78,79 @@ query only marks its own tile with `Query failed: ...`.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual reports also count as activity). A report with a `today_total` stage
   is a launch or a return from the background. Other foreground reports (the
-  Fights refresh after a background sync or an in-app action, the upload of
-  other activity) are not opens; a report without `today_total` or
+  Fights refresh after a background sync or an in-app action, the daily steps
+  upload) are not opens; a report without `today_total` or
   `healthkit_activity` counts only when the person sent no report in the 10
   minutes before it, because an open without Apple Health looks the same.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
   day. A day is final only after the phone's first sync after its midnight, so
-  complete-day tiles end the day before yesterday. A fight day is a day that a
-  real Fight covers for 12 hours or more. "Health history" cards include imported
-  days before signup.
-- **Speed:** a tab's tiles take turns on the pool's connections (10 for the
-  read-only production connection, 3 for the server's own database), and each
-  note ends with that tile's own query time (`Took 1.2 s.`). The route reuses a
-  running or under-5-minute-old result for the same environment, section and
-  period on that server instance, so Refresh can show data up to 5 minutes old.
-  A result with a failed tile is not reused.
+  complete-day tiles end the day before yesterday. A complete-day chart leaves out
+  a week or month that ends today (on a Monday or the 1st), because its last day,
+  yesterday, is not complete; the app and the example would read it as whole. A
+  fight day is a day that a real Fight covers for 12 hours or more. Steps around
+  signup keeps only people with step data on every day from signup to day 27, so
+  the later days do not average only the people who kept the app. "Health
+  history" tiles include imported days before signup.
+- **Speed:** each pool has one turn queue (10 connections for the read-only
+  production connection, 3 for the server's own database), shared by every section
+  requested together, first come first served. Each note ends with that tile's own
+  query time (`Took 1.2 s.`), not its wait for a turn. The route reuses a running
+  or under-5-minute-old result for the same environment, section, period and
+  bucket on that server instance. With `refresh=true`, which the app sends on
+  Refresh, it reuses only a result started in the last minute; older builds do
+  not send it. A result with a failed tile is not reused. When Admin opens, the
+  app loads every section: the selected one first, then the others in chip order,
+  two at a time. A tapped chip that has not started loads at once. Time indexes
+  (`20261012120000_admin_dashboard_time_indexes.sql`) on `activity_raw` step
+  totals, `fight_score_snapshots` and `healthkit_sync_attempts` keep recent
+  windows from scanning those tables, which keep every row.
 - **Retention:** follows people whose phone sent Apple Health steps (a
   `data_sources` row is not proof: Fight actions create one). Someone is retained in
   a week (or 30-day month) counted from their own signup day when the server has
-  their Apple Health steps for any day of it, final or not: background syncs run
-  without an open until the app is deleted or Health is turned off, and each sync
-  sends the last 40 days, today included. So a week can end yesterday, and a sync
-  after a gap (a reinstall) can still fill missed days. A person counts for a week
-  only once it has passed. Charts draw one line for each of the 8 newest signup
-  weeks and 6 newest signup months with someone past week (month) 1; the newest
-  point of a line counts only the people past it. Cards take the signups of the
-  latest 28 days (weeks) or 30 days (months) that got past that week or month,
-  against the span before. App opens are not used: complete sync history starts
-  only on 2 Oct 2026.
-- **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights (once
-  suggested, from the admin action, even after the suggestion is removed), whose
-  invitations are automatic.
+  their Apple Health steps for any day of it, final or not: since the activity
+  sync, background syncs run without an open until the app is deleted or Health
+  is turned off, and each sync sends the last 40 days, today included. So a week
+  can end yesterday, and a sync after a gap (a reinstall) can still fill missed
+  days. Before the activity sync, phones sent steps only for days in a Fight, and
+  their first activity sync imported the whole Health history: an earlier signup
+  counted only if they fought, and counted as retained everywhere if they kept
+  the app until then. So Retention reads only signups from `stepsFrom` (28 Sep
+  2026 on production, when build 1.1.2 (210) was released; 24 Sep on staging,
+  with TestFlight build 1.1.2 (206)): a card whose cohort window starts earlier has
+  no number, a cohort line that starts earlier is left out, Week 1 and week 4
+  retention shows a point only when all its people signed up from that day, and
+  Week 2 retention by first-week actions reads only those signups. The notes say
+  "Signups from 28 Sep: earlier phones sent only Fight days." while it applies. A
+  person counts for a week only once it has passed. Charts draw one line for each
+  of the 8 newest signup weeks and 6 newest signup months with someone past week
+  (month) 1; the newest point of a line counts only the people past it. Cards take
+  the signups of the latest 28 days (weeks) or 30 days (months) that got past that
+  week or month, against the span before. App opens are not used: complete sync
+  history starts only on 2 Oct 2026.
+- **Growth:** a day the phone sent steps is a Paris day with a steps total in
+  `private.activity_raw`, from `activityFrom`, because builds before the activity
+  sync sent steps only for live Fights. A signup's source (a friend's Fight, a
+  friend's link, on their own) is decided by the 7 days after it, so the viral
+  rate reads signups 7 to 37 days ago.
+- **App syncs:** a sync is a steps sync trace (`local_state` or `upload` stage).
+  Since the activity sync, its upload holds only Fight totals; once it succeeds,
+  the app uploads the day totals of the last 40 days, steps first, in its own
+  trace with the same trigger (`healthkit_activity`, then one `activity_upload`
+  per page). Weekly sync success, Sync outcomes, Sync problems by reason and Sync
+  time measure whether the daily steps reached the server, so each sync counts
+  once: by its daily steps trace (saved when its first page was saved) once its
+  upload succeeded, else by itself. Earlier builds sent day totals in the steps
+  upload. Sync time runs from the start of the steps sync to the end of that first
+  page. Weekly background syncs and Syncs by trigger count steps syncs, so the
+  daily steps trace never counts twice.
+- **Revenue:** amounts use the `eur` unit (what buyers paid, VAT included, before
+  Apple's commission; Apple's euro price, else the euro list price). Production
+  reads Production purchases, staging reads Sandbox purchases. The app shows
+  "73.80 EUR"; older builds show whole numbers.
+- **Real Fights:** Fight and social tiles exclude the app-wide (`PGG7`) and
+  suggested Fights (once suggested, from the admin action, even after the
+  suggestion is removed), whose invitations are automatic.
 - **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the
   admin email). The app always sends `X-FitFight-Auth-Project` with its own
   Supabase project ref. When it names the other FitFight project, the backend
@@ -121,9 +176,9 @@ query only marks its own tile with `Query failed: ...`.
   `postgres.` user and any user outside the production project, and answers 503
   while the variable is missing. New charts reach production data with a
   `preview` merge; `main` is not needed.
-- **Compatibility:** additive route; no existing contract, schema or migration
-  changes. `admin-dashboard.integration.ts` runs every card and chart on the
-  migrated disposable database.
+- **Compatibility:** additive route; no existing contract or schema changes. The
+  only migration adds the time indexes above. `admin-dashboard.integration.ts`
+  runs every card and chart on the migrated disposable database.
 
 ## Activity pipeline (prepared 23 Sep 2026)
 

@@ -142,8 +142,9 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     assert.equal(await joinedFight(), joinedBefore - 1, "A member of a cancelled fight has not joined a fight");
 
     // A sync is a trace that ran the steps sync. An Apple Health wake that joins a running sync, the
-    // upload of other activity and a Fights refresh send their own traces and are not syncs. A sync
-    // that saved the steps before the watchdog cut the wait for other activity succeeded.
+    // daily steps upload and a Fights refresh send their own traces and are not syncs. A sync whose
+    // upload worked before the watchdog cut its wait is not a problem: its daily steps upload decides
+    // whether the steps reached the server, and a failed first page or no page at all is a problem.
     const syncTiles = async () => {
         const app = await readAdminDashboard("app", 30, "staging", database);
         const problems = app.charts.find((chart) => chart.id === "sync_error_codes")?.series[0]?.points ?? [];
@@ -151,6 +152,8 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
             background: app.cards.find((card) => card.id === "background_syncs")?.value ?? 0,
             cancelled: problems.find((point) => point.x === "cancelled")?.y ?? 0,
             offline: problems.find((point) => point.x === "network unavailable")?.y ?? 0,
+            dailyFailed: problems.find((point) => point.x === "daily steps: sync failed")?.y ?? 0,
+            dailyEmpty: problems.find((point) => point.x === "daily steps: no Apple Health data in 40 days")?.y ?? 0,
         };
     };
     const syncsBefore = await syncTiles();
@@ -166,6 +169,8 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
                 {"stage": "upload", "started_ms": 900, "duration_ms": 600, "outcome": "succeeded"}]'),
             ('observer', 1, 'succeeded', null, '[]'),
             ('observer', 2, 'succeeded', null, '[{"stage": "healthkit_activity", "started_ms": 0, "duration_ms": 900, "outcome": "succeeded"}]'),
+            ('observer', 3, 'failed', 'sync_failed', '[{"stage": "healthkit_activity", "started_ms": 0, "duration_ms": 900, "outcome": "failed"},
+                {"stage": "activity_upload", "started_ms": 400, "duration_ms": 500, "outcome": "failed"}]'),
             ('foreground', 30, 'succeeded', null, '[{"stage": "session", "started_ms": 0, "duration_ms": 5, "outcome": "succeeded"},
                 {"stage": "fights_refresh", "started_ms": 5, "duration_ms": 400, "outcome": "succeeded"}]'),
             ('observer', 600, 'cancelled', 'attempt_expired', '[{"stage": "local_state", "started_ms": 5, "duration_ms": 2, "outcome": "succeeded"},
@@ -178,5 +183,7 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     const addedSyncs = syncsAfter.background - syncsBefore.background;
     assert.ok(Math.abs(addedSyncs - 18) <= 1, `Three background syncs on each of 6 days, got ${addedSyncs}`);
     assert.ok(Math.abs(syncsAfter.offline - syncsBefore.offline - 6) <= 1, "Each failed sync counts under its error");
-    assert.ok(Math.abs(syncsAfter.cancelled - syncsBefore.cancelled) <= 1, "A sync that saved its steps is not a problem");
+    assert.ok(Math.abs(syncsAfter.cancelled - syncsBefore.cancelled) <= 1, "A sync whose upload worked is not a problem");
+    assert.ok(Math.abs(syncsAfter.dailyFailed - syncsBefore.dailyFailed - 6) <= 1, "A failed daily steps upload is a problem");
+    assert.ok(Math.abs(syncsAfter.dailyEmpty - syncsBefore.dailyEmpty - 6) <= 1, "A daily steps trace without a page is a problem");
 });

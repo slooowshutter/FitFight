@@ -146,7 +146,8 @@ export type AdminDashboardQueryFragment = PendingQuery<Row[]>;
 /**
  * Cards use fixed spans from `now` (rolling) or `today` (complete Paris days). Charts over time
  * cover Paris days from `start`, a bucket start, through today. `activityFrom` is the first Paris
- * day of complete sync history: app opens before it were deleted.
+ * day of complete sync history: app opens before it were deleted. `stepsFrom` is the first Paris
+ * day of signups whose phones sent every day's steps: earlier phones sent only Fight days.
  */
 export type AdminDashboardWindow = {
     now: Date;
@@ -154,6 +155,7 @@ export type AdminDashboardWindow = {
     start: string;
     bucket: AdminDashboardBucket;
     activityFrom: string;
+    stepsFrom: string;
     environment: AdminDashboardEnvironment;
 };
 
@@ -204,8 +206,6 @@ export type AdminDashboardExampleReader = {
     count: (value: number, one: string, many: string) => string;
     /** "42%" of a whole, or undefined when the whole is 0. */
     share: (part: number, whole: number) => string | undefined;
-    /** "Thu 9 Oct" for a date x. */
-    day: (x: string) => string;
     /** A date chart's bucket by its x: "Thu 9 Oct", "the week of 5 Oct" or "October 2026". */
     period: (x: string) => string;
 };

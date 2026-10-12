@@ -1,10 +1,106 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **10 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Admin dashboard: every section loads at once, audit fixes, Growth and Revenue, prepared 12 Oct 2026
+
+Marc asked for the Admin tab to load every section when it opens, so a chip
+shows its numbers at once, and for a deep check of the dashboard with more
+useful charts.
+
+**App:** opening Admin loads the selected section first, then the other
+sections in chip order, two at a time. A tapped chip that has not started
+loads at once. `AdminDashboardStore` keeps the payloads in Dashboard, so a
+chart page or another Dashboard tab keeps them and does not stop the loading.
+A new server, period or bucket, Refresh and Retry load again, the selected
+section first. Refresh sends `refresh=true`. Money values read "73.80 EUR".
+Admin only, no release note.
+
+**Server:** tile turns belong to the pool, so sections requested together take
+turns on the same connections, the first one first, and each "Took X s." note
+still times only its own query. `refresh=true` reuses a result only when it
+started in the last minute.
+
+**Audit fixes** (about 60 findings, each checked by two independent
+verifiers):
+
+- Apple Health connected means the phone sent steps. A `data_sources` row
+  does not prove it: creating, joining or accepting a Fight adds one.
+- App opens leave out the Fights refresh after an in-app action. The
+  60-second rule after a background sync is gone, because it dropped real cold
+  launches.
+- Activity tiles start at the complete sync history, 2 Oct 2026, because
+  production deleted sync reports until 1 Oct. Monthly cards read "-" until
+  their 30 or 60 days exist.
+- Complete step days end the day before yesterday: a day is final only after
+  the phone's first sync after midnight.
+- Real Fights also exclude series that were ever suggested. Joins no longer
+  count recurring roll-overs. A fight day needs 12 hours of a live real Fight.
+  Repeat counts use Fights, not rounds. Referrals count only signups that
+  claimed a code within 7 days.
+- Rate cards compare cohorts of the same age with a fixed horizon. The
+  fight-day lift compares each person with their own days without a Fight.
+  Sync tiles count real syncs once each, and a sync succeeds when its daily
+  steps reached the server.
+- Retention follows signups from 28 Sep on production (24 Sep on staging):
+  before build 1.1.2 (206 to 210) the server stored step days only for Fight
+  days, and a later Health import filled every day. Its cards read "-" until
+  their cohorts fit after that day.
+- Complete-day charts leave out a week or month whose last day is yesterday,
+  because that day is not final yet.
+- Removed: Monthly days to first fight (right-censored), Monthly active days
+  (the same number as stickiness), the 30-day onboarding funnel (the same as
+  the rate cards), Steps on fight days vs other days (replaced by Step lift
+  during fights by length), Push permission on devices (the app only registers
+  allowed phones).
+
+**New tiles:**
+
+- Overview: Weekly active fighters (the north star: people whose steps
+  competed with someone else's) and Weekly contested fights, in place of Live
+  fights.
+- Growth (new section): Weekly quick ratio, Monthly viral rate, Signups by
+  source, People gained and lost, Fights that brought new users.
+- Users: Monthly activation rate. Retention: Week 2 retention by first-week
+  actions.
+- Fights: Monthly fight-again rate and its chart, Fighters by sync at round
+  end, Who fights again. Steps: Step lift during fights by length.
+- Revenue (new section): Monthly revenue, Paying users, Monthly character
+  failure rate, Revenue per bucket, Purchases by state. Production reads 0
+  until sales open; Staging shows Sandbox purchases.
+
+**Compatibility:** additive. New section ids, the `eur` unit and the optional
+`refresh` parameter are in `contracts/openapi.yaml`. Older builds draw the new
+chips from the payload and show `eur` values as whole numbers.
+
+**Migration:** `20261012120000_admin_dashboard_time_indexes.sql` only adds
+three indexes (`if not exists`) on the time columns of
+`private.activity_raw` (step totals), `private.fight_score_snapshots` and
+`private.healthkit_sync_attempts`, which keep every row. The dashboard works
+without them; they keep it fast as the tables grow. Production gets them with
+the next `main` ship.
+
+**Known limits:** on production, Monthly active users, stickiness, Weekly quick
+ratio, Monthly viral rate, People gained and lost and the Retention cards stay
+empty until their windows fit after 2 Oct or 28 Sep (mid-October to early
+December). Lapsed and Days since last open keep a number: before 2 Oct a last
+open is missing when the phone kept syncing for 7 days after it. staging.fitfight.app still prunes
+sync reports until it follows `preview`. The `fitfight_analytics` role needs
+SELECT on `private.activity_raw`, `private.fight_score_snapshots`, the purchase
+tables and `private.fight_admin_actions`; a missing grant fails only that tile.
+
+**Verification (local):** web typecheck, all 437 unit tests and the dashboard
+database test passed on Postgres 16 with every migration and a seeded copy
+(622 people, 240 days). Every section ran at 30 days, 90 days by week, a year
+by month and All with no failed tile and no `NaN` or `undefined` in a
+sentence; the slowest tile took 0.4 s. The new migration applied twice
+without error. Headline numbers were checked against
+independent SQL. Swift was parsed and the new store type-checked with stubs in
+Swift 5 and 6 modes; CI compiles the app.
 
 ## Personal Dashboard empty on TestFlight, prepared 11 Oct 2026
 

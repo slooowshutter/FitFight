@@ -1392,7 +1392,9 @@ struct CompanionPicker: View {
                         } label: {
                             collectionTile(
                                 name: String(appLocalized: "Create your own"),
-                                caption: characterPurchases.product?.displayPrice,
+                                caption: characterPurchases.freeCharacters > 0
+                                    ? String(appLocalized: "character.free-count", defaultValue: "\(characterPurchases.freeCharacters) free")
+                                    : characterPurchases.product?.displayPrice,
                                 selected: false
                             ) {
                                 Image(systemName: "plus")

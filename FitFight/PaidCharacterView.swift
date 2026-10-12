@@ -30,8 +30,11 @@ struct PaidCharacterView: View {
                 .accessibilityLabel(String(localized: "Close"))
                 .foregroundStyle(theme.textSecondary)
             }
-            Text("One purchase draws three portraits. Pick your favourite, then we create five fitness images from it that change with your daily Steps.")
+            Text(String(appLocalized: "Each character draws three portraits. Pick your favourite, then we create five fitness images from it that change with your daily Steps."))
                 .ffType(.body).foregroundStyle(theme.textSecondary)
+            if purchases.freeCharacters > 0 {
+                FreeCharacterBadge(count: purchases.freeCharacters)
+            }
 
             ForEach(purchases.inProgress) { active in
                 FFSection(title: String(localized: "Your character")) {
@@ -40,6 +43,7 @@ struct PaidCharacterView: View {
                     progress(active)
                 }
             }
+            CharacterIdeas(description: $description, disabled: purchases.isBusy)
             FFField(label: String(localized: "Your animal"), counter: "\(description.count)/1000", minHeight: 120) {
                 TextField(String(localized: "Species, breed, accessories, colors…"), text: $description, axis: .vertical)
                     .lineLimit(4...8)
@@ -50,6 +54,12 @@ struct PaidCharacterView: View {
                          enabled: !purchases.isBusy && !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                          busy: purchases.isBusy, fullWidth: true) {
                     Task { await start(ready) }
+                }
+            } else if purchases.freeCharacters > 0 {
+                FFButton(title: String(appLocalized: "Create for free"), kind: .primary,
+                         enabled: !purchases.isBusy && !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                         busy: purchases.isBusy, fullWidth: true) {
+                    Task { await createFree() }
                 }
             } else {
                 let title = purchases.pendingPurchase
@@ -274,6 +284,15 @@ struct PaidCharacterView: View {
         catch { self.error = error.localizedDescription }
     }
 
+    private func createFree() async {
+        error = ""
+        do {
+            try await purchases.claimFree(description: description, session: session)
+            description = ""
+        } catch is CancellationError {
+        } catch { self.error = error.localizedDescription }
+    }
+
     private func retry(_ character: CustomCharacterProgress) async {
         do { _ = try await purchases.advance(character.id, retry: true, session: session) }
         catch { self.error = error.localizedDescription }
@@ -294,6 +313,78 @@ struct PaidCharacterView: View {
             try await session.setCompanion(image: .init(requestID: entry.requestID, stage: "resting"))
             companions.apply(session.profile)
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+/// "1 free": the characters this person can still create without paying.
+struct FreeCharacterBadge: View {
+    let count: Int
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Label(String(appLocalized: "character.free-count", defaultValue: "\(count) free"), systemImage: "gift")
+            .ffType(.label)
+            .foregroundStyle(theme.mossText)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(theme.mossWash, in: Capsule())
+    }
+}
+
+/// Real descriptions next to the portrait the same drawing made from them, so people see what their words give.
+/// The four portraits are unused runs of the Specials work (11 Oct 2026) on the pinned Animal Avatars workflow.
+struct CharacterIdeas: View {
+    @Binding var description: String
+    var disabled = false
+    @Environment(\.ffTheme) private var theme
+
+    private var ideas: [(image: String, text: String)] {
+        [
+            ("CharacterIdea-pigeon", String(appLocalized: "character.idea.pigeon", defaultValue: "A plump grey city pigeon with an iridescent green-purple neck and orange eyes, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small fanny pack worn across the chest. Strutting, nosy, weirdly confident.")),
+            ("CharacterIdea-opossum", String(appLocalized: "character.idea.opossum", defaultValue: "A small scruffy grey opossum with a white face, pink nose and a bare pink tail. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny propeller beanie hat. Wide-eyed, slightly panicked, trying his best.")),
+            ("CharacterIdea-seagull", String(appLocalized: "character.idea.seagull", defaultValue: "A scrappy white and grey seagull with a yellow beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: small dark sunglasses. Shifty, opportunistic, totally guilty.")),
+            ("CharacterIdea-mole", String(appLocalized: "character.idea.mole", defaultValue: "A small velvety dark grey mole with a pink star-like nose and big pink digging paws. Nothing held in the hands or wings, no headband. One worn signature detail only: tiny thick round glasses. Squinting, determined, a bit lost.")),
+        ]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(String(appLocalized: "Ideas")).ffType(.label).foregroundStyle(theme.textSecondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(Array(ideas.enumerated()), id: \.offset) { _, idea in
+                        let picked = description == idea.text
+                        Button {
+                            description = idea.text
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Image(idea.image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 120)
+                                    .accessibilityHidden(true)
+                                Text(idea.text)
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                                    .lineLimit(4)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            .padding(8)
+                            .frame(width: 150, alignment: .top)
+                            .background(picked ? theme.mossWash : theme.card,
+                                        in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                            .ffBorder(picked ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
+                        }
+                        .buttonStyle(FFHapticPlainStyle())
+                        .disabled(disabled)
+                        .accessibilityAddTraits(picked ? .isSelected : [])
+                    }
+                }
+            }
+            Text(String(appLocalized: "Real portraits drawn from these words. Tap one to start from it."))
+                .ffType(.caption).foregroundStyle(theme.textSecondary)
+        }
     }
 }
 

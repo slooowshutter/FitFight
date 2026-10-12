@@ -268,8 +268,6 @@ function definitions(
         join (${profiles}) as p on p.user_id = latest.user_id
         where latest.finalized and latest.day < ${w.today}::date
     `;
-    const history = stepHistory(sql`'-infinity'::date`);
-    const steps = sql`select * from (${history}) as history where history.day >= history.joined_day`;
     // Complete days end the day before yesterday, as in dayCard.
     const recentSteps = sql`
         select * from (${stepHistory(sql`least(${w.start}::date, ${w.today}::date - 61)`)}) as history
@@ -353,6 +351,21 @@ function definitions(
         from private.referrals as r join public.profiles as p on p.user_id = r.referred_user_id
         where p.deleted_at is null and r.created_at < p.created_at + interval '7 days'
     `;
+    // When each person first synced steps into a real Fight that another person also synced
+    // into: the later of the two first syncs. Every sync into a live Fight adds a snapshot.
+    const firstContested = sql`
+        with synced as (
+            select s.fight_id, s.user_id, min(s.created_at) as first_at
+            from private.fight_score_snapshots as s
+            join (${realFights}) as f on f.id = s.fight_id
+            where f.state <> 'cancelled'
+            group by s.fight_id, s.user_id
+        )
+        select mine.user_id, min(greatest(mine.first_at, rival.first_at)) as at
+        from synced as mine
+        join synced as rival on rival.fight_id = mine.fight_id and rival.user_id <> mine.user_id
+        group by mine.user_id
+    `;
     const totalUsers: AdminDashboardCardDefinition = {
         id: "total_users", title: "Total users", unit: "count", better: true,
         note: "Now vs 7 days ago. Deleted accounts are removed from both counts, so the change equals Weekly new users.",
@@ -380,15 +393,6 @@ function definitions(
         id: "app_opens", title: "Weekly app opens", unit: "count", better: true,
         note: `Last 7 days vs the 7 before.${historyNote(14)}`,
         query: eventCard(sql, w, 7, opens, count, historyStart),
-    };
-    const liveFights: AdminDashboardCardDefinition = {
-        id: "live_fights", title: "Live fights", unit: "count", better: true,
-        note: "Now, vs 7 days ago. App-wide Fight included.",
-        query: sql`
-            select count(*) filter (where starts_at <= ${w.now} and ends_at > ${w.now})::float8 as value,
-                count(*) filter (where starts_at <= ${ago(7)} and ends_at > ${ago(7)})::float8 as previous
-            from public.fights where state not in ('draft', 'cancelled')
-        `,
     };
     const weeklyFightsCreated: AdminDashboardCardDefinition = {
         id: "fights_started", title: "Weekly fights created", unit: "count", better: true,
@@ -526,22 +530,7 @@ function definitions(
                 ],
             };
         }
-        case "users": {
-            // When each person first synced steps into a real Fight that another person also synced
-            // into: the later of the two first syncs. Every sync into a live Fight adds a snapshot.
-            const firstContested = sql`
-                with synced as (
-                    select s.fight_id, s.user_id, min(s.created_at) as first_at
-                    from private.fight_score_snapshots as s
-                    join (${realFights}) as f on f.id = s.fight_id
-                    where f.state <> 'cancelled'
-                    group by s.fight_id, s.user_id
-                )
-                select mine.user_id, min(greatest(mine.first_at, rival.first_at)) as at
-                from synced as mine
-                join synced as rival on rival.fight_id = mine.fight_id and rival.user_id <> mine.user_id
-                group by mine.user_id
-            `;
+        case "users":
             return {
                 cards: [
                     totalUsers, weeklyNewUsers,
@@ -775,7 +764,6 @@ function definitions(
                     },
                 ],
             };
-        }
         case "retention": {
             // NOTE: retention follows people whose phone sent Apple Health steps. Their phones send
             // steps in the background, opened or not, until the app is deleted or Health is turned off.
@@ -799,21 +787,6 @@ function definitions(
             const withHealth = sql`
                 select p.user_id, p.joined_day, p.at from (${profiles}) as p
                 where p.user_id in (select h.user_id from (${healthUsers}) as h)
-            `;
-            // When each person first synced steps into a real Fight that another person also synced
-            // into: the later of the two first syncs. Every sync into a live Fight adds a snapshot.
-            const firstContested = sql`
-                with synced as (
-                    select s.fight_id, s.user_id, min(s.created_at) as first_at
-                    from private.fight_score_snapshots as s
-                    join (${realFights}) as f on f.id = s.fight_id
-                    where f.state <> 'cancelled'
-                    group by s.fight_id, s.user_id
-                )
-                select mine.user_id, min(greatest(mine.first_at, rival.first_at)) as at
-                from synced as mine
-                join synced as rival on rival.fight_id = mine.fight_id and rival.user_id <> mine.user_id
-                group by mine.user_id
             `;
             // Signups of the `span` days that just got past day `to` after signing up, against the
             // `span` days before them: the share with steps for a day `from` to `to` days after.

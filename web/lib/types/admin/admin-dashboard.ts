@@ -46,6 +46,10 @@ export const adminDashboardCardSchema = z.object({
     unit: adminDashboardUnitSchema,
     higher_is_better: z.boolean().nullable(),
     note: z.string().nullable(),
+    /** What the card measures and what it compares with, for its detail page. */
+    definition: z.string().nullable(),
+    /** A sentence that reads the card's number. */
+    example: z.string().nullable(),
 });
 
 export const adminDashboardSeriesSchema = z.object({
@@ -155,7 +159,21 @@ export type AdminDashboardCardDefinition = {
     unit: AdminDashboardUnit;
     better: boolean | null;
     note?: string;
+    definition: string;
+    /** Read only when the card has a value. */
+    example: (read: AdminDashboardCardReader) => string;
     query: AdminDashboardQueryFragment;
+};
+
+/** What a card's example sentence reads. */
+export type AdminDashboardCardReader = {
+    value: number;
+    /** "8,234", "42%", "1.2 seconds"; the card's unit by default. */
+    format: (value: number, unit?: AdminDashboardUnit) => string;
+    /** "1 person", "6 people". */
+    count: (value: number, one: string, many: string) => string;
+    /** ", against 47 in the 7 days before", or nothing when the card has no previous value. */
+    against: (when: string) => string;
 };
 
 export type AdminDashboardChartDefinition = {

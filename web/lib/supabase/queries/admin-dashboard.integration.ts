@@ -72,6 +72,11 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
                 dashboard.charts.every((chart) => chart.definition && !/undefined|NaN/.test(chart.example ?? "")),
                 `${section} charts explain themselves`,
             );
+            assert.ok(
+                dashboard.cards.every((card) => card.definition && (card.value === null) === (card.example === null)
+                    && !/undefined|NaN/.test(card.example ?? "")),
+                `${section} cards explain themselves`,
+            );
             cardValues.push(JSON.stringify(dashboard.cards.map(({ id, value, previous }) => [id, value, previous])));
         }
         assert.equal(new Set(cardValues).size, 1, `${section} cards have fixed spans, whatever the period`);
@@ -80,6 +85,9 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     const opens = engagement.cards.find((card) => card.id === "app_opens");
     // Seven days of two foreground traces each; the one 20 seconds after a background sync is not an open.
     assert.ok(opens?.value !== undefined && opens.value !== null && opens.value >= 7);
+    assert.match(opens.example ?? "", /^The app was opened \d+ times in the last 7 days, against \d+ in the 7 days before\.$/);
+    const syncTimes = (await readAdminDashboard("app", 30, "staging", database)).charts.find((chart) => chart.id === "sync_durations");
+    assert.deepEqual(syncTimes?.series.map((line) => line.name), ["P10", "P25", "P50", "P75", "P90", "P95", "P99"]);
 
     const [first] = await database`
         select (min(created_at) at time zone 'Europe/Paris')::date::text as day from public.profiles

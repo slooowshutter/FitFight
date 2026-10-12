@@ -58,6 +58,10 @@ query only marks its own tile with `Query failed: ...`.
   measures) and an `example` sentence that reads one current number off it: the
   newest complete day, week or month, or now for totals and states. Both are built
   on the server in English, so their wording changes need no app build.
+- **Card pages (11 Oct 2026):** every card also carries a `definition` (what it
+  measures and what it compares with) and an `example` sentence that reads its
+  number and the previous one. A card without a value has no example. The app
+  shows only the name, number and change on a card, and the rest on its page.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
   after a background `observer` sync is the post-sync refresh, not an open. Sync

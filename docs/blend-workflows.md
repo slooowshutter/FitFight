@@ -123,9 +123,8 @@ descriptions remain available. A 1.1.2 release note and English/French copy were
 ## Credits and balance events
 
 Avatar admission stores a fixed price of **one credit**. Fitness and Group Photo
-require explicit positive `BLEND_FITNESS_CREDIT_PRICE` and
-`BLEND_GROUP_PHOTO_CREDIT_PRICE` values before new admission. Neither gets an
-invented default. The selected workflow price is stored once at admission and is
+require an explicit positive `creditPrice` in `blendConfiguration` before new
+admission. Neither gets an invented default. The selected workflow price is stored once at admission and is
 consumed only for a complete validated result. This is per-workflow settlement,
 not a partial charge for each image. New accounts have zero
 credits until an explicit grant. There is no starter grant, replenishment or
@@ -308,28 +307,38 @@ if an earlier request-only backend exists in an environment, keep it disabled an
 drain old instances before allowing any credit-bearing request. That older writer
 cannot settle the new credit constraint. Distribute the native UI only after the staging backend and image library are ready.
 
+Environment variables hold secrets only. Every other Blend setting is committed
+in `blendConfiguration` (`web/lib/types/ai/workflow.ts`) and is the same on
+every environment. Changing one is a code change that ships with a deploy.
+
+| Setting | Value |
+| --- | --- |
+| `limits.globalDailyStarts` | 500 shared starts per UTC day |
+| `limits.globalConcurrentRuns` | 20 unresolved runs |
+| `limits.providerRequestsPerMinute` | 60 shared start/read HTTP calls |
+| `workflows.avatar` | ID below, latest published version, price 1 |
+| `workflows.fitness` | ID below, latest published version, price unset |
+| `workflows.group_photo` | ID below, latest published version, price unset |
+
+Omit `versionId` to run the latest published version. Omit `creditPrice` to keep
+credit-funded starts for that workflow closed; paid characters never use it.
+
 | Variable | Requirement |
 | --- | --- |
 | `BLEND_API_KEY` | Deployment-only key; verify access and provider limits |
-| `BLEND_AVATAR_WORKFLOW_ID` | Published workflow ID |
-| `BLEND_AVATAR_VERSION_ID` | Optional. Empty runs the latest published Avatar version |
-| `BLEND_FITNESS_WORKFLOW_ID`, `BLEND_FITNESS_VERSION_ID` | Published Fitness ID; version optional, empty means latest |
-| `BLEND_GROUP_PHOTO_WORKFLOW_ID`, `BLEND_GROUP_PHOTO_VERSION_ID` | Published Group Photo ID; version optional, empty means latest |
-| `BLEND_FITNESS_CREDIT_PRICE`, `BLEND_GROUP_PHOTO_CREDIT_PRICE` | Required explicit positive prices for separate credit-funded starts; paid characters do not use them |
 | `APPLE_IAP_ENVIRONMENT` | `Sandbox` on staging, `Production` on production; App Review accounts retain their configured Sandbox shelf |
-| `BLEND_GLOBAL_DAILY_STARTS` | Required positive shared daily cap |
-| `BLEND_GLOBAL_CONCURRENT_RUNS` | Required positive unresolved-capacity cap |
-| `BLEND_REQUESTS_PER_MINUTE` | Required positive shared start/read HTTP cap |
 | `FITFIGHT_ADMIN_USER_ID` | Existing environment-owned operator Auth UUID |
 | `CRON_SECRET` | Authenticates the hosted reconciler |
 
-The three limits have no invented defaults. Choose them from the actual deployment
-key's limits and allowed spending. A start cap is not a guaranteed monetary budget
-without a verified maximum workflow cost or provider-enforced spending cap. Initial
-grants and provider spending policy still require an explicit decision before use.
+The three limits have no invented defaults. They were taken from the values set on
+Vercel for Development and Preview on 12 Oct 2026. Choose them from the actual
+deployment key's limits and allowed spending. A start cap is not a guaranteed
+monetary budget without a verified maximum workflow cost or provider-enforced
+spending cap. Initial grants and provider spending policy still require an
+explicit decision before use.
 
 Read-only publication inspection on 24 Sep confirmed zero validation errors and
-these current versions. The safe identifiers are included in `.env.example`;
+these current versions. The workflow IDs are in `blendConfiguration`;
 both credit prices remain unset. On an authorized `develop` merge, the hosted
 `custom-character-iap.yml` job prepares the one consumable at EUR 2.99 in the
 French base territory. The Paid Apps Agreement, banking and W-9 remain pending;

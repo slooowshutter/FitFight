@@ -21,16 +21,6 @@ export const aiAllowanceSchema = z.object({
     fitness_price: z.number().int().positive().nullable().optional(),
     group_photo_price: z.number().int().positive().nullable().optional(),
 });
-export const aiCreditPricesSchema = z.object({
-    fitness_price: z.preprocess(
-        (value) => (value === "" ? undefined : value),
-        z.coerce.number().int().positive().max(100_000).optional(),
-    ),
-    group_photo_price: z.preprocess(
-        (value) => (value === "" ? undefined : value),
-        z.coerce.number().int().positive().max(100_000).optional(),
-    ),
-});
 export const aiCreditBalanceSchema = z.object({
     user_id: z.string().uuid().toLowerCase(),
     available: z.number().int().nonnegative(),
@@ -107,7 +97,6 @@ export const aiRecoverySchema = z.discriminatedUnion("action", [
         .strict(),
 ]);
 
-export type AiCreditPrices = z.infer<typeof aiCreditPricesSchema>;
 export type AiAllowance = z.infer<typeof aiAllowanceSchema>;
 export type AiCreditBalance = z.infer<typeof aiCreditBalanceSchema>;
 export type AiBalanceEvent = z.infer<typeof aiBalanceEventSchema>;

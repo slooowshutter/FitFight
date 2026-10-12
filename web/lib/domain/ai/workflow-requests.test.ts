@@ -9,6 +9,7 @@ import {
 } from "@/lib/types/ai/request";
 import {
     aiRunResponseSchema,
+    blendConfiguration,
     createAiRunRequestSchema,
     legacyAvatarVersionId,
 } from "@/lib/types/ai/workflow";
@@ -24,29 +25,36 @@ const input = createAiRunRequestSchema.parse({
     workflow: "avatar",
     parameters: { description: "A fox with glasses" },
 });
-const env = {
-    BLEND_API_KEY: "bai_test_key",
-    BLEND_AVATAR_WORKFLOW_ID: version.workflowId,
-    BLEND_AVATAR_VERSION_ID: version.versionId,
-    BLEND_GLOBAL_DAILY_STARTS: "100",
-    BLEND_GLOBAL_CONCURRENT_RUNS: "2",
-    BLEND_REQUESTS_PER_MINUTE: "30",
-    BLEND_FITNESS_WORKFLOW_ID: "fitness-publication",
-    BLEND_FITNESS_VERSION_ID: "fitness-version",
-    BLEND_FITNESS_CREDIT_PRICE: "5",
-    BLEND_GROUP_PHOTO_WORKFLOW_ID: "group-publication",
-    BLEND_GROUP_PHOTO_VERSION_ID: "group-version",
-    BLEND_GROUP_PHOTO_CREDIT_PRICE: "2",
+const testConfiguration: typeof blendConfiguration = {
+    limits: {
+        globalDailyStarts: 100,
+        globalConcurrentRuns: 2,
+        providerRequestsPerMinute: 30,
+    },
+    workflows: {
+        avatar: { ...version, creditPrice: 1 },
+        fitness: {
+            workflowId: "fitness-publication",
+            versionId: "fitness-version",
+            creditPrice: 5,
+        },
+        group_photo: {
+            workflowId: "group-publication",
+            versionId: "group-version",
+            creditPrice: 2,
+        },
+    },
 };
-const original = Object.fromEntries(
-    Object.keys(env).map((name) => [name, process.env[name]]),
-);
-before(() => Object.assign(process.env, env));
+const originalConfiguration = { ...blendConfiguration };
+const originalApiKey = process.env.BLEND_API_KEY;
+before(() => {
+    process.env.BLEND_API_KEY = "bai_test_key";
+    Object.assign(blendConfiguration, testConfiguration);
+});
 after(() => {
-    for (const [name, value] of Object.entries(original)) {
-        if (value === undefined) delete process.env[name];
-        else process.env[name] = value;
-    }
+    Object.assign(blendConfiguration, originalConfiguration);
+    if (originalApiKey === undefined) delete process.env.BLEND_API_KEY;
+    else process.env.BLEND_API_KEY = originalApiKey;
 });
 
 function requestRecord(
@@ -222,7 +230,7 @@ test("accepted run followed by persistence failure stays uncertain and retains r
 });
 
 test("known run reads use owner-scoped storage and the original version, even after a newer version is configured", async () => {
-    process.env.BLEND_AVATAR_VERSION_ID = "new-version";
+    blendConfiguration.workflows.avatar.versionId = "new-version";
     try {
         const record = requestRecord({ status: "pending", run_handle: run });
         const response = await readAiRun(
@@ -247,7 +255,7 @@ test("known run reads use owner-scoped storage and the original version, even af
         );
         assert.equal(response.status, "running");
     } finally {
-        process.env.BLEND_AVATAR_VERSION_ID = version.versionId;
+        blendConfiguration.workflows.avatar.versionId = version.versionId;
     }
 });
 
@@ -482,8 +490,8 @@ test("AI routes authenticate before request parsing or paid-work admission", asy
 });
 
 test("removed start configuration still recovers an existing action key", async () => {
-    const workflowId = process.env.BLEND_AVATAR_WORKFLOW_ID;
-    delete process.env.BLEND_AVATAR_WORKFLOW_ID;
+    const workflowId = blendConfiguration.workflows.avatar.workflowId;
+    blendConfiguration.workflows.avatar.workflowId = "";
     try {
         const result = await startAiRun(
             userId,
@@ -500,7 +508,7 @@ test("removed start configuration still recovers an existing action key", async 
         );
         assert.equal(result.request_id, requestId);
     } finally {
-        process.env.BLEND_AVATAR_WORKFLOW_ID = workflowId;
+        blendConfiguration.workflows.avatar.workflowId = workflowId;
     }
 });
 
@@ -802,7 +810,7 @@ test("portrait inputs reject arbitrary URLs, duplicate characters and groups bey
 });
 
 test("unpriced workflows cannot start but their existing actions and status remain recoverable", async () => {
-    delete process.env.BLEND_FITNESS_CREDIT_PRICE;
+    blendConfiguration.workflows.fitness.creditPrice = undefined;
     try {
         const input = createAiRunRequestSchema.parse({
             workflow: "fitness",
@@ -839,7 +847,7 @@ test("unpriced workflows cannot start but their existing actions and status rema
             "running",
         );
     } finally {
-        process.env.BLEND_FITNESS_CREDIT_PRICE = "5";
+        blendConfiguration.workflows.fitness.creditPrice = 5;
     }
 });
 

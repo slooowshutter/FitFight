@@ -64,7 +64,10 @@ query only marks its own tile with `Query failed: ...`.
   shows only the name, number and change on a card, and the rest on its page.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
-  after a background `observer` sync is the post-sync refresh, not an open. Sync
+  after a background `observer` sync is the post-sync refresh, not an open. The
+  refresh after an action in the app, such as create, join, edit or leave a Fight,
+  sends `manual` since the 12 Oct 2026 change. Older builds send it as
+  `foreground`, so their opens include those actions. Sync
   history is kept since 29 Sep (never-delete rule), so engagement history grows
   from that date; earlier rows were pruned after 7 days.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,

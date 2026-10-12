@@ -745,7 +745,10 @@ struct CompanionIntroduction: View {
     private var youCharacter: some View {
         // Every companion opens the drawer on Fights, so Change animal is always reachable.
         if surface == .fights {
-            Button { showingLevels = true } label: { youArt }
+            // The whole area is tappable, even when a custom companion has no image yet.
+            Button { showingLevels = true } label: {
+                youArt.frame(maxWidth: .infinity, maxHeight: .infinity).contentShape(Rectangle())
+            }
                 .buttonStyle(FFPressStyle())
                 .accessibilityLabel(String(appLocalized: "Companion levels"))
         } else {

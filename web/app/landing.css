@@ -345,29 +345,35 @@ body:has(.lp) {
     margin-top: 40px;
 }
 
-.lp-total {
+.lp-hero-stat {
     display: grid;
-    justify-items: center;
-    padding: 56px 20px 8px;
-    text-align: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 20px;
+    border-top: 1px solid var(--hairline);
 }
 
-.lp-total .lp-eyebrow {
-    margin-bottom: 10px;
-}
-
-.lp-total-value {
+.lp-hero-stat b {
     color: var(--moss-text);
-    font-size: clamp(48px, 13vw, 96px);
+    font-size: 40px;
     font-weight: 800;
-    letter-spacing: -0.06em;
-    line-height: 0.95;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
 }
 
-.lp-total-caption {
-    margin-top: 10px;
+.lp-hero-stat > span {
     color: var(--secondary);
-    font-size: 15px;
+    font-size: 14px;
+}
+
+/* Read by screen readers only: the visible total counts up from zero */
+.lp-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 @media (min-width: 1000px) {

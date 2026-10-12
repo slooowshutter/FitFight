@@ -14,7 +14,7 @@ ship it with a wider hero and the phone only, without the race art.
 **Code:** `/` and `/fr` now render one shared page from `web/components/landing/`
 in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
 Feedback and Profile screens; text left and phone right on computers, stacked
-on phones), steps recorded, what it is, the goal, how it
+on phones) with the steps recorded under the buttons, what it is, the goal, how it
 works (the five New fight steps, nothing is saved), companions (pick one of the
 12 animals and see its five poses), fight options, pricing, FAQ with search,
 and a closing card. All people, fights and posts are fictional. The download

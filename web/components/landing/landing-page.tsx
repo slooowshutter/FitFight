@@ -104,6 +104,20 @@ export function LandingPage({
                                 <span key={item}>{item}</span>
                             ))}
                         </p>
+                        <p className="lp-hero-stat">
+                            <b>
+                                <span aria-hidden="true">
+                                    <TotalStepsCount
+                                        totalSteps={totalSteps}
+                                        language={language}
+                                    />
+                                </span>
+                                <span className="lp-sr">
+                                    {formatSteps(totalSteps, language)}
+                                </span>
+                            </b>
+                            <span>{copy.totalSteps.caption}</span>
+                        </p>
                     </div>
                     <div className="lp-hero-phone">
                         <LandingPhone language={language} />
@@ -113,22 +127,6 @@ export function LandingPage({
                         </p>
                     </div>
                 </div>
-            </section>
-
-            <section
-                className="lp-total"
-                aria-label={copy.totalSteps.label(
-                    formatSteps(totalSteps, language),
-                )}
-            >
-                <p className="lp-eyebrow">{copy.totalSteps.eyebrow}</p>
-                <p className="lp-total-value" aria-hidden="true">
-                    <TotalStepsCount
-                        totalSteps={totalSteps}
-                        language={language}
-                    />
-                </p>
-                <p className="lp-total-caption">{copy.totalSteps.caption}</p>
             </section>
 
             <section className="lp-sec" id="what">

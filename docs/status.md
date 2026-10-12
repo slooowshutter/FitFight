@@ -24,8 +24,20 @@ staging. The pricing card shows Specials (EUR 0.99) and Make it yours
 in `web/public/landing/`. The old home page styles and `total-steps.css` are
 removed. No API, database, app or release setting changed.
 
+**Published figures (Marc chose option A, 12 Oct 2026):** next to the steps
+recorded, the hero shows in gold the typical change in daily steps after
+joining. It is the same figure as the admin "Change after joining" card (the
+median person's 4 weeks after signup vs the 4 weeks before), read live with a
+1-hour cache and hidden when it rounds below 1%. The privacy policy, English and
+French, effective 12 Oct 2026, now says FitFight may publish anonymous,
+aggregate figures on fitfight.app. Marc accepted the remaining risk under Apple
+guideline 5.1.3 (HealthKit data in marketing) for these anonymous totals.
+
 **Verification (local):** web typecheck, all 438 unit tests and the CI privacy
-disclosure check passed. A production build kept `/` and `/fr` static with
+disclosure check passed. On a disposable Postgres with known before and after
+steps, the website query and the admin card's SQL both returned the expected
+median (15%); people with too few days, deleted profiles, unfinished days and
+other providers were excluded, and with nobody qualifying the stat is hidden. A production build kept `/` and `/fr` static with
 hourly revalidation. Against `next start` and a disposable Postgres, both
 languages rendered at 393 and 1440 pixels wide with the sample steps total;
 the phone tabs, the New fight steps, the companion picker, the FAQ search and

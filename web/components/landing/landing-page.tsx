@@ -26,12 +26,15 @@ export function LandingPage({
     language,
     download,
     totalSteps,
+    joiningLift,
 }: {
     language: SiteLanguage;
     download: { isStaging: boolean; url: string };
     totalSteps: number;
+    joiningLift: number | null;
 }) {
     const copy = landingCopy[language];
+    const lift = Math.round(joiningLift ?? 0);
     const statement = copy.what.statement;
     const downloadButton = (kind: "header" | "hero") =>
         download.isStaging ? (
@@ -104,20 +107,28 @@ export function LandingPage({
                                 <span key={item}>{item}</span>
                             ))}
                         </p>
-                        <p className="lp-hero-stat">
-                            <b>
-                                <span aria-hidden="true">
-                                    <TotalStepsCount
-                                        totalSteps={totalSteps}
-                                        language={language}
-                                    />
-                                </span>
-                                <span className="lp-sr">
-                                    {formatSteps(totalSteps, language)}
-                                </span>
-                            </b>
-                            <span>{copy.totalSteps.caption}</span>
-                        </p>
+                        <div className="lp-hero-stats">
+                            <p className="lp-hero-stat">
+                                <b>
+                                    <span aria-hidden="true">
+                                        <TotalStepsCount
+                                            totalSteps={totalSteps}
+                                            language={language}
+                                        />
+                                    </span>
+                                    <span className="lp-sr">
+                                        {formatSteps(totalSteps, language)}
+                                    </span>
+                                </b>
+                                <span>{copy.totalSteps.caption}</span>
+                            </p>
+                            {lift >= 1 ? (
+                                <p className="lp-hero-stat lp-lift">
+                                    <b>{copy.joiningLift.value(lift)}</b>
+                                    <span>{copy.joiningLift.caption}</span>
+                                </p>
+                            ) : null}
+                        </div>
                     </div>
                     <div className="lp-hero-phone">
                         <LandingPhone language={language} />

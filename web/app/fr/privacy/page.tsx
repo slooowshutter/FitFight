@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 11 octobre 2026</p>
+                <p className="legal-updated">En vigueur le 12 octobre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -287,7 +287,15 @@ export default function PrivacyPage() {
                             personnes qui ouvrent l’app, l’activité des défis et
                             la moyenne de pas par jour, pour savoir si FitFight
                             aide à bouger plus et pour l’améliorer. Seul
-                            l’opérateur de FitFight les voit ;
+                            l’opérateur de FitFight les voit, sauf les chiffres
+                            publiés ci-dessous ;
+                        </li>
+                        <li>
+                            publier quelques chiffres anonymes et agrégés sur
+                            fitfight.app, comme le total des pas enregistrés et
+                            l’évolution typique des pas quotidiens après
+                            l’inscription. Ils n’identifient jamais une
+                            personne ;
                         </li>
                         <li>répondre aux demandes d’assistance ;</li>
                         <li>

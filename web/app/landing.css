@@ -345,12 +345,21 @@ body:has(.lp) {
     margin-top: 40px;
 }
 
-.lp-hero-stat {
-    display: grid;
-    gap: 4px;
+.lp-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 18px 40px;
     margin-top: 8px;
     padding-top: 20px;
     border-top: 1px solid var(--hairline);
+}
+
+.lp-hero-stat {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    max-width: 270px;
 }
 
 .lp-hero-stat b {
@@ -364,6 +373,11 @@ body:has(.lp) {
 .lp-hero-stat > span {
     color: var(--secondary);
     font-size: 14px;
+}
+
+/* Gold means progress: the extra steps people walk after joining */
+.lp-hero-stat.lp-lift b {
+    color: var(--gold);
 }
 
 /* Read by screen readers only: the visible total counts up from zero */
@@ -393,7 +407,8 @@ body:has(.lp) {
     }
 
     .lp-cta,
-    .lp-meta {
+    .lp-meta,
+    .lp-hero-stats {
         justify-content: flex-start;
     }
 

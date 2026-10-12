@@ -1555,6 +1555,7 @@ struct CompanionPicker: View {
         isSaving = true
         defer { isSaving = false }
         do {
+            var bought = false
             if animal.isLimited && !CompanionPreview.isEnabled,
                purchases.snapshot?.editions.first(where: { $0.id == animal.rawValue })?.status != .yours {
                 guard await purchases.buy(animal, session: session) else {
@@ -1562,8 +1563,14 @@ struct CompanionPicker: View {
                     await loadLimitedEditions()
                     return
                 }
+                bought = true
             }
             try await companions.choose(id: animal.rawValue, prompt: nil, session: session)
+            // After a purchase the picker stays open, so the buyer sees the Special marked as theirs.
+            if bought {
+                await loadLimitedEditions()
+                return
+            }
             // Closing through the binding only: a second dismiss() can hit the screen underneath and leave it untappable.
             companions.showingPicker = false
         } catch is CancellationError {

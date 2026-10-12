@@ -1560,10 +1560,10 @@ struct FitFightAPI {
 
             var request = URLRequest(url: requestURL)
             request.httpMethod = method
-            // Only sync requests carry a trace. A stalled network must not hold a background wake
-            // or the refresh spinner.
+            // Only sync requests carry a trace. A slow upload or server gets up to 2 minutes without data.
+            // The refresh and background time limits still end the waits that people see.
             if trace != nil {
-                request.timeoutInterval = 15
+                request.timeoutInterval = 120
             }
             if !accessToken.isEmpty {
                 request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")

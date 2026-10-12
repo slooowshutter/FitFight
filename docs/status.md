@@ -19,7 +19,7 @@ activity syncs failed with HealthKit error 5 (authorization not determined).
 - An observer call answers HealthKit at once and records nothing while a sync
   runs, or for 15 minutes after a successful Steps upload. One upload reads
   every type, so no data is skipped.
-- Requests that carry a sync trace time out after 15 seconds without data.
+- Requests that carry a sync trace time out after 120 seconds without data.
 - A foreground or manual refresh stops its network part after 30 seconds.
   Fights, a Fight and Profile then show "Refreshing took too long" with Try
   again. The limit starts after the HealthKit read, so the permission sheet does

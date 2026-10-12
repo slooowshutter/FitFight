@@ -79,35 +79,39 @@ export function LandingPage({
             </header>
 
             <section className="lp-hero" id="top">
-                <div className="lp-wrap lp-hero-copy">
-                    <p className="lp-eyebrow">{copy.hero.eyebrow}</p>
-                    <h1 className="lp-h1">
-                        {copy.hero.title}{" "}
-                        <span className="lp-moss">{copy.hero.titleAccent}</span>
-                    </h1>
-                    <p className="lp-lede">{copy.hero.lede}</p>
-                    <div className="lp-cta">
-                        {downloadButton("hero")}
-                        <a className="lp-ghost" href="#how">
-                            {copy.hero.tryIt}
-                            <Icon name="down" size={18} weight={2.2} />
-                        </a>
+                <div className="lp-wrap lp-hero-grid">
+                    <div className="lp-hero-copy">
+                        <p className="lp-eyebrow">{copy.hero.eyebrow}</p>
+                        <h1 className="lp-h1">
+                            {copy.hero.title}{" "}
+                            <span className="lp-moss">
+                                {copy.hero.titleAccent}
+                            </span>
+                        </h1>
+                        <p className="lp-lede">{copy.hero.lede}</p>
+                        <div className="lp-cta">
+                            {downloadButton("hero")}
+                            <a className="lp-ghost" href="#how">
+                                {copy.hero.tryIt}
+                                <Icon name="down" size={18} weight={2.2} />
+                            </a>
+                        </div>
+                        <p className="lp-meta">
+                            {(download.isStaging
+                                ? copy.hero.betaMeta
+                                : copy.hero.meta
+                            ).map((item) => (
+                                <span key={item}>{item}</span>
+                            ))}
+                        </p>
                     </div>
-                    <p className="lp-meta">
-                        {(download.isStaging
-                            ? copy.hero.betaMeta
-                            : copy.hero.meta
-                        ).map((item) => (
-                            <span key={item}>{item}</span>
-                        ))}
-                    </p>
-                </div>
-                <div className="lp-hero-phone">
-                    <LandingPhone language={language} />
-                    <p className="lp-hint">
-                        <Icon name="sparkle" size={14} />
-                        {copy.hero.hint}
-                    </p>
+                    <div className="lp-hero-phone">
+                        <LandingPhone language={language} />
+                        <p className="lp-hint">
+                            <Icon name="sparkle" size={14} />
+                            {copy.hero.hint}
+                        </p>
+                    </div>
                 </div>
             </section>
 

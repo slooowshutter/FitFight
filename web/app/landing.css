@@ -278,10 +278,14 @@ body:has(.lp) {
     }
 }
 
-/* Hero: centered copy, then the phone */
+/* Hero: copy above the phone on a phone, copy left and phone right on a computer */
 .lp-hero {
     padding: 52px 0 24px;
     text-align: center;
+}
+
+.lp-hero-grid {
+    display: grid;
 }
 
 .lp-hero-copy {
@@ -367,13 +371,37 @@ body:has(.lp) {
 }
 
 @media (min-width: 1000px) {
+    .lp-hero {
+        padding-top: 40px;
+        text-align: left;
+    }
+
+    .lp-hero-grid {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 72px;
+    }
+
+    .lp-hero-copy {
+        justify-items: start;
+    }
+
+    .lp-cta,
+    .lp-meta {
+        justify-content: flex-start;
+    }
+
     .lp-hero .lp-h1 {
-        max-width: none;
-        font-size: 88px;
+        max-width: 12ch;
+        font-size: clamp(64px, 6vw, 84px);
+    }
+
+    .lp-hero-phone {
+        margin-top: 0;
     }
 
     .lp-hero-phone .lp-phone-wrap {
-        --lp-scale: 0.72;
+        --lp-scale: 0.76;
     }
 }
 
@@ -488,6 +516,7 @@ body:has(.lp) {
 
 .lp-frag-ui {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: 10px;
     height: 236px;
@@ -1716,6 +1745,7 @@ body:has(.lp) {
 
 .lp-scr-fights-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
 }
 

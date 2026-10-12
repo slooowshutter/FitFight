@@ -106,13 +106,13 @@ struct SpecialPurchaseTests {
         // Older servers sent five statuses and no shared product; current ones send the consumable.
         let decoder = JSONDecoder()
         let current = try decoder.decode(SpecialStoreSnapshot.self, from: Data("""
-            {"app_account_token":"6283b4c1-0e8f-4caa-b04b-827b6f1e925b","environment":"Sandbox","purchases_enabled":true,
+            {"app_account_token":"00000000-0000-4000-8000-000000000001","environment":"Sandbox","purchases_enabled":true,
              "product_id":"com.fitfight.mvp.special","conflicts":[],
              "editions":[{"id":"limited-tiger","product_id":"com.fitfight.mvp.special.tiger","status":"yours"}]}
             """.utf8))
         precondition(current.productId == "com.fitfight.mvp.special" && current.editions[0].status == .yours)
         let older = try decoder.decode(SpecialStoreSnapshot.self, from: Data("""
-            {"app_account_token":"6283b4c1-0e8f-4caa-b04b-827b6f1e925b","environment":"Sandbox","purchases_enabled":true,
+            {"app_account_token":"00000000-0000-4000-8000-000000000001","environment":"Sandbox","purchases_enabled":true,
              "conflicts":[],"editions":[{"id":"limited-tiger","product_id":"com.fitfight.mvp.special.tiger","status":"taken"}]}
             """.utf8))
         precondition(older.productId == nil && older.editions[0].status == .taken)

@@ -39,8 +39,10 @@ non-admin and 200 for the admin. It failed when the window was 9 days and when
 the admin check was removed. Swift 6.4 on Linux compiled and ran the native
 contract test with the new fixture, using a stand-in for the Apple-only
 localization file. It failed on a renamed field. The changed Swift files parse,
-and the localization, native API boundary and contract YAML checks passed. Not
-run: the iOS simulator build (macOS CI) and a device check.
+and the localization, native API boundary and contract YAML checks passed.
+[PR #357](https://github.com/slooowshutter/FitFight/pull/357) CI passed: the
+simulator build and native checks, migrations and database tests, web tests,
+screen renders and Vercel. Not run: a device check.
 
 **Live deployment:** Marc asked for a PR into `develop` on 12 Oct. Nothing is
 merged or deployed. A `preview` merge

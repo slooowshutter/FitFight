@@ -12383,16 +12383,6 @@
                 }
             }
         },
-        "Taken": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Déjà pris"
-                    }
-                }
-            }
-        },
         "Checking availability…": {
             "localizations": {
                 "fr": {
@@ -12443,16 +12433,6 @@
                 }
             }
         },
-        "Your special": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Votre Spécial"
-                    }
-                }
-            }
-        },
         "How others see you in fights and Feed. Change it anytime.": {
             "localizations": {
                 "fr": {
@@ -12463,32 +12443,12 @@
                 }
             }
         },
-        "Only one of each exists, one per person. Buy it once, keep it forever.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un seul exemplaire de chaque, un par personne. Achète-le une fois, garde-le pour toujours."
-                    }
-                }
-            }
-        },
         "Restore purchases": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "Restaurer les achats"
-                    }
-                }
-            }
-        },
-        "A purchase is in progress. Your Special is held for 30 minutes. Check it in Settings, Restore purchases.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un achat est en cours. Ton Spécial est réservé pendant 30 minutes. Vérifie dans Réglages, Restaurer les achats."
                     }
                 }
             }
@@ -12509,36 +12469,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Achats indisponibles"
-                    }
-                }
-            }
-        },
-        "Reserved for you": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Réservé pour vous"
-                    }
-                }
-            }
-        },
-        "Cancel checkout": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Annuler cet achat"
-                    }
-                }
-            }
-        },
-        "Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Supprimer votre compte ne rembourse pas les achats Apple. Les Spéciaux achetés ne sont pas revendus. Contactez l’assistance pour récupérer un achat."
                     }
                 }
             }
@@ -12583,32 +12513,12 @@
                 }
             }
         },
-        "Apple is processing your purchase. Your Special is held for 30 minutes.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Apple traite votre achat. Votre Spécial est réservé pendant 30 minutes."
-                    }
-                }
-            }
-        },
         "Purchase status is unknown. Restore purchases before trying again.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "L’état de l’achat est inconnu. Restaurez les achats avant de réessayer."
-                    }
-                }
-            }
-        },
-        "Purchases checked. Your owned Special is ready to use.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Achats vérifiés. Votre Spécial est prêt à être utilisé."
                     }
                 }
             }
@@ -15441,6 +15351,86 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Nouveaux Spéciaux : 30 animaux uniques en cinq séries, chacun avec cinq poses selon tes pas."
+                    }
+                }
+            }
+        },
+        "Buy any Special once and keep it forever. Collect as many as you like.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achète un Spécial une fois et garde-le pour toujours. Collectionne-en autant que tu veux."
+                    }
+                }
+            }
+        },
+        "Unlock this Special": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Débloquer ce Spécial"
+                    }
+                }
+            }
+        },
+        "Apple is processing your purchase. Your Special unlocks when it completes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple traite votre achat. Votre Spécial sera débloqué une fois l’achat terminé."
+                    }
+                }
+            }
+        },
+        "Apple is still processing your Special purchase.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Apple traite encore votre achat de Spécial."
+                    }
+                }
+            }
+        },
+        "Purchases checked. Your Specials are ready to use.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Achats vérifiés. Vos Spéciaux sont prêts à être utilisés."
+                    }
+                }
+            }
+        },
+        "You paid for a Special that is not unlocked yet. Pick one and tap Unlock.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous avez payé un Spécial qui n’est pas encore débloqué. Choisissez-en un et touchez Débloquer."
+                    }
+                }
+            }
+        },
+        "Deleting your account does not refund Apple purchases. Contact support for purchase recovery.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Supprimer votre compte ne rembourse pas les achats Apple. Contactez l’assistance pour récupérer un achat."
+                    }
+                }
+            }
+        },
+        "Specials are no longer one of a kind: anyone can buy any Special, and you can collect as many as you like. Each one is bought once and stays yours.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les Spéciaux ne sont plus uniques : tout le monde peut acheter n’importe quel Spécial, et vous pouvez en collectionner autant que vous voulez. Chacun s’achète une fois et reste à vous."
                     }
                 }
             }

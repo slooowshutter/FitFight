@@ -19,7 +19,6 @@ const env = databaseTestEnvironmentSchema.parse(process.env);
 process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
 process.env.SUPABASE_SECRET_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";
-process.env.APPLE_SPECIALS_ENABLED = "true";
 const database = postgres(env.DATABASE_URL, { max: 2 });
 const admin = createClient(env.SUPABASE_TEST_URL, env.SUPABASE_TEST_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 after(async () => { await closeDatabaseClientForTests(); await database.end(); });

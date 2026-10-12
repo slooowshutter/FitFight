@@ -7,7 +7,6 @@ import { customCharacterProductId, type AppleCustomCharacterTransaction } from "
 import {
     customCharacterAttemptSchema,
     customCharacterClaimResultSchema,
-    customCharacterConfigurationSchema,
     customCharacterPortraitRowSchema,
     customCharacterPurchaseRowSchema,
     customCharacterStoreSchema,
@@ -38,11 +37,6 @@ export async function readCustomCharacterStore(
     database: Sql = createDatabaseClient(),
 ) {
     const account = await readSpecialStore(userId, database);
-    const configuration = customCharacterConfigurationSchema.safeParse({
-        enabled: process.env.APPLE_CUSTOM_CHARACTERS_ENABLED,
-    });
-    if (!configuration.success)
-        throw new ApiError(503, "config", "Custom character purchases are not configured");
     const purchases = customCharacterPurchaseRowSchema.array().parse(
         await database`select * from private.custom_character_purchases
             where account_id = ${account.app_account_token} order by created_at desc`,
@@ -131,7 +125,7 @@ export async function readCustomCharacterStore(
     return customCharacterStoreSchema.parse({
         app_account_token: account.app_account_token,
         environment: account.environment,
-        purchases_enabled: configuration.data.enabled === "true",
+        purchases_enabled: true,
         product_id: customCharacterProductId,
         characters,
     });

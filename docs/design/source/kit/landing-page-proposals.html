@@ -642,9 +642,7 @@
             .rd-stat { display: grid; gap: 4px; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--hair); }
             .rd-stat b { color: var(--mossText); font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; }
             .rd-stat > span { color: var(--text2); font-size: 14px; }
-            .rd-note { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); color: var(--text3); font-size: 12px; font-weight: 700; }
-            /* Gold means progress: the extra steps people walk after joining */
-            .rd-note strong { color: var(--gold); font-weight: 800; }
+
             .rd-hero-center .rd-copy { justify-items: center; }
             .rd-hero-center .rd-copy .h1 { max-width: 15ch; text-wrap: balance; }
             .rd-hero-center .rd-copy .h1 span { white-space: nowrap; }
@@ -1317,7 +1315,6 @@
                             <div class="rd-stat">
                                 <b class="rd-total">${fmt(TOTAL_STEPS)}</b>
                                 <span>steps recorded since people joined FitFight</span>
-                                <p class="rd-note" title="The typical member walks 18% more a day in their first 4 weeks than in the 4 weeks before joining.">The typical member walks <strong>18% more</strong> when using FitFight.</p>
                             </div></div>`;
                         const livePhone = `${phone(scrFights(0), { tab: "fights", live: true, cls: "live" })}<p class="rd-hint">${icon("sparkle", 14)}Tap the tabs. This is the real app.</p>`;
                         const hero = `<section class="rd-hero rd-hero-center" id="top"><div class="wrap rd-hero-grid">${copy}<div class="rd-ph rd-hero-ph">${livePhone}</div></div></section>`;
@@ -1357,7 +1354,7 @@
 
             const RD1 = raceDay({
                 name: "Race Day",
-                when: "The pick, as on the site: text left and phone right on computers, the steps total and a footnote under the buttons.",
+                when: "The pick, as on the site: text left and phone right on computers, with the steps total under the buttons.",
             });
 
             // Picker: one landing page at a time, same data in all of them.

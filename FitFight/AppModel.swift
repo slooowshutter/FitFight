@@ -481,9 +481,11 @@ final class AppModel: ObservableObject {
             : String(appLocalized: "Waiting for first sync")
     }
 
+    /// Refreshes after an action inside the app. The attempt is "manual" because the admin
+    /// dashboard counts every "foreground" attempt as an app open.
     func refreshFromServer() async {
         guard let session else { return }
-        await refreshFromServer(session: session)
+        await refreshFromServer(session: session, trigger: .manual)
     }
 
     func restoreCachedFights(session: SessionStore) {
@@ -640,7 +642,8 @@ final class AppModel: ObservableObject {
     }
 
     func refreshFromServer(
-        session: SessionStore, trace: HealthKitSyncTrace? = nil, performMaintenance: Bool = true
+        session: SessionStore, trace: HealthKitSyncTrace? = nil,
+        trigger: HealthKitStepsStore.SyncTrigger = .foreground, performMaintenance: Bool = true
     ) async {
         guard !CompanionPreview.isEnabled else { return }
         self.session = session
@@ -652,7 +655,7 @@ final class AppModel: ObservableObject {
         if let profile = session.profile {
             you = Self.person(from: profile, isYou: true)
         }
-        let attempt = trace ?? HealthKitSyncTrace(trigger: .foreground)
+        let attempt = trace ?? HealthKitSyncTrace(trigger: trigger)
         defer {
             if trace == nil && performMaintenance {
                 HealthKitStepsStore.shared.completeAttempt(attempt, session: session, userID: userId)
@@ -1229,7 +1232,7 @@ final class AppModel: ObservableObject {
             coalesceInFlight: false
         )
         steps.completeAttempt(trace, session: session, userID: session.authSession?.user.id)
-        await refreshFromServer(session: session)
+        await refreshFromServer(session: session, trigger: .manual)
     }
 
     private func joinPendingFight(_ fight: Fight, start: String = "now") async {

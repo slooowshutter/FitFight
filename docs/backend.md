@@ -665,7 +665,17 @@ Supabase will receive a permission error after the migration. Feature-branch pus
 alone do not apply the hosted migration. No existing finalized scores or hosted
 previously-deleted accounts are rewritten by this change.
 
-## Specials: paid limited companions (updated 23 Sep 2026)
+## Specials: paid limited companions (updated 12 Oct 2026)
+
+**Current model, 12 Oct 2026:** Specials are no longer one of a kind. Any account
+may own any number of them. Each is one charge of the consumable
+`com.fitfight.mvp.special`; `POST /api/v1/me/specials/purchases` verifies it
+and records the chosen Special in `private.special_purchases` (one row per
+transaction, `revoked_at` on refund). Ownership is a non-revoked purchase or an
+edition owned under the old model. Holds, Taken and the one-per-account limit
+are gone; `/checkout` refuses `reserve` with `410 special_update_required`. The
+rest of this section describes the retired one-of-a-kind model, whose tables and
+legacy products are kept for existing Sandbox purchases.
 
 The 40 supplied animal photos have stable `limited-*` companion IDs and sell as
 non-consumable StoreKit products at EUR 0.99. Each photo, including alternate

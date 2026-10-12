@@ -5,14 +5,14 @@ import {
     VerificationException,
     VerificationStatus,
 } from "@apple/app-store-server-library";
+import type { z } from "zod";
 import { ApiError, ERROR_CODES } from "@/lib/http";
-import {
-    appleCustomCharacterTransactionSchema,
-    type AppleCustomCharacterTransaction,
-} from "@/lib/types/apple/custom-character-purchase";
+import { appleCustomCharacterTransactionSchema } from "@/lib/types/apple/custom-character-purchase";
 import {
     applePurchaseCredentialsSchema,
+    appleSpecialConsumableTransactionSchema,
     appleSpecialTransactionSchema,
+    type AppleConsumableTransaction,
     type AppleSpecialPurchaseContext,
     type AppleSpecialTransaction,
     type ApplePurchaseEnvironment,
@@ -68,15 +68,23 @@ export async function verifySpecialNotification(
     const decodedTransaction = await verifier.verifyAndDecodeTransaction(
         notification.data.signedTransactionInfo,
     );
-    const special = appleSpecialTransactionSchema.safeParse(decodedTransaction);
-    if (special.success) {
+    const legacy = appleSpecialTransactionSchema.safeParse(decodedTransaction);
+    if (legacy.success) {
         const transaction = await verifySpecialPurchase(
             notification.data.signedTransactionInfo,
             {
                 environment,
-                appAccountToken: special.data.appAccountToken,
-                companionId: special.data.companionId,
+                appAccountToken: legacy.data.appAccountToken,
+                companionId: legacy.data.companionId,
             },
+        );
+        return { notification, transaction };
+    }
+    const special = appleSpecialConsumableTransactionSchema.safeParse(decodedTransaction);
+    if (special.success) {
+        const transaction = await verifySpecialConsumablePurchase(
+            notification.data.signedTransactionInfo,
+            { environment, appAccountToken: special.data.appAccountToken },
         );
         return { notification, transaction };
     }
@@ -92,6 +100,7 @@ export async function verifySpecialNotification(
 }
 
 /**
+ * Legacy one-of-a-kind products only; they are no longer sold.
  * Checks a receipt against Apple's current record, bound to server-owned context.
  * Refund evidence is returned for reconciliation, never converted into a grant.
  */
@@ -228,11 +237,12 @@ export async function verifySpecialPurchase(
     return current.data;
 }
 
-/** Consumable purchases must be verified against Apple's current record before one character is granted. */
-export async function verifyCustomCharacterPurchase(
+/** Consumable purchases must be verified against Apple's current record before one character or Special is granted. */
+async function verifyConsumablePurchase<Transaction extends AppleConsumableTransaction>(
     signedTransaction: string,
     expected: { environment: ApplePurchaseEnvironment; appAccountToken: string },
-): Promise<AppleCustomCharacterTransaction> {
+    schema: z.ZodType<Transaction, z.ZodTypeDef, unknown>,
+): Promise<Transaction> {
     const credentials = applePurchaseCredentialsSchema.safeParse({
         keyId: process.env.APPLE_IAP_KEY_ID,
         issuerId: process.env.APPLE_IAP_ISSUER_ID,
@@ -253,9 +263,9 @@ export async function verifyCustomCharacterPurchase(
             "Apple purchase signature could not be verified",
         );
     }
-    const submitted = appleCustomCharacterTransactionSchema.safeParse(decoded);
+    const submitted = schema.safeParse(decoded);
     if (!submitted.success)
-        throw new ApiError(400, ERROR_CODES.validation, "Not a custom character purchase");
+        throw new ApiError(400, ERROR_CODES.validation, "Not a supported FitFight purchase");
     if (submitted.data.environment !== expected.environment ||
         submitted.data.appAccountToken !== expected.appAccountToken.toLowerCase())
         throw new ApiError(403, ERROR_CODES.forbidden, "Purchase belongs to another FitFight account");
@@ -281,7 +291,7 @@ export async function verifyCustomCharacterPurchase(
         if (!(error instanceof VerificationException)) throw error;
         throw new ApiError(502, ERROR_CODES.internal, "Apple's current purchase signature could not be verified");
     }
-    const current = appleCustomCharacterTransactionSchema.safeParse(currentDecoded);
+    const current = schema.safeParse(currentDecoded);
     if (!current.success)
         throw new ApiError(502, ERROR_CODES.internal, "Apple returned an unsupported purchase record");
     if (current.data.transactionId !== submitted.data.transactionId ||
@@ -291,4 +301,19 @@ export async function verifyCustomCharacterPurchase(
         current.data.signedDate < submitted.data.signedDate)
         throw new ApiError(409, ERROR_CODES.conflict, "Apple's current purchase record no longer matches this claim");
     return current.data;
+}
+
+export function verifyCustomCharacterPurchase(
+    signedTransaction: string,
+    expected: { environment: ApplePurchaseEnvironment; appAccountToken: string },
+) {
+    return verifyConsumablePurchase(signedTransaction, expected, appleCustomCharacterTransactionSchema);
+}
+
+/** The claim, not the receipt, names the Special: every Special is the same consumable product. */
+export function verifySpecialConsumablePurchase(
+    signedTransaction: string,
+    expected: { environment: ApplePurchaseEnvironment; appAccountToken: string },
+) {
+    return verifyConsumablePurchase(signedTransaction, expected, appleSpecialConsumableTransactionSchema);
 }

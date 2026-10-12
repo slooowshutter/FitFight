@@ -21,6 +21,7 @@ export const ERROR_CODES = {
     special_limit: "special_limit",
     special_unavailable: "special_unavailable",
     special_account: "special_account",
+    special_update_required: "special_update_required",
     character_purchase_required: "character_purchase_required",
     character_account: "character_account",
     character_refunded: "character_refunded",

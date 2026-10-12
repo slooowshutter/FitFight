@@ -35,7 +35,6 @@ enum StockCompanion: String, CaseIterable, Identifiable {
     case limitedDonkey = "limited-donkey"
 
     var isLimited: Bool { rawValue.hasPrefix("limited-") }
-    var productId: String { "com.fitfight.mvp.special.\(rawValue.replacingOccurrences(of: "limited-", with: "").replacingOccurrences(of: "-", with: "_"))" }
 
     var id: String { rawValue }
     var image: String { "Companion-\(rawValue)" }
@@ -1222,20 +1221,11 @@ struct CompanionPicker: View {
                         selection: $category, fill: true) { $0.name }
             .disabled(isSaving)
             if category == .limited || (category == .all && draft?.isLimited == true) {
-                Text("Only one of each exists, one per person. Buy it once, keep it forever.")
+                Text("Buy any Special once and keep it forever. Collect as many as you like.")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
-                if purchases.canCancelCheckout {
-                    FFButton(title: String(appLocalized: "Cancel checkout"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
-                        Task { await purchases.cancelCheckout(session: session) }
-                    }
-                }
                 if !purchases.message.isEmpty {
                     Text(purchases.message).ffType(.caption).foregroundStyle(theme.textSecondary)
-                }
-                if purchases.snapshot?.editions.contains(where: { $0.status == .reserved }) == true {
-                    Text("A purchase is in progress. Your Special is held for 30 minutes. Check it in Settings, Restore purchases.")
-                        .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 ForEach(purchases.snapshot?.conflicts ?? [], id: \.transactionId) { claim in
                     FFButton(title: String(appLocalized: "Request a refund from Apple"), kind: .secondary) {
@@ -1312,7 +1302,7 @@ struct CompanionPicker: View {
                                     .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
                                 }
                                 .buttonStyle(FFHapticPlainStyle())
-                                .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
+                                .disabled(isSaving || purchases.isBusy || (animal.isLimited && edition == nil))
                                 .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
                             }
                         } header: {
@@ -1445,12 +1435,14 @@ struct CompanionPicker: View {
                     }
                     let paid = draft.isLimited && !CompanionPreview.isEnabled
                     let owned = status(draft) == .yours
-                    // The preview has no StoreKit, but it still shows the label a buyer sees.
-                    let price = purchases.products[draft.productId]?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
                     let canBuy = purchases.canBuy(draft)
                     FFButton(
-                        title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned ? price.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable") : String(appLocalized: "Save companion"),
-                        enabled: (!paid || owned || canBuy) && (!draft.isLimited || [.available, .reserved, .yours].contains(status(draft))),
+                        title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned
+                            ? purchases.hasUnclaimedCharge
+                                ? String(appLocalized: "Unlock this Special")
+                                : specialPrice.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable")
+                            : String(appLocalized: "Save companion"),
+                        enabled: (!paid || owned || canBuy) && (!draft.isLimited || status(draft) != nil),
                         busy: isSaving || purchases.isBusy, fullWidth: true
                     ) { Task { await saveStock(draft) } }
                 }
@@ -1514,13 +1506,13 @@ struct CompanionPicker: View {
     private func status(_ animal: StockCompanion) -> SpecialStoreSnapshot.Edition.Status? {
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
-            return animal == CompanionCategory.limited.animals[0] ? .yours : animal == CompanionCategory.limited.animals[1] ? .taken : .available
+            return animal == CompanionCategory.limited.animals[0] || animal == CompanionCategory.limited.animals[1] ? .yours : .available
         }
         #endif
         return purchases.snapshot?.editions.first { $0.id == animal.rawValue }?.status
     }
 
-    /// Yours lists the Special this account owns and the current stock companion.
+    /// Yours lists every Special this account owns and the current stock companion.
     private func animals(in category: CompanionCategory) -> [StockCompanion] {
         guard category == .yours else { return category.animals.filter(shows) }
         let owned = CompanionCategory.limited.animals.filter { status($0) == .yours }
@@ -1535,12 +1527,12 @@ struct CompanionPicker: View {
 
     private func specialLabel(_ animal: StockCompanion) -> String? {
         guard animal.isLimited else { return nil }
-        return switch status(animal) {
-        case .yours: String(appLocalized: "Your special")
-        case .reserved: String(appLocalized: "Reserved for you")
-        case .available: String(appLocalized: "Available")
-        default: String(appLocalized: "Taken")
-        }
+        return status(animal) == .yours ? String(appLocalized: "Yours") : specialPrice ?? String(appLocalized: "Available")
+    }
+
+    /// Every Special costs the same consumable. The preview has no StoreKit, but it still shows the label a buyer sees.
+    private var specialPrice: String? {
+        purchases.product?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
     }
 
     /// Specials stay hidden while sales are off, except one this account already owns.

@@ -917,8 +917,12 @@ private func adminTenths(_ value: Double) -> String {
     return value < 0 && tenths != 0 ? "-" + digits : digits
 }
 
-/// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead, whole for steps.
+/// A value in its unit: "42%", "4.2%", "3 h", "1.5K", "4.99 EUR". `exact` shows grouped digits instead,
+/// whole for steps. Euros always show their cents.
 private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> String {
+    if unit == "eur" {
+        return value.formatted(.number.precision(.fractionLength(2))) + " EUR"
+    }
     let suffix: String
     switch unit {
     case "percent": suffix = "%"

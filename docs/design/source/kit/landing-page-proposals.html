@@ -214,7 +214,7 @@
             .phf-tag span { color: var(--mossText); }
             .phf-pose { width: 168px; height: 192px; object-fit: contain; margin: 4px -8px 0 0; }
             .phf-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 14px; font-size: 16px; }
-            .phf-list { display: grid; gap: 12px; }
+            .phf-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 
             .phn .ph-title { margin-bottom: 4px; }
             .phn-hero { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 22px; }
@@ -495,7 +495,7 @@
             .d3-frags { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 34px -20px 0; padding: 0 20px 4px; scroll-padding: 0 20px; }
             .d3-frags::-webkit-scrollbar { display: none; }
             .d3-frag { flex: 0 0 86%; scroll-snap-align: start; overflow: hidden; display: flex; flex-direction: column; }
-            .d3-frag-ui { padding: 18px 16px 0; background: var(--bg); border-bottom: 1px solid var(--hair); height: 236px; overflow: hidden; display: grid; align-content: start; gap: 10px; }
+            .d3-frag-ui { grid-template-columns: minmax(0, 1fr); padding: 18px 16px 0; background: var(--bg); border-bottom: 1px solid var(--hair); height: 236px; overflow: hidden; display: grid; align-content: start; gap: 10px; }
             .d3-frag figcaption { padding: 16px 18px 18px; }
             .d3-frag figcaption b { display: block; font-size: 17px; font-weight: 800; }
             .d3-frag figcaption span { font-size: 14px; color: var(--text2); }
@@ -636,8 +636,15 @@
             .rd-meta { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text3); }
             .rd-meta i { width: 4px; height: 4px; border-radius: 50%; background: var(--faint); }
 
-            /* Hero: centered copy, then the phone */
+            /* Hero: copy above the phone on a phone, copy left and phone right on a computer */
             .rd-hero-center { padding: 52px 0 24px; text-align: center; }
+            .rd-hero-grid { display: grid; }
+            .rd-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 40px; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--hair); }
+            .rd-stat { display: grid; align-content: start; gap: 4px; max-width: 270px; }
+            .rd-stat b { color: var(--mossText); font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; }
+            .rd-stat span { color: var(--text2); font-size: 14px; }
+            /* Gold means progress: the extra steps people walk after joining */
+            .rd-stat.rd-lift b { color: var(--gold); }
             .rd-hero-center .rd-copy { justify-items: center; }
             .rd-hero-center .rd-copy .h1 { max-width: 15ch; text-wrap: balance; }
             .rd-hero-center .rd-copy .h1 span { white-space: nowrap; }
@@ -646,8 +653,13 @@
             .rd-hero-ph { margin-top: 40px; }
             .rd-hero-ph .rd-hint { justify-content: center; }
             @media (min-width: 1000px) {
-                .rd-hero-center .rd-copy .h1 { max-width: none; font-size: 88px; }
-                .rd-hero-ph .phone-wrap { --s: 0.72; }
+                .rd-hero-center { padding-top: 40px; text-align: left; }
+                .rd-hero-grid { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 72px; }
+                .rd-hero-center .rd-copy { justify-items: start; }
+                .rd-hero-center .rd-cta, .rd-hero-center .rd-meta, .rd-stats { justify-content: flex-start; }
+                .rd-hero-center .rd-copy .h1 { max-width: 12ch; font-size: clamp(64px, 6vw, 84px); }
+                .rd-hero-ph { margin-top: 0; }
+                .rd-hero-ph .phone-wrap { --s: 0.76; }
             }
             /* A wider page on large screens */
             @media (min-width: 1300px) { .rd .wrap { width: min(1200px, 100% - 80px); } }
@@ -1301,9 +1313,13 @@
                             <h1 class="h1">Let friendly competition <span class="moss">move you.</span></h1>
                             <p class="lede">Start a private fight, let Apple Health keep the score, and find out who really walks the most.</p>
                             <div class="rd-cta">${storeBtn()}<a class="btn ghost" href="#how">Try it ${icon("down", 18, 2.2)}</a></div>
-                            <p class="rd-meta">Free<i></i>iPhone<i></i>Apple Health</p></div>`;
+                            <p class="rd-meta">Free<i></i>iPhone<i></i>Apple Health</p>
+                            <div class="rd-stats">
+                                <p class="rd-stat"><b class="rd-total">${fmt(TOTAL_STEPS)}</b><span>steps recorded since people joined FitFight</span></p>
+                                <p class="rd-stat rd-lift"><b>+18%</b><span>more steps a day for the typical member in their first 4 weeks than before joining</span></p>
+                            </div></div>`;
                         const livePhone = `${phone(scrFights(0), { tab: "fights", live: true, cls: "live" })}<p class="rd-hint">${icon("sparkle", 14)}Tap the tabs. This is the real app.</p>`;
-                        const hero = `<section class="rd-hero rd-hero-center" id="top"><div class="wrap">${copy}</div><div class="rd-ph rd-hero-ph">${livePhone}</div></section>`;
+                        const hero = `<section class="rd-hero rd-hero-center" id="top"><div class="wrap rd-hero-grid">${copy}<div class="rd-ph rd-hero-ph">${livePhone}</div></div></section>`;
                         const what = `<div class="rd-what">${kitStatement()}${kitFacts()}</div>${kitFrags()}`;
                         return `<div class="rd">
             <header class="d1-hdr"><div class="wrap">${brand()}${navLinks()}<a class="btn primary sm" href="${APP_STORE}">Get the app</a></div></header>
@@ -1327,6 +1343,8 @@
             </div>`;
                     },
                     mount(root) {
+                        const total = root.querySelector(".rd-total");
+                        onVisible(total, () => countUp(total, 0, TOTAL_STEPS, 1800));
                         mountLivePhone(root.querySelector(".phone-wrap.live"));
                         mountLines(root);
                         mountComposer(root.querySelector(".kit-composer .ph-scr"), this.composer);
@@ -1338,7 +1356,7 @@
 
             const RD1 = raceDay({
                 name: "Race Day",
-                when: "The pick, ready to ship: a wider hero with the phone only, one background from top to bottom, and the compact companion block.",
+                when: "The pick, as on the site: text left and phone right on computers, the steps total and the gold +18% under the buttons.",
             });
 
             // Picker: one landing page at a time, same data in all of them.

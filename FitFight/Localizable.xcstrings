@@ -15474,6 +15474,16 @@
                     }
                 }
             }
+        },
+        "On the companion stage, swiping back now brings the animal in from the left, instead of flying it across the screen from the right.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sur la scène des compagnons, revenir en arrière fait maintenant arriver l’animal par la gauche, au lieu de le faire traverser l’écran depuis la droite."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

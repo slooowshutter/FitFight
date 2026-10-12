@@ -31,7 +31,7 @@ final class SessionStore: ObservableObject {
     private static let needsSuggestedPrefix = "ff.onboarding.needsSuggested."
     private static let firstFightPrefix = "ff.onboarding.firstFight."
     private static let profileCachePrefix = "fitfight.profile."
-    private static let adminHandle = "marc"
+    private static let adminHandles = ["marc", "rad"]
 
     var isSignedIn: Bool { authSession != nil || screenshotSignedIn }
 
@@ -120,7 +120,7 @@ final class SessionStore: ObservableObject {
         #endif
         guard !screenshotSignedIn else { return false }
         guard let handle = profile?.handle else { return false }
-        return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame
+        return Self.adminHandles.contains { handle.caseInsensitiveCompare($0) == .orderedSame }
     }
 
     func freshAccessToken() async throws -> String {

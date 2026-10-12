@@ -1,0 +1,16 @@
+{
+    "people": [
+        {
+            "user_id": "11111111-1111-4111-8111-111111111111",
+            "handle": "marc",
+            "display_name": "Marc Lamy",
+            "last_synced_at": "2026-10-12T09:15:00Z"
+        },
+        {
+            "user_id": "33333333-3333-4333-8333-333333333333",
+            "handle": "lea",
+            "display_name": "Léa",
+            "last_synced_at": "2026-10-08T21:40:00Z"
+        }
+    ]
+}

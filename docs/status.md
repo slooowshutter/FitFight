@@ -1,6 +1,7 @@
 # FitFight status: what works, what’s fake, what’s next
 
 Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **11 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
@@ -24,6 +25,116 @@ configured, and Blend starts wherever its key and workflow ids are configured.
 Apple's own review is the gate: unapproved products never load in StoreKit, so
 the app shows "Purchases unavailable" until approval. `purchases_enabled` stays in
 the API (always `true`) for older builds.
+## TestFlight syncs card for the admin, prepared 12 Oct 2026
+
+On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes
+before. That person should use the App Store version, which uses production.
+Marc asked for a number on Fights, only in the staging app, with the names on tap.
+
+**Code:** new `GET /api/v1/admin/recent-syncs` lists every account whose Apple
+Health upload reached the server's database in the last 7 days
+(`data_sources.last_success_at`, provider `apple_health`). Newest sync is first,
+and deleted accounts are left out. Only the FitFight admin (`marc`, `rad`) can
+read it. Anyone else gets 403. On the staging build, the admin's Fights tab shows
+a card under the header: the count, "Synced on TestFlight" and "Last 7 days". A
+tap opens the names, usernames and the time since each last sync. The card reads
+the preview server, like the Admin tab. App Store builds, other people, the
+companion preview and screenshots do not get the card, and it takes no space for
+them. Admin only, so the copy is English only and there is no release note.
+
+**Contract:** additive route in `contracts/openapi.yaml`, with
+`contracts/fixtures/admin-recent-syncs.json`. No existing route, response or
+table changes, and there is no migration. Older builds never call the route.
+Read-only `/api/app-release` at 10:16 UTC on 12 Oct: staging latest 1.1.1 (201),
+review and internal 1.1.3 (222); production latest 1.1.2 (210), no candidates;
+`enforced: false` on both. The preview server answered 404 for the new route,
+as expected before deployment.
+
+**Verification (local):** web typecheck and all 439 unit tests passed. A local
+Supabase stack (CLI 2.115.0, as in CI) applied every migration and passed all 100
+database tests, including the new `recent-syncs.integration.ts`. It checks the
+7-day window, deleted accounts, the order, 401 without a session, 403 for a
+non-admin and 200 for the admin. It failed when the window was 9 days and when
+the admin check was removed. Swift 6.4 on Linux compiled and ran the native
+contract test with the new fixture, using a stand-in for the Apple-only
+localization file. It failed on a renamed field. The changed Swift files parse,
+and the localization, native API boundary and contract YAML checks passed.
+[PR #357](https://github.com/slooowshutter/FitFight/pull/357) CI passed: the
+simulator build and native checks, migrations and database tests, web tests,
+screen renders and Vercel. Not run: a device check.
+
+**Live deployment:** Marc asked for a PR into `develop` on 12 Oct. Nothing is
+merged or deployed. A `preview` merge
+deploys the route to the preview server and uploads a staging TestFlight build
+with the card. `main` is not needed, because App Store builds never show it.
+
+## Admin dashboard: card pages and sync time percentiles, prepared 11 Oct 2026
+
+Marc asked to see a definition and an example for each card, like the charts.
+He asked for cards with only the name, the number and the change, and for all
+the details on a tap. He also asked for more percentiles on the sync time
+chart, lower and higher than P50 and P90.
+
+**Server:** every card now has a `definition` and an `example`. The definition
+says what the card measures and what it compares with. The example reads the
+number in a sentence, for instance "52 people opened the app in the last 7
+days, against 47 in the 7 days before." A card without a value has no example.
+The App section's sync time chart is now "Sync time: P10 to P99", with seven
+lines: P10, P25, P50, P75, P90, P95 and P99. Chart and card sentences now say
+"1 day" and "1 time" when a value shows as 1.
+
+**App:** a card shows its name, its rounded number and its change. Its note
+moved to the card's page. A tap opens that page: the card name in the bar, the
+exact number, the change, the previous number, "What it shows", "In numbers",
+and the note with the query time. Before, a tap switched the card to the exact
+number. The chart page and the card page share one view. Admin only, no release
+note.
+
+**Compatibility:** additive. The two card fields are optional in
+`contracts/openapi.yaml`. The fixture has one card with the texts and one
+without, and the native contract test decodes both. Older builds ignore the new
+fields and keep the note on the card. The new percentiles reach every build,
+because the server defines the chart.
+
+**Verification (local):** web typecheck passed. The dashboard database test
+passed on Postgres 16 with all 61 migrations. It now also checks that every
+card has a definition, that a card has an example only when it has a value,
+that no sentence prints `undefined` or `NaN`, that the app opens card reads as
+a full sentence, and that the sync time chart has the seven lines in order.
+Every card sentence was read with fake values (1, 0, negative, 1.04 and large)
+and on a seeded copy. The Swift files were parsed with Swift 6.3.3 on Linux,
+and the native contract test compiled and passed there. The SwiftUI views
+compile only in CI.
+
+**Live deployment:** not merged or deployed. After a `preview` merge, the
+preview server sends the texts and the new percentiles to every build. The card
+page needs a new TestFlight build.
+
+## Admin access for username rad, prepared 11 Oct 2026
+
+Marc asked to make his wife an admin. She works on the app with him. Her
+username is `rad`.
+
+**Code:** the server list (`fitFightAdminHandleValues`) and the app
+(`SessionStore.isFitFightAdmin`) accept `rad` next to `marc`. She gets the
+Dashboard Admin tab, the debug menu, Settings → Developer with Broadcast, the
+App Store strip with the build, and feedback archive, delete and Cursor fix.
+Fight management, suggested Fights, profile measurements and AI grants still
+trust only `FITFIGHT_ADMIN_USER_ID`, so she does not get them.
+
+**Risk:** people can change their username. If `rad` is free on staging or
+production, the person who takes it becomes admin there, like `marc` today.
+
+**Compatibility:** no API, database or copy change. Web typecheck and all 438
+unit tests passed. Swift was not compiled here; CI compiles it.
+
+**Live deployment:** Marc asked for `develop` and `preview` on 11 Oct 2026. The
+`preview` merge uploads a staging TestFlight build and deploys the preview
+server, which serves the Admin tab data. Feedback admin and Broadcast call
+staging.fitfight.app, which still serves a deployment from before 1 Oct
+(`/api/v1/environment` answered 404 on 11 Oct). They work for her only after
+staging.fitfight.app follows `preview` (Marc's open Vercel action below). The
+App Store app gets this only after `main` and an App Store release.
 
 ## Paid character: three portraits, server-side progress, ready push, prepared 11 Oct 2026
 
@@ -3469,10 +3580,10 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Fight end               | Exact `ends_at` is the final cutoff. The fight screen and finished list show that date and time. The live list shows remaining months, weeks, days, hours, and minutes instead of the stop date; under two days it shows days and hours. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. **Fix in PR (not on TestFlight yet):** Finished shows **P** during `awaiting_final_sync`. After 24h, people who did not submit forfeit; both miss is a draw.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Tabs                    | Fights, New, Profile, Feedback. Feedback holds the same fight posts Feed, Bugs & requests, Top ranking, and a Report form. The old Requests tab and Design are removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Look                    | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Versions                | Works under Profile → Settings (the public changelog). The version label is only on Profile. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Versions                | Works under Profile → Settings (the public changelog). The version label is only on Profile. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc` or `rad`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on Profile above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                       |
 | Privacy / Support       | Pages are implemented and linked under Profile → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Fight posts / Feed      | Marc (username `marc`, Profile → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. Profile → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Details and recurring History alongside it. Details shows the round schedule, time zone, creator, current participant count, and sharing controls. Recurring fights retain earlier posts; invited-only people gain access after joining. |
+| Fight posts / Feed      | An admin (username `marc` or `rad`, Profile → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. Profile → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Details and recurring History alongside it. Details shows the round schedule, time zone, creator, current participant count, and sharing controls. Recurring fights retain earlier posts; invited-only people gain access after joining. |
 | Companion               | Saved on the account. Change animal opens the animal grid. Make it yours opens a description to edit and save (species, breed or race, accessories, colors, and other details). You can change animals anytime. That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

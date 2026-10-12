@@ -983,7 +983,9 @@ paths:
                                                 "previous": { "type": ["number", "null"] },
                                                 "unit": { "type": "string", "enum": ["count", "steps", "percent", "days", "hours", "minutes", "seconds"] },
                                                 "higher_is_better": { "type": ["boolean", "null"] },
-                                                "note": { "type": ["string", "null"] }
+                                                "note": { "type": ["string", "null"] },
+                                                "definition": { "type": ["string", "null"], "description": "What the card measures and what it compares with. Servers before 11 Oct 2026 omit it." },
+                                                "example": { "type": ["string", "null"], "description": "A sentence that reads the card's number, null when it has none. Servers before 11 Oct 2026 omit it." }
                                             }
                                         }
                                     },
@@ -1055,6 +1057,38 @@ paths:
             }
         }
     }
+    /admin/recent-syncs:
+        get:
+            operationId: readRecentSyncs
+            summary: Admin only. Accounts whose Apple Health upload reached this server's database in the last 7 days.
+            description: The staging app shows the count and the names on Fights, so the admin can ask testers who still sync to staging to move to the App Store version.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Newest sync first. Deleted accounts are left out. Cache-Control is no-store.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [people]
+                                properties:
+                                    people:
+                                        type: array
+                                        items:
+                                            type: object
+                                            required: [user_id, handle, display_name, last_synced_at]
+                                            properties:
+                                                user_id: { type: string, format: uuid }
+                                                handle: { type: string }
+                                                display_name: { type: string }
+                                                last_synced_at: { type: string, format: date-time }
+                "401":
+                    description: Missing or invalid session
+                "403":
+                    description: Not the FitFight admin
     "/me/capabilities": {
         "get": {
             "operationId": "readFightCapabilities",

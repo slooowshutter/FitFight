@@ -58,6 +58,10 @@ query only marks its own tile with `Query failed: ...`.
   measures) and an `example` sentence that reads one current number off it: the
   newest complete day, week or month, or now for totals and states. Both are built
   on the server in English, so their wording changes need no app build.
+- **Card pages (11 Oct 2026):** every card also carries a `definition` (what it
+  measures and what it compares with) and an `example` sentence that reads its
+  number and the previous one. A card without a value has no example. The app
+  shows only the name, number and change on a card, and the rest on its page.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
   after a background `observer` sync is the post-sync refresh, not an open. Sync
@@ -83,7 +87,7 @@ query only marks its own tile with `Query failed: ...`.
   would make week 1 look close to 0%.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
   invitations are automatic.
-- **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the
+- **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or `rad`, or the
   admin email). The app always sends `X-FitFight-Auth-Project` with its own
   Supabase project ref. When it names the other FitFight project, the backend
   verifies the token with that project's public Auth endpoint and accepts it only
@@ -111,6 +115,17 @@ query only marks its own tile with `Query failed: ...`.
 - **Compatibility:** additive route; no existing contract, schema or migration
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
+
+## Recent syncs (prepared 12 Oct 2026)
+
+`GET /api/v1/admin/recent-syncs` returns `{ "people": [...] }` with `user_id`,
+`handle`, `display_name` and `last_synced_at` for every account whose Apple
+Health upload reached this server's database in the last 7 days, newest first.
+It reads `public.data_sources.last_success_at` (provider `apple_health`), which
+every Steps and activity upload sets, and leaves out deleted accounts. Only the
+FitFight admin (`isFitFightAdmin`) can read it; anyone else gets 403. The staging
+app shows it to the admin on Fights, through the preview server, to find testers
+who still sync to staging instead of using the App Store version.
 
 ## Activity pipeline (prepared 23 Sep 2026)
 
@@ -445,7 +460,7 @@ Posts include additive `archived` and nullable `archive_reason` fields.
 `GET /api/v1/feedback/{postID}` includes `can_launch_fix`, `can_delete`, and
 `can_archive` for the signed-in viewer. Authors can delete their own posts.
 The launch and archive flags require the existing FitFight admin allowlist:
-confirmed account email `marc@marclamy.com`, username `marc`, or extras in
+confirmed account email `marc@marclamy.com`, username `marc` or `rad`, or extras in
 `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. User-editable metadata and
 identity email copies never grant admin access.
 

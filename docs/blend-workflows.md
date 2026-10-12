@@ -120,6 +120,25 @@ stay in the private library; fight assignment and
 cross-user casts need their own product contract. Stock selection and saved text
 descriptions remain available. A 1.1.2 release note and English/French copy were added.
 
+## Free characters
+
+Marc's rule (12 Oct 2026): no credits for characters. An account has a number of
+free characters. Every account gets one `signup` grant; the admin gives more
+(`gift`) from Profile → Dashboard → Admin, to one username or to every account.
+`private.free_character_grants` keeps every grant. A free character is a
+`custom_character_purchases` row with `free_claim_key` and no Apple fields, so it
+follows the paid flow exactly: three portraits, the owner's choice, five poses,
+reconciliation and the two pushes. It cannot be refunded. A free claim saves the
+description and portrait rows in one transaction; a replayed key returns the same
+character. Each free character costs the Blend runs of a paid one.
+
+The create screen and onboarding show four ideas: a real description and the
+portrait the Animal Avatars workflow (published `c405d12d`, version `56ebf8a4`, locked
+kit) drew from it. They are unused runs from the Specials work on 11 Oct 2026,
+recorded in `docs/design/source/companion/specials-v2.json` under `v7`: pigeon
+(`cb061446`), opossum (`c316650d`), seagull (`512f1929`) and mole (`ce30fb7b`). The
+app bundles them as `CharacterIdea-*` on the 352 by 400 companion canvas.
+
 ## Credits and balance events
 
 Avatar admission stores a fixed price of **one credit**. Fitness and Group Photo

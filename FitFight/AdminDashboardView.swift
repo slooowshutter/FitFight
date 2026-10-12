@@ -73,6 +73,7 @@ struct AdminDashboardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FreeCharacterGiftCard()
             controls
             statusLine
             if let failure {
@@ -370,6 +371,94 @@ struct AdminDashboardView: View {
             }
         }
         loading = false
+    }
+}
+
+/// `POST /api/v1/admin/free-characters`: one username, or every current account when `username` is nil.
+struct FitFightFreeCharacterGiftBody: Encodable {
+    let quantity: Int
+    let username: String?
+    let everyone: Bool?
+}
+
+struct FitFightFreeCharacterGift: Decodable {
+    let people: Int
+    let quantity: Int
+}
+
+/// Gives free characters on this build's own data: a staging build writes staging accounts through
+/// the preview server, like the rest of this tab; an App Store build writes production accounts.
+/// Every account already gets one on its own.
+struct FreeCharacterGiftCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var everyone = false
+    @State private var username = ""
+    @State private var quantity = 1
+    /// The same gift keeps its key until the server answers, so a retry never gives twice.
+    @State private var key = UUID()
+    @State private var busy = false
+    @State private var confirming = false
+    @State private var result: String?
+    @State private var failure: String?
+
+    private var production: Bool { AppVersion.backend == "prod" }
+
+    var body: some View {
+        FFCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(verbatim: "Free characters").ffType(.heading).foregroundStyle(theme.text)
+                Text(verbatim: "Everyone gets 1 on their own. Give more to \(production ? "Production" : "Staging") accounts.")
+                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+                FFSegmented(items: [false, true], selection: $everyone, fill: true) { $0 ? "Everyone" : "One person" }
+                if !everyone {
+                    FFField(label: "Username") {
+                        TextField("username" as String, text: $username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
+                }
+                Stepper(value: $quantity, in: 1...10) {
+                    Text(verbatim: "\(quantity) free").ffType(.label).foregroundStyle(theme.text)
+                }
+                FFButton(title: "Give", enabled: everyone || !username.trimmingCharacters(in: .whitespaces).isEmpty,
+                         busy: busy, fullWidth: true) {
+                    if everyone { confirming = true } else { Task { await give() } }
+                }
+                if let failure {
+                    Text(verbatim: failure).ffType(.caption).foregroundStyle(theme.emberText)
+                } else if let result {
+                    Text(verbatim: result).ffType(.caption).foregroundStyle(theme.mossText)
+                }
+            }
+        }
+        .confirmationDialog(Text(verbatim: "Give \(quantity) free to every account?"), isPresented: $confirming, titleVisibility: .visible) {
+            Button { Task { await give() } } label: { Text(verbatim: "Give to everyone") }
+        }
+        .onChange(of: "\(everyone)-\(username)-\(quantity)") { _, _ in key = UUID() }
+    }
+
+    private func give() async {
+        guard !busy else { return }
+        busy = true
+        failure = nil
+        result = nil
+        defer { busy = false }
+        do {
+            let api = production ? FitFightAPI() : FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+            let gift = try await api.giftFreeCharacters(
+                username: everyone ? nil : username.trimmingCharacters(in: .whitespaces),
+                quantity: quantity, idempotencyKey: key, accessToken: try await session.freshAccessToken()
+            )
+            key = UUID()
+            result = "Gave \(gift.quantity) free to \(gift.people) \(gift.people == 1 ? "person" : "people")."
+        } catch FitFightAPIError.http(let status, _, _) where status == 403 {
+            failure = "This account isn't the FitFight admin."
+        } catch FitFightAPIError.http(let status, _, _) where status == 404 {
+            failure = "No account has this username."
+        } catch {
+            failure = error.localizedDescription
+        }
     }
 }
 

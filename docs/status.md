@@ -6,6 +6,53 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Free characters, prepared 12 Oct 2026
+
+**Product (Marc):** no credits. Each account has a number of free characters
+("1 free"). Every account, current and new, gets 1. Marc can give more from the
+app. A later "beat Marc" challenge can add one the same way. Onboarding can
+create one and moves on at once; the push and the Fights card say when it is ready.
+
+**Code:**
+
+- Migration `20261012200000_free_characters.sql` adds `private.free_character_grants`
+  (user, quantity, reason `signup` or `gift`, giver, operation key). Rows are never
+  changed or removed. A free character is a `custom_character_purchases` row with
+  `free_claim_key` instead of the Apple columns, which become nullable behind a
+  check, so it uses the same three portraits, choice, poses, reconciler and pushes.
+- Remaining = sum of grants minus free characters created. The first
+  `GET /me/custom-characters` adds the one `signup` grant (unique per account).
+- `POST /api/v1/me/custom-characters/free` (`Idempotency-Key`, `{ description }`)
+  returns the paid claim's `{ purchase_id, refunded }`; `409 no_free_characters`
+  when none are left. The app then calls `/advance` in the background.
+- `POST /api/v1/admin/free-characters` (`Idempotency-Key`, `{ quantity, username }`
+  or `{ quantity, everyone: true }`), FitFight admin only.
+- App: "N free" on the create screen and on the Create your own tile, "Create for
+  free", four idea cards (real prompt and the portrait it gave, see
+  [Blend workflows](blend-workflows.md#free-characters)), "Or create your own" on the
+  onboarding companion step, and a Free characters card at the top of
+  Profile → Dashboard → Admin. A 1.1.3 release note in English and French.
+
+**Contract:** additive. The store adds `free_characters`; builds that decode it
+read a missing field as 0. Older builds ignore it and still show the price; a
+free character appears to them like a paid one. Both routes are in
+`contracts/openapi.yaml`. Order: apply the migration, then deploy the backend
+(it reads the new table and column), then ship the app.
+
+**Verification (local):** strict TypeScript and all unit tests passed. A local
+Supabase stack (CLI 2.115.0) applied every migration; all database tests passed,
+including a new free-character case (signup grant once, claim replay, no free
+left, another account's key, gift by username and to everyone, gift replay, the
+funding check). pgTAP (308) and schema lint passed. Localization and native API
+boundary checks passed, and every changed Swift file parses (Swift 6.0.3, Linux).
+Not run: the iOS simulator build, which needs CI on a PR, and a device check.
+
+**Live:** nothing deployed. On 12 Oct the new route answered 404 on staging,
+preview and production, as expected. TestFlight builds call staging.fitfight.app,
+which must follow `preview` before they get free characters; the admin card on a
+staging build writes through the preview server. Giving to production accounts
+needs the App Store build.
+
 ## Lighter background sync and refresh time limits, prepared 12 Oct 2026
 
 Marc saw about 200 background sync attempts per person each day in

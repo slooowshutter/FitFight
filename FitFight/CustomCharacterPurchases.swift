@@ -8,6 +8,8 @@ struct CustomCharacterStoreSnapshot: Decodable {
     let environment: String
     let purchasesEnabled: Bool
     let productId: String
+    /// Characters this person can still create without paying. A server without the field means none.
+    let freeCharacters: Int
     let characters: [CustomCharacterProgress]
 
     enum CodingKeys: String, CodingKey {
@@ -15,6 +17,17 @@ struct CustomCharacterStoreSnapshot: Decodable {
         case appAccountToken = "app_account_token"
         case purchasesEnabled = "purchases_enabled"
         case productId = "product_id"
+        case freeCharacters = "free_characters"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        appAccountToken = try container.decode(UUID.self, forKey: .appAccountToken)
+        environment = try container.decode(String.self, forKey: .environment)
+        purchasesEnabled = try container.decode(Bool.self, forKey: .purchasesEnabled)
+        productId = try container.decode(String.self, forKey: .productId)
+        freeCharacters = try container.decodeIfPresent(Int.self, forKey: .freeCharacters) ?? 0
+        characters = try container.decode([CustomCharacterProgress].self, forKey: .characters)
     }
 }
 
@@ -123,6 +136,11 @@ final class CustomCharacterPurchases: ObservableObject {
     private let api = FitFightAPI()
     private var ownerID: UUID?
     private var processing: Set<UInt64> = []
+    /// Kept until the server answers, so tapping again after a lost answer cannot use a second free character.
+    private var freeClaimKey: UUID?
+
+    /// Characters this person can still create without paying.
+    var freeCharacters: Int { snapshot?.freeCharacters ?? 0 }
 
     /// Characters the server is still drawing, waiting for a portrait choice, or stuck on a failure.
     var inProgress: [CustomCharacterProgress] {
@@ -148,6 +166,7 @@ final class CustomCharacterPurchases: ObservableObject {
     func observe(session: SessionStore) async {
         ownerID = session.profile?.userId
         snapshot = nil
+        freeClaimKey = nil
         product = nil
         message = ""
         pendingPurchase = false
@@ -242,6 +261,28 @@ final class CustomCharacterPurchases: ObservableObject {
         } catch is CancellationError {
             return
         } catch { message = error.localizedDescription }
+    }
+
+    /// Uses one free character. The portraits start in the background, so the caller can move on at once.
+    func claimFree(description: String, session: SessionStore) async throws {
+        let prompt = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Callers move on only after a claim, so every early exit throws.
+        guard !isBusy, !prompt.isEmpty, prompt.count <= 1000,
+              let userID = ownerID, userID == session.profile?.userId else { throw CancellationError() }
+        isBusy = true
+        defer { isBusy = false }
+        let key = freeClaimKey ?? UUID()
+        freeClaimKey = key
+        let claim = try await api.claimFreeCustomCharacter(
+            description: prompt, idempotencyKey: key, accessToken: try await session.freshAccessToken()
+        )
+        guard ownerID == userID, session.profile?.userId == userID else { throw CancellationError() }
+        freeClaimKey = nil
+        PostHogSDK.shared.capture("free_character_claimed")
+        // The character exists now; a failed reload must not make the caller think it does not.
+        try? await refresh(session: session)
+        // Starts the portraits now; if this fails, the server starts them within a few minutes.
+        Task { _ = try? await advance(claim.purchaseID, session: session) }
     }
 
     func advance(_ id: UUID, description: String? = nil, retry: Bool = false, session: SessionStore) async throws -> CustomCharacterProgress {

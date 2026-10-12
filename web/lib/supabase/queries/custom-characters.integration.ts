@@ -13,6 +13,8 @@ import {
     dueCustomCharacterPurchases,
     chooseCustomCharacterPortrait,
     claimCustomCharacterPush,
+    claimFreeCustomCharacter,
+    giftFreeCharacters,
 } from "./custom-characters-supabase-query";
 import { readSpecialStore } from "./specials-supabase-query";
 
@@ -316,4 +318,73 @@ test("a description saved at claim draws three portraits; the owner picks one an
     const poses = await reserveAiRequest(owner, { ...fitnessInput, sourceRequestIds: [runs[1].id] }, limits, database);
     if (!poses.shouldStart) assert.fail("Expected the poses to start");
     assert.deepEqual(poses.portraits, ["https://cdn.tryblend.ai/candidate-1.png"]);
+});
+
+test("every account gets one free character, gifts add more, and a free claim draws three portraits", async (context) => {
+    const owner = randomUUID();
+    const admin = randomUUID();
+    const handle = `free_${randomUUID().slice(0, 8)}`;
+    const giftKey = randomUUID();
+    const everyoneKey = randomUUID();
+    await database`insert into auth.users (id) values (${owner}), (${admin})`;
+    await database`update public.profiles set handle = ${handle} where id = ${owner}`;
+    await database`update private.ai_provider_budget set requests = 0, starts = 0, remaining = null,
+        reset_at = null, blocked_until = null, window_started_at = clock_timestamp(),
+        starts_day = (clock_timestamp() at time zone 'UTC')::date where provider = 'blend'`;
+    const account = (await readSpecialStore(owner, database)).app_account_token;
+    context.after(async () => {
+        await database`delete from private.free_character_grants
+            where user_id in (${owner}, ${admin}) or operation_key in (${giftKey}, ${everyoneKey})`;
+        await database`delete from private.ai_requests where user_id = ${owner}`;
+        await database`delete from private.custom_character_portraits where purchase_id in (
+            select id from private.custom_character_purchases where account_id = ${account})`;
+        await database`delete from private.custom_character_purchases where account_id = ${account}`;
+        await database`delete from private.special_accounts where id = ${account}`;
+        await database`delete from auth.users where id in (${owner}, ${admin})`;
+    });
+
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 1);
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 1);
+
+    const key = randomUUID();
+    const claim = await claimFreeCustomCharacter(owner, key, "A plump grey city pigeon", database);
+    assert.equal((await claimFreeCustomCharacter(owner, key, "A plump grey city pigeon", database)).purchase_id, claim.purchase_id);
+    await assert.rejects(claimFreeCustomCharacter(admin, key, "A stolen pigeon", database), { code: "ai_request_conflict" });
+    await assert.rejects(claimFreeCustomCharacter(owner, randomUUID(), "A second pigeon", database), {
+        code: "no_free_characters",
+    });
+    const store = await readCustomCharacterStore(owner, database);
+    assert.equal(store.free_characters, 0);
+    assert.equal(store.characters.length, 1);
+    assert.equal(store.characters[0].phase, "portraits");
+    assert.equal(store.characters[0].candidates.length, 3);
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === claim.purchase_id));
+
+    const stage = await prepareCustomCharacterStage(owner, claim.purchase_id, {}, database);
+    if (stage.kind !== "portraits") assert.fail("Expected three portraits");
+    assert.equal(stage.starts.length, 3);
+    const run = await reserveAiRequest(owner, {
+        workflow: "avatar", resourceId: claim.purchase_id, idempotencyKey: stage.starts[0],
+        requestHash: "a".repeat(64), version, creditPrice: 0, sourceRequestIds: [], description: stage.description,
+    }, limits, database);
+    assert.equal(run.shouldStart, true);
+
+    assert.deepEqual(await giftFreeCharacters(admin, giftKey, { username: handle.toUpperCase(), quantity: 2 }, database), {
+        people: 1, quantity: 2,
+    });
+    assert.deepEqual(await giftFreeCharacters(admin, giftKey, { username: handle, quantity: 2 }, database), {
+        people: 1, quantity: 2,
+    });
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 2);
+    await assert.rejects(giftFreeCharacters(admin, randomUUID(), { username: "nobody_has_this_name", quantity: 1 }, database), {
+        code: "not_found",
+    });
+    const everyone = await giftFreeCharacters(admin, everyoneKey, { everyone: true, quantity: 1 }, database);
+    assert.ok(everyone.people >= 2);
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 3);
+    const [gift] = await database`select reason, granted_by from private.free_character_grants where operation_key = ${giftKey}`;
+    assert.deepEqual({ ...gift }, { reason: "gift", granted_by: admin });
+
+    await assert.rejects(database`insert into private.custom_character_purchases (account_id, environment)
+        values (${account}, 'Sandbox')`, { code: "23514" });
 });

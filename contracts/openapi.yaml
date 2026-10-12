@@ -1089,6 +1089,86 @@ paths:
                     description: Missing or invalid session
                 "403":
                     description: Not the FitFight admin
+    /admin/free-characters:
+        post:
+            operationId: giftFreeCharacters
+            summary: Admin only. Gives free characters to one username or to every current account.
+            description: Each account also gets one free character on its own. A repeated Idempotency-Key never gives twice and returns the same count.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            oneOf:
+                                - type: object
+                                  additionalProperties: false
+                                  required: [quantity, username]
+                                  properties:
+                                      quantity: { type: integer, minimum: 1, maximum: 100 }
+                                      username: { type: string, minLength: 1, maxLength: 30 }
+                                - type: object
+                                  additionalProperties: false
+                                  required: [quantity, everyone]
+                                  properties:
+                                      quantity: { type: integer, minimum: 1, maximum: 100 }
+                                      everyone: { type: boolean, enum: [true] }
+            responses:
+                "200":
+                    description: The number of accounts this key gave to.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [people, quantity]
+                                properties:
+                                    people: { type: integer, minimum: 0 }
+                                    quantity: { type: integer, minimum: 1 }
+                "401":
+                    description: Missing or invalid session
+                "403":
+                    description: Not the FitFight admin
+                "404":
+                    description: No account has this username
+    /me/custom-characters/free:
+        post:
+            operationId: claimFreeCustomCharacter
+            summary: Uses one free character instead of an Apple charge and saves its description.
+            description: The result is the same as a paid claim. The app then starts the three portraits with /me/custom-characters/{purchase_id}/advance; if it does not, the reconciler does. GET /me/custom-characters reports the remaining count in free_characters.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [description]
+                            properties:
+                                description: { type: string, minLength: 1, maxLength: 1000 }
+            responses:
+                "200":
+                    description: The free character. A repeated key returns the same one.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [purchase_id, refunded]
+                                properties:
+                                    purchase_id: { type: string, format: uuid }
+                                    refunded: { type: boolean }
+                "401":
+                    description: Missing or invalid session
+                "409":
+                    description: "no_free_characters: none left"
     "/me/capabilities": {
         "get": {
             "operationId": "readFightCapabilities",

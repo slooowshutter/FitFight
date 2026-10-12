@@ -58,6 +58,10 @@ query only marks its own tile with `Query failed: ...`.
   measures) and an `example` sentence that reads one current number off it: the
   newest complete day, week or month, or now for totals and states. Both are built
   on the server in English, so their wording changes need no app build.
+- **Card pages (11 Oct 2026):** every card also carries a `definition` (what it
+  measures and what it compares with) and an `example` sentence that reads its
+  number and the previous one. A card without a value has no example. The app
+  shows only the name, number and change on a card, and the rest on its page.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
   after a background `observer` sync is the post-sync refresh, not an open. Sync
@@ -111,6 +115,17 @@ query only marks its own tile with `Query failed: ...`.
 - **Compatibility:** additive route; no existing contract, schema or migration
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
+
+## Recent syncs (prepared 12 Oct 2026)
+
+`GET /api/v1/admin/recent-syncs` returns `{ "people": [...] }` with `user_id`,
+`handle`, `display_name` and `last_synced_at` for every account whose Apple
+Health upload reached this server's database in the last 7 days, newest first.
+It reads `public.data_sources.last_success_at` (provider `apple_health`), which
+every Steps and activity upload sets, and leaves out deleted accounts. Only the
+FitFight admin (`isFitFightAdmin`) can read it; anyone else gets 403. The staging
+app shows it to the admin on Fights, through the preview server, to find testers
+who still sync to staging instead of using the App Store version.
 
 ## Activity pipeline (prepared 23 Sep 2026)
 
@@ -665,7 +680,17 @@ Supabase will receive a permission error after the migration. Feature-branch pus
 alone do not apply the hosted migration. No existing finalized scores or hosted
 previously-deleted accounts are rewritten by this change.
 
-## Specials: paid limited companions (updated 23 Sep 2026)
+## Specials: paid limited companions (updated 12 Oct 2026)
+
+**Current model, 12 Oct 2026:** Specials are no longer one of a kind. Any account
+may own any number of them. Each is one charge of the consumable
+`com.fitfight.mvp.special`; `POST /api/v1/me/specials/purchases` verifies it
+and records the chosen Special in `private.special_purchases` (one row per
+transaction, `revoked_at` on refund). Ownership is a non-revoked purchase or an
+edition owned under the old model. Holds, Taken and the one-per-account limit
+are gone; `/checkout` refuses `reserve` with `410 special_update_required`. The
+rest of this section describes the retired one-of-a-kind model, whose tables and
+legacy products are kept for existing Sandbox purchases.
 
 The 40 supplied animal photos have stable `limited-*` companion IDs and sell as
 non-consumable StoreKit products at EUR 0.99. Each photo, including alternate

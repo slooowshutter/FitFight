@@ -18,8 +18,6 @@ import { readSpecialStore } from "./specials-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
 process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";
-process.env.APPLE_SPECIALS_ENABLED = "true";
-process.env.APPLE_CUSTOM_CHARACTERS_ENABLED = "true";
 const database = postgres(env.DATABASE_URL, { max: 5 });
 after(() => database.end());
 const version = { workflowId: "paid-character-test", versionId: "published-test" };

@@ -104,7 +104,6 @@ enum CompanionStateTests {
             SpecialSeries.allCases.firstIndex(of: $0)! < SpecialSeries.allCases.firstIndex(of: $1)!
         }, "The Specials carousel is ordered by series")
         precondition(StockCompanion.limitedTiger.effortImage(stage: .peak) == "Companion-limited-tiger-effort-5", "Specials have effort poses")
-        precondition(StockCompanion.limitedTiger.productId == "com.fitfight.mvp.special.tiger")
 
         // A retired Special id from the first roster stays on its profile and is simply unknown here.
         let retired = FitFightProfile(userId: UUID(), handle: "retired", displayName: "Retired", handleSetAt: nil, companionId: "limited-pangolin")

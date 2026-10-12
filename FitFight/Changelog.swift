@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 12,
+            notes: "Specials are no longer one of a kind: anyone can buy any Special, and you can collect as many as you like. Each one is bought once and stays yours."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 11,
             notes: "Specials are new: 30 one-of-a-kind animals in five series, each with five step poses."
         ),

@@ -976,7 +976,6 @@ test("durable Blend admission and poll leases", async (t) => {
             await database`update private.ai_caller_windows set calls = 60 where user_id = ${owner}`;
             const env = {
                 BLEND_API_KEY: "bai_test_only",
-                BLEND_ENABLED: "false",
                 BLEND_AVATAR_WORKFLOW_ID: version.workflowId,
                 BLEND_AVATAR_VERSION_ID: version.versionId,
                 BLEND_GLOBAL_DAILY_STARTS: "100",

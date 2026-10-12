@@ -882,9 +882,9 @@ struct FitFightAPI {
         try await get(path: "me/specials", accessToken: accessToken, expected: [200])
     }
 
-    func specialCheckout(action: String, companionId: String, attemptId: UUID, accessToken: String) async throws {
-        let _: DiscardBody = try await post(path: "me/specials/checkout", accessToken: accessToken,
-            body: ["action": action, "companion_id": companionId, "attempt_id": attemptId.uuidString.lowercased()], expected: [200])
+    func claimSpecialPurchase(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
+        try await post(path: "me/specials/purchases", accessToken: accessToken,
+            body: ["companion_id": companionId, "signed_transaction": signedTransaction], expected: [200])
     }
 
     func claimSpecial(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
@@ -1295,6 +1295,10 @@ struct FitFightAPI {
             accessToken: accessToken,
             headers: ["X-FitFight-Auth-Project": authProject]
         )
+    }
+
+    func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
+        try await get(path: "admin/recent-syncs", accessToken: accessToken)
     }
 
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {

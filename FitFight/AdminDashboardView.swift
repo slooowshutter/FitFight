@@ -20,11 +20,11 @@ struct AdminDashboardView: View {
     @State private var loaded = ""
     /// The chart whose page is open.
     @State private var openChartID: String?
+    /// The card whose page is open.
+    @State private var openCardID: String?
     @State private var dashboard: FitFightAdminDashboard?
     @State private var loading = false
     @State private var failure: String?
-    /// Cards tapped to show the exact value instead of the rounded-down one.
-    @State private var exactCards: Set<String> = []
     /// Refresh and Retry bump this to rerun the load task.
     @State private var reloads = 0
 
@@ -110,7 +110,16 @@ struct AdminDashboardView: View {
         }
         .navigationDestination(item: $openChartID) { id in
             if let dashboard = shown, let chart = dashboard.charts.first(where: { $0.id == id }) {
-                AdminChartDetailView(chart: chart, bucket: dashboard.bucket)
+                AdminDetailView(title: chart.title, definition: chart.definition, example: chart.example, note: chart.note) {
+                    AdminChart(chart: chart, bucket: dashboard.bucket, interactive: true, height: 260)
+                }
+            }
+        }
+        .navigationDestination(item: $openCardID) { id in
+            if let card = shown?.cards.first(where: { $0.id == id }) {
+                AdminDetailView(title: card.title, definition: card.definition, example: card.example, note: card.note) {
+                    cardFigure(card)
+                }
             }
         }
     }
@@ -250,11 +259,11 @@ struct AdminDashboardView: View {
         .buttonStyle(FFHapticPlainStyle())
     }
 
+    /// Name, number and change only. Tapping opens the card's page with the rest.
     private func cardTile(_ card: FitFightAdminDashboard.Card) -> some View {
-        let exact = exactCards.contains(card.id)
         let change = changeLine(card)
         return Button {
-            exactCards.formSymmetricDifference([card.id])
+            openCardID = card.id
         } label: {
             FFCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -262,7 +271,7 @@ struct AdminDashboardView: View {
                         .ffType(.eyebrow)
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(2)
-                    Text(verbatim: card.value.map { adminValue($0, unit: card.unit, exact: exact) } ?? "-")
+                    Text(verbatim: card.value.map { adminValue($0, unit: card.unit) } ?? "-")
                         .font(.ff(28, 800))
                         .monospacedDigit()
                         .foregroundStyle(theme.text)
@@ -273,15 +282,33 @@ struct AdminDashboardView: View {
                             .ffType(.caption)
                             .foregroundStyle(change.color)
                     }
-                    if let note = card.note {
-                        Text(verbatim: note)
-                            .ffType(.micro)
-                            .foregroundStyle(theme.textSecondary)
-                    }
                 }
             }
         }
         .buttonStyle(FFHapticPlainStyle())
+    }
+
+    /// The top of a card's page: the exact number, its change, and the number it compares with.
+    private func cardFigure(_ card: FitFightAdminDashboard.Card) -> some View {
+        let change = changeLine(card)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: card.value.map { adminValue($0, unit: card.unit, exact: true) } ?? "-")
+                .font(.ff(34, 800))
+                .monospacedDigit()
+                .foregroundStyle(theme.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+            if let change {
+                Text(verbatim: change.text)
+                    .ffType(.label)
+                    .foregroundStyle(change.color)
+            }
+            if let previous = card.previous {
+                Text(verbatim: "Previous: " + adminValue(previous, unit: card.unit, exact: true))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
+        }
     }
 
     /// "+12% (+3)", or "+2.5 pts" on a percent card. Moss is good news and ember bad, by the
@@ -343,6 +370,96 @@ struct AdminDashboardView: View {
             }
         }
         loading = false
+    }
+}
+
+/// Fights on the staging build, admin only: how many people synced to staging in the last 7 days.
+/// They should be on the App Store version, so the admin can ask them to switch. Like the Admin
+/// tab, it reads the preview server, which always runs the newest `preview` backend on staging data.
+struct RecentSyncsCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var people: [FitFightRecentSyncs.Person]?
+    @State private var failure: String?
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            FFCard {
+                HStack(spacing: 13) {
+                    Text(verbatim: people.map { "\($0.count)" } ?? "-")
+                        .font(.ff(22, 800))
+                        .foregroundStyle(theme.text)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Synced on TestFlight").ffType(.heading).foregroundStyle(theme.text)
+                        Text(verbatim: failure ?? "Last 7 days. Tap for the names.")
+                            .ffType(.caption)
+                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .disabled(people?.isEmpty ?? true)
+        .task { await load() }
+        .sheet(isPresented: $showing) {
+            RecentSyncsSheet(people: people ?? [])
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func load() async {
+        do {
+            let token = try await session.freshAccessToken()
+            people = try await FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+                .recentSyncs(accessToken: token).people
+            failure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            failure = error.localizedDescription
+        }
+    }
+}
+
+private struct RecentSyncsSheet: View {
+    let people: [FitFightRecentSyncs.Person]
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSheetHeader(title: "Synced on TestFlight") { dismiss() }
+            Text(verbatim: "Last 7 days, newest first. They should use the App Store version.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            ScrollView {
+                FFGroupedRows {
+                    ForEach(people) { person in
+                        if person.id != people.first?.id { FFDivider() }
+                        FFGroupedRow(
+                            title: person.displayName,
+                            subtitle: "@\(person.handle)",
+                            subtitleTone: .neutral,
+                            trailing: AnyView(
+                                Text(verbatim: model.formatLastSync(person.lastSyncedAt))
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
     }
 }
 
@@ -694,40 +811,43 @@ private struct AdminChartSelection: ViewModifier {
     }
 }
 
-/// A chart on its own page: bigger, with the value under the finger, what it measures, and a
-/// sentence that reads its current number.
-private struct AdminChartDetailView: View {
-    let chart: FitFightAdminDashboard.Chart
-    let bucket: String?
+/// A chart or card on its own page: the chart bigger with the value under the finger, or the
+/// card's exact number, then what it measures and a sentence that reads its current number.
+private struct AdminDetailView<Hero: View>: View {
+    let title: String
+    let definition: String?
+    let example: String?
+    let note: String?
+    @ViewBuilder var hero: Hero
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         FFScreen {
             FFCard(padding: 16) {
-                AdminChart(chart: chart, bucket: bucket, interactive: true, height: 260)
+                hero
             }
-            if let definition = chart.definition {
+            if let definition {
                 FFSection(title: "What it shows") {
                     paragraph(definition)
                 }
             }
-            if let example = chart.example {
+            if let example {
                 FFSection(title: "In numbers") {
                     paragraph(example)
                 }
             }
-            if let note = chart.note {
+            if let note {
                 Text(verbatim: note)
                     .ffType(.micro)
                     .foregroundStyle(theme.textSecondary)
             }
         }
-        .navigationTitle(chart.title)
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Two lines, so long chart names stay whole.
+            // Two lines, so long names stay whole.
             ToolbarItem(placement: .principal) {
-                Text(verbatim: chart.title)
+                Text(verbatim: title)
                     .ffType(.rowTitle)
                     .foregroundStyle(theme.text)
                     .multilineTextAlignment(.center)

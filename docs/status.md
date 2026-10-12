@@ -1,10 +1,114 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **10 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **11 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
 
 ---
+
+## Specials for everyone, one consumable, prepared 12 Oct 2026
+
+**Product (Marc):** Specials are no longer one of a kind. Anyone can buy any Special, an account can own many, and there are no holds, Taken, or one-per-account limit. Every Special is one charge of the consumable `com.fitfight.mvp.special` (EUR 0.99, being created in App Store Connect by someone else); the server records which Special each charge unlocked.
+
+**Code:** Migration `20261012150000_specials_for_everyone.sql` adds `private.special_purchases` (account, environment, `companion_id`, unique transaction id, `revoked_at`, evidence) and widens `private.require_special_ownership` so a profile may equip a Special when the account owns it through a non-revoked purchase or an edition already owned under the old model. Nothing is deleted; `special_editions` and `special_transactions` keep every row. New `POST /api/v1/me/specials/purchases` takes `{ companion_id, signed_transaction }`, verifies the consumable against Apple's current record for this account token, and returns the existing `SpecialClaimResult`. A replay returns the Special the charge first unlocked. App Store refund notifications revoke that one purchase and unequip the Special only when no other ownership remains. The native picker saves the chosen Special before Apple's sheet, shows "Buy for" with StoreKit's price or "Yours", and keeps the picker open after buying. An unfinished charge whose choice was lost unlocks the next Special picked without paying again. Restore purchases finishes unfinished charges and re-reads the server.
+
+**Compatibility:** Additive. `GET /api/v1/me/specials` keeps every field and adds `product_id`; editions now report only `available` or `yours` (never `taken`, `reserved` or `refunded`), and `purchases_enabled` stays `true`. Older builds (206 to 222, production 210) still decode it and can equip owned Specials. Their `POST /checkout` `reserve` now returns `410 special_update_required` with "Update FitFight to buy Specials." before Apple can charge; `cancel` returns `{ saved: true }`. Legacy per-Special non-consumables (Sandbox only) still record through `/transactions` and notifications, never newly sold. Deploy order: migration, backend, then the app.
+
+**Checks:** Strict TypeScript and all 443 backend unit tests passed. Native Special purchase, companion state, localization and API boundary checks passed; the companion preview simulator build succeeded. The rewritten `specials.integration.ts` needs the disposable database (`npm run test:database`) and was not run here. No migration, deployment, App Store or TestFlight change was made.
+
+## No on/off switches for paid features: 12 Oct 2026
+
+Marc removed the `APPLE_SPECIALS_ENABLED`, `APPLE_CUSTOM_CHARACTERS_ENABLED` and
+`BLEND_ENABLED` environment switches. Sales are open wherever the Apple keys are
+configured, and Blend starts wherever its key and workflow ids are configured.
+Apple's own review is the gate: unapproved products never load in StoreKit, so
+the app shows "Purchases unavailable" until approval. `purchases_enabled` stays in
+the API (always `true`) for older builds.
+## TestFlight syncs card for the admin, prepared 12 Oct 2026
+
+On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes
+before. That person should use the App Store version, which uses production.
+Marc asked for a number on Fights, only in the staging app, with the names on tap.
+
+**Code:** new `GET /api/v1/admin/recent-syncs` lists every account whose Apple
+Health upload reached the server's database in the last 7 days
+(`data_sources.last_success_at`, provider `apple_health`). Newest sync is first,
+and deleted accounts are left out. Only the FitFight admin (`marc`, `rad`) can
+read it. Anyone else gets 403. On the staging build, the admin's Fights tab shows
+a card under the header: the count, "Synced on TestFlight" and "Last 7 days". A
+tap opens the names, usernames and the time since each last sync. The card reads
+the preview server, like the Admin tab. App Store builds, other people, the
+companion preview and screenshots do not get the card, and it takes no space for
+them. Admin only, so the copy is English only and there is no release note.
+
+**Contract:** additive route in `contracts/openapi.yaml`, with
+`contracts/fixtures/admin-recent-syncs.json`. No existing route, response or
+table changes, and there is no migration. Older builds never call the route.
+Read-only `/api/app-release` at 10:16 UTC on 12 Oct: staging latest 1.1.1 (201),
+review and internal 1.1.3 (222); production latest 1.1.2 (210), no candidates;
+`enforced: false` on both. The preview server answered 404 for the new route,
+as expected before deployment.
+
+**Verification (local):** web typecheck and all 439 unit tests passed. A local
+Supabase stack (CLI 2.115.0, as in CI) applied every migration and passed all 100
+database tests, including the new `recent-syncs.integration.ts`. It checks the
+7-day window, deleted accounts, the order, 401 without a session, 403 for a
+non-admin and 200 for the admin. It failed when the window was 9 days and when
+the admin check was removed. Swift 6.4 on Linux compiled and ran the native
+contract test with the new fixture, using a stand-in for the Apple-only
+localization file. It failed on a renamed field. The changed Swift files parse,
+and the localization, native API boundary and contract YAML checks passed.
+[PR #357](https://github.com/slooowshutter/FitFight/pull/357) CI passed: the
+simulator build and native checks, migrations and database tests, web tests,
+screen renders and Vercel. Not run: a device check.
+
+**Live deployment:** Marc asked for a PR into `develop` on 12 Oct. Nothing is
+merged or deployed. A `preview` merge
+deploys the route to the preview server and uploads a staging TestFlight build
+with the card. `main` is not needed, because App Store builds never show it.
+
+## Admin dashboard: card pages and sync time percentiles, prepared 11 Oct 2026
+
+Marc asked to see a definition and an example for each card, like the charts.
+He asked for cards with only the name, the number and the change, and for all
+the details on a tap. He also asked for more percentiles on the sync time
+chart, lower and higher than P50 and P90.
+
+**Server:** every card now has a `definition` and an `example`. The definition
+says what the card measures and what it compares with. The example reads the
+number in a sentence, for instance "52 people opened the app in the last 7
+days, against 47 in the 7 days before." A card without a value has no example.
+The App section's sync time chart is now "Sync time: P10 to P99", with seven
+lines: P10, P25, P50, P75, P90, P95 and P99. Chart and card sentences now say
+"1 day" and "1 time" when a value shows as 1.
+
+**App:** a card shows its name, its rounded number and its change. Its note
+moved to the card's page. A tap opens that page: the card name in the bar, the
+exact number, the change, the previous number, "What it shows", "In numbers",
+and the note with the query time. Before, a tap switched the card to the exact
+number. The chart page and the card page share one view. Admin only, no release
+note.
+
+**Compatibility:** additive. The two card fields are optional in
+`contracts/openapi.yaml`. The fixture has one card with the texts and one
+without, and the native contract test decodes both. Older builds ignore the new
+fields and keep the note on the card. The new percentiles reach every build,
+because the server defines the chart.
+
+**Verification (local):** web typecheck passed. The dashboard database test
+passed on Postgres 16 with all 61 migrations. It now also checks that every
+card has a definition, that a card has an example only when it has a value,
+that no sentence prints `undefined` or `NaN`, that the app opens card reads as
+a full sentence, and that the sync time chart has the seven lines in order.
+Every card sentence was read with fake values (1, 0, negative, 1.04 and large)
+and on a seeded copy. The Swift files were parsed with Swift 6.3.3 on Linux,
+and the native contract test compiled and passed there. The SwiftUI views
+compile only in CI.
+
+**Live deployment:** not merged or deployed. After a `preview` merge, the
+preview server sends the texts and the new percentiles to every build. The card
+page needs a new TestFlight build.
 
 ## Admin access for username rad, prepared 11 Oct 2026
 

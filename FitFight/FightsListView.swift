@@ -253,7 +253,8 @@ struct LiveFightCard: View {
                         people: fight.standings.filter { !$0.invited }.map(\.person),
                         visible: 4,
                         size: 22,
-                        ring: theme.card
+                        ring: theme.card,
+                        halfBody: true
                     )
                     // Joined for the next round: no place this round.
                     if !fight.isUpcoming, fight.standings.contains(where: { $0.person.isYou && !$0.deferred }) {
@@ -360,7 +361,8 @@ struct FinishedRow: View {
                     people: fight.standings.map(\.person),
                     visible: 2,
                     size: 26,
-                    ring: theme.card
+                    ring: theme.card,
+                    halfBody: true
                 )
             }
             .padding(.horizontal, 16)

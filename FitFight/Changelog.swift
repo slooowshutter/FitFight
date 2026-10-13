@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 13,
+            notes: "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 13,
             notes: "TestFlight builds now tell everyone except admins that FitFight is on the App Store, with a button to open it."
         ),
         ReleaseNote(

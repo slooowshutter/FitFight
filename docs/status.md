@@ -19,8 +19,8 @@ works (the five New fight steps, nothing is saved), companions (pick one of the
 12 animals and see its five poses), fight options, pricing, FAQ with search,
 and a closing card. All people, fights and posts are fictional. The download
 buttons keep the App Store link in production and the TestFlight dialog on
-staging. The pricing card shows Specials (EUR 0.99) and Make it yours
-(EUR 4.99) as coming later. Images are WebP copies of the bundled app artwork
+staging. The pricing card shows Specials (EUR 0.99, buy any and keep it) and
+Make it yours (EUR 4.99, the first one free) as coming later. Images are WebP copies of the bundled app artwork
 in `web/public/landing/`. The old home page styles and `total-steps.css` are
 removed. The browser tab, `favicon.ico` and iPhone home-screen icons now use the
 app's FF icon instead of the older arch mark. No API, database, app or release setting changed.

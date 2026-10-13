@@ -280,12 +280,12 @@ const en = {
             [
                 "Specials",
                 "€0.99",
-                "One-of-one animals. Each has a single owner, for good.",
+                "Buy any Special once and keep it forever. Collect as many as you like.",
             ],
             [
                 "Make it yours",
                 "€4.99",
-                "Describe any animal. Get your own companion in five poses.",
+                "Describe any animal and get your own companion in five poses. Your first one is free.",
             ],
         ],
     },
@@ -750,12 +750,12 @@ const fr: typeof en = {
             [
                 "Spéciaux",
                 "0,99 €",
-                "Des animaux uniques. Chacun n’a qu’un seul propriétaire, pour de bon.",
+                "Achetez un Spécial une fois et gardez-le pour toujours. Collectionnez-en autant que vous voulez.",
             ],
             [
                 "À ton image",
                 "4,99 €",
-                "Décrivez n’importe quel animal. Obtenez votre propre compagnon en cinq poses.",
+                "Décrivez n’importe quel animal et obtenez votre propre compagnon en cinq poses. Le premier est offert.",
             ],
         ],
     },

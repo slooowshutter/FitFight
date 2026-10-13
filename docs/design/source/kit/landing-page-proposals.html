@@ -639,9 +639,10 @@
             /* Hero: copy above the phone on a phone, copy left and phone right on a computer */
             .rd-hero-center { padding: 52px 0 24px; text-align: center; }
             .rd-hero-grid { display: grid; }
-            .rd-stat { display: grid; gap: 4px; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--hair); }
-            .rd-stat b { color: var(--mossText); font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; }
-            .rd-stat > span { color: var(--text2); font-size: 14px; }
+            .rd-total { display: grid; justify-items: center; padding: 72px 20px 8px; text-align: center; }
+            .rd-total .eyebrow { margin-bottom: 10px; }
+            .rd-total-num { color: var(--mossText); font-size: clamp(48px, 13vw, 104px); font-weight: 800; letter-spacing: -0.06em; line-height: 0.95; }
+            .rd-total span { margin-top: 10px; color: var(--text2); font-size: 15px; }
 
             .rd-hero-center .rd-copy { justify-items: center; }
             .rd-hero-center .rd-copy .h1 { max-width: 15ch; text-wrap: balance; }
@@ -651,7 +652,8 @@
             .rd-hero-ph { margin-top: 40px; }
             .rd-hero-ph .rd-hint { justify-content: center; }
             @media (min-width: 1000px) {
-                .rd-hero-center { padding-top: 40px; text-align: left; }
+                /* The first screen shows the hero and nothing else */
+                .rd-hero-center { display: grid; align-content: center; min-height: calc(100vh - 64px); min-height: calc(100svh - 64px); padding: 24px 0; text-align: left; }
                 .rd-hero-grid { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 72px; }
                 .rd-hero-center .rd-copy { justify-items: start; }
                 .rd-hero-center .rd-cta, .rd-hero-center .rd-meta { justify-content: flex-start; }
@@ -1311,13 +1313,10 @@
                             <h1 class="h1">Let friendly competition <span class="moss">move you.</span></h1>
                             <p class="lede">Start a private fight, let Apple Health keep the score, and find out who really walks the most.</p>
                             <div class="rd-cta">${storeBtn()}<a class="btn ghost" href="#how">Try it ${icon("down", 18, 2.2)}</a></div>
-                            <p class="rd-meta">Free<i></i>iPhone<i></i>Apple Health</p>
-                            <div class="rd-stat">
-                                <b class="rd-total">${fmt(TOTAL_STEPS)}</b>
-                                <span>steps recorded since people joined FitFight</span>
-                            </div></div>`;
+                            <p class="rd-meta">Free<i></i>iPhone<i></i>Apple Health</p></div>`;
                         const livePhone = `${phone(scrFights(0), { tab: "fights", live: true, cls: "live" })}<p class="rd-hint">${icon("sparkle", 14)}Tap the tabs. This is the real app.</p>`;
-                        const hero = `<section class="rd-hero rd-hero-center" id="top"><div class="wrap rd-hero-grid">${copy}<div class="rd-ph rd-hero-ph">${livePhone}</div></div></section>`;
+                        const hero = `<section class="rd-hero rd-hero-center" id="top"><div class="wrap rd-hero-grid">${copy}<div class="rd-ph rd-hero-ph">${livePhone}</div></div></section>
+                            <section class="rd-total"><p class="eyebrow">Steps recorded</p><b class="rd-total-num">${fmt(TOTAL_STEPS)}</b><span>since people joined FitFight</span></section>`;
                         const what = `<div class="rd-what">${kitStatement()}${kitFacts()}</div>${kitFrags()}`;
                         return `<div class="rd">
             <header class="d1-hdr"><div class="wrap">${brand()}${navLinks()}<a class="btn primary sm" href="${APP_STORE}">Get the app</a></div></header>
@@ -1341,7 +1340,7 @@
             </div>`;
                     },
                     mount(root) {
-                        const total = root.querySelector(".rd-total");
+                        const total = root.querySelector(".rd-total-num");
                         onVisible(total, () => countUp(total, 0, TOTAL_STEPS, 1800));
                         mountLivePhone(root.querySelector(".phone-wrap.live"));
                         mountLines(root);
@@ -1354,7 +1353,7 @@
 
             const RD1 = raceDay({
                 name: "Race Day",
-                when: "The pick, as on the site: text left and phone right on computers, with the steps total under the buttons.",
+                when: "The pick, as on the site: on computers the hero fills the first screen (text left, phone right), and the steps total sits just below it.",
             });
 
             // Picker: one landing page at a time, same data in all of them.

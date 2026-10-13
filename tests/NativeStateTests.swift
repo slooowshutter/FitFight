@@ -64,6 +64,7 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
     var isRefreshingFights = false
     var refreshPhase: FightRefreshPhase = .idle
     var refreshLine = 0
+    var refreshError: String?
     var companionPreviewNotice: String?
     var started = 0
     var continuations: [CheckedContinuation<Void, Never>] = []
@@ -317,6 +318,25 @@ enum FightRefreshPhase { case idle, readingHealth, uploading, updatingFights }
         if foreground.started == 2 { foreground.continuations.removeFirst().resume() }
         await foregroundFirst.value
         await foregroundSecond.value
+
+        let limited = AppModel()
+        limited.refreshError = "Refreshing took too long."
+        let limitedFirst = Task { await limited.refreshFights(session: session, steps: steps) }
+        while limited.started == 0 { await Task.yield() }
+        check(limited.refreshError == nil, "a new refresh clears the error of a stopped refresh")
+        let limitedQueued = Task { await limited.refreshFights(session: session, steps: steps, trigger: .manual) }
+        try? await Task.sleep(for: .milliseconds(20))
+        limited.refreshTask?.cancel()
+        limited.continuations.removeFirst().resume()
+        try? await Task.sleep(for: .milliseconds(20))
+        let limitedStarted = limited.started
+        if limited.started == 2 { limited.continuations.removeFirst().resume() }
+        await limitedFirst.value
+        await limitedQueued.value
+        check(
+            limitedStarted == 1 && !limited.isRefreshingFights,
+            "a refresh stopped by its time limit settles without starting the queued refresh"
+        )
 
         let post = FitFightFightPost(
             id: UUID(), audience: "fights", fightId: UUID(), fightName: "Test fight",

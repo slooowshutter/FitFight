@@ -500,8 +500,11 @@ struct CompanionAvatar: View {
     var photoURL: URL?
     var size: CGFloat = 44
     var pending = false
+    /// Drawn around photo and initials fallbacks only; companion art stands free.
+    var ring: Color?
+    /// Head to waist instead of full body, for the small stacks on Fights cards.
+    var halfBody = false
     @EnvironmentObject private var companions: CompanionStore
-    @Environment(\.ffTheme) private var theme
 
     init(
         personID: String? = nil,
@@ -510,7 +513,9 @@ struct CompanionAvatar: View {
         monogram: String = "?",
         photoURL: URL? = nil,
         size: CGFloat = 44,
-        pending: Bool = false
+        pending: Bool = false,
+        ring: Color? = nil,
+        halfBody: Bool = false
     ) {
         self.personID = personID
         self.companionID = companionID
@@ -519,9 +524,11 @@ struct CompanionAvatar: View {
         self.photoURL = photoURL
         self.size = size
         self.pending = pending
+        self.ring = ring
+        self.halfBody = halfBody
     }
 
-    init(_ person: Person?, size: CGFloat = 44, pending: Bool = false) {
+    init(_ person: Person?, size: CGFloat = 44, pending: Bool = false, ring: Color? = nil, halfBody: Bool = false) {
         self.init(
             personID: person?.id,
             companionID: person?.companionId,
@@ -529,23 +536,39 @@ struct CompanionAvatar: View {
             monogram: person?.initials ?? "?",
             photoURL: person?.photoURL,
             size: size,
-            pending: pending
+            pending: pending,
+            ring: ring,
+            halfBody: halfBody
         )
     }
 
     var body: some View {
         if let animal = companions.animal(for: personID, companionID: companionID, isYou: isYou) {
-            Image("\(animal.image)-avatar")
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
-                .background(theme.control, in: Circle())
-                .clipShape(Circle())
-                .contentShape(Circle())
-                .opacity(pending ? 0.55 : 1)
-                .accessibilityHidden(true)
+            Group {
+                if halfBody {
+                    // The 352x400 portrait scaled so its top 55% (head to waist) fills the square, then cropped.
+                    Image(animal.image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: size / 0.55 * 352 / 400, height: size / 0.55)
+                        .frame(width: size, height: size, alignment: .top)
+                        .clipped()
+                } else {
+                    // Full body in the same square a head crop used, so rows and cards keep their size.
+                    Image(animal.image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: size, height: size)
+                }
+            }
+            .contentShape(Rectangle())
+            .opacity(pending ? 0.55 : 1)
+            .accessibilityHidden(true)
         } else {
             FFAvatar(monogram: monogram, size: size, photoURL: photoURL, dimmed: pending)
+                .overlay {
+                    if let ring { Circle().strokeBorder(ring, lineWidth: 2) }
+                }
         }
     }
 }
@@ -555,13 +578,13 @@ struct CompanionAvatarStack: View {
     var visible = 3
     var size: CGFloat = 36
     var ring: Color?
+    var halfBody = false
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         HStack(spacing: -12) {
             ForEach(Array(people.prefix(visible).enumerated()), id: \.element.id) { offset, person in
-                CompanionAvatar(person, size: size)
-                    .overlay { Circle().strokeBorder(ring ?? theme.bg, lineWidth: 2) }
+                CompanionAvatar(person, size: size, ring: ring ?? theme.bg, halfBody: halfBody)
                     .zIndex(Double(visible - offset))
             }
             if people.count > visible {
@@ -1079,13 +1102,14 @@ struct CompanionStage: View {
                     .frame(width: proxy.size.width, alignment: .leading)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
+                    // NOTE: Not lazy. A lazy stack rebuilds the page you scroll back to and slides it in
+                    // from the far side of the screen. The thumbnails below already load every animal.
+                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
                         .scrollTargetLayout()
                 }
                 .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned)
                 .scrollPosition(id: $selection, anchor: .center)
-                .animation(reduceMotion ? nil : .snappy, value: selection)
                 .disabled(disabled)
             }
         }
@@ -1143,6 +1167,7 @@ struct CompanionStage: View {
         // The page fills the stage height, so the animal sits centred in any spare space.
         .frame(width: width, height: height)
         .scaleEffect(selection == animal ? 1 : 0.9)
+        .animation(reduceMotion ? nil : .snappy, value: selection)
         .accessibilityElement(children: .combine)
         .id(animal)
     }
@@ -1390,7 +1415,9 @@ struct CompanionPicker: View {
                         } label: {
                             collectionTile(
                                 name: String(appLocalized: "Create your own"),
-                                caption: characterPurchases.product?.displayPrice,
+                                caption: characterPurchases.freeCharacters > 0
+                                    ? String(appLocalized: "character.free-count", defaultValue: "\(characterPurchases.freeCharacters) free")
+                                    : characterPurchases.product?.displayPrice,
                                 selected: false
                             ) {
                                 Image(systemName: "plus")

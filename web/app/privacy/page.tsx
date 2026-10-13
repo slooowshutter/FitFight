@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 11 October 2026</p>
+                <p className="legal-updated">Effective 12 October 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -267,7 +267,12 @@ export default function PrivacyPage() {
                             app, Fight activity, and average daily Steps, to
                             learn whether FitFight helps people move more and
                             to improve it. Only the FitFight operator sees
-                            them;
+                            them, except the published figures below;
+                        </li>
+                        <li>
+                            publish a few anonymous, aggregate figures on
+                            fitfight.app, such as the total Steps recorded.
+                            They never identify a person;
                         </li>
                         <li>answer support requests; and</li>
                         <li>detect errors, abuse, and security problems.</li>

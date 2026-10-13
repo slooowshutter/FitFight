@@ -9,16 +9,16 @@ struct TestClient { var auth = TestAuth() }
 enum Failure: Error { case offline }
 enum CompanionPreview { static let isEnabled = false }
 enum ScreenshotExport { static let isEnabled = false }
-enum SyncTrigger { case foreground }
 enum Stage { case session }
 
 @MainActor final class HealthKitSyncTrace {
-    init(trigger: SyncTrigger) {}
+    init(trigger: HealthKitStepsStore.SyncTrigger) {}
     func measure<T>(_ stage: Stage, work: () async throws -> T) async rethrows -> T { try await work() }
     func fail(_ code: String) {}
 }
 
 @MainActor final class HealthKitStepsStore {
+    enum SyncTrigger { case foreground }
     static let shared = HealthKitStepsStore()
     func completeAttempt(_ trace: HealthKitSyncTrace, session: SessionStore, userID: UUID) {}
     static func errorCode(for error: Error) -> String { "offline" }

@@ -1,11 +1,133 @@
 # FitFight status: what works, what’s fake, what’s next
 
 Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
-Read this before building. Last updated **11 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
 
 ---
+
+## Race Day home page: prepared 12 Oct 2026
+
+Marc picked the Race Day landing page design (round 2, design 6) and asked to
+ship it with a wider hero and the phone only, without the race art.
+
+**Code:** `/` and `/fr` now render one shared page from `web/components/landing/`
+in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
+Feedback and Profile screens; text left and phone right on computers, stacked
+on phones; on computers the hero fills the first screen), steps recorded, what it is, the goal, how it
+works (the five New fight steps, nothing is saved), companions (pick one of the
+12 animals and see its five poses), fight options, pricing, FAQ with search,
+and a closing card. All people, fights and posts are fictional. The download
+buttons keep the App Store link in production and the TestFlight dialog on
+staging. The pricing card shows Specials (EUR 0.99, buy any and keep it) and
+Make it yours (EUR 4.99, the first one free) as coming later. Images are WebP copies of the bundled app artwork
+in `web/public/landing/`. The old home page styles and `total-steps.css` are
+removed. The browser tab, `favicon.ico` and iPhone home-screen icons now use the
+app's FF icon instead of the older arch mark. No API, database, app or release setting changed.
+
+**Published figures (Marc chose option A, 12 Oct 2026):** the public steps
+total stays. The privacy policy, English and French, effective 12 Oct 2026,
+now says FitFight may publish anonymous, aggregate figures on fitfight.app,
+such as the total Steps recorded. Marc accepted the remaining risk under Apple
+guideline 5.1.3 (HealthKit data in marketing) for this anonymous total. A
+"change in steps after joining" figure was tried and removed at his request.
+
+**Verification (local):** web typecheck, all 438 unit tests and the CI privacy
+disclosure check passed. A production build kept `/` and `/fr` static with
+hourly revalidation. Against `next start` and a disposable Postgres, both
+languages rendered at 393 and 1440 pixels wide with the sample steps total;
+the phone tabs, the New fight steps, the companion picker, the FAQ search and
+the staging TestFlight dialog worked in Chrome.
+
+**Live deployment:** none. Nothing is merged or deployed.
+
+## Free characters, prepared 12 Oct 2026
+
+**Product (Marc):** no credits. Each account has a number of free characters
+("1 free"). Every account, current and new, gets 1. Marc can give more from the
+app. A later "beat Marc" challenge can add one the same way. Onboarding can
+create one and moves on at once; the push and the Fights card say when it is ready.
+
+**Code:**
+
+- Migration `20261012200000_free_characters.sql` adds `private.free_character_grants`
+  (user, quantity, reason `signup` or `gift`, giver, operation key). Rows are never
+  changed or removed. A free character is a `custom_character_purchases` row with
+  `free_claim_key` instead of the Apple columns, which become nullable behind a
+  check, so it uses the same three portraits, choice, poses, reconciler and pushes.
+- Remaining = sum of grants minus free characters created. The first
+  `GET /me/custom-characters` adds the one `signup` grant (unique per account).
+- `POST /api/v1/me/custom-characters/free` (`Idempotency-Key`, `{ description }`)
+  returns the paid claim's `{ purchase_id, refunded }`; `409 no_free_characters`
+  when none are left. The app then calls `/advance` in the background.
+- `POST /api/v1/admin/free-characters` (`Idempotency-Key`, `{ quantity, username }`
+  or `{ quantity, everyone: true }`), FitFight admin only.
+- App: "N free" on the create screen and on the Create your own tile, "Create for
+  free", four idea cards (real prompt and the portrait it gave, see
+  [Blend workflows](blend-workflows.md#free-characters)), "Or create your own" on the
+  onboarding companion step, and a Free characters card at the top of
+  Profile → Dashboard → Admin. A 1.1.3 release note in English and French.
+
+**Contract:** additive. The store adds `free_characters`; builds that decode it
+read a missing field as 0. Older builds ignore it and still show the price; a
+free character appears to them like a paid one. Both routes are in
+`contracts/openapi.yaml`. Order: apply the migration, then deploy the backend
+(it reads the new table and column), then ship the app.
+
+**Verification (local):** strict TypeScript and all unit tests passed. A local
+Supabase stack (CLI 2.115.0) applied every migration; all database tests passed,
+including a new free-character case (signup grant once, claim replay, no free
+left, another account's key, gift by username and to everyone, gift replay, the
+funding check). pgTAP (308) and schema lint passed. Localization and native API
+boundary checks passed, and every changed Swift file parses (Swift 6.0.3, Linux).
+Not run: the iOS simulator build, which needs CI on a PR, and a device check.
+
+**Live:** nothing deployed. On 12 Oct the new route answered 404 on staging,
+preview and production, as expected. TestFlight builds call staging.fitfight.app,
+which must follow `preview` before they get free characters; the admin card on a
+staging build writes through the preview server. Giving to production accounts
+needs the App Store build.
+
+## Lighter background sync and refresh time limits, prepared 12 Oct 2026
+
+Marc saw about 200 background sync attempts per person each day in
+`private.healthkit_sync_attempts`. 84% of the background attempts only waited
+for another upload, and 7% stopped at the 25-second limit, often after iOS
+suspended the app. Some attempts and refreshes lasted minutes or hours. 3,131
+activity syncs failed with HealthKit error 5 (authorization not determined).
+
+**Code (native only):**
+
+- An observer call answers HealthKit at once and records nothing while a sync
+  runs, or for 15 minutes after a successful Steps upload. One upload reads
+  every type, so no data is skipped.
+- Requests that carry a sync trace time out after 120 seconds without data.
+- A foreground or manual refresh stops its network part after 30 seconds.
+  Fights, a Fight and Profile then show "Refreshing took too long" with Try
+  again. The limit starts after the HealthKit read, so the permission sheet does
+  not count.
+- A refresh holds an iOS background task, so leaving the app lets it finish.
+- A cancelled sync caller now cancels the shared sync.
+- A foreground refresh shows the Health permission sheet again when some read
+  types were never requested. iOS lists only the new types.
+- HealthKit error 6 (phone locked) records `protected_data_unavailable`, not
+  `sync_failed`.
+- Three 1.1.3 release notes, in English and French.
+
+**Contract:** no API, response or database change. The diagnostics endpoint
+receives fewer attempts.
+
+**Verification (local):** `scripts/check_localizations.py` and
+`scripts/check_native_api_boundary.py` passed. Swift 6.0.3 on Linux parsed every
+changed Swift file. It compiled and ran `scripts/test_native_state.py` with a
+stand-in for the Apple-only `AppLocalization.swift`: all 127 checks passed,
+including 2 new ones, and `develop` failed both new checks. A stub check compiled
+the changed `syncToBackend` and showed that a cancelled caller stops the shared
+sync. No iOS simulator build ran, because CI compiles iOS only on a pull request.
+
+**Still needed:** the iOS simulator build in CI, a TestFlight check of the
+permission sheet and the Try again notice, and the attempts queries after the
+release.
 
 ## Specials for everyone, one consumable, prepared 12 Oct 2026
 

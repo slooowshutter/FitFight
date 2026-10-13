@@ -12,6 +12,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Cloud only. No home Mac, no Hermes, no self-hosted runner, no Xcode on Marc’s desk.
 - This Linux environment cannot compile or upload iOS. CI on GitHub-hosted `macos-26` does that.
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
+- **Environment variables are for secrets only** (keys, tokens, passwords, connection strings). IDs, limits, prices, URLs, feature settings and anything else Marc could read aloud are committed in code or `docs/`, never in Vercel or `.env.example`. Marc's rule, 12 Oct 2026.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.
 - Never use em dashes (U+2014) or en dashes (U+2013). Use a comma, period, colon, or ASCII hyphen `-`. This applies to user-facing copy, docs, comments, and agent writing.
 - Version label shows at the **top of Profile** only (not the nav bar), e.g. `1.1.1 · build N · staging · 15 Sep`. Do not show it on Fights, New, Feed, or Feedback.

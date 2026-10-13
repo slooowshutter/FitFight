@@ -83,6 +83,7 @@ final class HealthKitStepsStore: ObservableObject {
     private var activeUserId: UUID?
     private static let pendingLocalDeletionKey = "ff.healthkit.pendingLocalDeletion"
     private static let pendingSyncKey = "ff.healthkit.pendingSync"
+    private static let backgroundSyncGap: TimeInterval = 15 * 60
     private static let diagnosticsPrefix = "ff.healthkit.diagnostics."
     private static let logger = Logger(subsystem: "com.fitfight.mvp", category: "HealthKitDiagnostics")
 
@@ -188,6 +189,14 @@ final class HealthKitStepsStore: ObservableObject {
                             self.updateDiagnostics { $0.errorCode = .authenticationUnavailable }
                             trace.fail(.authenticationUnavailable)
                             _ = trace.finish()
+                            gate.finish()
+                            return
+                        }
+                        // One upload reads every type, and each changed type calls this handler. While an upload
+                        // runs, or soon after one succeeded, answer HealthKit at once and record nothing.
+                        let lastUpload = [self.diagnostics.lastAutomaticSync, self.diagnostics.lastManualSync]
+                            .compactMap { $0 }.max() ?? .distantPast
+                        if self.inFlightSync != nil || Date().timeIntervalSince(lastUpload) < Self.backgroundSyncGap {
                             gate.finish()
                             return
                         }
@@ -312,7 +321,17 @@ final class HealthKitStepsStore: ObservableObject {
             if requestAccess || hasAsked { status = .empty }
             return
         }
-        if requestAccess {
+        // HealthKit refuses reads of types the app never asked for, such as types added after someone
+        // connected Apple Health. iOS shows the sheet for those new types only.
+        var askForNewTypes = false
+        if !requestAccess, hasAsked, UIApplication.shared.applicationState == .active {
+            let requestStatus = try? await store.statusForAuthorizationRequest(
+                toShare: [],
+                read: HealthKitActivityAggregates.readTypes
+            )
+            askForNewTypes = requestStatus == .shouldRequest
+        }
+        if requestAccess || askForNewTypes {
             do {
                 try await trace.measure(.authorization) {
                     try await store.requestAuthorization(
@@ -374,7 +393,12 @@ final class HealthKitStepsStore: ObservableObject {
         if let inFlightSync {
             if coalesceInFlight {
                 rerunRequested = true
-                return await inFlightSync.value
+                // A caller that gives up, such as a refresh past its time limit, stops the shared sync.
+                return await withTaskCancellationHandler {
+                    await inFlightSync.value
+                } onCancel: {
+                    inFlightSync.cancel()
+                }
             }
             _ = await inFlightSync.value
         }
@@ -387,7 +411,11 @@ final class HealthKitStepsStore: ObservableObject {
             return synced
         }
         inFlightSync = work
-        let synced = await work.value
+        let synced = await withTaskCancellationHandler {
+            await work.value
+        } onCancel: {
+            work.cancel()
+        }
         // Two uncoalesced callers can each start a sync; only the latest may clear the slot.
         if inFlightSync == work { inFlightSync = nil }
         return synced
@@ -613,6 +641,9 @@ final class HealthKitStepsStore: ObservableObject {
 
     static func errorCode(for error: Error) -> SyncErrorCode {
         if error is CancellationError { return .attemptExpired }
+        if let healthKitError = error as? HKError, healthKitError.code == .errorDatabaseInaccessible {
+            return .protectedDataUnavailable
+        }
         if let urlError = error as? URLError,
            [.notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost,
             .cannotFindHost, .timedOut].contains(urlError.code) { return .networkUnavailable }

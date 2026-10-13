@@ -20,6 +20,8 @@ extension EnvironmentValues {
 struct FFRefreshConfig {
     var isRefreshing: Bool
     var message: String
+    /// Shown above the content, with Try again, after a refresh stopped.
+    var error: String? = nil
     var action: @MainActor () async -> Void
 }
 
@@ -172,6 +174,15 @@ struct FFScreen<Content: View>: View {
 
     private func body(_ content: Content) -> some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            if let refresh, let error = refresh.error {
+                FFNotice(
+                    text: error,
+                    tone: .ember,
+                    systemImage: "exclamationmark.triangle",
+                    actionTitle: String(appLocalized: "Try again"),
+                    action: { Task { await refresh.action() } }
+                )
+            }
             content
         }
         .padding(.horizontal, theme.space.screenPadding)

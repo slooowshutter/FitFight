@@ -28,6 +28,55 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 13,
+            notes: "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 13,
+            notes: "TestFlight builds now tell everyone except admins that FitFight is on the App Store, with a button to open it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "Free characters: every account now gets one free custom companion. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "On the companion stage, swiping back now brings the animal in from the left, instead of flying it across the screen from the right."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "On a slow connection, refreshing now stops after 30 seconds and shows Try again instead of spinning."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "FitFight now asks once for the Apple Health activity types added since you connected, so all your activity syncs."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "Background sync does less work: one upload covers every Apple Health update, at most once every 15 minutes."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 12,
             notes: "Specials are no longer one of a kind: anyone can buy any Special, and you can collect as many as you like. Each one is bought once and stays yours."
         ),

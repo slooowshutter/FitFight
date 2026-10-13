@@ -161,16 +161,6 @@
                 }
             }
         },
-        "One purchase draws three portraits. Pick your favourite, then we create five fitness images from it that change with your daily Steps.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un achat dessine trois portraits. Choisissez votre préféré, puis nous en créons cinq images de forme qui changent avec vos Pas du jour."
-                    }
-                }
-            }
-        },
         "Drawing three portraits. This takes about a minute.": {
             "localizations": {
                 "fr": {
@@ -15431,6 +15421,322 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les Spéciaux ne sont plus uniques : tout le monde peut acheter n’importe quel Spécial, et vous pouvez en collectionner autant que vous voulez. Chacun s’achète une fois et reste à vous."
+                    }
+                }
+            }
+        },
+        "Refreshing took too long. Check your internet connection.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’actualisation a pris trop de temps. Vérifie ta connexion internet."
+                    }
+                }
+            }
+        },
+        "On a slow connection, refreshing now stops after 30 seconds and shows Try again instead of spinning.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Avec une connexion lente, l’actualisation s’arrête maintenant après 30 secondes et affiche Réessayer au lieu de tourner sans fin."
+                    }
+                }
+            }
+        },
+        "FitFight now asks once for the Apple Health activity types added since you connected, so all your activity syncs.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight te demande maintenant une fois l’accès aux types d’activité Apple Health ajoutés depuis ta connexion, pour que toute ton activité se synchronise."
+                    }
+                }
+            }
+        },
+        "Background sync does less work: one upload covers every Apple Health update, at most once every 15 minutes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La synchronisation en arrière-plan travaille moins : un seul envoi couvre toutes les mises à jour d’Apple Health, au plus une fois toutes les 15 minutes."
+                    }
+                }
+            }
+        },
+        "On the companion stage, swiping back now brings the animal in from the left, instead of flying it across the screen from the right.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sur la scène des compagnons, revenir en arrière fait maintenant arriver l’animal par la gauche, au lieu de le faire traverser l’écran depuis la droite."
+                    }
+                }
+            }
+        },
+        "Each character draws three portraits. Pick your favourite, then we create five fitness images from it that change with your daily Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chaque personnage commence par trois portraits. Choisissez votre préféré, puis nous en créons cinq images de forme qui changent avec vos Pas du jour."
+                    }
+                }
+            }
+        },
+        "character.free-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld free"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld free"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld gratuit"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld gratuits"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "Create for free": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer gratuitement"
+                    }
+                }
+            }
+        },
+        "Ideas": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Idées"
+                    }
+                }
+            }
+        },
+        "Real portraits drawn from these words. Tap one to start from it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "De vrais portraits dessinés à partir de ces mots. Touchez-en un pour partir de là."
+                    }
+                }
+            }
+        },
+        "character.idea.pigeon": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A plump grey city pigeon with an iridescent green-purple neck and orange eyes, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small fanny pack worn across the chest. Strutting, nosy, weirdly confident."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un pigeon des villes gris et dodu, au cou vert-violet irisé et aux yeux orange, les ailes servent de bras. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : une petite banane portée en travers de la poitrine. Il se pavane, curieux, étrangement sûr de lui."
+                    }
+                }
+            }
+        },
+        "character.idea.opossum": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A small scruffy grey opossum with a white face, pink nose and a bare pink tail. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny propeller beanie hat. Wide-eyed, slightly panicked, trying his best."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un petit opossum gris ébouriffé, au visage blanc, au nez rose et à la queue rose sans poils. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : un minuscule bonnet à hélice. Les yeux écarquillés, un peu paniqué, il fait de son mieux."
+                    }
+                }
+            }
+        },
+        "character.idea.seagull": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A scrappy white and grey seagull with a yellow beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: small dark sunglasses. Shifty, opportunistic, totally guilty."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une mouette blanche et grise un peu voyou, au bec jaune, les ailes servent de bras. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : de petites lunettes de soleil noires. Louche, opportuniste, totalement coupable."
+                    }
+                }
+            }
+        },
+        "character.idea.mole": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A small velvety dark grey mole with a pink star-like nose and big pink digging paws. Nothing held in the hands or wings, no headband. One worn signature detail only: tiny thick round glasses. Squinting, determined, a bit lost."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une petite taupe gris foncé au poil de velours, au nez rose en étoile et aux grandes pattes roses de fouisseuse. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : de minuscules lunettes rondes et épaisses. Elle plisse les yeux, déterminée, un peu perdue."
+                    }
+                }
+            }
+        },
+        "You have no free characters left.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous n’avez plus de personnage gratuit."
+                    }
+                }
+            }
+        },
+        "We are drawing your character. Keep going, we will tell you when it is ready.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous dessinons votre personnage. Continuez, nous vous préviendrons quand il sera prêt."
+                    }
+                }
+            }
+        },
+        "Or create your own": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ou créez le vôtre"
+                    }
+                }
+            }
+        },
+        "Describe any animal and we draw it for you.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Décrivez n’importe quel animal et nous le dessinons pour vous."
+                    }
+                }
+            }
+        },
+        "We draw three portraits from your words. You pick one, then we make its five fitness poses. It takes a few minutes, so you can keep going.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous dessinons trois portraits à partir de vos mots. Vous en choisissez un, puis nous créons ses cinq poses de forme. Cela prend quelques minutes, vous pouvez donc continuer."
+                    }
+                }
+            }
+        },
+        "onboarding.character.keep": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Until it is ready, you keep %@."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En attendant, vous gardez %@."
+                    }
+                }
+            }
+        },
+        "Free characters: every account now gets one free custom companion. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Personnages gratuits : chaque compte reçoit un compagnon personnalisé gratuit. Choisissez une idée ou décrivez votre animal, même à l’inscription, et continuez pendant qu’il est dessiné."
+                    }
+                }
+            }
+        },
+        "FitFight is on the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight est sur l'App Store"
+                    }
+                }
+            }
+        },
+        "Open the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvrir l'App Store"
+                    }
+                }
+            }
+        },
+        "FitFight is now on the App Store, and your friends are there. Your steps and stats from this TestFlight beta no longer reach them. Tap below, then sign in with the same Apple ID. If the App Store shows Open, delete this TestFlight app first, then tap Get.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight est maintenant sur l'App Store, et vos amis y sont. Les pas et les stats de cette bêta TestFlight ne leur parviennent plus. Appuyez ci-dessous, puis connectez-vous avec le même identifiant Apple. Si l'App Store affiche Ouvrir, supprimez d'abord cette app TestFlight, puis appuyez sur Obtenir."
+                    }
+                }
+            }
+        },
+        "TestFlight builds now tell everyone except admins that FitFight is on the App Store, with a button to open it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les versions TestFlight indiquent maintenant à tout le monde, sauf aux admins, que FitFight est sur l'App Store, avec un bouton pour l'ouvrir."
                     }
                 }
             }

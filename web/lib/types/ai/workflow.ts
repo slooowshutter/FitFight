@@ -56,20 +56,43 @@ export const createAiRunRequestSchema = z.discriminatedUnion("workflow", [
 
 export const blendEnvironmentSchema = z.object({
     BLEND_API_KEY: blendApiKeySchema,
-    BLEND_GLOBAL_DAILY_STARTS: z.coerce.number().int().positive().max(100_000),
-    BLEND_GLOBAL_CONCURRENT_RUNS: z.coerce.number().int().positive().max(1000),
-    BLEND_REQUESTS_PER_MINUTE: z.coerce.number().int().positive().max(100_000),
 });
 export const aiWorkflowConfigurationSchema = z.object({
     version: blendWorkflowVersionSchema,
     creditPrice: z.coerce.number().int().positive().max(100_000),
 });
-export const aiWorkflowEnvironmentPrefixes = {
-    avatar: "BLEND_AVATAR",
-    fitness: "BLEND_FITNESS",
-    group_photo: "BLEND_GROUP_PHOTO",
-} as const;
 export const legacyAvatarVersionId = "bbf425cb-1c8a-4dfa-9f0d-637f22e8f4e1";
+
+/**
+ * Non-secret Blend settings. Only BLEND_API_KEY lives in the environment.
+ * Omit versionId to run the latest published version. Omit creditPrice to keep
+ * credit-funded starts closed, with no invented default.
+ */
+export const blendConfiguration: {
+    limits: {
+        globalDailyStarts: number;
+        globalConcurrentRuns: number;
+        providerRequestsPerMinute: number;
+    };
+    workflows: Record<
+        AiWorkflow,
+        { workflowId: string; versionId?: string; creditPrice?: number }
+    >;
+} = {
+    limits: {
+        globalDailyStarts: 500,
+        globalConcurrentRuns: 20,
+        providerRequestsPerMinute: 60,
+    },
+    workflows: {
+        avatar: {
+            workflowId: "c405d12d-fa25-4e67-8d4d-8336e741cbbc",
+            creditPrice: 1,
+        },
+        fitness: { workflowId: "fa770c5b-25ba-46cc-a758-a08aeebc1c92" },
+        group_photo: { workflowId: "f740d71e-06fe-41d4-a92d-a85c90abd3f9" },
+    },
+};
 
 export const aiImageHostValues = [
     "supabase.tryblend.ai",

@@ -345,25 +345,29 @@ body:has(.lp) {
     margin-top: 40px;
 }
 
-.lp-hero-stat {
+.lp-total {
     display: grid;
-    gap: 4px;
-    margin-top: 8px;
-    padding-top: 20px;
-    border-top: 1px solid var(--hairline);
+    justify-items: center;
+    padding: 72px 20px 8px;
+    text-align: center;
 }
 
-.lp-hero-stat b {
+.lp-total .lp-eyebrow {
+    margin-bottom: 10px;
+}
+
+.lp-total-value {
     color: var(--moss-text);
-    font-size: 40px;
+    font-size: clamp(48px, 13vw, 104px);
     font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1.05;
+    letter-spacing: -0.06em;
+    line-height: 0.95;
 }
 
-.lp-hero-stat > span {
+.lp-total-caption {
+    margin-top: 10px;
     color: var(--secondary);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 /* Read by screen readers only: the visible total counts up from zero */
@@ -377,8 +381,13 @@ body:has(.lp) {
 }
 
 @media (min-width: 1000px) {
+    /* The first screen shows the hero and nothing else */
     .lp-hero {
-        padding-top: 40px;
+        display: grid;
+        align-content: center;
+        min-height: calc(100vh - 64px);
+        min-height: calc(100svh - 64px);
+        padding: 24px 0;
         text-align: left;
     }
 

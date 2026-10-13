@@ -22,7 +22,8 @@ const en = {
         hint: "Tap the tabs. This is the real app.",
     },
     totalSteps: {
-        caption: "steps recorded since people joined FitFight",
+        eyebrow: "Steps recorded",
+        caption: "since people joined FitFight",
     },
     what: {
         eyebrow: "What it is",
@@ -418,7 +419,8 @@ const fr: typeof en = {
         hint: "Touchez les onglets. C’est la vraie app.",
     },
     totalSteps: {
-        caption: "pas enregistrés depuis que chacun a rejoint FitFight",
+        eyebrow: "Pas enregistrés",
+        caption: "depuis que chacun a rejoint FitFight",
     },
     what: {
         eyebrow: "Le principe",

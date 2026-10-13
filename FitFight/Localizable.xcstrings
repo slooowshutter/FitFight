@@ -14460,6 +14460,16 @@
                 }
             }
         },
+        "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’animal de chacun s’affiche maintenant en entier dans le classement, Fil et Profil, et de la tête à la taille sur les cartes Défis, au lieu d’un visage rogné dans un rond."
+                    }
+                }
+            }
+        },
         "Rest": {
             "localizations": {
                 "fr": {

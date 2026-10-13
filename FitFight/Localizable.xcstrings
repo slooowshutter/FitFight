@@ -15700,6 +15700,46 @@
                     }
                 }
             }
+        },
+        "FitFight is on the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight est sur l'App Store"
+                    }
+                }
+            }
+        },
+        "Open the App Store": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvrir l'App Store"
+                    }
+                }
+            }
+        },
+        "FitFight is now on the App Store, and your friends are there. Your steps and stats from this TestFlight beta no longer reach them. Tap below, then sign in with the same Apple ID. If the App Store shows Open, delete this TestFlight app first, then tap Get.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight est maintenant sur l'App Store, et vos amis y sont. Les pas et les stats de cette bêta TestFlight ne leur parviennent plus. Appuyez ci-dessous, puis connectez-vous avec le même identifiant Apple. Si l'App Store affiche Ouvrir, supprimez d'abord cette app TestFlight, puis appuyez sur Obtenir."
+                    }
+                }
+            }
+        },
+        "TestFlight builds now tell everyone except admins that FitFight is on the App Store, with a button to open it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les versions TestFlight indiquent maintenant à tout le monde, sauf aux admins, que FitFight est sur l'App Store, avec un bouton pour l'ouvrir."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

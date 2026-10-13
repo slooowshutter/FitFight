@@ -35,6 +35,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 13,
+            notes: "TestFlight builds now tell everyone except admins that FitFight is on the App Store, with a button to open it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 12,
             notes: "Free characters: every account now gets one free custom companion. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn."
         ),

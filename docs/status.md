@@ -22,7 +22,8 @@ buttons keep the App Store link in production and the TestFlight dialog on
 staging. The pricing card shows Specials (EUR 0.99) and Make it yours
 (EUR 4.99) as coming later. Images are WebP copies of the bundled app artwork
 in `web/public/landing/`. The old home page styles and `total-steps.css` are
-removed. No API, database, app or release setting changed.
+removed. The browser tab, `favicon.ico` and iPhone home-screen icons now use the
+app's FF icon instead of the older arch mark. No API, database, app or release setting changed.
 
 **Published figures (Marc chose option A, 12 Oct 2026):** the public steps
 total stays. The privacy policy, English and French, effective 12 Oct 2026,

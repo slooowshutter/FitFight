@@ -173,12 +173,16 @@ jobs:
                   print("Production services and generated build environment are ready")
                   PY
 
+            # Package downloads only. Release archives always compile from scratch.
+            - uses: actions/cache@v4
+              with:
+                  path: ~/Library/Caches/org.swift.swiftpm
+                  key: swiftpm-${{ hashFiles('FitFight.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
             - uses: ruby/setup-ruby@v1
               with:
                   ruby-version: "3.3"
-
-            - name: Install Fastlane
-              run: bundle install
+                  bundler-cache: true
 
             - name: Upload production candidate
               env:

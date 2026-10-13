@@ -60,6 +60,24 @@ jobs:
                   )
                   PY
 
+            - name: Read Xcode version
+              id: xcode
+              run: echo "build=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+            # Checkout gives every app file a new timestamp, so the app always recompiles.
+            # This cache only skips downloading and compiling the Swift packages.
+            # Built apps stay out because Xcode never removes deleted resources from them.
+            - name: Restore Swift package build cache
+              id: build-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      build
+                      !build/Build/Products/*/*.app
+                      !build/Build/Products/*/*.appex
+                  key: screenshot-build-${{ steps.xcode.outputs.build }}-${{ hashFiles('FitFight.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+                  restore-keys: screenshot-build-${{ steps.xcode.outputs.build }}-
+
             - name: Build for the simulator
               run: |
                   set -o pipefail
@@ -74,7 +92,19 @@ jobs:
                     CODE_SIGNING_REQUIRED=YES \
                     CODE_SIGN_STYLE=Manual \
                     CODE_SIGN_IDENTITY=- \
+                    COMPILER_INDEX_STORE_ENABLE=NO \
                     build
+
+            # Only pushes save, so pull requests share the develop, preview, or main cache.
+            - name: Save Swift package build cache
+              if: github.event_name == 'push' && steps.build-cache.outputs.cache-hit != 'true'
+              uses: actions/cache/save@v4
+              with:
+                  path: |
+                      build
+                      !build/Build/Products/*/*.app
+                      !build/Build/Products/*/*.appex
+                  key: ${{ steps.build-cache.outputs.cache-primary-key }}
 
             - name: Render the app in English and French
               run: |

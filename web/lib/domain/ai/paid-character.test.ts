@@ -10,6 +10,7 @@ import {
     customCharacterClaimRequestSchema,
 } from "@/lib/types/ai/custom-character";
 import { blendWorkflowConfiguration } from "@/lib/blend/workflows";
+import { blendConfiguration } from "@/lib/types/ai/workflow";
 
 test("paid character routes require authentication and reject caller-owned purchase metadata", async () => {
     const purchaseID = "22222222-2222-4222-8222-222222222222";
@@ -40,38 +41,18 @@ test("paid character routes require authentication and reject caller-owned purch
 });
 
 test("paid portrait and fitness starts require no operator credit price", () => {
-    const previous = {
-        BLEND_API_KEY: process.env.BLEND_API_KEY,
-        BLEND_ENABLED: process.env.BLEND_ENABLED,
-        BLEND_GLOBAL_DAILY_STARTS: process.env.BLEND_GLOBAL_DAILY_STARTS,
-        BLEND_GLOBAL_CONCURRENT_RUNS: process.env.BLEND_GLOBAL_CONCURRENT_RUNS,
-        BLEND_REQUESTS_PER_MINUTE: process.env.BLEND_REQUESTS_PER_MINUTE,
-        BLEND_AVATAR_WORKFLOW_ID: process.env.BLEND_AVATAR_WORKFLOW_ID,
-        BLEND_AVATAR_VERSION_ID: process.env.BLEND_AVATAR_VERSION_ID,
-        BLEND_FITNESS_WORKFLOW_ID: process.env.BLEND_FITNESS_WORKFLOW_ID,
-        BLEND_FITNESS_VERSION_ID: process.env.BLEND_FITNESS_VERSION_ID,
-        BLEND_FITNESS_CREDIT_PRICE: process.env.BLEND_FITNESS_CREDIT_PRICE,
-    };
+    const previousApiKey = process.env.BLEND_API_KEY;
+    const previousPrice = blendConfiguration.workflows.fitness.creditPrice;
     try {
-        Object.assign(process.env, {
-            BLEND_API_KEY: "bai_test-only-blend-key",
-            BLEND_ENABLED: "true",
-            BLEND_GLOBAL_DAILY_STARTS: "100",
-            BLEND_GLOBAL_CONCURRENT_RUNS: "10",
-            BLEND_REQUESTS_PER_MINUTE: "100",
-            BLEND_AVATAR_WORKFLOW_ID: "avatar-publication",
-            BLEND_AVATAR_VERSION_ID: "avatar-version",
-            BLEND_FITNESS_WORKFLOW_ID: "fitness-publication",
-            BLEND_FITNESS_VERSION_ID: "fitness-version",
-        });
-        delete process.env.BLEND_FITNESS_CREDIT_PRICE;
+        process.env.BLEND_API_KEY = "bai_test-only-blend-key";
+        blendConfiguration.workflows.fitness.creditPrice = undefined;
         assert.equal(blendWorkflowConfiguration("avatar", true).creditPrice, 0);
         assert.equal(blendWorkflowConfiguration("fitness", true).creditPrice, 0);
         assert.throws(() => blendWorkflowConfiguration("fitness"), { code: "ai_unavailable" });
     } finally {
-        for (const [key, value] of Object.entries(previous)) {
-            if (value === undefined) delete process.env[key];
-            else process.env[key] = value;
-        }
+        blendConfiguration.workflows.fitness.creditPrice = previousPrice;
+        if (previousApiKey === undefined) delete process.env.BLEND_API_KEY;
+        else process.env.BLEND_API_KEY = previousApiKey;
     }
 });
+

@@ -35,7 +35,6 @@ enum StockCompanion: String, CaseIterable, Identifiable {
     case limitedDonkey = "limited-donkey"
 
     var isLimited: Bool { rawValue.hasPrefix("limited-") }
-    var productId: String { "com.fitfight.mvp.special.\(rawValue.replacingOccurrences(of: "limited-", with: "").replacingOccurrences(of: "-", with: "_"))" }
 
     var id: String { rawValue }
     var image: String { "Companion-\(rawValue)" }
@@ -451,22 +450,36 @@ final class CompanionStore: ObservableObject {
 struct CompanionCharacter: View {
     let animal: StockCompanion
     var effort: CompanionEffortStage?
+    /// Off when a parent button owns the tap, so the inner greeting cannot swallow it.
+    var greets = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.ffStaticRender) private var staticRender
     @State private var greeting = false
 
     var body: some View {
+        if greets {
+            greetingButton
+        } else {
+            artwork
+        }
+    }
+
+    private var artwork: some View {
+        Image(animal.effortImage(stage: effort))
+            .resizable()
+            .scaledToFit()
+            .rotationEffect(.degrees(greeting ? -3 : 0), anchor: .bottom)
+            .scaleEffect(greeting ? 1.025 : 1, anchor: .bottom)
+            .padding(4)
+            .contentShape(Rectangle())
+    }
+
+    private var greetingButton: some View {
         Button {
             guard !reduceMotion, !staticRender, !greeting else { return }
             withAnimation(.easeInOut(duration: 0.18)) { greeting = true }
         } label: {
-            Image(animal.effortImage(stage: effort))
-                .resizable()
-                .scaledToFit()
-                .rotationEffect(.degrees(greeting ? -3 : 0), anchor: .bottom)
-                .scaleEffect(greeting ? 1.025 : 1, anchor: .bottom)
-                .padding(4)
-                .contentShape(Rectangle())
+            artwork
         }
         .buttonStyle(.plain)
         .accessibilityLabel(String(appLocalized: "companion.greet", defaultValue: "Say hello to \(animal.name)"))
@@ -745,7 +758,10 @@ struct CompanionIntroduction: View {
     private var youCharacter: some View {
         // Every companion opens the drawer on Fights, so Change animal is always reachable.
         if surface == .fights {
-            Button { showingLevels = true } label: { youArt }
+            // The whole area is tappable, even when a custom companion has no image yet.
+            Button { showingLevels = true } label: {
+                youArt.frame(maxWidth: .infinity, maxHeight: .infinity).contentShape(Rectangle())
+            }
                 .buttonStyle(FFPressStyle())
                 .accessibilityLabel(String(appLocalized: "Companion levels"))
         } else {
@@ -758,7 +774,7 @@ struct CompanionIntroduction: View {
         if companions.isCustom {
             RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
-            CompanionCharacter(animal: companions.selection, effort: youEffort)
+            CompanionCharacter(animal: companions.selection, effort: youEffort, greets: surface != .fights)
         }
     }
 
@@ -1063,13 +1079,14 @@ struct CompanionStage: View {
                     .frame(width: proxy.size.width, alignment: .leading)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
+                    // NOTE: Not lazy. A lazy stack rebuilds the page you scroll back to and slides it in
+                    // from the far side of the screen. The thumbnails below already load every animal.
+                    HStack(spacing: overlap) { ForEach(animals) { page($0, width: width, height: proxy.size.height) } }
                         .scrollTargetLayout()
                 }
                 .contentMargins(.horizontal, (proxy.size.width - width) / 2, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned)
                 .scrollPosition(id: $selection, anchor: .center)
-                .animation(reduceMotion ? nil : .snappy, value: selection)
                 .disabled(disabled)
             }
         }
@@ -1127,6 +1144,7 @@ struct CompanionStage: View {
         // The page fills the stage height, so the animal sits centred in any spare space.
         .frame(width: width, height: height)
         .scaleEffect(selection == animal ? 1 : 0.9)
+        .animation(reduceMotion ? nil : .snappy, value: selection)
         .accessibilityElement(children: .combine)
         .id(animal)
     }
@@ -1205,20 +1223,11 @@ struct CompanionPicker: View {
                         selection: $category, fill: true) { $0.name }
             .disabled(isSaving)
             if category == .limited || (category == .all && draft?.isLimited == true) {
-                Text("Only one of each exists, one per person. Buy it once, keep it forever.")
+                Text("Buy any Special once and keep it forever. Collect as many as you like.")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
-                if purchases.canCancelCheckout {
-                    FFButton(title: String(appLocalized: "Cancel checkout"), kind: .secondary, enabled: !isSaving, busy: purchases.isBusy) {
-                        Task { await purchases.cancelCheckout(session: session) }
-                    }
-                }
                 if !purchases.message.isEmpty {
                     Text(purchases.message).ffType(.caption).foregroundStyle(theme.textSecondary)
-                }
-                if purchases.snapshot?.editions.contains(where: { $0.status == .reserved }) == true {
-                    Text("A purchase is in progress. Your Special is held for 30 minutes. Check it in Settings, Restore purchases.")
-                        .ffType(.caption).foregroundStyle(theme.textSecondary)
                 }
                 ForEach(purchases.snapshot?.conflicts ?? [], id: \.transactionId) { claim in
                     FFButton(title: String(appLocalized: "Request a refund from Apple"), kind: .secondary) {
@@ -1295,7 +1304,7 @@ struct CompanionPicker: View {
                                     .contentShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
                                 }
                                 .buttonStyle(FFHapticPlainStyle())
-                                .disabled(isSaving || purchases.isBusy || (animal.isLimited && ![.available, .reserved, .yours].contains(edition)))
+                                .disabled(isSaving || purchases.isBusy || (animal.isLimited && edition == nil))
                                 .accessibilityAddTraits(draft == animal && !pickingCustom ? .isSelected : [])
                             }
                         } header: {
@@ -1383,7 +1392,9 @@ struct CompanionPicker: View {
                         } label: {
                             collectionTile(
                                 name: String(appLocalized: "Create your own"),
-                                caption: characterPurchases.product?.displayPrice,
+                                caption: characterPurchases.freeCharacters > 0
+                                    ? String(appLocalized: "character.free-count", defaultValue: "\(characterPurchases.freeCharacters) free")
+                                    : characterPurchases.product?.displayPrice,
                                 selected: false
                             ) {
                                 Image(systemName: "plus")
@@ -1428,12 +1439,14 @@ struct CompanionPicker: View {
                     }
                     let paid = draft.isLimited && !CompanionPreview.isEnabled
                     let owned = status(draft) == .yours
-                    // The preview has no StoreKit, but it still shows the label a buyer sees.
-                    let price = purchases.products[draft.productId]?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
                     let canBuy = purchases.canBuy(draft)
                     FFButton(
-                        title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned ? price.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable") : String(appLocalized: "Save companion"),
-                        enabled: (!paid || owned || canBuy) && (!draft.isLimited || [.available, .reserved, .yours].contains(status(draft))),
+                        title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned
+                            ? purchases.hasUnclaimedCharge
+                                ? String(appLocalized: "Unlock this Special")
+                                : specialPrice.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable")
+                            : String(appLocalized: "Save companion"),
+                        enabled: (!paid || owned || canBuy) && (!draft.isLimited || status(draft) != nil),
                         busy: isSaving || purchases.isBusy, fullWidth: true
                     ) { Task { await saveStock(draft) } }
                 }
@@ -1497,13 +1510,13 @@ struct CompanionPicker: View {
     private func status(_ animal: StockCompanion) -> SpecialStoreSnapshot.Edition.Status? {
         #if DEBUG && targetEnvironment(simulator)
         if CompanionPreview.isEnabled {
-            return animal == CompanionCategory.limited.animals[0] ? .yours : animal == CompanionCategory.limited.animals[1] ? .taken : .available
+            return animal == CompanionCategory.limited.animals[0] || animal == CompanionCategory.limited.animals[1] ? .yours : .available
         }
         #endif
         return purchases.snapshot?.editions.first { $0.id == animal.rawValue }?.status
     }
 
-    /// Yours lists the Special this account owns and the current stock companion.
+    /// Yours lists every Special this account owns and the current stock companion.
     private func animals(in category: CompanionCategory) -> [StockCompanion] {
         guard category == .yours else { return category.animals.filter(shows) }
         let owned = CompanionCategory.limited.animals.filter { status($0) == .yours }
@@ -1518,12 +1531,12 @@ struct CompanionPicker: View {
 
     private func specialLabel(_ animal: StockCompanion) -> String? {
         guard animal.isLimited else { return nil }
-        return switch status(animal) {
-        case .yours: String(appLocalized: "Your special")
-        case .reserved: String(appLocalized: "Reserved for you")
-        case .available: String(appLocalized: "Available")
-        default: String(appLocalized: "Taken")
-        }
+        return status(animal) == .yours ? String(appLocalized: "Yours") : specialPrice ?? String(appLocalized: "Available")
+    }
+
+    /// Every Special costs the same consumable. The preview has no StoreKit, but it still shows the label a buyer sees.
+    private var specialPrice: String? {
+        purchases.product?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
     }
 
     /// Specials stay hidden while sales are off, except one this account already owns.
@@ -1538,6 +1551,7 @@ struct CompanionPicker: View {
         isSaving = true
         defer { isSaving = false }
         do {
+            var bought = false
             if animal.isLimited && !CompanionPreview.isEnabled,
                purchases.snapshot?.editions.first(where: { $0.id == animal.rawValue })?.status != .yours {
                 guard await purchases.buy(animal, session: session) else {
@@ -1545,10 +1559,16 @@ struct CompanionPicker: View {
                     await loadLimitedEditions()
                     return
                 }
+                bought = true
             }
             try await companions.choose(id: animal.rawValue, prompt: nil, session: session)
+            // After a purchase the picker stays open, so the buyer sees the Special marked as theirs.
+            if bought {
+                await loadLimitedEditions()
+                return
+            }
+            // Closing through the binding only: a second dismiss() can hit the screen underneath and leave it untappable.
             companions.showingPicker = false
-            dismiss()
         } catch is CancellationError {
             return
         } catch {
@@ -1567,7 +1587,6 @@ struct CompanionPicker: View {
             try await session.setCompanion(image: .init(requestID: entry.requestID, stage: "resting"))
             companions.apply(session.profile)
             companions.showingPicker = false
-            dismiss()
         } catch is CancellationError {
             return
         } catch {

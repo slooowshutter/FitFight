@@ -42,6 +42,10 @@ struct FightsListView: View {
         FFScreen(refresh: fightsRefresh) {
             CompanionIntroduction(surface: .fights)
             PaidCharacterProgressCard()
+            // Left out, not hidden, so everyone else keeps the same spacing.
+            if session.isFitFightAdmin, AppVersion.backend == "staging", !CompanionPreview.isEnabled {
+                RecentSyncsCard()
+            }
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -148,6 +152,7 @@ struct FightsListView: View {
         FFRefreshConfig(
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
+            error: model.refreshError,
             action: {
                 await model.refreshFights(session: session, steps: steps, trigger: .manual)
             }

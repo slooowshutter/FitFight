@@ -41,6 +41,155 @@ the staging TestFlight dialog worked in Chrome.
 
 **Live deployment:** none. Nothing is merged or deployed.
 
+## Free characters, prepared 12 Oct 2026
+
+**Product (Marc):** no credits. Each account has a number of free characters
+("1 free"). Every account, current and new, gets 1. Marc can give more from the
+app. A later "beat Marc" challenge can add one the same way. Onboarding can
+create one and moves on at once; the push and the Fights card say when it is ready.
+
+**Code:**
+
+- Migration `20261012200000_free_characters.sql` adds `private.free_character_grants`
+  (user, quantity, reason `signup` or `gift`, giver, operation key). Rows are never
+  changed or removed. A free character is a `custom_character_purchases` row with
+  `free_claim_key` instead of the Apple columns, which become nullable behind a
+  check, so it uses the same three portraits, choice, poses, reconciler and pushes.
+- Remaining = sum of grants minus free characters created. The first
+  `GET /me/custom-characters` adds the one `signup` grant (unique per account).
+- `POST /api/v1/me/custom-characters/free` (`Idempotency-Key`, `{ description }`)
+  returns the paid claim's `{ purchase_id, refunded }`; `409 no_free_characters`
+  when none are left. The app then calls `/advance` in the background.
+- `POST /api/v1/admin/free-characters` (`Idempotency-Key`, `{ quantity, username }`
+  or `{ quantity, everyone: true }`), FitFight admin only.
+- App: "N free" on the create screen and on the Create your own tile, "Create for
+  free", four idea cards (real prompt and the portrait it gave, see
+  [Blend workflows](blend-workflows.md#free-characters)), "Or create your own" on the
+  onboarding companion step, and a Free characters card at the top of
+  Profile → Dashboard → Admin. A 1.1.3 release note in English and French.
+
+**Contract:** additive. The store adds `free_characters`; builds that decode it
+read a missing field as 0. Older builds ignore it and still show the price; a
+free character appears to them like a paid one. Both routes are in
+`contracts/openapi.yaml`. Order: apply the migration, then deploy the backend
+(it reads the new table and column), then ship the app.
+
+**Verification (local):** strict TypeScript and all unit tests passed. A local
+Supabase stack (CLI 2.115.0) applied every migration; all database tests passed,
+including a new free-character case (signup grant once, claim replay, no free
+left, another account's key, gift by username and to everyone, gift replay, the
+funding check). pgTAP (308) and schema lint passed. Localization and native API
+boundary checks passed, and every changed Swift file parses (Swift 6.0.3, Linux).
+Not run: the iOS simulator build, which needs CI on a PR, and a device check.
+
+**Live:** nothing deployed. On 12 Oct the new route answered 404 on staging,
+preview and production, as expected. TestFlight builds call staging.fitfight.app,
+which must follow `preview` before they get free characters; the admin card on a
+staging build writes through the preview server. Giving to production accounts
+needs the App Store build.
+
+## Lighter background sync and refresh time limits, prepared 12 Oct 2026
+
+Marc saw about 200 background sync attempts per person each day in
+`private.healthkit_sync_attempts`. 84% of the background attempts only waited
+for another upload, and 7% stopped at the 25-second limit, often after iOS
+suspended the app. Some attempts and refreshes lasted minutes or hours. 3,131
+activity syncs failed with HealthKit error 5 (authorization not determined).
+
+**Code (native only):**
+
+- An observer call answers HealthKit at once and records nothing while a sync
+  runs, or for 15 minutes after a successful Steps upload. One upload reads
+  every type, so no data is skipped.
+- Requests that carry a sync trace time out after 120 seconds without data.
+- A foreground or manual refresh stops its network part after 30 seconds.
+  Fights, a Fight and Profile then show "Refreshing took too long" with Try
+  again. The limit starts after the HealthKit read, so the permission sheet does
+  not count.
+- A refresh holds an iOS background task, so leaving the app lets it finish.
+- A cancelled sync caller now cancels the shared sync.
+- A foreground refresh shows the Health permission sheet again when some read
+  types were never requested. iOS lists only the new types.
+- HealthKit error 6 (phone locked) records `protected_data_unavailable`, not
+  `sync_failed`.
+- Three 1.1.3 release notes, in English and French.
+
+**Contract:** no API, response or database change. The diagnostics endpoint
+receives fewer attempts.
+
+**Verification (local):** `scripts/check_localizations.py` and
+`scripts/check_native_api_boundary.py` passed. Swift 6.0.3 on Linux parsed every
+changed Swift file. It compiled and ran `scripts/test_native_state.py` with a
+stand-in for the Apple-only `AppLocalization.swift`: all 127 checks passed,
+including 2 new ones, and `develop` failed both new checks. A stub check compiled
+the changed `syncToBackend` and showed that a cancelled caller stops the shared
+sync. No iOS simulator build ran, because CI compiles iOS only on a pull request.
+
+**Still needed:** the iOS simulator build in CI, a TestFlight check of the
+permission sheet and the Try again notice, and the attempts queries after the
+release.
+
+## Specials for everyone, one consumable, prepared 12 Oct 2026
+
+**Product (Marc):** Specials are no longer one of a kind. Anyone can buy any Special, an account can own many, and there are no holds, Taken, or one-per-account limit. Every Special is one charge of the consumable `com.fitfight.mvp.special` (EUR 0.99, being created in App Store Connect by someone else); the server records which Special each charge unlocked.
+
+**Code:** Migration `20261012150000_specials_for_everyone.sql` adds `private.special_purchases` (account, environment, `companion_id`, unique transaction id, `revoked_at`, evidence) and widens `private.require_special_ownership` so a profile may equip a Special when the account owns it through a non-revoked purchase or an edition already owned under the old model. Nothing is deleted; `special_editions` and `special_transactions` keep every row. New `POST /api/v1/me/specials/purchases` takes `{ companion_id, signed_transaction }`, verifies the consumable against Apple's current record for this account token, and returns the existing `SpecialClaimResult`. A replay returns the Special the charge first unlocked. App Store refund notifications revoke that one purchase and unequip the Special only when no other ownership remains. The native picker saves the chosen Special before Apple's sheet, shows "Buy for" with StoreKit's price or "Yours", and keeps the picker open after buying. An unfinished charge whose choice was lost unlocks the next Special picked without paying again. Restore purchases finishes unfinished charges and re-reads the server.
+
+**Compatibility:** Additive. `GET /api/v1/me/specials` keeps every field and adds `product_id`; editions now report only `available` or `yours` (never `taken`, `reserved` or `refunded`), and `purchases_enabled` stays `true`. Older builds (206 to 222, production 210) still decode it and can equip owned Specials. Their `POST /checkout` `reserve` now returns `410 special_update_required` with "Update FitFight to buy Specials." before Apple can charge; `cancel` returns `{ saved: true }`. Legacy per-Special non-consumables (Sandbox only) still record through `/transactions` and notifications, never newly sold. Deploy order: migration, backend, then the app.
+
+**Checks:** Strict TypeScript and all 443 backend unit tests passed. Native Special purchase, companion state, localization and API boundary checks passed; the companion preview simulator build succeeded. The rewritten `specials.integration.ts` needs the disposable database (`npm run test:database`) and was not run here. No migration, deployment, App Store or TestFlight change was made.
+
+## No on/off switches for paid features: 12 Oct 2026
+
+Marc removed the `APPLE_SPECIALS_ENABLED`, `APPLE_CUSTOM_CHARACTERS_ENABLED` and
+`BLEND_ENABLED` environment switches. Sales are open wherever the Apple keys are
+configured, and Blend starts wherever its key and workflow ids are configured.
+Apple's own review is the gate: unapproved products never load in StoreKit, so
+the app shows "Purchases unavailable" until approval. `purchases_enabled` stays in
+the API (always `true`) for older builds.
+## TestFlight syncs card for the admin, prepared 12 Oct 2026
+
+On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes
+before. That person should use the App Store version, which uses production.
+Marc asked for a number on Fights, only in the staging app, with the names on tap.
+
+**Code:** new `GET /api/v1/admin/recent-syncs` lists every account whose Apple
+Health upload reached the server's database in the last 7 days
+(`data_sources.last_success_at`, provider `apple_health`). Newest sync is first,
+and deleted accounts are left out. Only the FitFight admin (`marc`, `rad`) can
+read it. Anyone else gets 403. On the staging build, the admin's Fights tab shows
+a card under the header: the count, "Synced on TestFlight" and "Last 7 days". A
+tap opens the names, usernames and the time since each last sync. The card reads
+the preview server, like the Admin tab. App Store builds, other people, the
+companion preview and screenshots do not get the card, and it takes no space for
+them. Admin only, so the copy is English only and there is no release note.
+
+**Contract:** additive route in `contracts/openapi.yaml`, with
+`contracts/fixtures/admin-recent-syncs.json`. No existing route, response or
+table changes, and there is no migration. Older builds never call the route.
+Read-only `/api/app-release` at 10:16 UTC on 12 Oct: staging latest 1.1.1 (201),
+review and internal 1.1.3 (222); production latest 1.1.2 (210), no candidates;
+`enforced: false` on both. The preview server answered 404 for the new route,
+as expected before deployment.
+
+**Verification (local):** web typecheck and all 439 unit tests passed. A local
+Supabase stack (CLI 2.115.0, as in CI) applied every migration and passed all 100
+database tests, including the new `recent-syncs.integration.ts`. It checks the
+7-day window, deleted accounts, the order, 401 without a session, 403 for a
+non-admin and 200 for the admin. It failed when the window was 9 days and when
+the admin check was removed. Swift 6.4 on Linux compiled and ran the native
+contract test with the new fixture, using a stand-in for the Apple-only
+localization file. It failed on a renamed field. The changed Swift files parse,
+and the localization, native API boundary and contract YAML checks passed.
+[PR #357](https://github.com/slooowshutter/FitFight/pull/357) CI passed: the
+simulator build and native checks, migrations and database tests, web tests,
+screen renders and Vercel. Not run: a device check.
+
+**Live deployment:** Marc asked for a PR into `develop` on 12 Oct. Nothing is
+merged or deployed. A `preview` merge
+deploys the route to the preview server and uploads a staging TestFlight build
+with the card. `main` is not needed, because App Store builds never show it.
+
 ## Admin dashboard: card pages and sync time percentiles, prepared 11 Oct 2026
 
 Marc asked to see a definition and an example for each card, like the charts.

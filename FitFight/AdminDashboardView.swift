@@ -73,6 +73,7 @@ struct AdminDashboardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FreeCharacterGiftCard()
             controls
             statusLine
             if let failure {
@@ -370,6 +371,184 @@ struct AdminDashboardView: View {
             }
         }
         loading = false
+    }
+}
+
+/// `POST /api/v1/admin/free-characters`: one username, or every current account when `username` is nil.
+struct FitFightFreeCharacterGiftBody: Encodable {
+    let quantity: Int
+    let username: String?
+    let everyone: Bool?
+}
+
+struct FitFightFreeCharacterGift: Decodable {
+    let people: Int
+    let quantity: Int
+}
+
+/// Gives free characters on this build's own data: a staging build writes staging accounts through
+/// the preview server, like the rest of this tab; an App Store build writes production accounts.
+/// Every account already gets one on its own.
+struct FreeCharacterGiftCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var everyone = false
+    @State private var username = ""
+    @State private var quantity = 1
+    /// The same gift keeps its key until the server answers, so a retry never gives twice.
+    @State private var key = UUID()
+    @State private var busy = false
+    @State private var confirming = false
+    @State private var result: String?
+    @State private var failure: String?
+
+    private var production: Bool { AppVersion.backend == "prod" }
+
+    var body: some View {
+        FFCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(verbatim: "Free characters").ffType(.heading).foregroundStyle(theme.text)
+                Text(verbatim: "Everyone gets 1 on their own. Give more to \(production ? "Production" : "Staging") accounts.")
+                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+                FFSegmented(items: [false, true], selection: $everyone, fill: true) { $0 ? "Everyone" : "One person" }
+                if !everyone {
+                    FFField(label: "Username") {
+                        TextField("username" as String, text: $username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
+                }
+                Stepper(value: $quantity, in: 1...10) {
+                    Text(verbatim: "\(quantity) free").ffType(.label).foregroundStyle(theme.text)
+                }
+                FFButton(title: "Give", enabled: everyone || !username.trimmingCharacters(in: .whitespaces).isEmpty,
+                         busy: busy, fullWidth: true) {
+                    if everyone { confirming = true } else { Task { await give() } }
+                }
+                if let failure {
+                    Text(verbatim: failure).ffType(.caption).foregroundStyle(theme.emberText)
+                } else if let result {
+                    Text(verbatim: result).ffType(.caption).foregroundStyle(theme.mossText)
+                }
+            }
+        }
+        .confirmationDialog(Text(verbatim: "Give \(quantity) free to every account?"), isPresented: $confirming, titleVisibility: .visible) {
+            Button { Task { await give() } } label: { Text(verbatim: "Give to everyone") }
+        }
+        .onChange(of: "\(everyone)-\(username)-\(quantity)") { _, _ in key = UUID() }
+    }
+
+    private func give() async {
+        guard !busy else { return }
+        busy = true
+        failure = nil
+        result = nil
+        defer { busy = false }
+        do {
+            let api = production ? FitFightAPI() : FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+            let gift = try await api.giftFreeCharacters(
+                username: everyone ? nil : username.trimmingCharacters(in: .whitespaces),
+                quantity: quantity, idempotencyKey: key, accessToken: try await session.freshAccessToken()
+            )
+            key = UUID()
+            result = "Gave \(gift.quantity) free to \(gift.people) \(gift.people == 1 ? "person" : "people")."
+        } catch FitFightAPIError.http(let status, _, _) where status == 403 {
+            failure = "This account isn't the FitFight admin."
+        } catch FitFightAPIError.http(let status, _, _) where status == 404 {
+            failure = "No account has this username."
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
+}
+
+/// Fights on the staging build, admin only: how many people synced to staging in the last 7 days.
+/// They should be on the App Store version, so the admin can ask them to switch. Like the Admin
+/// tab, it reads the preview server, which always runs the newest `preview` backend on staging data.
+struct RecentSyncsCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var people: [FitFightRecentSyncs.Person]?
+    @State private var failure: String?
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            FFCard {
+                HStack(spacing: 13) {
+                    Text(verbatim: people.map { "\($0.count)" } ?? "-")
+                        .font(.ff(22, 800))
+                        .foregroundStyle(theme.text)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Synced on TestFlight").ffType(.heading).foregroundStyle(theme.text)
+                        Text(verbatim: failure ?? "Last 7 days. Tap for the names.")
+                            .ffType(.caption)
+                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .disabled(people?.isEmpty ?? true)
+        .task { await load() }
+        .sheet(isPresented: $showing) {
+            RecentSyncsSheet(people: people ?? [])
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func load() async {
+        do {
+            let token = try await session.freshAccessToken()
+            people = try await FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+                .recentSyncs(accessToken: token).people
+            failure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            failure = error.localizedDescription
+        }
+    }
+}
+
+private struct RecentSyncsSheet: View {
+    let people: [FitFightRecentSyncs.Person]
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSheetHeader(title: "Synced on TestFlight") { dismiss() }
+            Text(verbatim: "Last 7 days, newest first. They should use the App Store version.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            ScrollView {
+                FFGroupedRows {
+                    ForEach(people) { person in
+                        if person.id != people.first?.id { FFDivider() }
+                        FFGroupedRow(
+                            title: person.displayName,
+                            subtitle: "@\(person.handle)",
+                            subtitleTone: .neutral,
+                            trailing: AnyView(
+                                Text(verbatim: model.formatLastSync(person.lastSyncedAt))
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
     }
 }
 

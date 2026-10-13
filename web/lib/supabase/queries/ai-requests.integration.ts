@@ -16,6 +16,7 @@ import {
     aiBalanceEventSchema,
 } from "@/lib/types/ai/credits";
 import { ApiError } from "@/lib/http";
+import { blendConfiguration } from "@/lib/types/ai/workflow";
 import type {
     AiRequestRecord,
     AiRequestReservation,
@@ -974,19 +975,21 @@ test("durable Blend admission and poll leases", async (t) => {
             );
             await database`update private.ai_requests set next_poll_at = clock_timestamp() where id = ${request.id}`;
             await database`update private.ai_caller_windows set calls = 60 where user_id = ${owner}`;
-            const env = {
-                BLEND_API_KEY: "bai_test_only",
-                BLEND_ENABLED: "false",
-                BLEND_AVATAR_WORKFLOW_ID: version.workflowId,
-                BLEND_AVATAR_VERSION_ID: version.versionId,
-                BLEND_GLOBAL_DAILY_STARTS: "100",
-                BLEND_GLOBAL_CONCURRENT_RUNS: "10",
-                BLEND_REQUESTS_PER_MINUTE: "100",
-            };
-            const original = Object.fromEntries(
-                Object.keys(env).map((name) => [name, process.env[name]]),
-            );
-            Object.assign(process.env, env);
+            const originalConfiguration = { ...blendConfiguration };
+            const originalApiKey = process.env.BLEND_API_KEY;
+            process.env.BLEND_API_KEY = "bai_test_only";
+            Object.assign(blendConfiguration, {
+                limits: {
+                    globalDailyStarts: 100,
+                    globalConcurrentRuns: 10,
+                    providerRequestsPerMinute: 100,
+                },
+                workflows: {
+                    avatar: { ...version, creditPrice: 1 },
+                    fitness: { workflowId: "fitness-publication" },
+                    group_photo: { workflowId: "group-publication" },
+                },
+            });
             try {
                 const result = await reconcileAiRuns({
                     due: () => dueAiRequests(database),
@@ -1063,10 +1066,10 @@ test("durable Blend admission and poll leases", async (t) => {
                     await database`select calls from private.ai_caller_windows where user_id = ${owner}`;
                 assert.equal(window.calls, 60);
             } finally {
-                for (const [name, value] of Object.entries(original)) {
-                    if (value === undefined) delete process.env[name];
-                    else process.env[name] = value;
-                }
+                Object.assign(blendConfiguration, originalConfiguration);
+                if (originalApiKey === undefined)
+                    delete process.env.BLEND_API_KEY;
+                else process.env.BLEND_API_KEY = originalApiKey;
             }
         },
     );

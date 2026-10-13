@@ -26,6 +26,8 @@ enum FitFightAPIError: LocalizedError {
                 return String(appLocalized: "Special purchases are not available yet.")
             case "special_account":
                 return String(appLocalized: "This purchase belongs to another FitFight account. Sign in to that account or contact support.")
+            case "no_free_characters":
+                return String(appLocalized: "You have no free characters left.")
             case "already_member":
                 return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
@@ -882,9 +884,9 @@ struct FitFightAPI {
         try await get(path: "me/specials", accessToken: accessToken, expected: [200])
     }
 
-    func specialCheckout(action: String, companionId: String, attemptId: UUID, accessToken: String) async throws {
-        let _: DiscardBody = try await post(path: "me/specials/checkout", accessToken: accessToken,
-            body: ["action": action, "companion_id": companionId, "attempt_id": attemptId.uuidString.lowercased()], expected: [200])
+    func claimSpecialPurchase(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
+        try await post(path: "me/specials/purchases", accessToken: accessToken,
+            body: ["companion_id": companionId, "signed_transaction": signedTransaction], expected: [200])
     }
 
     func claimSpecial(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
@@ -900,6 +902,11 @@ struct FitFightAPI {
         var body = ["signed_transaction": signedTransaction]
         body["description"] = description
         return try await post(path: "me/custom-characters/purchases", accessToken: accessToken, body: body, expected: [200])
+    }
+
+    func claimFreeCustomCharacter(description: String, idempotencyKey: UUID, accessToken: String) async throws -> CustomCharacterClaim {
+        try await post(path: "me/custom-characters/free", accessToken: accessToken, body: ["description": description],
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
     }
 
     func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {
@@ -1297,6 +1304,17 @@ struct FitFightAPI {
         )
     }
 
+    func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
+        try await get(path: "admin/recent-syncs", accessToken: accessToken)
+    }
+
+    /// Admin only. A nil username gives to every current account.
+    func giftFreeCharacters(username: String?, quantity: Int, idempotencyKey: UUID, accessToken: String) async throws -> FitFightFreeCharacterGift {
+        try await post(path: "admin/free-characters", accessToken: accessToken,
+                       body: FitFightFreeCharacterGiftBody(quantity: quantity, username: username, everyone: username == nil ? true : nil),
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
+    }
+
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
         let list: FitFightJoinableList = try await get(
             path: "fights/suggested",
@@ -1556,6 +1574,11 @@ struct FitFightAPI {
 
             var request = URLRequest(url: requestURL)
             request.httpMethod = method
+            // Only sync requests carry a trace. A slow upload or server gets up to 2 minutes without data.
+            // The refresh and background time limits still end the waits that people see.
+            if trace != nil {
+                request.timeoutInterval = 120
+            }
             if !accessToken.isEmpty {
                 request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             }

@@ -131,7 +131,7 @@ struct YouView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently deletes your profile, photos, uploaded Apple Health activity, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
-            Text("Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.")
+            Text("Deleting your account does not refund Apple purchases. Contact support for purchase recovery.")
         }
     }
 
@@ -159,6 +159,7 @@ struct YouView: View {
         FFRefreshConfig(
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
+            error: model.refreshError,
             action: {
                 await refreshOwnProfile(trigger: .manual)
             }

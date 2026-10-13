@@ -64,7 +64,10 @@ query only marks its own tile with `Query failed: ...`.
   shows only the name, number and change on a card, and the rest on its page.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
-  after a background `observer` sync is the post-sync refresh, not an open. Sync
+  after a background `observer` sync is the post-sync refresh, not an open. The
+  refresh after an action in the app, such as create, join, edit or leave a Fight,
+  sends `manual` since the 12 Oct 2026 change. Older builds send it as
+  `foreground`, so their opens include those actions. Sync
   history is kept since 29 Sep (never-delete rule), so engagement history grows
   from that date; earlier rows were pruned after 7 days.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
@@ -115,6 +118,17 @@ query only marks its own tile with `Query failed: ...`.
 - **Compatibility:** additive route; no existing contract, schema or migration
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
+
+## Recent syncs (prepared 12 Oct 2026)
+
+`GET /api/v1/admin/recent-syncs` returns `{ "people": [...] }` with `user_id`,
+`handle`, `display_name` and `last_synced_at` for every account whose Apple
+Health upload reached this server's database in the last 7 days, newest first.
+It reads `public.data_sources.last_success_at` (provider `apple_health`), which
+every Steps and activity upload sets, and leaves out deleted accounts. Only the
+FitFight admin (`isFitFightAdmin`) can read it; anyone else gets 403. The staging
+app shows it to the admin on Fights, through the preview server, to find testers
+who still sync to staging instead of using the App Store version.
 
 ## Activity pipeline (prepared 23 Sep 2026)
 
@@ -646,11 +660,13 @@ verification are recorded separately in [status.md](status.md).
 
 An aggregate upload uses at most eight SQL statements, excluding BEGIN/COMMIT, independent of Fight/member count. Finalizing one Fight uses at most six. TypeScript still owns scoring; batched writes preserve the existing transaction and lock boundaries. Snapshot inserts remain separate from reads of the latest snapshot, preserving corrections that return to an earlier total.
 
-Each foreground/manual refresh and observer opportunity owns a trace. Native `ContinuousClock` measures permission prompts separately, today's HealthKit read, context retrieval, merged-day and each exact-window HealthKit query, upload, and final Fights refresh. The total ends after the final requested app work and mapping/cache updates. Observers omit the screen refresh they do not perform; expiry records a cancelled attempt once. Routine token retrieval uses the SDK's valid session accessor; account deletion still explicitly renews its session.
+Each foreground/manual refresh and each observer call that starts an upload owns a trace. One upload reads every HealthKit type, but every changed type calls its own observer. So an observer call answers HealthKit at once and records nothing while another upload runs, or for 15 minutes after a successful Steps upload (12 Oct 2026). Native `ContinuousClock` measures permission prompts separately, today's HealthKit read, context retrieval, merged-day and each exact-window HealthKit query, upload, and final Fights refresh. The total ends after the final requested app work and mapping/cache updates. Observers omit the screen refresh they do not perform; expiry records a cancelled attempt once. Routine token retrieval uses the SDK's valid session accessor; account deletion still explicitly renews its session.
 
 The native API sends `X-FitFight-Trace-ID` for context, upload, and Fights refresh. Their responses include `Server-Timing` for `auth`, `db`, optional `maintenance`, and `total`, including failures. Structured `fitfight_request` Vercel logs contain the same trace ID, fixed operation name, status and durations only. Server `db` includes pool acquisition, locks, and the whole database operation; it is not an isolated query execution time. Server `total` starts at handler entry and excludes earlier cold-start time. Compare each stage's client duration with its server timing; never subtract phone and server wall-clock timestamps.
 
 One immutable completed attempt is logged locally under OSLog category `HealthKitPerformance` and sent through the existing diagnostics endpoint after product work completes. Reporting is best effort and is excluded from the attempt's own duration, avoiding recursive timing reports. Network loss, suspension, or termination can prevent server delivery; there is no background retry queue. The underlying HealthKit callback may still finish after observer expiry, but cancellation prevents a subsequent upload from that expired attempt.
+
+Time limits (12 Oct 2026): requests that carry a trace (context, upload, activity upload, Fights refresh) time out after 120 seconds without data. Slow data that still moves does not count, and the 30-second refresh limit and the 25-second background limit stop sooner. A foreground/manual refresh stops its network part after 30 seconds, records a cancelled attempt, and shows Try again on Fights, a Fight, and Profile. The limit starts after the HealthKit read, because a permission sheet waits for the person. The refresh holds an iOS background task, so leaving the app lets it finish instead of freezing it until the next open. `ContinuousClock` keeps counting while iOS suspends the app, so a very long attempt usually means a suspension, not a slow request. HealthKit error 6 (database inaccessible while the phone is locked) records `protected_data_unavailable`. When a foreground refresh finds read types that the app never requested, such as types added after the person connected Apple Health, it shows the Health sheet again. iOS lists only the new types, which removes HealthKit error 5 from the activity sync.
 
 Failed stages preserve HealthKit/URL/Cocoa numeric errors, HTTP status, decoding/configuration failures, and the app's unavailable/invalid Steps errors. Unknown error domains are reduced to `unknown`; messages, URLs, query predicates and `NSError.userInfo` are never logged. The existing `stages` JSON stores these details without another migration. After authentication and validation, the diagnostics route emits `fitfight_healthkit_failure` to Vercel logs before database persistence, with trace ID, app version/build, trigger, outcome and failed stages. Legacy reports such as build 153 emit their coarse error only; discarded device errors cannot be recovered retroactively.
 
@@ -669,7 +685,17 @@ Supabase will receive a permission error after the migration. Feature-branch pus
 alone do not apply the hosted migration. No existing finalized scores or hosted
 previously-deleted accounts are rewritten by this change.
 
-## Specials: paid limited companions (updated 23 Sep 2026)
+## Specials: paid limited companions (updated 12 Oct 2026)
+
+**Current model, 12 Oct 2026:** Specials are no longer one of a kind. Any account
+may own any number of them. Each is one charge of the consumable
+`com.fitfight.mvp.special`; `POST /api/v1/me/specials/purchases` verifies it
+and records the chosen Special in `private.special_purchases` (one row per
+transaction, `revoked_at` on refund). Ownership is a non-revoked purchase or an
+edition owned under the old model. Holds, Taken and the one-per-account limit
+are gone; `/checkout` refuses `reserve` with `410 special_update_required`. The
+rest of this section describes the retired one-of-a-kind model, whose tables and
+legacy products are kept for existing Sandbox purchases.
 
 The 40 supplied animal photos have stable `limited-*` companion IDs and sell as
 non-consumable StoreKit products at EUR 0.99. Each photo, including alternate

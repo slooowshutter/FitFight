@@ -188,6 +188,7 @@ struct FightDetailView: View {
         FFRefreshConfig(
             isRefreshing: pane == .feed ? isRefreshingFeed : model.isRefreshingFights,
             message: pane == .feed ? String(appLocalized: "Loading") : model.refreshStatusText,
+            error: pane == .feed ? nil : model.refreshError,
             action: {
                 if pane == .feed, let fightID = UUID(uuidString: fight.id) {
                     isRefreshingFeed = true

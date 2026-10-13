@@ -3,16 +3,19 @@ import { test } from "node:test";
 import { GET } from "@/app/api/v1/me/specials/route";
 import { POST as checkout } from "@/app/api/v1/me/specials/checkout/route";
 import { POST as claim } from "@/app/api/v1/me/specials/transactions/route";
+import { POST as purchase } from "@/app/api/v1/me/specials/purchases/route";
 import { POST as notify } from "@/app/api/apple/specials/notifications/[environment]/route";
 import {
     specialCheckoutRequestSchema,
     specialClaimRequestSchema,
+    specialPurchaseRequestSchema,
 } from "@/lib/types/companions/specials";
 
 for (const [path, handler] of [
     ["", GET],
     ["/checkout", checkout],
     ["/transactions", claim],
+    ["/purchases", purchase],
 ] as const) {
     test(`Specials ${path || "store"} requires authentication before reading or writing purchases`, async () => {
         const response = await handler(
@@ -75,6 +78,28 @@ test("checkout cannot supply an owner, environment, price or entitlement", () =>
         }).success,
         false,
     );
+});
+
+test("a Special purchase names a current Special and cannot supply an owner, price or entitlement", () => {
+    const input = {
+        companion_id: "limited-black-panther",
+        signed_transaction: "signed",
+    };
+    assert.equal(specialPurchaseRequestSchema.safeParse(input).success, true);
+    for (const change of [
+        { companion_id: "fox" },
+        { companion_id: "limited-pangolin" },
+        { signed_transaction: "" },
+        { user_id: "6283b4c1-0e8f-4caa-b04b-827b6f1e925b" },
+        { environment: "Production" },
+        { owned: true },
+    ]) {
+        assert.equal(
+            specialPurchaseRequestSchema.safeParse({ ...input, ...change })
+                .success,
+            false,
+        );
+    }
 });
 
 test("notifications reject unknown environments, wrong deployments and unsigned payloads", async () => {

@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 12,
+            notes: "Free characters: every account now gets one free custom companion. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
             notes: "On the companion stage, swiping back now brings the animal in from the left, instead of flying it across the screen from the right."
         ),
         ReleaseNote(

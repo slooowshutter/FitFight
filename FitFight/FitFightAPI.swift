@@ -26,6 +26,8 @@ enum FitFightAPIError: LocalizedError {
                 return String(appLocalized: "Special purchases are not available yet.")
             case "special_account":
                 return String(appLocalized: "This purchase belongs to another FitFight account. Sign in to that account or contact support.")
+            case "no_free_characters":
+                return String(appLocalized: "You have no free characters left.")
             case "already_member":
                 return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
@@ -902,6 +904,11 @@ struct FitFightAPI {
         return try await post(path: "me/custom-characters/purchases", accessToken: accessToken, body: body, expected: [200])
     }
 
+    func claimFreeCustomCharacter(description: String, idempotencyKey: UUID, accessToken: String) async throws -> CustomCharacterClaim {
+        try await post(path: "me/custom-characters/free", accessToken: accessToken, body: ["description": description],
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
+    }
+
     func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {
         try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/advance", accessToken: accessToken,
                        body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil,
@@ -1299,6 +1306,13 @@ struct FitFightAPI {
 
     func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
         try await get(path: "admin/recent-syncs", accessToken: accessToken)
+    }
+
+    /// Admin only. A nil username gives to every current account.
+    func giftFreeCharacters(username: String?, quantity: Int, idempotencyKey: UUID, accessToken: String) async throws -> FitFightFreeCharacterGift {
+        try await post(path: "admin/free-characters", accessToken: accessToken,
+                       body: FitFightFreeCharacterGiftBody(quantity: quantity, username: username, everyone: username == nil ? true : nil),
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
     }
 
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {

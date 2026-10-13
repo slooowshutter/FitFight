@@ -10,7 +10,9 @@ import {
     customCharacterPortraitRowSchema,
     customCharacterPurchaseRowSchema,
     customCharacterStoreSchema,
+    freeCharacterGiftResultSchema,
     type CustomCharacterAdvanceRequest,
+    type FreeCharacterGiftRequest,
     type CustomCharacterAttempt,
     type CustomCharacterStage,
 } from "@/lib/types/ai/custom-character";
@@ -29,6 +31,18 @@ async function saveCustomCharacterDescription(
         await sql`insert into private.custom_character_portraits (purchase_id, slot, action_key)
             values (${purchaseId}, 1, ${key}), (${purchaseId}, 2, ${randomUUID()}), (${purchaseId}, 3, ${randomUUID()})`;
     return customCharacterPurchaseRowSchema.parse(saved);
+}
+
+/** Every account gets one signup character the first time this runs; admin gifts add more. Each free character uses one. */
+async function readFreeCharacters(sql: Sql | TransactionSql, userId: string) {
+    await sql`insert into private.free_character_grants (user_id, quantity, reason, operation_key)
+        values (${userId}, 1, 'signup', ${randomUUID()}) on conflict do nothing`;
+    const [row] = await sql`select
+        (select coalesce(sum(quantity), 0) from private.free_character_grants where user_id = ${userId})
+        - (select count(*) from private.custom_character_purchases purchase
+            join private.special_accounts account on account.id = purchase.account_id
+            where account.user_id = ${userId} and purchase.free_claim_key is not null) as remaining`;
+    return Number(row.remaining);
 }
 
 /** Apple account tokens are shared with Specials; only this purchase flag controls new character checkout. */
@@ -127,6 +141,7 @@ export async function readCustomCharacterStore(
         environment: account.environment,
         purchases_enabled: true,
         product_id: customCharacterProductId,
+        free_characters: await readFreeCharacters(database, userId),
         characters,
     });
 }
@@ -194,6 +209,54 @@ export async function recordCustomCharacterTransaction(
             purchase_id: saved.id,
             refunded: saved.revoked_at !== null,
         });
+    });
+}
+
+/**
+ * Uses one free character instead of an Apple charge and saves its description with three portraits, like a paid claim.
+ * The client's key makes a retried request return the same character instead of using another one.
+ */
+export async function claimFreeCustomCharacter(
+    userId: string,
+    claimKey: string,
+    description: string,
+    database: Sql = createDatabaseClient(),
+) {
+    const account = await readSpecialStore(userId, database);
+    return database.begin(async (sql) => {
+        await sql`select id from public.profiles where id = ${userId} for update`;
+        const [existing] = await sql`select id, account_id from private.custom_character_purchases
+            where free_claim_key = ${claimKey}`;
+        if (existing) {
+            if (existing.account_id !== account.app_account_token)
+                throw new ApiError(409, "ai_request_conflict", "This free character belongs to another account");
+            return customCharacterClaimResultSchema.parse({ purchase_id: existing.id, refunded: false });
+        }
+        if (await readFreeCharacters(sql, userId) < 1)
+            throw new ApiError(409, "no_free_characters", "You have no free characters left");
+        const [purchase] = await sql`insert into private.custom_character_purchases (account_id, environment, free_claim_key)
+            values (${account.app_account_token}, ${account.environment}, ${claimKey}) returning id`;
+        await saveCustomCharacterDescription(sql, purchase.id, description, true);
+        return customCharacterClaimResultSchema.parse({ purchase_id: purchase.id, refunded: false });
+    });
+}
+
+/** Adds free characters to one username or to every current account. The same key never gives twice. */
+export async function giftFreeCharacters(
+    adminId: string,
+    operationKey: string,
+    input: FreeCharacterGiftRequest,
+    database: Sql = createDatabaseClient(),
+) {
+    return database.begin(async (sql) => {
+        await sql`insert into private.free_character_grants (user_id, quantity, reason, granted_by, operation_key)
+            select user_id, ${input.quantity}, 'gift', ${adminId}, ${operationKey} from public.profiles
+            where deleted_at is null and ${"everyone" in input ? sql`true` : sql`lower(handle) = lower(${input.username})`}
+            on conflict (operation_key, user_id) do nothing`;
+        const [given] = await sql`select count(*)::int as people from private.free_character_grants
+            where operation_key = ${operationKey}`;
+        if (given.people === 0) throw new ApiError(404, "not_found", "No account has this username");
+        return freeCharacterGiftResultSchema.parse({ people: given.people, quantity: input.quantity });
     });
 }
 

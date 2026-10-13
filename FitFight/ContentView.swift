@@ -13,6 +13,7 @@ struct ContentView: View {
     @EnvironmentObject private var push: PushNotificationService
     @EnvironmentObject private var companions: CompanionStore
     @Environment(\.colorScheme) private var colorScheme
+    @State private var dismissedAppStoreNotice = false
 
     var body: some View {
         Group {
@@ -206,6 +207,30 @@ struct ContentView: View {
             }
         } message: {
             Text(String(appLocalized: "FitFight can remind you when a fight ends and when to sync your steps. Lock-screen alerts never show scores or fight titles."))
+        }
+        // TestFlight friends moved to the App Store build, which uses another database. Admins keep TestFlight.
+        .alert(
+            String(appLocalized: "FitFight is on the App Store"),
+            isPresented: Binding(
+                get: {
+                    appUpdate.isTestFlight
+                        && session.isSignedIn
+                        && session.profile != nil
+                        && !session.isFitFightAdmin
+                        && !dismissedAppStoreNotice
+                        && !push.showPrePrompt
+                        && !CompanionPreview.isEnabled
+                        && !ScreenshotExport.isEnabled
+                },
+                set: { if !$0 { dismissedAppStoreNotice = true } }
+            )
+        ) {
+            Button(String(appLocalized: "Open the App Store")) {
+                openURL(URL(string: "https://apps.apple.com/app/id6804230516")!)
+            }
+            Button(String(appLocalized: "Not now"), role: .cancel) {}
+        } message: {
+            Text(String(appLocalized: "FitFight is now on the App Store, and your friends are there. Your steps and stats from this TestFlight beta no longer reach them. Tap below, then sign in with the same Apple ID. If the App Store shows Open, delete this TestFlight app first, then tap Get."))
         }
     }
 

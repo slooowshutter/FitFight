@@ -139,6 +139,16 @@ export async function startAiRun(
 
     let started;
     try {
+        // NOTE: Blend sends a bare URL to its LLM nodes as application/octet-stream, which the provider rejects. Typed files keep the PNG media type.
+        const portraits = reservation.portraits.map((url) => ({
+            id: url,
+            name: "portrait.png",
+            url,
+            size: 0,
+            mimeType: "image/png",
+            extension: "png",
+            mediaCategory: "image",
+        }));
         const inputs =
             input.workflow === "avatar"
                 ? {
@@ -150,11 +160,11 @@ export async function startAiRun(
                   }
                 : input.workflow === "fitness"
                   ? {
-                        character_portrait: reservation.portraits,
+                        character_portrait: portraits,
                         identity_details: input.parameters.identity_details,
                     }
                   : {
-                        character_portraits: reservation.portraits,
+                        character_portraits: portraits,
                         scene: input.parameters.scene,
                         cast_roster: input.parameters.characters
                             .map(

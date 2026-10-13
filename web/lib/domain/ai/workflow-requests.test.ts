@@ -555,6 +555,15 @@ test("fitness and group adapters use owned portraits, exact labels, cast order a
         "https://cdn.tryblend.ai/first.png",
         "https://cdn.tryblend.ai/second.png",
     ];
+    const portraitFile = (url: string) => ({
+        id: url,
+        name: "portrait.png",
+        url,
+        size: 0,
+        mimeType: "image/png",
+        extension: "png",
+        mediaCategory: "image",
+    });
     for (const workflow of ["fitness", "group_photo"] as const) {
         const parameters =
             workflow === "fitness"
@@ -621,11 +630,14 @@ test("fitness and group adapters use owned portraits, exact labels, cast order a
                         inputs,
                         workflow === "fitness"
                             ? {
-                                  character_portrait: portraits.slice(0, 1),
+                                  character_portrait: portraits
+                                      .slice(0, 1)
+                                      .map(portraitFile),
                                   identity_details: "Pangolin with glasses",
                               }
                             : {
-                                  character_portraits: portraits,
+                                  character_portraits:
+                                      portraits.map(portraitFile),
                                   scene: "Run toward the right",
                                   cast_roster:
                                       "1. Pangolin with glasses\n2. Grey elephant",

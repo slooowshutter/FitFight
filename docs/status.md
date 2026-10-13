@@ -2,9 +2,44 @@
 
 Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
 
 ---
+
+## Race Day home page: prepared 12 Oct 2026
+
+Marc picked the Race Day landing page design (round 2, design 6) and asked to
+ship it with a wider hero and the phone only, without the race art.
+
+**Code:** `/` and `/fr` now render one shared page from `web/components/landing/`
+in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
+Feedback and Profile screens; text left and phone right on computers, stacked
+on phones; on computers the hero fills the first screen), steps recorded, what it is, the goal, how it
+works (the five New fight steps, nothing is saved), companions (pick one of the
+12 animals and see its five poses), fight options, pricing, FAQ with search,
+and a closing card. All people, fights and posts are fictional. The download
+buttons keep the App Store link in production and the TestFlight dialog on
+staging. The pricing card shows Specials (EUR 0.99, buy any and keep it) and
+Make it yours (EUR 4.99, the first one free) as coming later. Images are WebP copies of the bundled app artwork
+in `web/public/landing/`. The old home page styles and `total-steps.css` are
+removed. The browser tab, `favicon.ico` and iPhone home-screen icons now use the
+app's FF icon instead of the older arch mark. No API, database, app or release setting changed.
+
+**Published figures (Marc chose option A, 12 Oct 2026):** the public steps
+total stays. The privacy policy, English and French, effective 12 Oct 2026,
+now says FitFight may publish anonymous, aggregate figures on fitfight.app,
+such as the total Steps recorded. Marc accepted the remaining risk under Apple
+guideline 5.1.3 (HealthKit data in marketing) for this anonymous total. A
+"change in steps after joining" figure was tried and removed at his request.
+
+**Verification (local):** web typecheck, all 438 unit tests and the CI privacy
+disclosure check passed. A production build kept `/` and `/fr` static with
+hourly revalidation. Against `next start` and a disposable Postgres, both
+languages rendered at 393 and 1440 pixels wide with the sample steps total;
+the phone tabs, the New fight steps, the companion picker, the FAQ search and
+the staging TestFlight dialog worked in Chrome.
+
+**Live deployment:** none. Nothing is merged or deployed.
 
 ## Free characters, prepared 12 Oct 2026
 

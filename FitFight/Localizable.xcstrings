@@ -14470,6 +14470,16 @@
                 }
             }
         },
+        "Your own characters no longer sit on a grey square: their transparent background shows the card behind them.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tes propres personnages ne sont plus posés sur un carré gris : leur fond transparent laisse voir la carte derrière eux."
+                    }
+                }
+            }
+        },
         "Rest": {
             "localizations": {
                 "fr": {

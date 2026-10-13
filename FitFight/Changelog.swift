@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 13,
+            notes: "Your own characters no longer sit on a grey square: their transparent background shows the card behind them."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 13,
             notes: "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop."
         ),
         ReleaseNote(

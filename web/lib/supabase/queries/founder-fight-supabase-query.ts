@@ -6,6 +6,7 @@ import { createDatabaseClient } from "@/lib/supabase/postgres";
 import type { FightRow } from "@/lib/types/database";
 import {
     FOUNDER_FIGHT_DAYS,
+    FOUNDER_FIGHT_TIME_ZONE,
     founderChallengersSchema,
     founderUserIds,
     type FounderChallengers,
@@ -26,10 +27,7 @@ export async function readFounderId(database: Sql = createDatabaseClient()): Pro
     return founderUserIds[environment];
 }
 
-/**
- * One repeating 1v1 series per user against the founder; calling again returns its current round.
- * Rounds run on whole days in the zone of the founder's stored daily Steps, so they fit his score.
- */
+/** One repeating 1v1 series per user against the founder; calling again returns its current round. */
 export async function createFounderFight(
     userId: string,
     founderId: string,
@@ -39,21 +37,16 @@ export async function createFounderFight(
         throw new ApiError(400, ERROR_CODES.validation, "You cannot fight yourself");
     }
     const admin = createAdminClient();
-    const [source, founderSource] = await Promise.all([
-        ensureAppleHealthSource(userId, { admin }),
-        ensureAppleHealthSource(founderId, { admin }),
-    ]);
+    const source = await ensureAppleHealthSource(userId, { admin });
     const joinCode = await allocateJoinCode(admin);
     const fight = await database.begin(async (sql) => {
-        const [zone] = await sql<{ time_zone: string }[]>`
-            select time_zone from private.activity_metrics
-            where source_id = ${founderSource.id} and scope = 'day' and metric = 'steps'
-                and time_zone is not null
-            order by day desc
-            limit 1
+        // Read only: the founder's source reports his own syncs, never a challenger's signup.
+        const [founderSource] = await sql<{ id: string; source_label: string }[]>`
+            select id, source_label from public.data_sources
+            where user_id = ${founderId} and provider = 'apple_health' and connection_route = 'healthkit'
         `;
-        if (!zone) {
-            throw new ApiError(503, ERROR_CODES.config, "The founder has no Steps yet");
+        if (!founderSource) {
+            throw new ApiError(503, ERROR_CODES.config, "The founder has not connected Apple Health");
         }
         const [series] = await sql<{ id: string }[]>`
             insert into public.fight_series (
@@ -61,7 +54,7 @@ export async function createFounderFight(
             )
             values (
                 ${userId}, ${founderId}, ${joinCode}, 'invite_only', true,
-                ${FOUNDER_FIGHT_DAYS * 86_400}, 'Fight Marc', ${zone.time_zone}
+                ${FOUNDER_FIGHT_DAYS * 86_400}, 'Fight Marc', ${FOUNDER_FIGHT_TIME_ZONE}
             )
             on conflict (owner_id, host_id) where host_id is not null do nothing
             returning id
@@ -81,10 +74,10 @@ export async function createFounderFight(
                 outcome_rule, goal_policy, stake_kind, series_id
             )
             select ${userId}, ${founderId}, 'Fight Marc', 'live',
-                today.starts_on at time zone ${zone.time_zone},
-                (today.starts_on + make_interval(days => ${FOUNDER_FIGHT_DAYS})) at time zone ${zone.time_zone},
-                ${zone.time_zone}, 'steps', 'highest_total', 'shared', 'action', ${series.id}
-            from (select date_trunc('day', now() at time zone ${zone.time_zone}) as starts_on) as today
+                today.starts_on at time zone ${FOUNDER_FIGHT_TIME_ZONE},
+                (today.starts_on + make_interval(days => ${FOUNDER_FIGHT_DAYS})) at time zone ${FOUNDER_FIGHT_TIME_ZONE},
+                ${FOUNDER_FIGHT_TIME_ZONE}, 'steps', 'highest_total', 'shared', 'action', ${series.id}
+            from (select date_trunc('day', now() at time zone ${FOUNDER_FIGHT_TIME_ZONE}) as starts_on) as today
             returning id, state::text as state
         `;
         await sql`update public.fight_series set current_fight_id = ${inserted.id} where id = ${series.id}`;
@@ -94,7 +87,7 @@ export async function createFounderFight(
             )
             values
                 (${inserted.id}, ${userId}, 'accepted', now(), ${source.id}, ${source.sourceLabel}),
-                (${inserted.id}, ${founderId}, 'accepted', now(), ${founderSource.id}, ${founderSource.sourceLabel})
+                (${inserted.id}, ${founderId}, 'accepted', now(), ${founderSource.id}, ${founderSource.source_label})
         `;
         await sql`
             insert into public.fight_series_members (series_id, user_id, state, joined_at)
@@ -113,7 +106,8 @@ export async function readFounderChallengers(
 ): Promise<FounderChallengers> {
     const challengers = await database`
         select challenger.id as user_id, challenger.handle, challenger.display_name,
-            fight.id as fight_id, fight.state::text as state,
+            fight.id as fight_id,
+            case when series.paused_at is null then fight.state::text else 'left' end as state,
             least(
                 floor(extract(epoch from now() - fight.starts_at) / 86400)::integer + 1,
                 round(extract(epoch from fight.ends_at - fight.starts_at) / 86400)::integer

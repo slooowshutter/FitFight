@@ -139,3 +139,75 @@ as $$
             )
     );
 $$;
+
+-- Feed reload pings follow the same rule: a host is not pinged for his founder rounds.
+create or replace function private.broadcast_feed_changes()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+    changed jsonb;
+    changed_post_id uuid;
+    changed_fight_id uuid;
+    changed_app_wide boolean := false;
+    recipient uuid;
+begin
+    if tg_op = 'DELETE' then
+        changed := to_jsonb(old);
+    else
+        changed := to_jsonb(new);
+    end if;
+    if tg_table_name = 'fight_posts' then
+        changed_post_id := (changed->>'id')::uuid;
+        changed_app_wide := (changed->>'app_wide')::boolean;
+    else
+        changed_post_id := (changed->>'post_id')::uuid;
+        select p.app_wide into changed_app_wide
+        from public.fight_posts p where p.id = changed_post_id;
+    end if;
+    changed_fight_id := (changed->>'fight_id')::uuid;
+
+    for recipient in
+        with affected_fights as (
+            select changed_fight_id as id
+            union
+            select p.fight_id from public.fight_posts p where p.id = changed_post_id
+            union
+            select c.fight_id from public.fight_post_channels c where c.post_id = changed_post_id
+        ), visible_fights as (
+            select f.id from public.fights f
+            where f.id in (select a.id from affected_fights a)
+                or f.series_id in (
+                    select original.series_id from public.fights original
+                    where original.id in (select a.id from affected_fights a)
+                )
+        )
+        select m.user_id from public.fight_members m
+        join public.fights f on f.id = m.fight_id
+        where m.fight_id in (select v.id from visible_fights v)
+            and m.state in ('accepted', 'deferred', 'invited')
+            and m.user_id is distinct from f.host_id
+        union
+        select p.user_id from public.profiles p
+        where changed_app_wide and p.deleted_at is null
+        union
+        select (changed->>'user_id')::uuid
+        where tg_table_name = 'fight_membership_events'
+            and not exists (
+                select 1 from public.fights f
+                where f.id = changed_fight_id and f.host_id = (changed->>'user_id')::uuid
+            )
+        union
+        select (changed->>'blocker_id')::uuid where tg_table_name = 'feed_blocks'
+        union
+        select (changed->>'blocked_id')::uuid where tg_table_name = 'feed_blocks'
+    loop
+        if recipient is not null then
+            perform realtime.send('{}'::jsonb, 'feed_changed', 'fitfight:fights:' || recipient::text, true);
+        end if;
+    end loop;
+    return null;
+end;
+$$;

@@ -22,7 +22,7 @@ export async function recalculateFight(
     await database.begin("read write", async (sql) => {
         const fights = await sql`
             select state::text, starts_at::text, ends_at::text,
-                final_sync_grace_seconds, outcome_rule::text, stake_minor, default_goal_value::text
+                final_sync_grace_seconds, outcome_rule::text, stake_minor, default_goal_value::text, host_id
             from public.fights where id = ${fightId}
             for update
         `;
@@ -133,10 +133,12 @@ export async function recalculateFight(
         }
         if (nextState !== fight.state) {
             await sql`update public.fights set state = ${nextState} where id = ${fightId}`;
-            const notificationMembers = scoredMembers.map((member) => ({
-                user_id: member.user_id,
-                final_steps_complete: member.final_steps_complete,
-            }));
+            const notificationMembers = scoredMembers
+                .filter((member) => member.user_id !== fight.host_id)
+                .map((member) => ({
+                    user_id: member.user_id,
+                    final_steps_complete: member.final_steps_complete,
+                }));
             if (nextState === "awaiting_final_sync") {
                 await enqueueAwaitingFinalSyncNotifications(
                     sql,

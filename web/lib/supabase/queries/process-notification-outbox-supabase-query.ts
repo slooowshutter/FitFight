@@ -154,7 +154,7 @@ export async function processNotificationOutbox(
         }
 
         if (row.fight_host_id === intent.user_id) {
-            await markIntent(database, intent.id, "skipped", "founder_fight_host");
+            await markIntent(database, intent.id, "skipped", "superseded");
             result.skipped += 1;
             continue;
         }

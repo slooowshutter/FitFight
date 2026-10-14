@@ -1120,7 +1120,7 @@ paths:
                                                 days: { type: integer }
                                                 steps: { type: number }
                                                 founder_steps: { type: number }
-                                                state: { type: string }
+                                                state: { type: string, description: "Current round state, or left when the challenger left the series" }
                                                 wins: { type: integer }
                                                 losses: { type: integer }
                                                 draws: { type: integer }

@@ -545,7 +545,9 @@ async function saveMeasurements(
 
 /**
  * A founder fight's host never uploads its total. His score is the sum of his stored daily Steps
- * whose day fits inside the round, published through the same path as a phone upload.
+ * for the round's dates, published through the same path as a phone upload. Dates, not instants,
+ * so a day still counts while his phone is in another zone; the round is complete once its last
+ * date is.
  */
 export async function publishHostScores(
     sql: TransactionSql,
@@ -556,7 +558,9 @@ export async function publishHostScores(
     const totals = fightScoreTotalSchema.array().parse(await sql`
         with days as (
             select fight.id as fight_id, day.day, day.value, day.observed_through, day.updated_at,
-                least(day.ends_at, day.observed_through) as cutoff_at,
+                least(day.ends_at, day.observed_through, fight.ends_at) as cutoff_at,
+                day.day = (fight.ends_at at time zone fight.time_zone)::date - 1
+                    and day.observed_through >= day.ends_at as completes_round,
                 sum(day.value) over (partition by fight.id order by day.day)::bigint as steps
             from public.fights as fight
             join public.fight_members as member
@@ -564,7 +568,8 @@ export async function publishHostScores(
             join private.activity_metrics as day
                 on day.source_id = member.selected_source_id and day.scope = 'day'
                 and day.metric = 'steps'
-                and day.starts_at >= fight.starts_at and day.ends_at <= fight.ends_at
+                and day.day >= (fight.starts_at at time zone fight.time_zone)::date
+                and day.day < (fight.ends_at at time zone fight.time_zone)::date
             where fight.host_id = ${hostId}
                 and fight.state in ('live', 'awaiting_final_sync')
                 and member.state = 'accepted'
@@ -573,7 +578,8 @@ export async function publishHostScores(
                 and (${fightId}::uuid is null or fight.id = ${fightId}::uuid)
         )
         select fight.id as fight_id, fight.starts_at::text as starts_at, fight.ends_at::text as ends_at,
-            least(fight.ends_at, max(days.observed_through))::text as cutoff_at,
+            (case when bool_or(days.completes_round) then fight.ends_at
+                else least(fight.ends_at, max(days.observed_through)) end)::text as cutoff_at,
             max(days.steps)::integer as steps,
             jsonb_agg(jsonb_build_object(
                 'day', days.day::text, 'cutoff_at', days.cutoff_at, 'steps', days.steps

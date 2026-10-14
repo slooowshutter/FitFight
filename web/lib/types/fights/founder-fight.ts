@@ -8,6 +8,8 @@ export const founderUserIds: Record<EnvironmentName, string> = {
 };
 
 export const FOUNDER_FIGHT_DAYS = 30;
+/** Marc's phone stores its days in GMT. No daylight saving, so repeating rounds keep midnight bounds. */
+export const FOUNDER_FIGHT_TIME_ZONE = "GMT";
 
 export const founderChallengerSchema = z.object({
     user_id: z.string().uuid(),

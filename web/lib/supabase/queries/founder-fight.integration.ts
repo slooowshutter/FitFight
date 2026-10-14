@@ -15,7 +15,9 @@ import { joinFight } from "./join-fight-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
 import { mintNextRecurringFight } from "./mint-recurring-fight-supabase-query";
 import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
+import { updateFight } from "./update-fight-supabase-query";
 import { getProviderUploadContext } from "./provider-uploads-supabase-query";
+import { recalculateFight } from "./recalculate-fight-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
 process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
@@ -31,13 +33,13 @@ after(async () => {
 
 const zone = "GMT";
 
-async function uploadFounderSteps(founder: string, steps: Record<string, number>) {
+async function uploadFounderSteps(founder: string, steps: Record<string, number>, phoneZone = zone) {
     const collectedAt = new Date(Date.now() - 1_000).toISOString();
     return receiveHealthKitActivity(founder, healthKitActivityBatchSchema.parse({
         collected_at: collectedAt,
-        time_zone: zone,
+        time_zone: phoneZone,
         totals: Object.entries(steps).map(([day, value]) => {
-            const bounds = civilDayBounds(day, zone);
+            const bounds = civilDayBounds(day, phoneZone);
             return {
                 metric: "steps",
                 day,
@@ -70,8 +72,13 @@ test("a founder fight scores the founder from stored daily Steps and stays off h
     const yesterday = civilDayStamp(new Date(Date.now() - 86_400_000), zone);
     await uploadFounderSteps(founder, { [yesterday]: 7_000, [today]: 3_000 });
 
+    const founderLastSuccess = async () => (await database<{ at: string }[]>`
+        select last_success_at::text as at from public.data_sources where user_id = ${founder}
+    `)[0].at;
+    const syncedAt = await founderLastSuccess();
     await assert.rejects(createFounderFight(founder, founder, database), /cannot fight yourself/);
     const fight = await createFounderFight(challenger, founder, database);
+    assert.equal(await founderLastSuccess(), syncedAt, "a signup never looks like a founder sync");
     assert.equal(fight.state, "live");
     assert.deepEqual(await createFounderFight(challenger, founder, database), fight, "one series per user");
 
@@ -114,6 +121,7 @@ test("a founder fight scores the founder from stored daily Steps and stays off h
         select paused_at is not null as paused, owner_id from public.fight_series where id = ${round.series_id}
     `;
     assert.deepEqual(series, { paused: true, owner_id: challenger }, "leaving ends the series without a successor");
+    assert.deepEqual((await readFounderChallengers(founder, database)).challengers.map((row) => row.state), ["left"]);
 });
 
 test("the next founder round keeps its host", async (t) => {
@@ -136,3 +144,72 @@ test("the next founder round keeps its host", async (t) => {
     `;
     assert.deepEqual(next, { host_id: founder, members: 2 });
 });
+
+test("a founder round completes from his last date, even with his phone in another zone", async (t) => {
+    const [founder, challenger] = [randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where owner_id = ${challenger}`;
+        await database`delete from public.fight_series where owner_id = ${challenger}`;
+        await database`delete from auth.users where id in (${founder}, ${challenger})`;
+    });
+    await database`insert into auth.users (id) values (${founder}), (${challenger})`;
+    const travelZone = "Asia/Tokyo";
+    await uploadFounderSteps(founder, { [civilDayStamp(new Date(Date.now() - 3 * 86_400_000), zone)]: 1_000 });
+    const fight = await createFounderFight(challenger, founder, database);
+    const yesterday = civilDayStamp(new Date(Date.now() - 86_400_000), zone);
+    const bounds = civilDayBounds(yesterday, zone);
+    await database`
+        update public.fights set starts_at = ${bounds.startsAt.toISOString()}, ends_at = ${bounds.endsAt.toISOString()},
+            state = 'awaiting_final_sync'
+        where id = ${fight.id}
+    `;
+
+    await uploadFounderSteps(founder, { [yesterday]: 8_000 }, travelZone);
+    const [member] = await database<{ value: number; complete: boolean }[]>`
+        select current_value::float8 as value, final_steps_complete as complete from public.fight_members
+        where fight_id = ${fight.id} and user_id = ${founder}
+    `;
+    assert.deepEqual(member, { value: 8_000, complete: true });
+
+    await recalculateFight(fight.id, new Date(bounds.endsAt.getTime() + 2 * 86_400_000), database);
+    const [final] = await database<{ state: string; host_intents: number; challenger_intents: number }[]>`
+        select fight.state::text as state,
+            (select count(*)::int from private.notification_intents where fight_id = fight.id and user_id = ${founder}) as host_intents,
+            (select count(*)::int from private.notification_intents where fight_id = fight.id and user_id = ${challenger}) as challenger_intents
+        from public.fights as fight where fight.id = ${fight.id}
+    `;
+    assert.equal(final.state, "final");
+    assert.equal(final.host_intents, 0, "a founder round never queues a push for its host");
+    assert.ok(final.challenger_intents > 0);
+});
+
+test(
+    "the owner can rename a founder fight but not reschedule or open it",
+    // NOTE: once direct access closes, every service-role fight update fails on allow_score_correction.
+    { skip: env.SUPABASE_CLIENT_ACCESS_CLOSED && "service-role fight updates fail with direct access closed" },
+    async (t) => {
+        const [founder, challenger] = [randomUUID(), randomUUID()];
+        t.after(async () => {
+            await database`delete from public.fights where owner_id = ${challenger}`;
+            await database`delete from public.fight_series where owner_id = ${challenger}`;
+            await database`delete from auth.users where id in (${founder}, ${challenger})`;
+        });
+        await database`insert into auth.users (id) values (${founder}), (${challenger})`;
+        await uploadFounderSteps(founder, { [civilDayStamp(new Date(), zone)]: 1_000 });
+        const fight = await createFounderFight(challenger, founder, database);
+
+        await updateFight(challenger, fight.id, {
+            name: "Beat Marc",
+            visibility: "joinable",
+            recurring: false,
+            endsAt: new Date(Date.now() + 86_400_000).toISOString(),
+        }, admin, new Date(), database);
+        const [edited] = await database<{ name: string; days: number; visibility: string; recurring: boolean }[]>`
+            select fight.name, extract(day from fight.ends_at - fight.starts_at)::int as days,
+                series.visibility::text, series.recurring
+            from public.fights as fight join public.fight_series as series on series.id = fight.series_id
+            where fight.id = ${fight.id}
+        `;
+        assert.deepEqual(edited, { name: "Beat Marc", days: 30, visibility: "invite_only", recurring: true });
+    },
+);

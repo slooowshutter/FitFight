@@ -23,17 +23,21 @@ pushes, Feed, profile access and rivalry would fill with every challenger.
 `fight_series.host_id` and `fights.host_id` (copied to every round), with one series per
 user and host. Marc is an accepted member of every round, so older builds show a normal 1v1.
 The backend scores him from his stored daily Steps (`private.activity_metrics`, scope `day`):
-the days that fit inside the round, published through the same snapshot path as a phone
-upload. That runs for all his founder rounds whenever his phone's activity sync stores daily
-Steps, and once when a round is created. Rounds start at midnight in the zone of his daily
-rows (`GMT` on staging and production) and last 30 calendar days. The challenger owns the
-series.
+the sum of the round's dates, published through the same snapshot path as a phone upload.
+That runs for all his founder rounds whenever his phone's activity sync stores daily Steps,
+and once when a round is created. His score is complete once the round's last date is.
+Rounds run on GMT days (his phone stores GMT days; no daylight saving, so repeating rounds
+keep midnight bounds) and last 30 days. Matching dates rather than instants keeps every day
+counted while his phone is in another zone. The challenger owns the series and can rename
+it, but its schedule, visibility and repetition stay fixed; older Edit screens still send
+those fields, so the server ignores them instead of rejecting the save.
 
 - `POST /api/v1/founder-fight`: idempotent, one series per user, returns `{ id, state }`.
   The founder id per environment is in `web/lib/types/fights/founder-fight.ts`, resolved with
   `readEnvironment`.
 - `GET /api/v1/admin/founder-fights`: admin only. Each challenger's current round (day,
-  their Steps, Marc's Steps) and Marc's wins, losses and draws over finished rounds.
+  their Steps, Marc's Steps, or `left`) and Marc's wins, losses and draws over finished
+  rounds.
 - Founder rounds are left out of Marc's upload context, Steps sync check, snapshot, due-fight
   closing, live-update pings, reminders, daily status and pushes. They create no Main Feed
   visibility, Feed activity, tag or mention eligibility, current-opponent profile access,
@@ -46,8 +50,9 @@ series.
   1.1.3, 14 Oct, English and French.
 
 **Known limits:** Marc forfeits a round if his phone does not sync within the 24-hour final
-sync grace after it ends. Days must stay fixed-length in his zone; a daylight-saving zone
-would drop the first or last day from his score.
+sync grace after it ends. While his phone is in another zone, his days are that zone's
+local days. A new round shows Marc at 0 until his phone's next sync. A result appears at
+the challenger's next refresh, or when the grace ends.
 
 **Everybody fight on production is full:** read-only on 14 Oct, `PGG7` had 50 of 50
 accepted or deferred members (the cap), 11 more invited who cannot accept, and 81 profiles.
@@ -60,17 +65,31 @@ builds never call the new endpoints. For them a founder round is an ordinary 1v1
 own builds get fewer fight windows and fights, which they already handle. An owner leaving
 from an older build still sends a successor, which the server ignores for founder series.
 
-**Deployment order:** migration (additive columns, two replaced functions), then backend,
-then the app. No founder round exists until the new backend creates one, so an older
-backend instance never sees a `host_id`.
+**Deployment order:** migration (additive columns, three replaced trigger and policy
+functions), then backend, then the app. The new backend reads `host_id` in the snapshot,
+upload context, Steps sync, closer and outbox, so confirm the migration has applied before
+the backend promotes; both run from the same merge. No founder round exists until the new
+backend creates one, so an older backend instance never sees a `host_id`. Do not roll the
+backend back once founder rounds exist: older code expects Marc's phone to upload a total
+for each of them and would reject his Steps sync.
 
-**Verification (local):** web typecheck and unit tests passed. Against a disposable local
-Supabase with every migration: schema lint clean, the founder-fight integration tests pass
-(scoring from daily rows, rescoring on his activity sync, idempotency, his Steps sync with no
-founder totals, upload context, invite/join guards, admin list, leaving pauses the series,
-the next round keeps its host), plus the Feed, profile and admin exclusion cases. iOS
-simulator build of the FitFight scheme succeeded, and the onboarding state, localization and
-API contract checks passed. Not deployed; no staging or production check of the new code.
+**Verification (local):** web typecheck and all 449 unit tests passed. On a disposable
+local Supabase rebuilt from every migration, in CI's order: schema lint clean, build 113
+compatibility 1 of 1, pgTAP 316 of 316 (including `supabase/tests/founder_fights.sql`: no
+fight or Feed ping to the host, no Main post visibility through a founder round),
+`test:database` 104 of 105, then with direct access closed pgTAP 18 of 18 and
+`test:database` 103 of 105 with 1 skipped. The one failure in both runs, "every admin
+dashboard card and chart runs on the migrated schema", fails the same way with develop's code
+on that database (local clock skew), so CI decides it. The skipped case renames a founder
+fight; with direct access closed every service-role fight update already fails on
+`allow_score_correction`, which predates this change. The founder-fight integration tests
+cover scoring from daily rows, rescoring on his activity sync, completion with his phone in
+another zone, no push queued for him at the end of a round, idempotency, his Steps sync with
+no founder totals, his source left untouched by signups, the upload context, invite, join and
+edit guards, the admin list, leaving pausing the series and the next round keeping its host.
+The Feed, mention, push, profile and admin cases cover the exclusions. iOS simulator build of
+the FitFight scheme succeeded, and the onboarding state, localization and API contract checks
+passed. Not deployed; no staging or production check of the new code.
 
 ---
 

@@ -53,6 +53,18 @@ export async function updateFight(
         }
     }
 
+    if (fight.host_id) {
+        // A founder fight keeps its schedule and stays private. Edit screens send these on every save.
+        input = {
+            ...input,
+            visibility: undefined,
+            recurring: undefined,
+            startsAt: undefined,
+            endsAt: undefined,
+            timeZone: undefined,
+        };
+    }
+
     const removeIds = [...new Set(input.removeUserIds ?? [])];
     const inviteHandles = [
         ...new Set(

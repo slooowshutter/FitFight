@@ -1,5 +1,5 @@
 begin;
-select plan(6);
+select plan(8);
 
 -- Host (founder), challenger, and a friend who shares an ordinary fight with the host.
 insert into auth.users (id) values
@@ -49,6 +49,21 @@ where fight_id = 'a2000000-0000-4000-8000-000000000002';
 select ok(
     pg_temp.pings('a1000000-0000-4000-8000-000000000001') > (select host from before_pings),
     'the host is still pinged for an ordinary fight'
+);
+
+create temporary table before_feed as select
+    pg_temp.pings('a1000000-0000-4000-8000-000000000001') as host,
+    pg_temp.pings('a1000000-0000-4000-8000-000000000002') as challenger;
+insert into public.fight_posts (id, fight_id, author_id, body, audience, broadcast) values
+    ('a3000000-0000-4000-8000-000000000003', 'a2000000-0000-4000-8000-000000000001',
+        'a1000000-0000-4000-8000-000000000002', 'Inside the founder round', 'fight', false);
+select ok(
+    pg_temp.pings('a1000000-0000-4000-8000-000000000002') > (select challenger from before_feed),
+    'a founder round post pings the challenger''s Feed'
+);
+select is(
+    pg_temp.pings('a1000000-0000-4000-8000-000000000001'), (select host from before_feed),
+    'a founder round post never pings its host''s Feed'
 );
 
 insert into public.fight_posts (id, fight_id, author_id, body, audience, broadcast) values

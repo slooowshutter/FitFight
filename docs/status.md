@@ -6,6 +6,55 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Admin dashboard: Churn tab and local-time opens heatmap, prepared 14 Oct 2026
+
+Marc asked for churn numbers, weekly and monthly, with a trend and charts. He
+also asked for the opens heatmap in each person's time zone, counting people
+instead of opens.
+
+**Server:** a new `churn` section (Churn chip after Retention). A person churned
+when they were active in the 7 (or 30) complete days before the latest 7 (or
+30) and not active in the latest. Two meanings of active:
+
+- **App opens**, as Weekly and Monthly active users. Cards: Weekly churn,
+  Monthly churn, Weekly churned users, Monthly churned users. Charts: weekly and
+  monthly churn over time, weekly users gained and lost (New, Came back, and
+  Stopped below zero), and weekly churn for people in a live fight against
+  people with none.
+- **Phone syncs**, as Retention: a complete Apple Health step day. Cards: Weekly
+  and Monthly sync churn. Chart: both over time. A phone stops syncing when the
+  app is deleted or Health is turned off.
+
+Production deleted sync reports until 1 Oct and kept the last reports of people
+who left, so churn by app opens reads only periods from 2 Oct 2026: weekly
+numbers show from 16 Oct, monthly numbers from 1 Dec, and their comparisons a
+week (or 30 days) later. staging.fitfight.app pruned until it moved to newer
+code after 11 Oct, so staging reads high for a while. A returning phone uploads
+the days it missed, so older sync churn drops when people come back.
+
+The Engagement heatmap "When people open the app, last 30 days" now counts the
+people who opened the app at least once in each weekday and hour, in their own
+saved time zone (Paris when it is missing or invalid), instead of all opens in
+Paris time.
+
+**Compatibility:** additive `section` value in `contracts/openapi.yaml`. The
+response shape does not change, and there is no migration. The app draws chips,
+cards and charts from the payload, so builds from 30 Sep 2026 on show the tab
+with no app build. No release note (admin only).
+
+**Verification (local):** web typecheck and all 444 unit tests passed. The
+dashboard database test passed on Postgres 16 with all 64 migrations. It now
+adds a phone that stopped syncing and checks that Weekly sync churn counts it;
+it failed when churn ignored the latest week. A seeded copy with 11 people and
+known open and sync days gave the expected values: weekly churn 33.3% against
+100%, monthly churn 66.7% against 0%, sync churn 50%, gained and lost 1, 2 and
+-1, churn by fight 0% and 50%, and chart end points equal to the cards. The
+heatmap counted a person once per cell and moved a New York person to 06:00.
+
+**Live deployment:** Marc asked for a PR into `develop` on 14 Oct. Nothing is
+merged or deployed. A `preview` merge deploys the preview server, which serves
+both dashboard environments.
+
 ## Steps sync: fewer HealthKit reads, Steps-only history (prepared 14 Oct 2026)
 
 Marc asked for each day to be read once for all Fights, and for the app to stop

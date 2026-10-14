@@ -826,6 +826,207 @@ function definitions(
                 ],
             };
         }
+        case "churn": {
+            // NOTE: until 1 Oct 2026 servers deleted Health sync reports past 7 days or 100 per person,
+            // keeping the last reports of people who left. Churn by app opens reads only periods from
+            // 2 Oct on; earlier ones would read too high. Phone syncs (step days) were never deleted.
+            const openedFrom = sql`'2026-10-02'::date`;
+            const floor = sql`least(${w.start}::date - 60, ${w.today}::date - 90)`;
+            const opened = sql`
+                select distinct user_id, (at at time zone 'Europe/Paris')::date as day
+                from (${activitySince(sql`${floor}::timestamp at time zone 'Europe/Paris'`)}) as activity
+            `;
+            const synced = sql`
+                select distinct history.user_id, history.day from (${stepHistory(floor)}) as history
+                where history.day >= history.joined_day
+            `;
+            // People active in the `span` complete days before the latest `span` who were not active
+            // in the latest, as a share or a number, against the same `span` days earlier. A value
+            // whose first day is before `from` stays empty.
+            const churnCard = (days: AdminDashboardQueryFragment, span: number, share: boolean, from = sql`'-infinity'::date`) => {
+                const measure = (shift: number) => sql`
+                    case when ${w.today}::date - ${shift + 2 * span}::int >= ${from} then ${share
+                        ? sql`100.0 * count(*) filter (where e.shift = ${shift}::int and not e.stayed)
+                            / nullif(count(*) filter (where e.shift = ${shift}::int), 0)`
+                        : sql`count(*) filter (where e.shift = ${shift}::int and not e.stayed)::float8`} end
+                `;
+                return sql`
+                    select ${measure(0)} as value, ${measure(span)} as previous
+                    from (
+                        select a.user_id, k.shift,
+                            bool_or(a.day < ${w.today}::date - k.shift - ${span}::int) as was,
+                            bool_or(a.day >= ${w.today}::date - k.shift - ${span}::int) as stayed
+                        from (${days}) as a
+                        cross join (values (0), (${span}::int)) as k(shift)
+                        where a.day >= ${w.today}::date - k.shift - ${2 * span}::int and a.day < ${w.today}::date - k.shift
+                        group by a.user_id, k.shift
+                    ) as e
+                    where e.was
+                `;
+            };
+            // The same weekly and monthly churn, read on the complete days up to the end of each
+            // bucket. A bucket without a complete day yet is left out.
+            const churnLines = (days: AdminDashboardQueryFragment, from = sql`'-infinity'::date`) => sql`
+                with active as materialized (${days}),
+                ends as (
+                    select point.bucket, least(point.day, ${w.today}::date - 1) as day, span.series, span.position, span.days
+                    from (${samplePoints(sql, w)}) as point
+                    cross join (values ('Weekly churn', 1, 7), ('Monthly churn', 2, 30)) as span(series, position, days)
+                    where point.bucket < ${w.today}::date
+                        and least(point.day, ${w.today}::date - 1) - 2 * span.days + 1 >= ${from}
+                ),
+                flags as (
+                    select ends.bucket, ends.series, ends.position, a.user_id,
+                        bool_or(a.day <= ends.day - ends.days) as was, bool_or(a.day > ends.day - ends.days) as stayed
+                    from ends join active as a on a.day > ends.day - 2 * ends.days and a.day <= ends.day
+                    group by ends.bucket, ends.series, ends.position, a.user_id
+                )
+                select bucket::text as x, (100.0 * count(*) filter (where not stayed) / count(*))::float8 as y, series
+                from flags where was
+                group by bucket, series, position
+                order by position, bucket
+            `;
+            const kept = "App opens are complete from 2 Oct 2026";
+            return {
+                cards: [
+                    ...[
+                        { id: "weekly_churn", title: "Weekly churn", span: 7, share: true, starts: "16 Oct" },
+                        { id: "monthly_churn", title: "Monthly churn", span: 30, share: true, starts: "1 Dec" },
+                        { id: "weekly_churned", title: "Weekly churned users", span: 7, share: false, starts: "16 Oct" },
+                        { id: "monthly_churned", title: "Monthly churned users", span: 30, share: false, starts: "1 Dec" },
+                    ].map(({ id, title, span, share, starts }): AdminDashboardCardDefinition => {
+                        const before = `${span + 1} to ${2 * span} days ago`;
+                        const earlier = span === 7 ? "a week earlier" : "30 days earlier";
+                        return {
+                            id, title, unit: share ? "percent" : "count", better: false,
+                            note: `${share ? "Share" : "People"} who opened the app ${before} but not in the last ${span} days, vs ${earlier}.`,
+                            definition: `${share ? "The share" : "The number"} of people who opened the app ${before} and did not open it in the ${span} complete days before today, compared with ${earlier}. A background sync without an open does not count. ${kept}, so it shows from ${starts}.`,
+                            example: (r) => share
+                                ? `${r.format(r.value)} of the people who opened the app ${before} did not open it in the last ${span} days${r.against(earlier)}.`
+                                : `${r.count(r.value, "person", "people")} who opened the app ${before} did not open it in the last ${span} days${r.against(earlier)}.`,
+                            query: churnCard(opened, span, share, openedFrom),
+                        };
+                    }),
+                    ...[
+                        { id: "weekly_sync_churn", title: "Weekly sync churn", span: 7 },
+                        { id: "monthly_sync_churn", title: "Monthly sync churn", span: 30 },
+                    ].map(({ id, title, span }): AdminDashboardCardDefinition => {
+                        const before = `${span + 1} to ${2 * span} days ago`;
+                        const earlier = span === 7 ? "a week earlier" : "30 days earlier";
+                        return {
+                            id, title, unit: "percent", better: false,
+                            note: `Share whose phone synced steps ${before} but not in the last ${span} days, vs ${earlier}.`,
+                            definition: `The share of people whose phone synced Apple Health steps ${before} and synced no day in the ${span} complete days before today, compared with ${earlier}. A phone syncs in the background until the app is deleted or Health is turned off, so these people left, not just stopped opening the app. A phone that comes back uploads the days it missed, so people who return no longer count.`,
+                            example: (r) => `${r.format(r.value)} of the people whose phone synced steps ${before} synced none in the last ${span} days${r.against(earlier)}.`,
+                            query: churnCard(synced, span, true),
+                        };
+                    }),
+                ],
+                charts: [
+                    {
+                        id: "churn_rate", title: "Weekly and monthly churn", kind: "line", unit: "percent", x: "date",
+                        definition: `Weekly churn: of the people who opened the app in the 7 days before the last 7, the share who did not open it in the last 7. Monthly churn: the same with 30 days. Each point reads the complete days up to the end of its ${w.bucket}. ${kept}, so weekly points start on 15 Oct and monthly points on 30 Nov.`,
+                        example: (r) => {
+                            const weekly = r.at("Weekly churn");
+                            const monthly = r.at("Monthly churn");
+                            if (weekly === undefined) return null;
+                            return `Weekly churn was ${r.format(weekly)} ${r.when}${monthly === undefined ? "" : `, and monthly churn ${r.format(monthly)}`}.`;
+                        },
+                        note: `Stopped opening the app. Complete days up to the end of each ${w.bucket}. ${kept}.`,
+                        query: churnLines(opened, openedFrom),
+                    },
+                    {
+                        id: "users_gained_lost", title: "Weekly users gained and lost", kind: "bar", unit: "count", x: "date",
+                        definition: `People who opened the app in the 7 complete days up to the end of each ${w.bucket}, against the 7 days before. New: signed up in those 7 days. Came back: opened the app again after 7 days or more away. Stopped: opened it in the 7 days before, not in these 7, drawn below zero. ${kept}.`,
+                        example: (r) => {
+                            const fresh = r.at("New");
+                            const back = r.at("Came back");
+                            const lost = r.at("Stopped");
+                            if (fresh === undefined || back === undefined || lost === undefined) return null;
+                            const span = w.bucket === "day" ? "the 7 days up to then" : `the last 7 days of that ${w.bucket}`;
+                            return `${r.when[0].toUpperCase()}${r.when.slice(1)}, ${r.count(fresh, "new person", "new people")} and ${r.count(back, "person who came back", "people who came back")} opened the app in ${span}, and ${r.count(-lost, "person", "people")} stopped.`;
+                        },
+                        note: `The 7 complete days up to the end of each ${w.bucket} against the 7 before. Stopped is below zero.`,
+                        query: sql`
+                            with active as materialized (${opened}),
+                            ends as (
+                                select point.bucket, least(point.day, ${w.today}::date - 1) as day
+                                from (${samplePoints(sql, w)}) as point
+                                where point.bucket < ${w.today}::date
+                                    and least(point.day, ${w.today}::date - 1) - 13 >= ${openedFrom}
+                            ),
+                            flags as (
+                                select ends.bucket, ends.day, a.user_id,
+                                    bool_or(a.day > ends.day - 7) as opened, bool_or(a.day <= ends.day - 7) as was
+                                from ends join active as a on a.day > ends.day - 14 and a.day <= ends.day
+                                group by ends.bucket, ends.day, a.user_id
+                            ),
+                            counted as (
+                                select f.bucket,
+                                    count(*) filter (where f.opened and not f.was and p.joined_day > f.day - 7) as fresh,
+                                    count(*) filter (where f.opened and not f.was and p.joined_day <= f.day - 7) as back,
+                                    count(*) filter (where f.was and not f.opened) as lost
+                                from flags as f join (${profiles}) as p using (user_id)
+                                group by f.bucket
+                            )
+                            select counted.bucket::text as x, value.y::float8 as y, value.series
+                            from counted cross join lateral (values
+                                (1, 'New', counted.fresh), (2, 'Came back', counted.back), (3, 'Stopped', -counted.lost)
+                            ) as value(position, series, y)
+                            order by value.position, counted.bucket
+                        `,
+                    },
+                    {
+                        id: "sync_churn_rate", title: "Weekly and monthly sync churn", kind: "line", unit: "percent", x: "date",
+                        definition: `Weekly sync churn: of the people whose phone synced Apple Health steps in the 7 days before the last 7, the share whose phone synced no day in the last 7. Monthly: the same with 30 days. Each point reads the complete days up to the end of its ${w.bucket}. A phone stops syncing when the app is deleted or Health is turned off. A phone that comes back uploads the days it missed, so older points drop when people return.`,
+                        example: (r) => {
+                            const weekly = r.at("Weekly churn");
+                            const monthly = r.at("Monthly churn");
+                            if (weekly === undefined) return null;
+                            return `Weekly sync churn was ${r.format(weekly)} ${r.when}${monthly === undefined ? "" : `, and monthly sync churn ${r.format(monthly)}`}.`;
+                        },
+                        note: `Phone stopped syncing steps: app deleted or Health off. Complete days up to the end of each ${w.bucket}.`,
+                        query: churnLines(synced),
+                    },
+                    {
+                        id: "churn_by_fight", title: "Weekly churn, in a fight or not", kind: "bar", unit: "percent", x: "label",
+                        definition: `People who opened the app 8 to 14 days ago, split by whether they were in a live fight when the last 7 complete days started. Each bar is the share who did not open the app in those 7 days. The app-wide Fight and suggested Fights do not count. ${kept}, so it shows from 16 Oct.`,
+                        example: (r) => {
+                            const fighting = r.row("In a live fight");
+                            const idle = r.row("No live fight");
+                            if (fighting === undefined || idle === undefined) return null;
+                            return `${r.format(fighting)} of the people in a live fight stopped opening the app in the last 7 days, against ${r.format(idle)} of the people with no live fight.`;
+                        },
+                        note: "Opened the app 8 to 14 days ago. Fight status when the last 7 days started.",
+                        query: sql`
+                            with people as (
+                                select a.user_id, bool_or(a.day >= ${w.today}::date - 7) as stayed
+                                from (${opened}) as a
+                                where a.day >= ${w.today}::date - 14 and a.day < ${w.today}::date
+                                group by a.user_id
+                                having bool_or(a.day < ${w.today}::date - 7)
+                            ),
+                            grouped as (
+                                select people.stayed, exists (
+                                    select 1 from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
+                                    where m.user_id = people.user_id and m.state = 'accepted'
+                                        and f.state not in ('draft', 'cancelled')
+                                        and f.starts_at <= (${w.today}::date - 7)::timestamp at time zone 'Europe/Paris'
+                                        and f.ends_at > (${w.today}::date - 7)::timestamp at time zone 'Europe/Paris'
+                                ) as fighting
+                                from people
+                            )
+                            select band.x, (100.0 * count(*) filter (where not grouped.stayed) / count(*))::float8 as y
+                            from (values (1, 'In a live fight', true), (2, 'No live fight', false)) as band(position, x, fighting)
+                            join grouped on grouped.fighting = band.fighting
+                            where ${w.today}::date - 14 >= ${openedFrom}
+                            group by band.position, band.x
+                            order by band.position
+                        `,
+                    },
+                ],
+            };
+        }
         case "engagement": {
             // Fixed 120 days, so these don't move with the chart period.
             const seen = activitySince(sql`${ago(120)}`);
@@ -1073,16 +1274,20 @@ function definitions(
                     },
                     {
                         id: "opens_heatmap", title: "When people open the app, last 30 days", kind: "heatmap", unit: "count", x: "label",
-                        definition: "App opens in the last 30 days by weekday and hour, Paris time. The darker the cell, the more opens.",
+                        definition: "Each cell is the number of different people who opened the app at least once on that weekday at that hour in the last 30 days, in their own time zone. Someone who opens it often counts once per cell. Paris time when a person has no valid time zone. The darker the cell, the more people.",
                         example: (r) => (r.peak && r.peak.value > 0
-                            ? `The busiest hour is ${r.peak.y} ${r.peak.x}:00 Paris time, with ${r.count(r.peak.value, "open", "opens")} in 30 days.`
+                            ? `The busiest time is ${r.peak.y} ${r.peak.x}:00 local time: ${r.count(r.peak.value, "person", "people")} opened the app then in the last 30 days.`
                             : null),
-                        note: "Opens by weekday and hour, Paris time.",
+                        note: "People who opened the app, by weekday and hour in their own time zone.",
                         query: sql`
-                            with counted as (
-                                select extract(isodow from o.at at time zone 'Europe/Paris')::int as d,
-                                    extract(hour from o.at at time zone 'Europe/Paris')::int as h, count(*) as n
+                            with zones as (select name from pg_timezone_names),
+                            counted as (
+                                select extract(isodow from local.at)::int as d, extract(hour from local.at)::int as h,
+                                    count(distinct o.user_id) as n
                                 from (${opens}) as o
+                                join public.profiles as p on p.user_id = o.user_id
+                                left join zones on zones.name = p.time_zone
+                                cross join lateral (select o.at at time zone coalesce(zones.name, 'Europe/Paris') as at) as local
                                 where o.at >= ${ago(30)} and o.at < ${w.now}
                                 group by 1, 2
                             )

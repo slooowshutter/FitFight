@@ -32,7 +32,7 @@ It caches the last answer per API address and keeps it when the call fails.
 ## Admin dashboard (prepared 29 Sep 2026)
 
 `GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>[&bucket=day|week|month]` feeds the Admin tab
-in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement`,
+in Profile -> Dashboard. Sections: `overview`, `retention`, `churn`, `users`, `engagement`,
 `steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
 query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
@@ -70,6 +70,15 @@ query only marks its own tile with `Query failed: ...`.
   `foreground`, so their opens include those actions. Sync
   history is kept since 29 Sep (never-delete rule), so engagement history grows
   from that date; earlier rows were pruned after 7 days.
+- **Churn (14 Oct 2026):** a person churned when they were active in the 7 (or
+  30) complete Paris days before the latest 7 (or 30) and not active in the
+  latest. Two meanings of active: an app open (as above), or a phone sync, which
+  is a complete Apple Health step day as in Retention. Charts read the same
+  windows at the end of each bucket. Churn by app opens reads only periods from
+  2 Oct 2026, because production pruned sync reports until 1 Oct and kept the
+  last reports of people who left; weekly numbers show from 16 Oct, monthly from
+  1 Dec. A returning phone uploads the days it missed, so older sync churn drops
+  when people come back.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
   day. "Health history" cards include imported days before signup.

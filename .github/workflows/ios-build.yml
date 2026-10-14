@@ -34,6 +34,7 @@ on:
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
             - "scripts/test_trophy_streak.py"
+            - "scripts/test_past_rounds.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -71,6 +72,7 @@ on:
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
             - "scripts/test_trophy_streak.py"
+            - "scripts/test_past_rounds.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -189,6 +191,9 @@ jobs:
             - name: Verify series trophy streaks
               run: python3 scripts/test_trophy_streak.py
 
+            - name: Verify Past lists every finished round
+              run: python3 scripts/test_past_rounds.py
+
             - name: Verify native API contracts
               run: |
                   swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
@@ -211,6 +216,24 @@ jobs:
             - name: Verify Profile refresh after HealthKit upload
               run: python3 scripts/test_profile_refresh.py
 
+            - name: Read Xcode version
+              id: xcode
+              run: echo "build=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+            # Checkout gives every app file a new timestamp, so the app always recompiles.
+            # This cache only skips downloading and compiling the Swift packages.
+            # Built apps stay out because Xcode never removes deleted resources from them.
+            - name: Restore Swift package build cache
+              id: build-cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      build
+                      !build/Build/Products/*/*.app
+                      !build/Build/Products/*/*.appex
+                  key: simulator-build-${{ steps.xcode.outputs.build }}-${{ hashFiles('FitFight.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+                  restore-keys: simulator-build-${{ steps.xcode.outputs.build }}-
+
             - name: Build for iOS Simulator
               run: |
                   set -o pipefail
@@ -224,7 +247,19 @@ jobs:
                     CODE_SIGNING_REQUIRED=YES \
                     CODE_SIGN_STYLE=Manual \
                     CODE_SIGN_IDENTITY=- \
+                    COMPILER_INDEX_STORE_ENABLE=NO \
                     build
+
+            # Only pushes save, so pull requests share the develop, preview, or main cache.
+            - name: Save Swift package build cache
+              if: github.event_name == 'push' && steps.build-cache.outputs.cache-hit != 'true'
+              uses: actions/cache/save@v4
+              with:
+                  path: |
+                      build
+                      !build/Build/Products/*/*.app
+                      !build/Build/Products/*/*.appex
+                  key: ${{ steps.build-cache.outputs.cache-primary-key }}
 
             - name: Render limited companion previews
               if: github.ref == 'refs/heads/exclusive-animal-avatars'

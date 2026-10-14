@@ -31,7 +31,7 @@ final class SessionStore: ObservableObject {
     private static let needsSuggestedPrefix = "ff.onboarding.needsSuggested."
     private static let firstFightPrefix = "ff.onboarding.firstFight."
     private static let profileCachePrefix = "fitfight.profile."
-    private static let adminHandle = "marc"
+    private static let adminHandles = ["marc", "rad"]
 
     var isSignedIn: Bool { authSession != nil || screenshotSignedIn }
 
@@ -45,13 +45,15 @@ final class SessionStore: ObservableObject {
         guard !screenshotSignedIn, isSignedIn, let profile,
               authSession?.user.id == profile.userId else { return nil }
         if let data = UserDefaults.standard.data(forKey: Self.firstFightPrefix + profile.userId.uuidString),
-           let progress = try? JSONDecoder().decode(FirstFightOnboarding.self, from: data) {
+           var progress = try? JSONDecoder().decode(FirstFightOnboarding.self, from: data) {
+            // Before 14 Oct 2026 the companion came before Health, so that saved page still needs Health.
+            if progress.order == nil && progress.page == .companion { progress.page = .health }
             return progress
         }
         if needsOnboarding { return FirstFightOnboarding() }
         // Resume incomplete setup from older builds without enrolling completed accounts again.
         if UserDefaults.standard.bool(forKey: Self.needsHealthKey) {
-            return FirstFightOnboarding(page: profile.companionId == nil ? .companion : .health)
+            return FirstFightOnboarding(page: .health)
         }
         if UserDefaults.standard.bool(forKey: Self.needsNotificationKey)
             || UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
@@ -62,6 +64,8 @@ final class SessionStore: ObservableObject {
     }
 
     func saveFirstFightOnboarding(_ progress: FirstFightOnboarding, userID: UUID) {
+        var progress = progress
+        progress.order = 2
         guard authSession?.user.id == userID,
               let data = try? JSONEncoder().encode(progress) else { return }
         UserDefaults.standard.set(data, forKey: Self.firstFightPrefix + userID.uuidString)
@@ -114,9 +118,13 @@ final class SessionStore: ObservableObject {
     }
 
     var isFitFightAdmin: Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        // Marc's Simulator always shows admin tools; App Store screenshots never do.
+        if !ScreenshotExport.isEnabled { return true }
+        #endif
         guard !screenshotSignedIn else { return false }
         guard let handle = profile?.handle else { return false }
-        return handle.caseInsensitiveCompare(Self.adminHandle) == .orderedSame
+        return Self.adminHandles.contains { handle.caseInsensitiveCompare($0) == .orderedSame }
     }
 
     func freshAccessToken() async throws -> String {
@@ -375,7 +383,7 @@ final class SessionStore: ObservableObject {
             }
             UserDefaults.standard.set(true, forKey: Self.needsSuggestedPrefix + userId.uuidString)
             var progress = firstFightOnboarding ?? FirstFightOnboarding()
-            progress.page = .companion
+            progress.page = .health
             saveFirstFightOnboarding(progress, userID: userId)
             cacheProfile(updated, for: userId)
         } catch is CancellationError {
@@ -397,21 +405,6 @@ final class SessionStore: ObservableObject {
         guard let userId = authSession?.user.id else { throw HandleError.notSignedIn }
         let token = try await freshAccessToken()
         let updated = try await api.updateProfile(handle: handle, displayName: displayName, timeZone: timeZone.identifier, accessToken: token)
-        try Task.checkCancellation()
-        guard authSession?.user.id == userId else { throw CancellationError() }
-        cacheProfile(updated, for: userId)
-    }
-
-    func setAvatar(_ media: FitFightMedia) async throws {
-        guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
-        guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
-            throw HandleError.notSignedIn
-        }
-        let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(
-            avatarMediaId: media.id,
-            accessToken: token
-        )
         try Task.checkCancellation()
         guard authSession?.user.id == userId else { throw CancellationError() }
         cacheProfile(updated, for: userId)
@@ -488,7 +481,7 @@ final class SessionStore: ObservableObject {
                     continue
                 }
                 if let previousId = authSession?.user.id, previousId != session.user.id {
-                    CrashReporting.reset()
+                    Analytics.reset()
                 }
                 profileUnavailable = false
                 if let data = UserDefaults.standard.data(
@@ -506,7 +499,7 @@ final class SessionStore: ObservableObject {
             } else {
                 // A nil initial session is signed out; reset crash identity only after a real session is dropped.
                 if authSession != nil {
-                    CrashReporting.reset()
+                    Analytics.reset()
                 }
                 authSession = nil
                 profile = nil
@@ -559,7 +552,7 @@ final class SessionStore: ObservableObject {
         authSession = nil
         profile = nil
         profileUnavailable = false
-        CrashReporting.reset()
+        Analytics.reset()
         for key in [Self.handleChosenKey, Self.needsHealthKey, Self.needsNotificationKey, Self.needsRequestsKey] {
             UserDefaults.standard.removeObject(forKey: key)
         }

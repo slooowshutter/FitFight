@@ -111,6 +111,12 @@ struct APIContractTests {
         let releasedProfile = try decoder.decode(Build201Profile.self, from: limitedData)
         precondition(limitedCompanion.companionId == "limited-pangolin")
         precondition(releasedProfile.companionId == "limited-pangolin" && releasedProfile.companionPrompt == nil)
+        // The second Specials roster reaches builds that only know the first one; the id stays an opaque string.
+        withCompanionJSON["companion_id"] = "limited-black-panther"
+        let rosterData = try JSONSerialization.data(withJSONObject: withCompanionJSON)
+        let rosterCompanion = try decoder.decode(FitFightProfile.self, from: rosterData)
+        let rosterReleased = try decoder.decode(Build201Profile.self, from: rosterData)
+        precondition(rosterCompanion.companionId == "limited-black-panther" && rosterReleased.companionId == "limited-black-panther")
         withCompanionJSON["companion_id"] = "custom"
         withCompanionJSON["companion_prompt"] = "a cream frenchie with gold sunglasses"
         let customCompanion = try decoder.decode(FitFightProfile.self,
@@ -185,11 +191,21 @@ struct APIContractTests {
         precondition(dashboard.cards[0].higherIsBetter == true && dashboard.cards[0].previous == 110)
         precondition(dashboard.cards[1].previous == nil && dashboard.cards[1].higherIsBetter == nil,
                      "Cards without a comparison or a direction remain decodable")
+        precondition(dashboard.cards[0].example == "FitFight has 123 users now, against 110 a week ago.")
+        precondition(dashboard.cards[1].definition == nil && dashboard.cards[1].example == nil,
+                     "Cards from servers before 11 Oct 2026 have no texts")
         precondition(dashboard.charts[0].kind == "line" && dashboard.charts[0].xKind == "date")
+        precondition(dashboard.bucket == "day" && dashboard.charts[0].example == "6 people signed up on Mon 28 Sep.")
+        precondition(dashboard.charts[1].definition == nil && dashboard.charts[1].example == nil,
+                     "Charts from servers before 10 Oct 2026 have no texts")
         precondition(!dashboard.charts[0].series[0].previous && dashboard.charts[0].series[1].previous)
         precondition(dashboard.charts[1].xKind == "label" && dashboard.charts[1].cells.isEmpty)
         precondition(dashboard.charts[2].kind == "heatmap" && dashboard.charts[2].cells.count == 6)
-        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard passed")
+        let syncs = try serverDecoder.decode(FitFightRecentSyncs.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("admin-recent-syncs.json")))
+        precondition(syncs.people.map(\.handle) == ["marc", "lea"] && syncs.people[1].displayName == "Léa")
+        precondition(syncs.people[0].lastSyncedAt == parseServerDate("2026-10-12T09:15:00Z"))
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, recent syncs passed")
     }
 }
 

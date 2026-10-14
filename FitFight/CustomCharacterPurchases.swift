@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import PostHog
 import StoreKit
 
 struct CustomCharacterStoreSnapshot: Decodable {
@@ -7,6 +8,10 @@ struct CustomCharacterStoreSnapshot: Decodable {
     let environment: String
     let purchasesEnabled: Bool
     let productId: String
+    /// Characters this person can still create without paying. A server without the field means none.
+    let freeCharacters: Int
+    /// Referred, and the referral character waits for this account's first Apple Health steps. Missing means no.
+    let referralPending: Bool
     let characters: [CustomCharacterProgress]
 
     enum CodingKeys: String, CodingKey {
@@ -14,12 +19,44 @@ struct CustomCharacterStoreSnapshot: Decodable {
         case appAccountToken = "app_account_token"
         case purchasesEnabled = "purchases_enabled"
         case productId = "product_id"
+        case freeCharacters = "free_characters"
+        case referralPending = "referral_pending"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        appAccountToken = try container.decode(UUID.self, forKey: .appAccountToken)
+        environment = try container.decode(String.self, forKey: .environment)
+        purchasesEnabled = try container.decode(Bool.self, forKey: .purchasesEnabled)
+        productId = try container.decode(String.self, forKey: .productId)
+        freeCharacters = try container.decodeIfPresent(Int.self, forKey: .freeCharacters) ?? 0
+        referralPending = try container.decodeIfPresent(Bool.self, forKey: .referralPending) ?? false
+        characters = try container.decode([CustomCharacterProgress].self, forKey: .characters)
     }
 }
 
 struct CustomCharacterProgress: Decodable, Identifiable {
     enum Status: String, Decodable { case ready, generating, retryable, needsSupport = "needs_support", complete, refunded }
     enum Stage: String, Decodable { case portrait, fitness }
+    /// The detailed step. `status` keeps the values older builds decode.
+    enum Phase: String, Decodable {
+        case ready, portraits, choosing, poses, complete, retryable, refunded
+        case needsSupport = "needs_support"
+    }
+
+    struct Candidate: Decodable, Identifiable {
+        enum Status: String, Decodable { case pending, completed, failed, needsSupport = "needs_support" }
+        let id: UUID
+        let slot: Int
+        let status: Status
+        let imageURL: URL?
+        let selected: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case id, slot, status, selected
+            case imageURL = "image_url"
+        }
+    }
 
     let id: UUID
     let description: String?
@@ -27,11 +64,45 @@ struct CustomCharacterProgress: Decodable, Identifiable {
     let status: Status
     let requestID: UUID?
     let pollAfterSeconds: Int?
+    let phase: Phase
+    /// The chosen portrait, or nil until one is chosen.
+    let portraitURL: URL?
+    /// The three portrait choices. Characters bought before the choice existed have none.
+    let candidates: [Candidate]
+
+    /// Finished portraits the owner can pick from.
+    var candidateURLs: [URL] { candidates.compactMap { $0.status == .completed ? $0.imageURL : nil } }
 
     enum CodingKeys: String, CodingKey {
-        case id, description, stage, status
+        case id, description, stage, status, phase, candidates
         case requestID = "request_id"
         case pollAfterSeconds = "poll_after_seconds"
+        case portraitURL = "portrait_url"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        stage = try container.decodeIfPresent(Stage.self, forKey: .stage)
+        status = try container.decode(Status.self, forKey: .status)
+        requestID = try container.decodeIfPresent(UUID.self, forKey: .requestID)
+        pollAfterSeconds = try container.decodeIfPresent(Int.self, forKey: .pollAfterSeconds)
+        portraitURL = try container.decodeIfPresent(URL.self, forKey: .portraitURL)
+        candidates = try container.decodeIfPresent([Candidate].self, forKey: .candidates) ?? []
+        // A server without the phase field still describes every legacy step through status and stage.
+        if let phase = try? container.decodeIfPresent(Phase.self, forKey: .phase) {
+            self.phase = phase
+        } else {
+            switch status {
+            case .ready: phase = .ready
+            case .generating: phase = stage == .fitness ? .poses : .portraits
+            case .retryable: phase = .retryable
+            case .needsSupport: phase = .needsSupport
+            case .complete: phase = .complete
+            case .refunded: phase = .refunded
+            }
+        }
     }
 }
 
@@ -47,6 +118,12 @@ struct CustomCharacterClaim: Decodable {
 struct CustomCharacterAdvanceBody: Encodable {
     let description: String?
     let retry: Bool?
+    let choosePortrait: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case description, retry
+        case choosePortrait = "choose_portrait"
+    }
 }
 
 @MainActor
@@ -57,20 +134,49 @@ final class CustomCharacterPurchases: ObservableObject {
     @Published private(set) var pendingPurchase = false
     @Published var message = ""
 
+    /// Completed characters this person has already opened; the rest show as Ready.
+    @Published private var seenReady: Set<UUID> = []
+
     private let api = FitFightAPI()
     private var ownerID: UUID?
     private var processing: Set<UInt64> = []
+    /// Kept until the server answers, so tapping again after a lost answer cannot use a second free character.
+    private var freeClaimKey: UUID?
+
+    /// Characters or Specials this person can still get without paying.
+    var freeCharacters: Int { snapshot?.freeCharacters ?? 0 }
+    /// Referred, and the referral character waits for this account's first Apple Health steps.
+    var referralPending: Bool { snapshot?.referralPending ?? false }
+
+    /// Characters the server is still drawing, waiting for a portrait choice, or stuck on a failure.
+    var inProgress: [CustomCharacterProgress] {
+        snapshot?.characters.filter { [.portraits, .choosing, .poses, .retryable, .needsSupport].contains($0.phase) } ?? []
+    }
+
+    /// Finished characters this person has not opened yet.
+    var unseenReady: [CustomCharacterProgress] {
+        snapshot?.characters.filter { $0.phase == .complete && !seenReady.contains($0.id) } ?? []
+    }
 
     private func draftKey(_ userID: UUID) -> String { "ff.character.draft.\(userID.uuidString)" }
+    private func seenKey(_ userID: UUID) -> String { "ff.character.seen.\(userID.uuidString)" }
+
+    func markReadySeen() {
+        guard let userID = ownerID else { return }
+        seenReady.formUnion(snapshot?.characters.filter { $0.phase == .complete }.map(\.id) ?? [])
+        UserDefaults.standard.set(seenReady.map(\.uuidString), forKey: seenKey(userID))
+    }
     private func pendingKey(_ userID: UUID) -> String { "ff.character.pending.\(userID.uuidString)" }
     private func pendingSinceKey(_ userID: UUID) -> String { "ff.character.pending.since.\(userID.uuidString)" }
 
     func observe(session: SessionStore) async {
         ownerID = session.profile?.userId
         snapshot = nil
+        freeClaimKey = nil
         product = nil
         message = ""
         pendingPurchase = false
+        seenReady = []
         guard let userID = ownerID else { return }
         pendingPurchase = UserDefaults.standard.bool(forKey: pendingKey(userID))
         let updates = Task {
@@ -102,6 +208,14 @@ final class CustomCharacterPurchases: ObservableObject {
         try Task.checkCancellation()
         guard userID == ownerID, session.profile?.userId == userID else { throw CancellationError() }
         snapshot = loaded
+        if let userID {
+            if let stored = UserDefaults.standard.stringArray(forKey: seenKey(userID)) {
+                seenReady = Set(stored.compactMap(UUID.init(uuidString:)))
+            } else {
+                // Characters finished before this screen existed were already seen.
+                markReadySeen()
+            }
+        }
         if loaded.purchasesEnabled && product == nil {
             do {
                 let products = try await Product.products(for: [loaded.productId])
@@ -132,6 +246,7 @@ final class CustomCharacterPurchases: ObservableObject {
             switch result {
             case .success(let verified):
                 _ = try await deliver(verified, session: session)
+                PostHogSDK.shared.capture("purchase_completed", properties: ["product": "custom_character"])
             case .userCancelled:
                 UserDefaults.standard.removeObject(forKey: draftKey(userID))
                 UserDefaults.standard.removeObject(forKey: pendingKey(userID))
@@ -154,6 +269,28 @@ final class CustomCharacterPurchases: ObservableObject {
         } catch { message = error.localizedDescription }
     }
 
+    /// Uses one free character. The portraits start in the background, so the caller can move on at once.
+    func claimFree(description: String, session: SessionStore) async throws {
+        let prompt = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Callers move on only after a claim, so every early exit throws.
+        guard !isBusy, !prompt.isEmpty, prompt.count <= 1000,
+              let userID = ownerID, userID == session.profile?.userId else { throw CancellationError() }
+        isBusy = true
+        defer { isBusy = false }
+        let key = freeClaimKey ?? UUID()
+        freeClaimKey = key
+        let claim = try await api.claimFreeCustomCharacter(
+            description: prompt, idempotencyKey: key, accessToken: try await session.freshAccessToken()
+        )
+        guard ownerID == userID, session.profile?.userId == userID else { throw CancellationError() }
+        freeClaimKey = nil
+        PostHogSDK.shared.capture("free_character_claimed")
+        // The character exists now; a failed reload must not make the caller think it does not.
+        try? await refresh(session: session)
+        // Starts the portraits now; if this fails, the server starts them within a few minutes.
+        Task { _ = try? await advance(claim.purchaseID, session: session) }
+    }
+
     func advance(_ id: UUID, description: String? = nil, retry: Bool = false, session: SessionStore) async throws -> CustomCharacterProgress {
         guard let userID = ownerID, userID == session.profile?.userId else { throw CancellationError() }
         let result = try await api.advanceCustomCharacter(
@@ -165,6 +302,17 @@ final class CustomCharacterPurchases: ObservableObject {
         if result.status != .ready {
             UserDefaults.standard.removeObject(forKey: draftKey(userID))
         }
+        try await refresh(session: session)
+        return result
+    }
+
+    func choose(_ id: UUID, candidate: UUID, session: SessionStore) async throws -> CustomCharacterProgress {
+        guard let userID = ownerID, userID == session.profile?.userId else { throw CancellationError() }
+        let result = try await api.chooseCustomCharacterPortrait(
+            id: id, candidateID: candidate, accessToken: try await session.freshAccessToken()
+        )
+        try Task.checkCancellation()
+        guard ownerID == userID, session.profile?.userId == userID else { throw CancellationError() }
         try await refresh(session: session)
         return result
     }
@@ -226,8 +374,11 @@ final class CustomCharacterPurchases: ObservableObject {
         }
         guard processing.insert(transaction.id).inserted else { return nil }
         defer { processing.remove(transaction.id) }
+        // The server saves the description with the purchase, so drawing continues even if the app closes now.
+        let prompt = UserDefaults.standard.string(forKey: draftKey(userID))
         let claim = try await api.claimCustomCharacter(
             signedTransaction: result.jwsRepresentation,
+            description: prompt,
             accessToken: try await session.freshAccessToken()
         )
         try Task.checkCancellation()
@@ -235,10 +386,13 @@ final class CustomCharacterPurchases: ObservableObject {
         await transaction.finish()
         UserDefaults.standard.removeObject(forKey: pendingKey(userID))
         pendingPurchase = false
+        if !claim.refunded, prompt != nil {
+            UserDefaults.standard.removeObject(forKey: draftKey(userID))
+        }
         try await refresh(session: session)
-        if !claim.refunded, let prompt = UserDefaults.standard.string(forKey: draftKey(userID)) {
-            do { _ = try await advance(claim.purchaseID, description: prompt, session: session) }
-            catch { message = error.localizedDescription }
+        if !claim.refunded, prompt != nil {
+            // Starts the portraits now; if this fails, the server starts them within a few minutes.
+            _ = try? await advance(claim.purchaseID, session: session)
         }
         return claim
     }

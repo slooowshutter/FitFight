@@ -161,6 +161,28 @@ test("transient status failure is not settlement and does not block the next kno
     assert.deepEqual(result, { checked: 1, settled: 1 });
 });
 
+test("a paid portrait that settles advances its character in the same run", async () => {
+    const purchaseId = "33333333-3333-4333-8333-333333333333";
+    const advanced: string[] = [];
+    const result = await reconcileAiRuns({
+        due: async () => [{ ...pendingRequest(), resource_id: purchaseId }, pendingRequest(userId)],
+        read: async (_owner, id) => ({
+            request_id: id,
+            workflow: "avatar",
+            status: "completed",
+            data: { image_url: "https://cdn.tryblend.ai/avatar.png" },
+        }),
+        paidDue: async () => [],
+        paidAdvance: async (_owner, id) => {
+            advanced.push(id);
+            if (advanced.length === 1) throw new ApiError(409, "ai_in_progress", "Busy");
+            throw new Error("Unexpected second advance");
+        },
+    });
+    assert.deepEqual(advanced, [purchaseId]);
+    assert.deepEqual(result, { checked: 2, settled: 2 });
+});
+
 test("allowance and operator routes require authentication; cron cannot be called with a user token", async () => {
     setAiHttpLogWriter(async () => {});
     setServerErrorLogWriter(async () => {});

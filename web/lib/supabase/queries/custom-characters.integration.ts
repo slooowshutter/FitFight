@@ -11,13 +11,15 @@ import {
     recordCustomCharacterTransaction,
     prepareCustomCharacterStage,
     dueCustomCharacterPurchases,
+    chooseCustomCharacterPortrait,
+    claimCustomCharacterPush,
+    claimFreeCustomCharacter,
+    giftFreeCharacters,
 } from "./custom-characters-supabase-query";
 import { readSpecialStore } from "./specials-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
 process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";
-process.env.APPLE_SPECIALS_ENABLED = "true";
-process.env.APPLE_CUSTOM_CHARACTERS_ENABLED = "true";
 const database = postgres(env.DATABASE_URL, { max: 5 });
 after(() => database.end());
 const version = { workflowId: "paid-character-test", versionId: "published-test" };
@@ -124,6 +126,9 @@ test("each verified consumable funds exactly one recoverable portrait and five-i
     }, {}, database);
     assert.equal((await readCustomCharacterStore(owner, database)).characters[0].status, "complete");
     assert.equal((await readAiLibrary(owner, database)).find((item) => item.request_id === fitnessRun.request.id)?.images.length, 5);
+    // A finished character stays due only until its ready push is claimed.
+    assert.equal((await dueCustomCharacterPurchases(database)).some((item) => item.id === first.purchase_id), true);
+    await database`update private.custom_character_purchases set poses_notified_at = now() where id = ${first.purchase_id}`;
     assert.equal((await dueCustomCharacterPurchases(database)).some((item) => item.id === first.purchase_id), false);
     assert.deepEqual(await prepareCustomCharacterStage(owner, first.purchase_id, {}, database), {
         kind: "existing", requestId: fitnessRun.request.id,
@@ -215,4 +220,178 @@ test("each verified consumable funds exactly one recoverable portrait and five-i
     }, limits, database);
     assert.equal(renamedRun.shouldStart, true);
     assert.equal(renamedRun.request.description, "A white owl");
+});
+
+test("a description saved at claim draws three portraits; the owner picks one and only it feeds the poses", async (context) => {
+    const owner = randomUUID();
+    await database`insert into auth.users (id) values (${owner})`;
+    await database`update private.ai_provider_budget set requests = 0, starts = 0, remaining = null,
+        reset_at = null, blocked_until = null, window_started_at = clock_timestamp(),
+        starts_day = (clock_timestamp() at time zone 'UTC')::date where provider = 'blend'`;
+    const account = (await readSpecialStore(owner, database)).app_account_token;
+    context.after(async () => {
+        await database`delete from private.ai_library_images where user_id = ${owner}`;
+        await database`delete from private.ai_requests where user_id = ${owner}`;
+        await database`delete from private.custom_character_portraits where purchase_id in (
+            select id from private.custom_character_purchases where account_id = ${account})`;
+        await database`delete from private.custom_character_purchases where account_id = ${account}`;
+        await database`delete from private.special_accounts where id = ${account}`;
+        await database`delete from auth.users where id = ${owner}`;
+    });
+    const transactionId = BigInt(`0x${randomUUID().replaceAll("-", "")}`).toString();
+    const receipt = appleCustomCharacterTransactionSchema.parse({
+        transactionId,
+        originalTransactionId: transactionId,
+        bundleId: "com.fitfight.mvp",
+        productId: customCharacterProductId,
+        environment: "Sandbox",
+        type: "Consumable",
+        inAppOwnershipType: "PURCHASED",
+        quantity: 1,
+        appAccountToken: account,
+        purchaseDate: Date.now(),
+        signedDate: Date.now() + 1_000,
+    });
+    const claim = await recordCustomCharacterTransaction(receipt, database, "A red panda in a tracksuit");
+    assert.equal((await recordCustomCharacterTransaction(receipt, database, "Another words")).purchase_id, claim.purchase_id);
+    let character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.description, "A red panda in a tracksuit");
+    assert.equal(character.phase, "portraits");
+    assert.equal(character.status, "generating");
+    assert.equal(character.candidates.length, 3);
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === claim.purchase_id));
+
+    const stage = await prepareCustomCharacterStage(owner, claim.purchase_id, {}, database);
+    if (stage.kind !== "portraits") assert.fail("Expected three portraits");
+    assert.equal(stage.starts.length, 3);
+    const runs = [];
+    for (const [index, key] of stage.starts.entries()) {
+        const run = await reserveAiRequest(owner, {
+            workflow: "avatar", resourceId: claim.purchase_id, idempotencyKey: key,
+            requestHash: String(index).repeat(64), version, creditPrice: 0, sourceRequestIds: [], description: stage.description,
+        }, limits, database);
+        assert.equal(run.shouldStart, true);
+        runs.push(run.request);
+    }
+    for (const [index, run] of runs.entries()) {
+        assert.ok(run.lease_token);
+        await finishAiRequestAttempt(owner, run.id, run.lease_token, index < 2
+            ? { status: "completed", runHandle: { ...version, runId: randomUUID() },
+                result: { image_url: `https://cdn.tryblend.ai/candidate-${index}.png` }, errorCode: null }
+            : { status: "failed", runHandle: null, result: null, errorCode: "ai_failed" }, {}, database);
+    }
+    character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.phase, "choosing");
+    assert.equal(character.status, "generating");
+    assert.deepEqual(character.candidates.map((item) => item.status), ["completed", "completed", "failed"]);
+    assert.equal(character.portrait_url, null);
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === claim.purchase_id));
+    assert.equal(await claimCustomCharacterPush(owner, claim.purchase_id, "portraits", database), true);
+    assert.equal(await claimCustomCharacterPush(owner, claim.purchase_id, "portraits", database), false);
+
+    const [first, second, failed] = character.candidates;
+    await assert.rejects(chooseCustomCharacterPortrait(owner, claim.purchase_id, failed.id, database), {
+        code: "character_portrait_not_ready",
+    });
+    await chooseCustomCharacterPortrait(owner, claim.purchase_id, second.id, database);
+    await chooseCustomCharacterPortrait(owner, claim.purchase_id, second.id, database);
+    await assert.rejects(chooseCustomCharacterPortrait(owner, claim.purchase_id, first.id, database), {
+        code: "character_portrait_chosen",
+    });
+    character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.phase, "poses");
+    assert.equal(character.stage, "fitness");
+    assert.equal(character.portrait_url, "https://cdn.tryblend.ai/candidate-1.png");
+    assert.equal((await database`select count(*)::int as count from private.custom_character_portraits
+        where purchase_id = ${claim.purchase_id} and selected_at is null`)[0].count, 2);
+
+    const fitness = await prepareCustomCharacterStage(owner, claim.purchase_id, {}, database);
+    if (fitness.kind !== "fitness") assert.fail("Expected the poses stage");
+    assert.equal(fitness.avatarRequestId, runs[1].id);
+    const fitnessInput = {
+        workflow: "fitness" as const, resourceId: claim.purchase_id, idempotencyKey: fitness.key,
+        requestHash: "f".repeat(64), version, creditPrice: 0, description: fitness.description,
+    };
+    await assert.rejects(reserveAiRequest(owner, { ...fitnessInput, sourceRequestIds: [runs[0].id] }, limits, database), {
+        code: "not_found",
+    });
+    const poses = await reserveAiRequest(owner, { ...fitnessInput, sourceRequestIds: [runs[1].id] }, limits, database);
+    if (!poses.shouldStart) assert.fail("Expected the poses to start");
+    assert.deepEqual(poses.portraits, ["https://cdn.tryblend.ai/candidate-1.png"]);
+});
+
+test("new accounts get no free character, gifts add some, and a free claim draws three portraits", async (context) => {
+    const owner = randomUUID();
+    const admin = randomUUID();
+    const handle = `free_${randomUUID().slice(0, 8)}`;
+    const firstGiftKey = randomUUID();
+    const giftKey = randomUUID();
+    const everyoneKey = randomUUID();
+    await database`insert into auth.users (id) values (${owner}), (${admin})`;
+    await database`update public.profiles set handle = ${handle} where id = ${owner}`;
+    await database`update private.ai_provider_budget set requests = 0, starts = 0, remaining = null,
+        reset_at = null, blocked_until = null, window_started_at = clock_timestamp(),
+        starts_day = (clock_timestamp() at time zone 'UTC')::date where provider = 'blend'`;
+    const account = (await readSpecialStore(owner, database)).app_account_token;
+    context.after(async () => {
+        await database`delete from private.free_character_grants
+            where user_id in (${owner}, ${admin}) or operation_key in (${firstGiftKey}, ${giftKey}, ${everyoneKey})`;
+        await database`delete from private.ai_requests where user_id = ${owner}`;
+        await database`delete from private.custom_character_portraits where purchase_id in (
+            select id from private.custom_character_purchases where account_id = ${account})`;
+        await database`delete from private.custom_character_purchases where account_id = ${account}`;
+        await database`delete from private.special_accounts where id = ${account}`;
+        await database`delete from auth.users where id in (${owner}, ${admin})`;
+    });
+
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 0);
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 0);
+    assert.equal((await database`select 1 from private.free_character_grants where user_id = ${owner}`).length, 0);
+    await assert.rejects(claimFreeCustomCharacter(owner, randomUUID(), "A plump grey city pigeon", database), {
+        code: "no_free_characters",
+    });
+    await giftFreeCharacters(admin, firstGiftKey, { username: handle, quantity: 1 }, database);
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 1);
+
+    const key = randomUUID();
+    const claim = await claimFreeCustomCharacter(owner, key, "A plump grey city pigeon", database);
+    assert.equal((await claimFreeCustomCharacter(owner, key, "A plump grey city pigeon", database)).purchase_id, claim.purchase_id);
+    await assert.rejects(claimFreeCustomCharacter(admin, key, "A stolen pigeon", database), { code: "ai_request_conflict" });
+    await assert.rejects(claimFreeCustomCharacter(owner, randomUUID(), "A second pigeon", database), {
+        code: "no_free_characters",
+    });
+    const store = await readCustomCharacterStore(owner, database);
+    assert.equal(store.free_characters, 0);
+    assert.equal(store.characters.length, 1);
+    assert.equal(store.characters[0].phase, "portraits");
+    assert.equal(store.characters[0].candidates.length, 3);
+    assert.ok((await dueCustomCharacterPurchases(database)).some((item) => item.id === claim.purchase_id));
+
+    const stage = await prepareCustomCharacterStage(owner, claim.purchase_id, {}, database);
+    if (stage.kind !== "portraits") assert.fail("Expected three portraits");
+    assert.equal(stage.starts.length, 3);
+    const run = await reserveAiRequest(owner, {
+        workflow: "avatar", resourceId: claim.purchase_id, idempotencyKey: stage.starts[0],
+        requestHash: "a".repeat(64), version, creditPrice: 0, sourceRequestIds: [], description: stage.description,
+    }, limits, database);
+    assert.equal(run.shouldStart, true);
+
+    assert.deepEqual(await giftFreeCharacters(admin, giftKey, { username: handle.toUpperCase(), quantity: 2 }, database), {
+        people: 1, quantity: 2,
+    });
+    assert.deepEqual(await giftFreeCharacters(admin, giftKey, { username: handle, quantity: 2 }, database), {
+        people: 1, quantity: 2,
+    });
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 2);
+    await assert.rejects(giftFreeCharacters(admin, randomUUID(), { username: "nobody_has_this_name", quantity: 1 }, database), {
+        code: "not_found",
+    });
+    const everyone = await giftFreeCharacters(admin, everyoneKey, { everyone: true, quantity: 1 }, database);
+    assert.ok(everyone.people >= 2);
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 3);
+    const [gift] = await database`select reason, granted_by from private.free_character_grants where operation_key = ${giftKey}`;
+    assert.deepEqual({ ...gift }, { reason: "gift", granted_by: admin });
+
+    await assert.rejects(database`insert into private.custom_character_purchases (account_id, environment)
+        values (${account}, 'Sandbox')`, { code: "23514" });
 });

@@ -17,14 +17,18 @@ import {
 import { ApiError } from "@/lib/http";
 import {
     appleSpecialProductIds,
+    appleSpecialTransactionSchema,
+    specialProductId,
     type AppleSpecialPurchaseContext,
 } from "@/lib/types/apple/special-purchase";
 import { appleCustomCharacterTransactionSchema, customCharacterProductId } from "@/lib/types/apple/custom-character-purchase";
 import appleRootCertificates from "./apple-root-certificates.json";
 import {
+    claimsSandbox,
     verifySpecialPurchase,
     verifySpecialNotification,
     verifyCustomCharacterPurchase,
+    verifySpecialConsumablePurchase,
 } from "./special-purchase";
 
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
@@ -84,8 +88,12 @@ function mockApple(
     return { verification, lookup };
 }
 
-test("the 40 immutable Apple product IDs match the Specials collection", () => {
-    assert.equal(appleSpecialProductIds.size, 40);
+test("the 70 immutable Apple product IDs match both Specials rosters", () => {
+    assert.equal(appleSpecialProductIds.size, 70);
+    assert.equal(
+        appleSpecialProductIds.get("com.fitfight.mvp.special.black_panther"),
+        "limited-black-panther",
+    );
     assert.equal(
         appleSpecialProductIds.get("com.fitfight.mvp.special.pangolin"),
         "limited-pangolin",
@@ -98,7 +106,7 @@ test("the 40 immutable Apple product IDs match the Specials collection", () => {
         appleSpecialProductIds.has("com.fitfight.mvp.special.spotted-quoll"),
         false,
     );
-    assert.equal(new Set(appleSpecialProductIds.values()).size, 40);
+    assert.equal(new Set(appleSpecialProductIds.values()).size, 70);
 });
 
 test("bundled public roots retain their Apple fingerprints and valid CA signatures", () => {
@@ -424,4 +432,64 @@ test("Apple character refund notifications route a verified consumable for revoc
     const result = await verifySpecialNotification("signed-envelope", "Production");
     assert.equal(result.transaction?.type, "Consumable");
     assert.equal(result.transaction?.revocationDate, character.signedDate! + 500);
+});
+
+test("one consumable Special charge is verified against Apple's current record without naming a Special", async (context) => {
+    const special = {
+        ...receipt,
+        productId: specialProductId,
+        type: "Consumable" as const,
+        transactionId: "200000100004",
+        originalTransactionId: "200000100004",
+    };
+    const { lookup } = mockApple(context, special);
+    const current = await verifySpecialConsumablePurchase("submitted-receipt", {
+        environment: "Production",
+        appAccountToken: expected.appAccountToken,
+    });
+    assert.equal(current.productId, specialProductId);
+    assert.equal(lookup.mock.callCount(), 1);
+    assert.equal(appleSpecialTransactionSchema.safeParse(special).success, false, "The consumable is not a legacy product");
+    assert.equal(appleCustomCharacterTransactionSchema.safeParse(special).success, false);
+});
+
+test("consumable Special evidence rejects the character product, legacy products and other accounts", async (context) => {
+    const special = { ...receipt, productId: specialProductId, type: "Consumable" as const };
+    const apple = mockApple(context, { ...special, productId: customCharacterProductId });
+    await assert.rejects(verifySpecialConsumablePurchase("submitted-receipt", {
+        environment: "Production", appAccountToken: expected.appAccountToken,
+    }), { status: 400 });
+    apple.verification.mock.mockImplementation(async () => receipt);
+    await assert.rejects(verifySpecialConsumablePurchase("submitted-receipt", {
+        environment: "Production", appAccountToken: expected.appAccountToken,
+    }), { status: 400 });
+    apple.verification.mock.mockImplementation(async () => special);
+    await assert.rejects(verifySpecialConsumablePurchase("submitted-receipt", {
+        environment: "Production", appAccountToken: randomUUID(),
+    }), { status: 403 });
+    assert.equal(apple.lookup.mock.callCount(), 0);
+});
+
+test("Apple Special refund notifications route a verified consumable for revocation", async (context) => {
+    const special = { ...receipt, productId: specialProductId, type: "Consumable" as const };
+    mockApple(context, special, {
+        ...special,
+        signedDate: special.signedDate! + 1_000,
+        revocationDate: special.signedDate! + 500,
+    });
+    context.mock.method(SignedDataVerifier.prototype, "verifyAndDecodeNotification", async () => ({
+        notificationUUID: randomUUID(),
+        notificationType: "REFUND",
+        data: { signedTransactionInfo: "submitted-receipt" },
+    }));
+    const result = await verifySpecialNotification("signed-envelope", "Production");
+    assert.equal(result.transaction?.productId, specialProductId);
+    assert.equal(result.transaction?.revocationDate, special.signedDate! + 500);
+});
+
+test("only a charge that names Sandbox claims the Sandbox shelf", () => {
+    const signed = (payload: object) => `e30.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.sig`;
+    assert.equal(claimsSandbox(signed({ environment: "Sandbox" })), true);
+    assert.equal(claimsSandbox(signed({ environment: "Production" })), false);
+    assert.equal(claimsSandbox("not a transaction"), false);
 });

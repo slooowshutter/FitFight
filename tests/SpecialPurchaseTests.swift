@@ -9,7 +9,9 @@ struct Product {
     enum PurchaseResult { case success(VerificationResult<Transaction>), userCancelled, pending }
     enum PurchaseOption: Hashable { case appAccountToken(UUID) }
     enum PurchaseError: Error { case purchaseNotAllowed }
+    enum ProductType { case consumable, nonConsumable }
     let id: String
+    let type = ProductType.consumable
     static var result = PurchaseResult.pending
     static var presented = 0
     static var failure: Error?
@@ -23,32 +25,33 @@ struct Product {
 
 @MainActor
 final class Transaction {
-    let id: UInt64 = 123
-    let originalID: UInt64 = 123
-    let productID = StockCompanion.pangolin.productId
+    let id: UInt64
+    let productID: String
     let appAccountToken: UUID?
     var finished = false
     static var continuation: AsyncStream<VerificationResult<Transaction>>.Continuation?
-    static var history: [VerificationResult<Transaction>] = []
+    static var pending: [Transaction] = []
     static var updates: AsyncStream<VerificationResult<Transaction>> {
         AsyncStream { continuation = $0 }
     }
-    static var all: AsyncStream<VerificationResult<Transaction>> {
+    static var unfinished: AsyncStream<VerificationResult<Transaction>> {
         AsyncStream { stream in
-            for item in history { stream.yield(item) }
+            for item in pending where !item.finished { stream.yield(.verified(item)) }
             stream.finish()
         }
     }
-    init(account: UUID) { appAccountToken = account }
+    init(account: UUID, id: UInt64 = 123, productID: String = "com.fitfight.mvp.special") {
+        appAccountToken = account
+        self.id = id
+        self.productID = productID
+    }
     func finish() async { finished = true }
 }
 
 enum AppStore { static func sync() async throws {} }
 enum StoreKitError: Error { case userCancelled }
 enum StockCompanion: String, CaseIterable {
-    case pangolin = "limited-pangolin", platypus = "limited-platypus"
-    var isLimited: Bool { true }
-    var productId: String { "com.fitfight.mvp.special.\(rawValue.dropFirst(8))" }
+    case blackPanther = "limited-black-panther", loneWolf = "limited-lone-wolf", tiger = "limited-tiger"
 }
 
 @MainActor
@@ -62,150 +65,179 @@ final class SessionStore {
 @MainActor
 struct FitFightAPI {
     static var account = UUID()
-    static var status = SpecialStoreSnapshot.Edition.Status.available
-    static var loseReserveResponse = false
-    static var failCancel = false
+    static var owned: Set<String> = []
     static var failRead = false
-    static var attempts: [UUID] = []
-    static var delivered = 0
-    static var outcome = SpecialClaimResult.Outcome.owned
+    static var failClaim = false
+    static var claims: [String] = []
+    static var legacyClaims: [String] = []
+    /// The server keeps the Special a charge first unlocked.
+    static var recorded: [String: String] = [:]
     func specials(accessToken: String) async throws -> SpecialStoreSnapshot {
         if Self.failRead {
             Self.failRead = false
             throw URLError(.notConnectedToInternet)
         }
         return SpecialStoreSnapshot(appAccountToken: Self.account, environment: "Sandbox", purchasesEnabled: true,
-            editions: StockCompanion.allCases.map { .init(id: $0.rawValue, productId: $0.productId, status: $0 == .pangolin ? Self.status : .available) }, conflicts: [])
+            productId: "com.fitfight.mvp.special",
+            editions: StockCompanion.allCases.map { .init(id: $0.rawValue, status: Self.owned.contains($0.rawValue) ? .yours : .available) },
+            conflicts: [])
     }
-    func specialCheckout(action: String, companionId: String, attemptId: UUID, accessToken: String) async throws {
-        if action == "reserve" {
-            Self.attempts.append(attemptId)
-            Self.status = .reserved
-            if Self.loseReserveResponse {
-                Self.loseReserveResponse = false
-                throw URLError(.networkConnectionLost)
-            }
-        } else {
-            if Self.failCancel {
-                Self.failCancel = false
-                throw URLError(.notConnectedToInternet)
-            }
-            Self.status = .available
+    func claimSpecialPurchase(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
+        if Self.failClaim {
+            Self.failClaim = false
+            throw URLError(.networkConnectionLost)
         }
+        Self.claims.append(companionId)
+        let key = "\(Self.claims.count)"
+        let companion = Self.recorded[key] ?? companionId
+        Self.owned.insert(companion)
+        return .init(outcome: .owned, transactionId: key, companionId: companion)
     }
+    static var freeKeys: [UUID] = []
+    func claimFreeSpecial(companionId: String, idempotencyKey: UUID, accessToken: String) async throws -> SpecialClaimResult {
+        Self.freeKeys.append(idempotencyKey)
+        if Self.failClaim {
+            Self.failClaim = false
+            throw URLError(.networkConnectionLost)
+        }
+        Self.owned.insert(companionId)
+        return .init(outcome: .owned, transactionId: idempotencyKey.uuidString, companionId: companionId)
+    }
+
     func claimSpecial(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
-        Self.delivered += 1
-        if Self.outcome == .owned { Self.status = .yours }
-        return .init(outcome: Self.outcome, transactionId: "123", companionId: companionId)
+        Self.legacyClaims.append(companionId)
+        Self.owned.insert(companionId)
+        return .init(outcome: .owned, transactionId: "1", companionId: companionId)
     }
 }
 
 @main
 struct SpecialPurchaseTests {
     @MainActor static func main() async throws {
+        // Older servers sent five statuses and no shared product; current ones send the consumable.
+        let decoder = JSONDecoder()
+        let current = try decoder.decode(SpecialStoreSnapshot.self, from: Data("""
+            {"app_account_token":"00000000-0000-4000-8000-000000000001","environment":"Sandbox","purchases_enabled":true,
+             "product_id":"com.fitfight.mvp.special","conflicts":[],
+             "editions":[{"id":"limited-tiger","product_id":"com.fitfight.mvp.special.tiger","status":"yours"}]}
+            """.utf8))
+        precondition(current.productId == "com.fitfight.mvp.special" && current.editions[0].status == .yours)
+        let older = try decoder.decode(SpecialStoreSnapshot.self, from: Data("""
+            {"app_account_token":"00000000-0000-4000-8000-000000000001","environment":"Sandbox","purchases_enabled":true,
+             "conflicts":[],"editions":[{"id":"limited-tiger","product_id":"com.fitfight.mvp.special.tiger","status":"taken"}]}
+            """.utf8))
+        precondition(older.productId == nil && older.editions[0].status == .taken)
+
         let session = SessionStore()
         let userId = session.profile!.userId
-        defer { UserDefaults.standard.removeObject(forKey: "ff.special.purchase.\(userId.uuidString)") }
+        let draftKey = "ff.special.draft.\(userId.uuidString)"
+        defer {
+            UserDefaults.standard.removeObject(forKey: draftKey)
+            UserDefaults.standard.removeObject(forKey: "ff.special.pending.since.\(userId.uuidString)")
+        }
         let purchases = SpecialPurchases()
         let observer = Task { await purchases.observe(session: session) }
         defer { observer.cancel() }
-        for _ in 0..<100 where purchases.products.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
-        precondition(purchases.canBuy(.pangolin))
+        for _ in 0..<100 where purchases.product == nil { try await Task.sleep(for: .milliseconds(10)) }
+        precondition(purchases.canBuy(.blackPanther) && purchases.canBuy(.loneWolf))
 
-        FitFightAPI.loseReserveResponse = true
-        let firstResult = await purchases.buy(.pangolin, session: session)
-        precondition(firstResult == false)
-        try await purchases.refresh(session: session)
-        precondition(purchases.canBuy(.pangolin), "A lost reserve response must allow the same attempt to resume")
-        precondition(!purchases.canBuy(.platypus))
+        // A completed charge unlocks the chosen Special; the account can keep buying others.
+        let first = Transaction(account: FitFightAPI.account, id: 1)
+        Product.result = .success(.verified(first))
+        let bought = await purchases.buy(.blackPanther, session: session)
+        precondition(bought)
+        precondition(first.finished && FitFightAPI.claims == ["limited-black-panther"])
+        precondition(UserDefaults.standard.string(forKey: draftKey) == nil)
+        precondition(!purchases.canBuy(.blackPanther), "An owned Special is not sold again")
+        precondition(purchases.canBuy(.loneWolf), "One account can own many Specials")
+
+        // Cancelling or Apple refusing charges nothing and leaves buying open.
+        Product.result = .userCancelled
+        let cancelled = await purchases.buy(.loneWolf, session: session)
+        precondition(!cancelled)
+        precondition(purchases.canBuy(.loneWolf) && purchases.message.isEmpty && UserDefaults.standard.string(forKey: draftKey) == nil)
+        Product.failure = Product.PurchaseError.purchaseNotAllowed
+        let refused = await purchases.buy(.loneWolf, session: session)
+        precondition(!refused)
+        precondition(purchases.canBuy(.loneWolf) && !purchases.message.isEmpty)
+        Product.failure = StoreKitError.userCancelled
+        _ = await purchases.buy(.loneWolf, session: session)
+        precondition(purchases.canBuy(.loneWolf) && purchases.message.isEmpty, "A dismissed sign-in is quiet")
+        Product.failure = nil
+
+        // Ask to Buy: the chosen Special waits with the charge and unlocks when Apple approves.
         Product.result = .pending
-        let resumedResult = await purchases.buy(.pangolin, session: session)
-        precondition(resumedResult == false)
-        precondition(FitFightAPI.attempts.count == 2 && FitFightAPI.attempts[0] == FitFightAPI.attempts[1])
-        precondition(!purchases.canBuy(.pangolin), "Never present a second purchase sheet for a submitted attempt")
-        precondition(Product.presented == 1)
+        let waiting = await purchases.buy(.loneWolf, session: session)
+        precondition(!waiting)
+        precondition(purchases.pendingPurchase && !purchases.canBuy(.tiger), "Never start a second charge while one is pending")
+        let approved = Transaction(account: FitFightAPI.account, id: 2)
+        Transaction.continuation?.yield(.verified(approved))
+        for _ in 0..<100 where !approved.finished { try await Task.sleep(for: .milliseconds(10)) }
+        precondition(approved.finished && FitFightAPI.claims.last == "limited-lone-wolf" && !purchases.pendingPurchase)
+        precondition(FitFightAPI.owned.contains("limited-lone-wolf"))
+
+        // A charge from another FitFight account is never claimed here.
+        let foreign = Transaction(account: UUID(), id: 3)
+        Transaction.continuation?.yield(.verified(foreign))
+        try await Task.sleep(for: .milliseconds(30))
+        precondition(!foreign.finished && FitFightAPI.claims.count == 2)
         observer.cancel()
         await observer.value
 
-        // Recreate the controller to verify that the unresolved attempt survives restart.
+        // A crash after Apple charged: the saved choice claims the unfinished charge on the next launch.
+        UserDefaults.standard.set("limited-tiger", forKey: draftKey)
+        let interrupted = Transaction(account: FitFightAPI.account, id: 4)
+        Transaction.pending = [interrupted]
         let restarted = SpecialPurchases()
-        let nextObserver = Task { await restarted.observe(session: session) }
-        defer { nextObserver.cancel() }
-        for _ in 0..<100 where restarted.products.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
-        precondition(!restarted.canBuy(.pangolin))
-        let foreign = Transaction(account: UUID())
-        Transaction.continuation?.yield(.verified(foreign))
-        try await Task.sleep(for: .milliseconds(30))
-        precondition(!foreign.finished && FitFightAPI.delivered == 0)
-        let transaction = Transaction(account: FitFightAPI.account)
-        Transaction.continuation?.yield(.verified(transaction))
-        for _ in 0..<100 where !transaction.finished { try await Task.sleep(for: .milliseconds(10)) }
-        precondition(transaction.finished && FitFightAPI.delivered == 1)
-        precondition(UserDefaults.standard.data(forKey: "ff.special.purchase.\(userId.uuidString)") == nil)
-        precondition(!restarted.canBuy(.platypus), "Permanent ownership enforces the account limit")
-        nextObserver.cancel()
-        await nextObserver.value
+        let restartedObserver = Task { await restarted.observe(session: session) }
+        for _ in 0..<100 where !interrupted.finished { try await Task.sleep(for: .milliseconds(10)) }
+        precondition(interrupted.finished && FitFightAPI.claims.last == "limited-tiger")
+        restartedObserver.cancel()
+        await restartedObserver.value
 
-        // Initial network failure must not permanently stop transaction observation.
-        let otherSession = SessionStore()
+        // A charge whose choice was lost stays unfinished, then unlocks the next Special picked without paying.
+        FitFightAPI.owned = []
+        let orphan = Transaction(account: FitFightAPI.account, id: 5)
+        Transaction.pending = [orphan]
         let recovering = SpecialPurchases()
-        FitFightAPI.failRead = true
-        FitFightAPI.status = .available
-        FitFightAPI.outcome = .conflict
-        let recoveringObserver = Task { await recovering.observe(session: otherSession) }
+        let recoveringObserver = Task { await recovering.observe(session: session) }
         defer { recoveringObserver.cancel() }
-        try await Task.sleep(for: .milliseconds(30))
-        let conflict = Transaction(account: FitFightAPI.account)
-        Transaction.continuation?.yield(.verified(conflict))
-        for _ in 0..<100 where FitFightAPI.delivered < 2 { try await Task.sleep(for: .milliseconds(10)) }
-        precondition(FitFightAPI.delivered == 2 && !conflict.finished, "Unfulfilled charges must remain recoverable")
-        try await recovering.refresh(session: otherSession)
-        Product.result = .userCancelled
-        let cancelled = await recovering.buy(.pangolin, session: otherSession)
-        precondition(!cancelled && recovering.canBuy(.platypus), "Apple cancellation must release only this checkout")
-        FitFightAPI.loseReserveResponse = true
-        _ = await recovering.buy(.pangolin, session: otherSession)
-        precondition(recovering.canCancelCheckout)
-        await recovering.cancelCheckout(session: otherSession)
-        precondition(!recovering.canCancelCheckout && recovering.canBuy(.platypus))
-        recoveringObserver.cancel()
-        await recoveringObserver.value
+        for _ in 0..<100 where !recovering.hasUnclaimedCharge { try await Task.sleep(for: .milliseconds(10)) }
+        precondition(recovering.hasUnclaimedCharge && !orphan.finished && FitFightAPI.claims.count == 3)
+        let presented = Product.presented
+        let unlocked = await recovering.buy(.loneWolf, session: session)
+        precondition(unlocked)
+        precondition(orphan.finished && Product.presented == presented && FitFightAPI.claims.last == "limited-lone-wolf")
+        precondition(!recovering.hasUnclaimedCharge)
 
-        // Apple refusing before a charge releases the hold at once.
-        let thirdSession = SessionStore()
-        let failing = SpecialPurchases()
-        FitFightAPI.status = .available
-        let failingObserver = Task { await failing.observe(session: thirdSession) }
-        defer { failingObserver.cancel() }
-        for _ in 0..<100 where failing.products.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
-        Product.failure = Product.PurchaseError.purchaseNotAllowed
-        let refused = await failing.buy(.pangolin, session: thirdSession)
-        precondition(!refused && FitFightAPI.status == .available && failing.canBuy(.pangolin) && failing.canBuy(.platypus),
-                     "A refused purchase must release the hold")
+        // A failed claim keeps the charge and its choice for Restore purchases.
+        let retried = Transaction(account: FitFightAPI.account, id: 6)
+        Product.result = .success(.verified(retried))
+        FitFightAPI.failClaim = true
+        let unclaimed = await recovering.buy(.tiger, session: session)
+        precondition(!unclaimed)
+        precondition(!retried.finished && UserDefaults.standard.string(forKey: draftKey) == "limited-tiger")
+        Transaction.pending = [retried]
+        await recovering.restore(session: session)
+        precondition(retried.finished && FitFightAPI.claims.last == "limited-tiger" && !recovering.pendingPurchase)
+        precondition(recovering.message == String(appLocalized: "Purchases checked. Your Specials are ready to use."))
 
-        // Dismissing Apple's sign-in is a cancel, not an error.
-        Product.failure = StoreKitError.userCancelled
-        _ = await failing.buy(.pangolin, session: thirdSession)
-        precondition(FitFightAPI.status == .available && failing.canBuy(.platypus) && failing.message.isEmpty,
-                     "A dismissed sign-in must release the hold quietly")
+        // A legacy one-of-a-kind charge still records under its own Special.
+        let legacy = Transaction(account: FitFightAPI.account, id: 7, productID: "com.fitfight.mvp.special.black_panther")
+        Transaction.pending = [legacy]
+        await recovering.restore(session: session)
+        precondition(legacy.finished && FitFightAPI.legacyClaims == ["limited-black-panther"])
 
-        // An ambiguous error keeps the hold; the checkout frees itself once the server hold lapses.
-        Product.failure = URLError(.networkConnectionLost)
-        _ = await failing.buy(.pangolin, session: thirdSession)
-        Product.failure = nil
-        precondition(FitFightAPI.status == .reserved && !failing.canBuy(.pangolin) && !failing.canBuy(.platypus),
-                     "A possibly charged purchase must keep its hold")
-        FitFightAPI.status = .available
-        try await failing.refresh(session: thirdSession)
-        precondition(failing.canBuy(.pangolin), "A lapsed server hold must not strand the checkout")
-
-        // A cancel that could not reach the server can be retried by hand.
-        Product.result = .userCancelled
-        FitFightAPI.failCancel = true
-        _ = await failing.buy(.pangolin, session: thirdSession)
-        precondition(failing.canCancelCheckout && !failing.canBuy(.pangolin))
-        await failing.cancelCheckout(session: thirdSession)
-        precondition(!failing.canCancelCheckout && failing.canBuy(.platypus))
-        print("Special purchase recovery, account binding, pending holds, errors, lapses, cancellation and delivery checks passed")
+        // A free character unlocks a Special without Apple; a retry after a lost answer reuses the key.
+        let shown = Product.presented
+        FitFightAPI.failClaim = true
+        let lost = await recovering.claimFree(.tiger, session: session)
+        precondition(!lost && !recovering.message.isEmpty)
+        let freed = await recovering.claimFree(.tiger, session: session)
+        precondition(freed && FitFightAPI.freeKeys.count == 2 && FitFightAPI.freeKeys[0] == FitFightAPI.freeKeys[1])
+        precondition(Product.presented == shown, "A free unlock never opens Apple's sheet")
+        _ = await recovering.claimFree(.loneWolf, session: session)
+        precondition(FitFightAPI.freeKeys[2] != FitFightAPI.freeKeys[1], "A new free claim gets a new key")
+        print("Special purchase decoding, many-per-account ownership, pending, interrupted, orphaned, failed-claim, account binding, legacy and free-character checks passed")
     }
 }

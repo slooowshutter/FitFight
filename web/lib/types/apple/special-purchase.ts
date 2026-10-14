@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-    limitedCompanionIdSchema,
-    limitedCompanionIdValues,
+    specialCompanionIdSchema,
+    specialCompanionIdValues,
 } from "@/lib/types/companions/companion";
 
 export const applePurchaseEnvironmentValues = [
@@ -12,8 +12,12 @@ export const applePurchaseEnvironmentSchema = z.enum(
     applePurchaseEnvironmentValues,
 );
 
+/** The one consumable every Special is bought with; the claim names the Special it unlocks. */
+export const specialProductId = "com.fitfight.mvp.special";
+
+/** Legacy one-of-a-kind products, no longer sold; kept so refunds and restores of earlier Sandbox purchases still record. */
 export const appleSpecialProductIds = new Map(
-    limitedCompanionIdValues.map((id) => [
+    specialCompanionIdValues.map((id) => [
         `com.fitfight.mvp.special.${id.slice("limited-".length).replaceAll("-", "_")}`,
         id,
     ]),
@@ -29,8 +33,39 @@ export const applePurchaseCredentialsSchema = z.object({
 export const appleSpecialPurchaseContextSchema = z.object({
     environment: applePurchaseEnvironmentSchema,
     appAccountToken: z.string().uuid(),
-    companionId: limitedCompanionIdSchema,
+    companionId: specialCompanionIdSchema,
 });
+
+/** A repeatable charge: shared by the paid character and Specials, which each pin their own product ID. */
+export const appleConsumableTransactionSchema = z.object({
+    transactionId: z.string().regex(/^\d{1,128}$/),
+    originalTransactionId: z.string().regex(/^\d{1,128}$/),
+    bundleId: z.literal("com.fitfight.mvp"),
+    productId: z.string(),
+    environment: applePurchaseEnvironmentSchema,
+    type: z.literal("Consumable"),
+    inAppOwnershipType: z.literal("PURCHASED"),
+    quantity: z.literal(1),
+    appAccountToken: z
+        .string()
+        .uuid()
+        .transform((value) => value.toLowerCase()),
+    purchaseDate: z.number().int().nonnegative().safe(),
+    signedDate: z.number().int().nonnegative().safe(),
+    revocationDate: z.number().int().nonnegative().safe().optional(),
+    revocationReason: z.number().int().optional(),
+    revocationType: z.string().optional(),
+    revocationPercentage: z.number().int().min(0).max(100_000).optional(),
+    price: z.number().int().nonnegative().safe().optional(),
+    currency: z
+        .string()
+        .regex(/^[A-Z]{3}$/)
+        .optional(),
+});
+export const appleSpecialConsumableTransactionSchema =
+    appleConsumableTransactionSchema.extend({
+        productId: z.literal(specialProductId),
+    });
 
 export const appleSpecialTransactionSchema = z
     .object({
@@ -80,7 +115,13 @@ export type ApplePurchaseCredentials = z.infer<
 export type AppleSpecialPurchaseContext = z.infer<
     typeof appleSpecialPurchaseContextSchema
 >;
-/** Verified payment evidence, including refunds; this is not an ownership grant. */
+export type AppleConsumableTransaction = z.infer<
+    typeof appleConsumableTransactionSchema
+>;
+export type AppleSpecialConsumableTransaction = z.infer<
+    typeof appleSpecialConsumableTransactionSchema
+>;
+/** Verified legacy payment evidence, including refunds; this is not an ownership grant. */
 export type AppleSpecialTransaction = z.infer<
     typeof appleSpecialTransactionSchema
 >;

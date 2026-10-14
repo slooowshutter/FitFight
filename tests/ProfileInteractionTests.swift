@@ -54,9 +54,13 @@ struct Fight {
     var fights: [Fight] = []
     var pendingJoinable: Fight?
     var snapshotLoads = 0
+    var refreshTriggers: [SyncTrigger] = []
     var discoveryInvalidations = 0
     func refreshFromServer() async { snapshotLoads += 1 }
-    func refreshFromServer(session: SessionStore) async { snapshotLoads += 1 }
+    func refreshFromServer(session: SessionStore, trigger: SyncTrigger) async {
+        snapshotLoads += 1
+        refreshTriggers.append(trigger)
+    }
     func invalidateFightDiscovery() { discoveryInvalidations += 1 }
     // TAB_STATE
     // APP_METHODS
@@ -142,6 +146,7 @@ struct Fight {
         await join.value
         check(model.snapshotLoads == 1 && model.discoveryInvalidations == 1 && FitFightAPI.offerLoads == 1,
               "A successful onboarding join syncs, refreshes standings, and reloads offers")
+        check(model.refreshTriggers == [.manual], "The refresh after a join is not reported as an app open")
         check(view.joining == nil && view.error == nil, "Join settles after the refresh")
         check(joinedID == offer.fightId && !view.busy, "Only a confirmed and synced join advances to reminders")
         joinedID = nil

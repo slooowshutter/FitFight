@@ -14,9 +14,11 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     const userId = randomUUID();
     const sourceId = randomUUID();
     const fightId = randomUUID();
+    const stoppedId = randomUUID();
+    const stoppedSourceId = randomUUID();
     t.after(async () => {
         await database`delete from public.fights where id = ${fightId}`;
-        await database`delete from auth.users where id = ${userId}`;
+        await database`delete from auth.users where id in (${userId}, ${stoppedId})`;
     });
     await database`insert into auth.users(id, created_at) values (${userId}, now() - interval '20 days')`;
     await database`
@@ -53,8 +55,25 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
             'Europe/Paris', 'highest_total', 'shared')
     `;
     await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${userId}, 'accepted', now())`;
+    // A second phone synced steps from 30 to 10 days ago, then stopped.
+    await database`insert into auth.users(id, created_at) values (${stoppedId}, now() - interval '30 days')`;
+    await database`update public.profiles set created_at = now() - interval '30 days' where user_id = ${stoppedId}`;
+    await database`
+        insert into public.data_sources(id, user_id, provider, source_label, connection_route, capabilities, status,
+            connected_at, last_success_at)
+        values (${stoppedSourceId}, ${stoppedId}, 'apple_health', 'Apple Health', 'healthkit', array['steps'], 'healthy',
+            now() - interval '30 days', now() - interval '10 days')
+    `;
+    await database`
+        insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+            observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+        select ${stoppedId}, ${stoppedSourceId}, 'day', 'day:' || day::date, 'steps', day, day + interval '1 day',
+            day + interval '1 day', day::date, 'Europe/Paris', 4000, 'count', array[gen_random_uuid()], 1
+        from generate_series(current_date - 29, current_date - 10, interval '1 day') as day
+    `;
 
     for (const section of adminDashboardSectionValues) {
+        const cardValues: string[] = [];
         for (const days of [1, 30, 3650]) {
             const dashboard = await readAdminDashboard(section, days, "staging", database);
             const failed = [...dashboard.cards, ...dashboard.charts]
@@ -67,10 +86,42 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
                 "Every tile reports its own query time",
             );
             assert.equal(dashboard.environment, "staging");
+            assert.ok(
+                dashboard.charts.every((chart) => chart.definition && !/undefined|NaN/.test(chart.example ?? "")),
+                `${section} charts explain themselves`,
+            );
+            assert.ok(
+                dashboard.cards.every((card) => card.definition && (card.value === null) === (card.example === null)
+                    && !/undefined|NaN/.test(card.example ?? "")),
+                `${section} cards explain themselves`,
+            );
+            cardValues.push(JSON.stringify(dashboard.cards.map(({ id, value, previous }) => [id, value, previous])));
         }
+        assert.equal(new Set(cardValues).size, 1, `${section} cards have fixed spans, whatever the period`);
     }
     const engagement = await readAdminDashboard("engagement", 30, "staging", database);
     const opens = engagement.cards.find((card) => card.id === "app_opens");
-    // Thirteen days of two foreground traces each; the one 20 seconds after a background sync is not an open.
-    assert.ok(opens?.value !== undefined && opens.value !== null && opens.value >= 13);
+    // Seven days of two foreground traces each; the one 20 seconds after a background sync is not an open.
+    assert.ok(opens?.value !== undefined && opens.value !== null && opens.value >= 7);
+    assert.match(opens.example ?? "", /^The app was opened \d+ times in the last 7 days, against \d+ in the 7 days before\.$/);
+    const syncChurn = (await readAdminDashboard("churn", 30, "staging", database)).cards
+        .find((card) => card.id === "weekly_sync_churn");
+    assert.ok(syncChurn?.value, "The phone that stopped syncing counts as lost");
+    assert.match(syncChurn.example ?? "", /^\d+(\.\d)?% of the people whose phone synced steps 8 to 14 days ago synced none in the last 7 days/);
+    const syncTimes = (await readAdminDashboard("app", 30, "staging", database)).charts.find((chart) => chart.id === "sync_durations");
+    assert.deepEqual(syncTimes?.series.map((line) => line.name), ["P10", "P25", "P50", "P75", "P90", "P95", "P99"]);
+
+    const [first] = await database`
+        select (min(created_at) at time zone 'Europe/Paris')::date::text as day from public.profiles
+    `;
+    const newUsers = async (days: number) => (await readAdminDashboard("overview", days, "staging", database))
+        .charts.find((chart) => chart.id === "new_users_per_bucket")?.series[0]?.points ?? [];
+    assert.equal((await newUsers(7)).length, 7, "Seven daily points for 7 days");
+    assert.equal((await newUsers(3650))[0]?.x, first?.day, "A long period starts at the first signup, not years before it");
+
+    const weekly = await readAdminDashboard("overview", 30, "staging", database, "week");
+    assert.equal(weekly.bucket, "week");
+    const weeks = weekly.charts.find((chart) => chart.id === "new_users_per_bucket")?.series[0]?.points ?? [];
+    assert.ok(weeks.length >= 3 && weeks.every((point) => new Date(`${point.x}T00:00:00Z`).getUTCDay() === 1), "A chosen week bucket starts on Mondays");
+    assert.equal((await readAdminDashboard("overview", 365, "staging", database, "day")).bucket, "day");
 });

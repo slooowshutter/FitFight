@@ -19,7 +19,6 @@ const env = databaseTestEnvironmentSchema.parse(process.env);
 process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
 process.env.SUPABASE_SECRET_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";
-process.env.APPLE_SPECIALS_ENABLED = "true";
 const database = postgres(env.DATABASE_URL, { max: 2 });
 const admin = createClient(env.SUPABASE_TEST_URL, env.SUPABASE_TEST_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 after(async () => { await closeDatabaseClientForTests(); await database.end(); });
@@ -52,7 +51,7 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
     assert.equal(zoneResponse.status, 200);
     assert.equal(profileSchema.parse(await zoneResponse.json()).time_zone, "Pacific/Kiritimati");
     const unpaidSave = await updateMe(new Request("https://staging.fitfight.app/api/v1/me", {
-        method: "PATCH", headers, body: JSON.stringify({ companion_id: "limited-pangolin" }),
+        method: "PATCH", headers, body: JSON.stringify({ companion_id: "limited-black-panther" }),
     }), { params: Promise.resolve({}) });
     assert.equal(unpaidSave.status, 403);
     const store = await readSpecialStore(viewer.userId, database);
@@ -63,12 +62,12 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
     });
     await recordSpecialTransaction(appleSpecialTransactionSchema.parse({
         transactionId: "200000099", originalTransactionId: "200000099",
-        bundleId: "com.fitfight.mvp", productId: "com.fitfight.mvp.special.pangolin",
+        bundleId: "com.fitfight.mvp", productId: "com.fitfight.mvp.special.black_panther",
         environment: "Sandbox", type: "Non-Consumable", inAppOwnershipType: "PURCHASED", quantity: 1,
         appAccountToken: store.app_account_token, purchaseDate: 1_790_000_000_000, signedDate: 1_790_000_001_000,
     }), database);
     const limitedSave = await updateMe(new Request("https://staging.fitfight.app/api/v1/me", {
-        method: "PATCH", headers, body: JSON.stringify({ companion_id: "limited-pangolin" }),
+        method: "PATCH", headers, body: JSON.stringify({ companion_id: "limited-black-panther" }),
     }), { params: Promise.resolve({}) });
     assert.equal(limitedSave.status, 200);
     for (const [version, build] of [["1.0.0", "113"], ["1.0.0", "190"], ["1.1.0", "200"], ["1.1.1", "201"], ["1.1.1", "202"], ["1.1.2", "203"], ["1.1.2", "204"], ["1.1.2", "205"]]) {
@@ -85,7 +84,7 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
         assert.equal(profile.user_id, viewer.userId);
         assert.ok(profile.referral_code);
         assert.equal(profile.time_zone, "Pacific/Kiritimati");
-        assert.equal(profile.companion_id, "limited-pangolin");
+        assert.equal(profile.companion_id, "limited-black-panther");
         const legacyPatch = await updateMe(new Request("https://staging.fitfight.app/api/v1/me", {
             method: "PATCH",
             headers: { ...headers, "X-FitFight-Version": version, "X-FitFight-Build": build },

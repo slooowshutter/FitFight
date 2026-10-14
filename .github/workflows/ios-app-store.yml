@@ -31,7 +31,7 @@ jobs:
             SUPABASE_PRODUCTION_URL: ${{ vars.SUPABASE_PRODUCTION_URL || 'https://pvqntpteehdvhqyctwum.supabase.co' }}
             SUPABASE_PRODUCTION_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PRODUCTION_PUBLISHABLE_KEY || 'sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li' }}
             FITFIGHT_PRODUCTION_API_URL: https://fitfight.app
-            FITFIGHT_RELEASE_VERSION: "1.1.2"
+            FITFIGHT_RELEASE_VERSION: "1.1.3"
         steps:
             - uses: actions/checkout@v4
 
@@ -173,12 +173,16 @@ jobs:
                   print("Production services and generated build environment are ready")
                   PY
 
+            # Package downloads only. Release archives always compile from scratch.
+            - uses: actions/cache@v4
+              with:
+                  path: ~/Library/Caches/org.swift.swiftpm
+                  key: swiftpm-${{ hashFiles('FitFight.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
             - uses: ruby/setup-ruby@v1
               with:
                   ruby-version: "3.3"
-
-            - name: Install Fastlane
-              run: bundle install
+                  bundler-cache: true
 
             - name: Upload production candidate
               env:
@@ -186,6 +190,8 @@ jobs:
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
                   APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+                  POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+                  POSTHOG_CLI_PROJECT_ID: "658541"
               run: bundle exec fastlane app_store_candidate
 
             - name: Register production candidate and refresh available releases

@@ -1,31 +1,42 @@
 import type { Sql } from "postgres";
 import { ApiError } from "@/lib/http";
+import { appReleasePolicy } from "@/lib/releases/app-release";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     appleSpecialProductIds,
-    applePurchaseEnvironmentSchema,
+    specialProductId,
+    type AppleSpecialConsumableTransaction,
     type AppleSpecialTransaction,
 } from "@/lib/types/apple/special-purchase";
 import {
+    limitedCompanionIdValues,
+    specialCompanionIdSchema,
+    specialCompanionIdValues,
+    type LimitedCompanionId,
+} from "@/lib/types/companions/companion";
+import {
     specialAccountSchema,
     specialEditionSchema,
+    specialPurchaseRowSchema,
     specialStoreSchema,
     specialTransactionRecordSchema,
     specialsConfigurationSchema,
-    type SpecialCheckoutRequest,
     type SpecialClaimResult,
     type SpecialStore,
 } from "@/lib/types/companions/specials";
 
-/** The shelf comes exclusively from deployment configuration, never a client header. */
+/**
+ * The shelf comes from deployment configuration. `sandbox` is set only while claiming a charge that names Sandbox; the
+ * charge is then verified as Sandbox, so a false claim only moves the caller's own account while it has no purchase,
+ * and on production only while a build is in review.
+ */
 export async function readSpecialStore(
     userId: string,
     database: Sql = createDatabaseClient(),
+    sandbox = false,
 ): Promise<SpecialStore> {
     const configured = specialsConfigurationSchema.safeParse({
         environment: process.env.APPLE_IAP_ENVIRONMENT,
-        enabled: process.env.APPLE_SPECIALS_ENABLED,
-        reviewers: process.env.APPLE_IAP_REVIEW_USER_IDS,
     });
     if (!configured.success)
         throw new ApiError(
@@ -34,6 +45,14 @@ export async function readSpecialStore(
             "Special purchases are not configured",
         );
     const configuration = configured.data;
+    // NOTE: App Review signs in with its own Apple Account and buys in Sandbox against production, so production opens
+    // the Sandbox shelf only while the release registry lists a build in review.
+    const environment =
+        sandbox &&
+        (configuration.environment === "Sandbox" ||
+            (await appReleasePolicy()).review !== null)
+            ? "Sandbox"
+            : configuration.environment;
     return database.begin(async (sql) => {
         const profiles =
             await sql`select id from public.profiles where id = ${userId} and deleted_at is null for key share`;
@@ -43,22 +62,6 @@ export async function readSpecialStore(
                 "profile_missing",
                 "Invalid or deleted account",
             );
-        // NOTE: unpaid holds lapse after 30 minutes so abandoned checkouts cannot strand a Special.
-        // A reserved row's updated_at is its reservation time; resuming the same checkout restarts it.
-        await sql`
-            update private.special_editions set state = 'available', account_id = null, attempt_id = null
-            where id in (
-                select id from private.special_editions
-                where state = 'reserved' and updated_at < now() - interval '30 minutes'
-                order by environment, companion_id for update skip locked
-            )
-        `;
-        // NOTE: App Review buys in Sandbox against production. Only configured review accounts use that shelf.
-        const environment =
-            configuration.environment === "Production" &&
-            configuration.reviewers.includes(userId.toLowerCase())
-                ? "Sandbox"
-                : configuration.environment;
         await sql`
             insert into private.special_accounts (user_id, environment) values (${userId}, ${environment})
             on conflict (user_id) do nothing
@@ -68,6 +71,7 @@ export async function readSpecialStore(
             where user_id = ${userId} and environment <> ${environment}
                 and not exists (select 1 from private.special_editions where account_id = account.id)
                 and not exists (select 1 from private.special_transactions where account_id = account.id)
+                and not exists (select 1 from private.special_purchases where account_id = account.id)
                 and not exists (select 1 from private.custom_character_purchases where account_id = account.id)
         `;
         const [row] =
@@ -82,9 +86,18 @@ export async function readSpecialStore(
                 "config",
                 "Purchase environment changed for this account",
             );
-        const editions = (
-            await sql`select * from private.special_editions where environment = ${account.environment}`
-        ).map((edition) => specialEditionSchema.parse(edition));
+        // An edition owned under the one-of-a-kind model stays owned alongside consumable purchases.
+        const owned = new Set(
+            (
+                await sql`
+                    select companion_id from private.special_purchases
+                    where account_id = ${account.id} and environment = ${account.environment} and revoked_at is null
+                    union
+                    select companion_id from private.special_editions
+                    where account_id = ${account.id} and environment = ${account.environment} and state = 'owned'
+                `
+            ).map((row) => specialCompanionIdSchema.parse(row.companion_id)),
+        );
         const conflicts = await sql`
             select outcome, transaction_id, companion_id from private.special_transactions
             where account_id = ${account.id} and outcome = 'conflict'
@@ -95,108 +108,136 @@ export async function readSpecialStore(
                 product,
             ]),
         );
+        const current = new Set<string>(limitedCompanionIdValues);
         return specialStoreSchema.parse({
             app_account_token: account.id,
             environment: account.environment,
-            purchases_enabled: configuration.enabled === "true",
-            editions: editions.map((edition) => ({
-                id: edition.companion_id,
-                product_id: productIds.get(edition.companion_id),
-                status:
-                    edition.account_id === account.id
-                        ? edition.state === "owned"
-                            ? "yours"
-                            : edition.state === "revoked"
-                              ? "refunded"
-                              : "reserved"
-                        : edition.state === "available"
-                          ? "available"
-                          : "taken",
-            })),
+            purchases_enabled: true,
+            product_id: specialProductId,
+            // Retired Specials are listed only for an account that owns one.
+            editions: specialCompanionIdValues
+                .filter((id) => current.has(id) || owned.has(id))
+                .map((id) => ({
+                    id,
+                    product_id: productIds.get(id),
+                    status: owned.has(id) ? "yours" : "available",
+                })),
             conflicts,
         });
     });
 }
 
-/** Holds lapse after 30 minutes without a verified charge; see readSpecialStore. */
-export async function specialCheckout(
-    userId: string,
-    input: SpecialCheckoutRequest,
+/**
+ * Apple is the payment authority: one charge unlocks one Special for one account, and a replay returns the Special it
+ * first unlocked. A notification names no Special, so it only updates a charge the app already claimed; an unclaimed
+ * refund is caught when the app claims it, because the claim reads Apple's current record.
+ */
+export async function recordSpecialPurchase(
+    transaction: AppleSpecialConsumableTransaction,
+    companionId: LimitedCompanionId | undefined,
     database: Sql = createDatabaseClient(),
-): Promise<void> {
-    const store = await readSpecialStore(userId, database);
-    if (input.action === "reserve" && !store.purchases_enabled)
-        throw new ApiError(
-            503,
-            "special_unavailable",
-            "Special purchases are not available yet",
-        );
-    await database.begin(async (sql) => {
-        const profiles =
-            await sql`select id from public.profiles where id = ${userId} and deleted_at is null for update`;
-        if (!profiles.length)
+): Promise<SpecialClaimResult | null> {
+    return database.begin(async (sql) => {
+        await sql`select pg_advisory_xact_lock(hashtextextended(${transaction.environment + ":" + transaction.originalTransactionId}, 3))`;
+        const [owner] =
+            await sql`select id, user_id, environment from private.special_accounts where id = ${transaction.appAccountToken}`;
+        if (!owner || owner.environment !== transaction.environment)
             throw new ApiError(
-                401,
-                "profile_missing",
-                "Invalid or deleted account",
+                409,
+                "special_account",
+                "Purchase belongs to another FitFight account",
             );
+        const account = specialAccountSchema.parse(owner);
+        // Profile, then account, is also the deletion and equip lock order.
+        if (account.user_id)
+            await sql`select id from public.profiles where id = ${account.user_id} for update`;
         const [locked] =
-            await sql`select environment from private.special_accounts where id = ${store.app_account_token} for update`;
-        const environment = applePurchaseEnvironmentSchema.parse(
-            locked.environment,
-        );
-        const rows = await sql`
-            select * from private.special_editions where environment = ${environment}
-                and (companion_id = ${input.companion_id} or account_id = ${store.app_account_token})
-            order by companion_id for update
-        `;
-        const editions = rows.map((row) => specialEditionSchema.parse(row));
-        const target = editions.find(
-            (edition) => edition.companion_id === input.companion_id,
-        );
-        if (!target) throw new ApiError(404, "not_found", "Special not found");
-        if (input.action === "cancel") {
-            if (
-                target.state === "reserved" &&
-                target.account_id === store.app_account_token &&
-                target.attempt_id === input.attempt_id
-            ) {
-                await sql`update private.special_editions set state = 'available', account_id = null, attempt_id = null where id = ${target.id}`;
-            }
-            return;
-        }
-        const existing = editions.find(
-            (edition) => edition.account_id === store.app_account_token,
-        );
-        if (existing) {
-            if (
-                existing.id === target.id &&
-                existing.state === "reserved" &&
-                existing.attempt_id === input.attempt_id
-            ) {
-                await sql`update private.special_editions set updated_at = now() where id = ${existing.id}`;
-                return;
-            }
+            await sql`select user_id, environment from private.special_accounts where id = ${account.id} for update`;
+        if (
+            locked.user_id !== account.user_id ||
+            locked.environment !== transaction.environment
+        )
             throw new ApiError(
                 409,
-                "special_limit",
-                "You already own a Special or have a purchase in progress",
+                "special_account",
+                "Purchase account changed",
             );
-        }
-        if (target.state !== "available")
+        const [previousRow] = await sql`
+            select id, account_id, companion_id, transaction_id, original_transaction_id, revoked_at, signed_at
+            from private.special_purchases where environment = ${transaction.environment}
+                and (transaction_id = ${transaction.transactionId} or original_transaction_id = ${transaction.originalTransactionId})
+            for update
+        `;
+        const previous =
+            previousRow && specialPurchaseRowSchema.parse(previousRow);
+        if (
+            previous &&
+            (previous.account_id !== account.id ||
+                previous.transaction_id !== transaction.transactionId ||
+                previous.original_transaction_id !==
+                    transaction.originalTransactionId)
+        )
             throw new ApiError(
                 409,
-                "companion_taken",
-                "That Special is no longer available",
+                "special_account",
+                "Purchase is already bound to another account",
             );
-        await sql`
-            update private.special_editions set state = 'reserved', account_id = ${store.app_account_token}, attempt_id = ${input.attempt_id}
-            where id = ${target.id}
-        `;
+        const revoked =
+            transaction.revocationDate !== undefined ||
+            transaction.revocationType !== undefined ||
+            (transaction.revocationPercentage !== undefined &&
+                transaction.revocationPercentage > 0);
+        const revokedAt = revoked
+            ? new Date(transaction.revocationDate ?? transaction.signedDate)
+            : null;
+        let saved = previous;
+        if (!previous) {
+            if (!companionId) return null;
+            const [inserted] = await sql`
+                insert into private.special_purchases
+                    (account_id, environment, companion_id, transaction_id, original_transaction_id, revoked_at, signed_at, purchase_at, evidence)
+                values (${account.id}, ${transaction.environment}, ${companionId}, ${transaction.transactionId},
+                    ${transaction.originalTransactionId}, ${revokedAt}, ${new Date(transaction.signedDate)},
+                    ${new Date(transaction.purchaseDate)}, ${sql.json(transaction)})
+                returning id, account_id, companion_id, transaction_id, original_transaction_id, revoked_at, signed_at
+            `;
+            saved = specialPurchaseRowSchema.parse(inserted);
+        } else if (previous.signed_at.getTime() <= transaction.signedDate) {
+            const [updated] = await sql`
+                update private.special_purchases set revoked_at = ${revokedAt}, signed_at = ${new Date(transaction.signedDate)},
+                    evidence = ${sql.json(transaction)}
+                where id = ${previous.id}
+                returning id, account_id, companion_id, transaction_id, original_transaction_id, revoked_at, signed_at
+            `;
+            saved = specialPurchaseRowSchema.parse(updated);
+        }
+        if (!saved) throw new Error("Special purchase was not saved");
+        // The same Special may be owned twice, or under the old model, so a refund unequips only the last ownership.
+        if (saved.revoked_at && account.user_id) {
+            await sql`
+                update public.profiles set companion_id = null, companion_prompt = null
+                where id = ${account.user_id} and companion_id = ${saved.companion_id}
+                    and not exists (
+                        select 1 from private.special_purchases where account_id = ${account.id}
+                            and environment = ${transaction.environment} and companion_id = ${saved.companion_id}
+                            and revoked_at is null
+                    )
+                    and not exists (
+                        select 1 from private.special_editions where account_id = ${account.id}
+                            and environment = ${transaction.environment} and companion_id = ${saved.companion_id}
+                            and state = 'owned'
+                    )
+            `;
+        }
+        return {
+            outcome: saved.revoked_at ? "refunded" : "owned",
+            transaction_id: transaction.transactionId,
+            companion_id: saved.companion_id,
+        };
     });
 }
 
-/** Persists every verified charge, including conflicts, before reporting its outcome. */
+/** Legacy one-of-a-kind products only. Persists every verified charge, including conflicts, before reporting its outcome. */
 export async function recordSpecialTransaction(
     transaction: AppleSpecialTransaction,
     database: Sql = createDatabaseClient(),
@@ -280,7 +321,9 @@ export async function recordSpecialTransaction(
         const assignable =
             !hasAnother &&
             (belongs ||
-                (edition.state === "available" && (!revoked || !previous)));
+                (edition.retired_at === null &&
+                    edition.state === "available" &&
+                    (!revoked || !previous)));
         const outcome = stale
             ? previous.outcome
             : revoked

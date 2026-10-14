@@ -8,6 +8,7 @@ struct YouView: View {
     @EnvironmentObject private var steps: HealthKitStepsStore
     @EnvironmentObject private var preferences: AccountPreferencesStore
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var purchases: SpecialPurchases
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
@@ -70,7 +71,10 @@ struct YouView: View {
         }
         .navigationDestination(isPresented: $showingSettings) { settingsScreen }
         .navigationDestination(isPresented: $showingDashboard) {
-            DashboardView(sports: activity.sports, days: activity.days, statistics: ownProfile?.stepStatistics, results: results)
+            DashboardView(
+                sports: activity.sports, days: activity.days, statistics: ownProfile?.stepStatistics,
+                results: results, record: ownProfile?.record
+            )
         }
         .onChange(of: session.authSession?.user.id, initial: true) { _, userID in
             cachedProfile = userID
@@ -127,14 +131,14 @@ struct YouView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently deletes your profile, photos, uploaded Apple Health activity, referrals, invitations, fights you created, and bugs or requests you posted; removes you from other fights; and signs you out. This can’t be undone.")
-            Text("Deleting your account does not refund Apple purchases. Paid Specials are not resold. Contact support for purchase recovery.")
+            Text("Deleting your account does not refund Apple purchases. Contact support for purchase recovery.")
         }
     }
 
     private var ownProfile: SharedProfile? { profileStore.profile ?? cachedProfile }
 
     /// Won, lost and drew from your record; group places below first count as lost.
-    /// Nil when the backend predates draws and losses, so the card shows wins over played.
+    /// Nil when the backend predates draws and losses, so the card shows only won and lost.
     private var results: (won: Int, lost: Int, drew: Int)? {
         guard let record = ownProfile?.record, let drew = record.draws, let lost = record.losses else { return nil }
         return (record.wins, lost, drew)
@@ -155,6 +159,7 @@ struct YouView: View {
         FFRefreshConfig(
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
+            error: model.refreshError,
             action: {
                 await refreshOwnProfile(trigger: .manual)
             }
@@ -229,6 +234,14 @@ struct YouView: View {
                     navRow(String(appLocalized: "Edit profile")) { showingEditProfile = true }
                     FFDivider()
                     navRow(String(appLocalized: "Your companion")) { companions.showingPicker = true }
+                    FFDivider()
+                    FFGroupedRow(
+                        title: String(appLocalized: "Restore purchases"),
+                        subtitle: purchases.message.isEmpty ? nil : purchases.message,
+                        enabled: !purchases.isBusy,
+                        subtitleTone: .neutral,
+                        action: { Task { await purchases.restore(session: session) } }
+                    )
                 }
             }
             FFSection(title: String(appLocalized: "Apple Health")) {
@@ -451,7 +464,21 @@ struct YouView: View {
         FFGroupedRows {
             if let code = session.profile?.referralCode {
                 ShareLink(item: APIConfig.publicOrigin.appending(path: "r/\(code.uuidString.lowercased())")) {
-                    rowLabel(title: String(appLocalized: "Refer a friend"), destructive: false)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(String(appLocalized: "Refer a friend"))
+                                .ffType(.rowTitle)
+                                .foregroundStyle(theme.text)
+                            Text(String(appLocalized: "When they connect Apple Health, you each get a free character."))
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textSecondary)
+                        }
+                        Spacer()
+                        FFChevron()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(FFHapticPlainStyle())
                 FFDivider()

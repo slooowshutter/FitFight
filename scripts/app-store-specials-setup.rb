@@ -34,7 +34,7 @@ request_apple = lambda do |path, payload = nil, allow_missing: false|
 end
 
 catalog = JSON.parse(File.read(File.expand_path("../docs/design/source/companion/limited-editions.json", __dir__)))
-abort "Expected 40 distinct Specials" unless catalog.length == 40 && catalog.map { |row| row.fetch("id") }.uniq.length == 40
+abort "Expected 30 distinct Specials" unless catalog.length == 30 && catalog.map { |row| row.fetch("id") }.uniq.length == 30
 mode = ARGV.fetch(0, "audit")
 abort "Expected audit, prepare, price, or availability" unless ["audit", "prepare", "price", "availability"].include?(mode)
 expected = catalog.map { |row| "com.fitfight.mvp.special.#{row.fetch('id').delete_prefix('limited-').tr('-', '_')}" }
@@ -79,10 +79,9 @@ if mode == "prepare"
             }).fetch("data")
         end
         localizations = request_apple.call("/v1/inAppPurchaseVersions/#{version.fetch('id')}/localizations?limit=200").fetch("data")
-        french_name = row.fetch("id") == "limited-secretary-bird-stride" ? "Messager sagittaire, actif" : row.fetch("frenchName")
         [
             ["en-US", row.fetch("name"), "One-of-a-kind profile companion."],
-            ["fr-FR", french_name, "Compagnon de profil en exemplaire unique."]
+            ["fr-FR", row.fetch("frenchName"), "Compagnon de profil en exemplaire unique."]
         ].each do |locale, name, description|
             abort "Apple purchase text is too long" unless name.length.between?(2, 30) && description.length <= 45
             existing = localizations.find { |item| item.fetch("attributes").fetch("locale") == locale }
@@ -203,7 +202,7 @@ if mode == "price"
         verified_prices << { product_id: product_id, base_territory: base_territory, currency: "EUR", customer_price: "0.99" }
         puts "Verified #{product_id}: EUR 0.99"
     end
-    abort "Not every Special price was verified" unless verified_prices.length == 40
+    abort "Not every Special price was verified" unless verified_prices.length == 30
 end
 
 puts JSON.pretty_generate({

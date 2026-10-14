@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 enum MetricKind: String, Codable, Hashable {
     case steps
@@ -213,6 +214,10 @@ final class AppModel: ObservableObject {
     @Published var dailyStatusRecap: DailyStatusRecap?
     @Published var showingVersions = false
     @Published var showingPreferences = false
+    @Published var showingBetaTesting = false
+    /// `beta`, `production`, or nil before the backend first answers. Cached per backend: an App Store
+    /// install that replaces TestFlight must not start with the Beta strip.
+    @Published private(set) var environment = UserDefaults.standard.string(forKey: AppModel.environmentKey)
     @Published var showingDebugMenu = false
     @Published var showingUpdateToastPreview = false
     @Published var feedbackRequestFilter = RequestFilter()
@@ -229,6 +234,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var isRefreshingFights = false
     @Published private(set) var refreshPhase: FightRefreshPhase = .idle
     @Published private(set) var refreshLine = 0
+    @Published private(set) var refreshError: String?
 
     var refreshStatusText: String {
         refreshPhase.statusText(line: refreshLine)
@@ -250,6 +256,7 @@ final class AppModel: ObservableObject {
     private var discoveryTask: Task<Void, Never>?
     private var discoveryGeneration = 0
     private var refreshTask: Task<Void, Never>?
+    private var refreshBackgroundTask = UIBackgroundTaskIdentifier.invalid
     private var refreshLineTask: Task<Void, Never>?
     private var refreshUserID: UUID?
     private var pendingRefresh: (
@@ -263,6 +270,7 @@ final class AppModel: ObservableObject {
     private static let pendingReferralUserKey = "fitfight.pendingReferralUser"
     private static let pendingFightRouteKey = "fitfight.pendingFightRoute"
     private static let pendingDailyStatusKey = "fitfight.pendingDailyStatus"
+    private static let environmentKey = "fitfight.environment.\(FitFightAPI.resolvedBaseURL?.absoluteString ?? "")"
 
     static func storePendingFightRoute(_ route: String) {
         let trimmed = route.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -321,6 +329,13 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The backend reads its environment table, so this build's own settings never decide Beta.
+    func refreshEnvironment() async {
+        guard let environment = try? await api.environment().environment else { return }
+        UserDefaults.standard.set(environment, forKey: Self.environmentKey)
+        self.environment = environment
+    }
+
     func fight(id: String) -> Fight? {
         fights.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
             ?? pendingJoinable.flatMap { $0.id.caseInsensitiveCompare(id) == .orderedSame ? $0 : nil }
@@ -345,13 +360,18 @@ final class AppModel: ObservableObject {
             .sorted { $0.windowStart > $1.windowStart }
     }
 
-    /// Winner of the previous round and how many rounds in a row they have won.
+    /// Who holds the trophy in this round and how many rounds in a row they have won.
+    /// A final round's own winner holds it, so History cards match their result. A round still
+    /// being played shows the previous round's winner, and a cancelled round has no holder.
     /// ponytail: only rounds this user was in are in the snapshot; a skipped or cancelled round ends the streak early.
     func trophyStreak(for fight: Fight) -> (userId: String, count: Int)? {
+        if fight.serverState == "cancelled" { return nil }
+        let ended = fight.serverState == "final"
         var holder: String?
         var count = 0
-        var nextStart = fight.windowStart
-        for round in seriesHistory(for: fight) where round.windowStart < fight.windowStart {
+        var nextStart = ended ? fight.windowEnd : fight.windowStart
+        let earlier = seriesHistory(for: fight).filter { $0.windowStart < fight.windowStart }
+        for round in (ended ? [fight] : []) + earlier {
             // The server starts each round at the previous round's end, truncated to milliseconds.
             guard abs(round.windowEnd.timeIntervalSince(nextStart)) < 1, round.serverState == "final" else { break }
             nextStart = round.windowStart
@@ -402,9 +422,17 @@ final class AppModel: ObservableObject {
             .filter { $0.status == .invited }
             .sorted { $0.windowStart > $1.windowStart }
     }
+    /// Every ended round, so a repeating fight's result stays visible after its next round starts.
+    /// Non-canonical rounds need you as a real member, which hides rounds you were only invited to.
     var finished: [Fight] {
-        canonicalFights
-            .filter { $0.status == .pending || $0.status == .finished }
+        let canonicalIDs = Set(canonicalFights.map(\.id))
+        return fights
+            .filter { fight in
+                guard fight.status == .pending || fight.status == .finished else { return false }
+                if canonicalIDs.contains(fight.id) { return true }
+                guard let you = youStanding(in: fight) else { return false }
+                return !you.invited && !you.deferred
+            }
             .sorted { $0.windowStart > $1.windowStart }
     }
 
@@ -469,9 +497,11 @@ final class AppModel: ObservableObject {
             : String(appLocalized: "Waiting for first sync")
     }
 
+    /// Refreshes after an action inside the app. The attempt is "manual" because the admin
+    /// dashboard counts every "foreground" attempt as an app open.
     func refreshFromServer() async {
         guard let session else { return }
-        await refreshFromServer(session: session)
+        await refreshFromServer(session: session, trigger: .manual)
     }
 
     func restoreCachedFights(session: SessionStore) {
@@ -515,6 +545,7 @@ final class AppModel: ObservableObject {
         }
         isRefreshingFights = true
         refreshPhase = .readingHealth
+        refreshError = nil
         refreshUserID = session.authSession?.user.id ?? session.client.auth.currentUser?.id
         let work = Task { @MainActor in
             defer {
@@ -539,7 +570,7 @@ final class AppModel: ObservableObject {
                 if let pending = self.pendingRefresh {
                     current = pending
                 }
-            } while self.pendingRefresh != nil
+            } while self.pendingRefresh != nil && !Task.isCancelled
         }
         refreshTask = work
         guard !Task.isCancelled else { return }
@@ -559,6 +590,14 @@ final class AppModel: ObservableObject {
     ) async {
         let userID = session.authSession?.user.id ?? session.client.auth.currentUser?.id
         let trace = HealthKitSyncTrace(trigger: trigger)
+        // If the user leaves the app mid-refresh, iOS lets it finish instead of freezing it until the next open.
+        refreshBackgroundTask = UIApplication.shared.beginBackgroundTask(withName: "FitFight refresh") {
+            MainActor.assumeIsolated {
+                self.refreshTask?.cancel()
+                self.endRefreshBackgroundTask()
+            }
+        }
+        defer { endRefreshBackgroundTask() }
 
         await holdRefreshPhase(.readingHealth) {
             await steps.refresh(requestAccess: requestAccess, trace: trace)
@@ -568,6 +607,15 @@ final class AppModel: ObservableObject {
             steps.completeAttempt(trace, session: session, userID: userID)
             return
         }
+        // The network part stops after 30 seconds, so a stalled connection cannot keep the spinner turning.
+        // The limit starts after the Health read, because the Health permission sheet waits for the user.
+        let refresh = refreshTask
+        let limit = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            self.refreshError = String(appLocalized: "Refreshing took too long. Check your internet connection.")
+            refresh?.cancel()
+        }
+        defer { limit.cancel() }
         if session.authSession != nil {
             await holdRefreshPhase(.uploading) {
                 await steps.syncToBackend(session: session, trigger: trigger, trace: trace)
@@ -582,6 +630,12 @@ final class AppModel: ObservableObject {
             await refreshFromServer(session: session, trace: trace)
         }
         steps.completeAttempt(trace, session: session, userID: userID)
+    }
+
+    private func endRefreshBackgroundTask() {
+        guard refreshBackgroundTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(refreshBackgroundTask)
+        refreshBackgroundTask = .invalid
     }
 
     private func holdRefreshPhase(_ phase: FightRefreshPhase, work: () async -> Void) async {
@@ -628,7 +682,8 @@ final class AppModel: ObservableObject {
     }
 
     func refreshFromServer(
-        session: SessionStore, trace: HealthKitSyncTrace? = nil, performMaintenance: Bool = true
+        session: SessionStore, trace: HealthKitSyncTrace? = nil,
+        trigger: HealthKitStepsStore.SyncTrigger = .foreground, performMaintenance: Bool = true
     ) async {
         guard !CompanionPreview.isEnabled else { return }
         self.session = session
@@ -640,7 +695,7 @@ final class AppModel: ObservableObject {
         if let profile = session.profile {
             you = Self.person(from: profile, isYou: true)
         }
-        let attempt = trace ?? HealthKitSyncTrace(trigger: .foreground)
+        let attempt = trace ?? HealthKitSyncTrace(trigger: trigger)
         defer {
             if trace == nil && performMaintenance {
                 HealthKitStepsStore.shared.completeAttempt(attempt, session: session, userID: userId)
@@ -1217,7 +1272,7 @@ final class AppModel: ObservableObject {
             coalesceInFlight: false
         )
         steps.completeAttempt(trace, session: session, userID: session.authSession?.user.id)
-        await refreshFromServer(session: session)
+        await refreshFromServer(session: session, trigger: .manual)
     }
 
     private func joinPendingFight(_ fight: Fight, start: String = "now") async {
@@ -1244,7 +1299,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func leaveFight(id: String) async {
+    func leaveFight(id: String, newOwnerID: String? = nil) async {
         guard !CompanionPreview.isEnabled else { createError = CompanionPreview.writeUnavailable; return }
         createError = nil
         guard let session, session.authSession != nil, api.isConfigured else {
@@ -1256,7 +1311,7 @@ final class AppModel: ObservableObject {
             return
         }
         do {
-            _ = try await api.leaveFight(fightID: fightID, accessToken: try await session.freshAccessToken())
+            _ = try await api.leaveFight(fightID: fightID, newOwnerID: newOwnerID.flatMap(UUID.init(uuidString:)), accessToken: try await session.freshAccessToken())
             invalidateFightDiscovery()
             openFightID = nil
             joined.remove(id)

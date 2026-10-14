@@ -59,7 +59,7 @@ function requestResponse(request: AiRequestRecord): AiRunResponse {
             {
                 request_id: request.id,
                 workflow_id: request.workflow_version.workflowId,
-                version_id: request.workflow_version.versionId,
+                version_id: request.workflow_version.versionId ?? null,
             },
             { request_id: request.id },
         );
@@ -87,7 +87,7 @@ export async function startAiRun(
         correlateAiRequest({
             user_id: userId,
             workflow_id: config.version.workflowId,
-            version_id: config.version.versionId,
+            version_id: config.version.versionId ?? null,
         });
     const reservation = await deps.reserve(
         userId,
@@ -104,8 +104,8 @@ export async function startAiRun(
             requestHash: createHash("sha256")
                 .update(JSON.stringify(input))
                 .digest("hex"),
-            version: config?.enabled ? config.version : null,
-            creditPrice: config?.enabled ? config.creditPrice : null,
+            version: config?.version ?? null,
+            creditPrice: config?.creditPrice ?? null,
             sourceRequestIds:
                 input.workflow === "avatar"
                     ? []
@@ -115,13 +115,13 @@ export async function startAiRun(
                             (character) => character.avatar_request_id,
                         ),
         },
-        config?.enabled ? config.limits : null,
+        config?.limits ?? null,
     );
     const request = reservation.request;
     const diagnostic = {
         request_id: request.id,
         workflow_id: request.workflow_version.workflowId,
-        version_id: request.workflow_version.versionId,
+        version_id: request.workflow_version.versionId ?? null,
     };
     correlateAiRequest(
         {
@@ -139,6 +139,16 @@ export async function startAiRun(
 
     let started;
     try {
+        // NOTE: Blend sends a bare URL to its LLM nodes as application/octet-stream, which the provider rejects. Typed files keep the PNG media type.
+        const portraits = reservation.portraits.map((url) => ({
+            id: url,
+            name: "portrait.png",
+            url,
+            size: 0,
+            mimeType: "image/png",
+            extension: "png",
+            mediaCategory: "image",
+        }));
         const inputs =
             input.workflow === "avatar"
                 ? {
@@ -150,11 +160,11 @@ export async function startAiRun(
                   }
                 : input.workflow === "fitness"
                   ? {
-                        character_portrait: reservation.portraits,
+                        character_portrait: portraits,
                         identity_details: input.parameters.identity_details,
                     }
                   : {
-                        character_portraits: reservation.portraits,
+                        character_portraits: portraits,
                         scene: input.parameters.scene,
                         cast_roster: input.parameters.characters
                             .map(
@@ -274,7 +284,7 @@ export async function readAiRun(
     const diagnostic = {
         request_id: request.id,
         workflow_id: request.workflow_version.workflowId,
-        version_id: request.workflow_version.versionId,
+        version_id: request.workflow_version.versionId ?? null,
         run_id: request.run_handle?.runId ?? null,
     };
     correlateAiRequest({ user_id: userId, ...diagnostic }, "observed");

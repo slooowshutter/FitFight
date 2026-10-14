@@ -27,6 +27,174 @@ enum Changelog {
         ReleaseNote(
             version: "1.1.3",
             year: 2026,
+            month: 10,
+            day: 14,
+            notes: "Trophies now follow each finished round’s winner: History shows the trophy next to who won that round, and finished fights show one on their winner. ×N still counts rounds won in a row."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "Steps sync faster and wake your phone less: each day is read once for all your fights, and FitFight now uploads only your Steps."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "Past now shows every finished round of a repeating fight with its dates, and tapping one opens that round’s result."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "Free characters now come from invites. When a friend you invite connects Apple Health, you each get one. New accounts no longer get one on their own."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "A free character can also unlock any Special, and the companion picker shows how many you have."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "During sign-up, you now connect Apple Health before you choose your companion."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 13,
+            notes: "Your own characters no longer sit on a grey square: their transparent background shows the card behind them."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 13,
+            notes: "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 13,
+            notes: "TestFlight builds now tell everyone except admins that FitFight is on the App Store, with a button to open it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "Free characters: create a custom companion with a free character. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "On the companion stage, swiping back now brings the animal in from the left, instead of flying it across the screen from the right."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "On a slow connection, refreshing now stops after 30 seconds and shows Try again instead of spinning."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "FitFight now asks once for the Apple Health activity types added since you connected, so all your activity syncs."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "Background sync does less work: one upload covers every Apple Health update, at most once every 15 minutes."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 12,
+            notes: "Specials are no longer one of a kind: anyone can buy any Special, and you can collect as many as you like. Each one is bought once and stays yours."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "Specials are new: 30 one-of-a-kind animals in five series, each with five step poses."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "The Yours tab in the animal picker is now your collection: your Special, the characters you created, and your current animal, with Create your own at the end. Writing a free text-only animal is gone. If you already have one, you keep it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "A paid character now starts with three portraits to choose from. Pick your favourite and FitFight draws its five fitness poses, even with the app closed, then notifies you when it is ready."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "Your profile picture is now always your companion. Photo uploads are gone."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 11,
+            notes: "Specials are back in the animal picker: 40 one-of-a-kind animals, each owned by only one person."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 10,
+            notes: "You can now change your companion from the levels drawer: tap it on Fights, then choose Change animal."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 6,
+            notes: "You can now leave any fight you joined. If you created it, pick who takes over first, or delete it if you are the only one in it."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 5,
+            notes: "Profile shows your fight record in color every time, instead of sometimes as plain wins out of fights played."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 9,
+            day: 29,
+            notes: "On the beta, a Beta bar now sits at the top of the app. Tap it to open Beta testing in Profile and get back to the App Store version."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
             month: 9,
             day: 29,
             notes: "Fights shows today's steps as soon as you open the app instead of a dash, then updates them from Apple Health. Before the first read of the day, it shows Synchronizing your steps."
@@ -39,11 +207,25 @@ enum Changelog {
             notes: "The You tab is now called Profile."
         ),
         ReleaseNote(
-            version: "1.1.2",
+            version: "1.1.3",
             year: 2026,
             month: 9,
             day: 28,
             notes: "When a new FitFight version is out, a notice at the top offers the update, at most once every three days. Close it to keep using your current version. The app no longer locks until you update."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 9,
+            day: 28,
+            notes: "Tap your companion on Fights to see its five levels: each pose, the steps it starts at, and how many more steps you need today for the next one."
+        ),
+        ReleaseNote(
+            version: "1.1.2",
+            year: 2026,
+            month: 9,
+            day: 28,
+            notes: "Tap your companion on Fights to see its five levels: each pose, the steps it starts at, and how many more steps you need today for the next one."
         ),
         ReleaseNote(
             version: "1.1.2",

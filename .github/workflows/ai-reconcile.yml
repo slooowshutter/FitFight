@@ -1,0 +1,41 @@
+# Advances paid characters and Blend runs on staging, where Vercel Cron never runs.
+# Production also has a per-minute Vercel Cron; this is its backup. GitHub runs schedules
+# only from the default branch, at best every 5 minutes, and may start them late.
+# Every environment shares one CRON_SECRET, stored once as a repository secret.
+name: AI reconcile
+
+on:
+    schedule:
+        - cron: "*/5 * * * *"
+
+concurrency:
+    group: ai-reconcile
+    cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+    reconcile:
+        name: Reconcile ${{ matrix.environment }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 3
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - environment: staging
+                      url: https://staging.fitfight.app/api/internal/ai/reconcile
+                    - environment: production
+                      url: https://fitfight.app/api/internal/ai/reconcile
+        steps:
+            - name: Call the protected reconcile endpoint
+              env:
+                  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+                  URL: ${{ matrix.url }}
+              run: |
+                  if [ -z "$CRON_SECRET" ]; then
+                      echo "Repository secret CRON_SECRET is not set; skipping."
+                      exit 0
+                  fi
+                  curl --fail-with-body --silent --show-error --max-time 90 \
+                      -H "Authorization: Bearer $CRON_SECRET" "$URL"

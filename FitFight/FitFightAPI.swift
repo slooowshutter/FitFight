@@ -1,4 +1,5 @@
 import Foundation
+import PostHog
 
 enum FitFightAPIError: LocalizedError {
     case notConfigured
@@ -25,6 +26,8 @@ enum FitFightAPIError: LocalizedError {
                 return String(appLocalized: "Special purchases are not available yet.")
             case "special_account":
                 return String(appLocalized: "This purchase belongs to another FitFight account. Sign in to that account or contact support.")
+            case "no_free_characters":
+                return String(appLocalized: "You have no free characters left.")
             case "already_member":
                 return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
@@ -881,9 +884,15 @@ struct FitFightAPI {
         try await get(path: "me/specials", accessToken: accessToken, expected: [200])
     }
 
-    func specialCheckout(action: String, companionId: String, attemptId: UUID, accessToken: String) async throws {
-        let _: DiscardBody = try await post(path: "me/specials/checkout", accessToken: accessToken,
-            body: ["action": action, "companion_id": companionId, "attempt_id": attemptId.uuidString.lowercased()], expected: [200])
+    func claimSpecialPurchase(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
+        try await post(path: "me/specials/purchases", accessToken: accessToken,
+            body: ["companion_id": companionId, "signed_transaction": signedTransaction], expected: [200])
+    }
+
+    /// Unlocks a Special with one free character instead of a charge.
+    func claimFreeSpecial(companionId: String, idempotencyKey: UUID, accessToken: String) async throws -> SpecialClaimResult {
+        try await post(path: "me/specials/free", accessToken: accessToken, body: ["companion_id": companionId],
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
     }
 
     func claimSpecial(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
@@ -895,14 +904,27 @@ struct FitFightAPI {
         try await get(path: "me/custom-characters", accessToken: accessToken, expected: [200])
     }
 
-    func claimCustomCharacter(signedTransaction: String, accessToken: String) async throws -> CustomCharacterClaim {
-        try await post(path: "me/custom-characters/purchases", accessToken: accessToken,
-                       body: ["signed_transaction": signedTransaction], expected: [200])
+    func claimCustomCharacter(signedTransaction: String, description: String?, accessToken: String) async throws -> CustomCharacterClaim {
+        var body = ["signed_transaction": signedTransaction]
+        body["description"] = description
+        return try await post(path: "me/custom-characters/purchases", accessToken: accessToken, body: body, expected: [200])
+    }
+
+    func claimFreeCustomCharacter(description: String, idempotencyKey: UUID, accessToken: String) async throws -> CustomCharacterClaim {
+        try await post(path: "me/custom-characters/free", accessToken: accessToken, body: ["description": description],
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
     }
 
     func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {
         try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/advance", accessToken: accessToken,
-                       body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil), expected: [200, 202])
+                       body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil,
+                                                        choosePortrait: description == nil ? nil : true),
+                       expected: [200, 202])
+    }
+
+    func chooseCustomCharacterPortrait(id: UUID, candidateID: UUID, accessToken: String) async throws -> CustomCharacterProgress {
+        try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/choose", accessToken: accessToken,
+                       body: ["candidate_id": candidateID.uuidString.lowercased()], expected: [200, 202])
     }
 
     func updateProfile(
@@ -1223,13 +1245,15 @@ struct FitFightAPI {
         accessToken: String,
         idempotencyKey: String
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights",
             accessToken: accessToken,
             body: payload,
             idempotencyKey: idempotencyKey,
             expected: [200, 201]
         )
+        PostHogSDK.shared.capture("fight_created")
+        return fight
     }
 
     func updateFight(
@@ -1257,20 +1281,49 @@ struct FitFightAPI {
         try await get(path: "me/capabilities", accessToken: accessToken)
     }
 
+    func environment() async throws -> FitFightEnvironment {
+        try await get(path: "environment", accessToken: "")
+    }
+
     func administerFight(fightID: UUID, input: AdministerFightRequest, accessToken: String) async throws -> FitFightSummary {
         try await request(path: "fights/\(fightID.uuidString.lowercased())/admin", method: "PATCH", accessToken: accessToken,
                           body: Self.encoder.encode(input))
     }
 
-    /// `environment` is the database to read, `production` or `staging`. `authProject` is the
+    /// `environment` is the database to read, `production` or `staging`. `bucket` (day, week or
+    /// month) sets the charts over time; nil lets the server pick by period. `authProject` is the
     /// Supabase project ref of this app's own sign-in, so a login from either project works
     /// without a second sign-in.
-    func adminDashboard(section: String, days: Int, environment: String, authProject: String, accessToken: String) async throws -> FitFightAdminDashboard {
+    func adminDashboard(
+        section: String,
+        days: Int,
+        bucket: String?,
+        environment: String,
+        authProject: String,
+        accessToken: String
+    ) async throws -> FitFightAdminDashboard {
         try await get(
-            path: "admin/dashboard?section=\(section)&days=\(days)&environment=\(environment)",
+            path: "admin/dashboard?section=\(section)&days=\(days)&environment=\(environment)"
+                + (bucket.map { "&bucket=\($0)" } ?? ""),
             accessToken: accessToken,
             headers: ["X-FitFight-Auth-Project": authProject]
         )
+    }
+
+    func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
+        try await get(path: "admin/recent-syncs", accessToken: accessToken)
+    }
+
+    /// Admin only. The newest referral characters.
+    func freeCharacterReferrals(accessToken: String) async throws -> FitFightFreeCharacterReferrals {
+        try await get(path: "admin/free-characters", accessToken: accessToken)
+    }
+
+    /// Admin only. A nil username gives to every current account.
+    func giftFreeCharacters(username: String?, quantity: Int, idempotencyKey: UUID, accessToken: String) async throws -> FitFightFreeCharacterGift {
+        try await post(path: "admin/free-characters", accessToken: accessToken,
+                       body: FitFightFreeCharacterGiftBody(quantity: quantity, username: username, everyone: username == nil ? true : nil),
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
     }
 
     func listSuggestedFights(accessToken: String) async throws -> [FitFightJoinableFight] {
@@ -1307,18 +1360,20 @@ struct FitFightAPI {
         accessToken: String,
         start: String = "now"
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights/join",
             accessToken: accessToken,
             body: JoinFightBody(code: code, fightId: fightID, start: start)
         )
+        PostHogSDK.shared.capture("fight_joined")
+        return fight
     }
 
-    func leaveFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {
+    func leaveFight(fightID: UUID, newOwnerID: UUID? = nil, accessToken: String) async throws -> FitFightSummary {
         try await post(
             path: "fights/leave",
             accessToken: accessToken,
-            body: LeaveFightBody(fightId: fightID)
+            body: LeaveFightBody(fightId: fightID, newOwnerId: newOwnerID)
         )
     }
 
@@ -1328,11 +1383,13 @@ struct FitFightAPI {
         personalTarget: Double? = nil,
         start: String = "now"
     ) async throws -> FitFightSummary {
-        try await post(
+        let fight: FitFightSummary = try await post(
             path: "fights/\(fightID.uuidString.lowercased())/accept",
             accessToken: accessToken,
             body: AcceptBody(personalTarget: personalTarget, start: start)
         )
+        PostHogSDK.shared.capture("fight_accepted")
+        return fight
     }
 
     func declineFight(fightID: UUID, accessToken: String) async throws -> FitFightSummary {
@@ -1528,6 +1585,11 @@ struct FitFightAPI {
 
             var request = URLRequest(url: requestURL)
             request.httpMethod = method
+            // Only sync requests carry a trace. A slow upload or server gets up to 2 minutes without data.
+            // The refresh and background time limits still end the waits that people see.
+            if trace != nil {
+                request.timeoutInterval = 120
+            }
             if !accessToken.isEmpty {
                 request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             }
@@ -1765,6 +1827,7 @@ private struct JoinFightBody: Encodable {
 
 private struct LeaveFightBody: Encodable {
     var fightId: UUID
+    var newOwnerId: UUID?
 }
 
 private struct AcceptBody: Encodable {
@@ -1811,6 +1874,11 @@ struct FitFightNotificationDeliveryStatus: Decodable {
     enum CodingKeys: String, CodingKey {
         case apnsConfigured = "apns_configured"
     }
+}
+
+/// `beta` on the develop database, `production` on main. A String so a later name decodes.
+struct FitFightEnvironment: Decodable {
+    let environment: String
 }
 
 struct FitFightNotificationPreferences: Codable, Equatable {

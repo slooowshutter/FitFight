@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const fitFightAdminEmailValues = ["marc@marclamy.com"] as const;
-export const fitFightAdminHandleValues = ["marc"] as const;
+export const fitFightAdminHandleValues = ["marc", "rad"] as const;
 /** Marc's accounts: staging (TestFlight) and production. Account IDs never change. */
 export const fitFightAdminUserIdValues = [
     "87434630-dd64-4465-b79b-fd99e35368be",

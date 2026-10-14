@@ -1,6 +1,4 @@
-import PhotosUI
 import SwiftUI
-import UIKit
 
 struct EditProfileView: View {
     @EnvironmentObject private var session: SessionStore
@@ -13,9 +11,7 @@ struct EditProfileView: View {
     @State private var timeZone = TimeZone.current
     @State private var error: String?
     @State private var saving = false
-    @State private var pickerItem: PhotosPickerItem?
     @State private var showingCompanions = false
-    @State private var showingPhotos = false
     @State private var previewAudience = "stranger"
     @State private var showingPreview = false
     @FocusState private var displayNameFocused: Bool
@@ -32,16 +28,13 @@ struct EditProfileView: View {
                         if error == nil { ProgressView() }
                         else { FFButton(title: String(appLocalized: "Retry"), kind: .secondary) { Task { await load() } } }
                     } else {
-                        // Your companion is your profile picture; a photo is the alternative behind the same button.
+                        // Your companion is your profile picture.
                         VStack(spacing: 10) {
                             CompanionAvatar(
                                 personID: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true,
                                 monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 104
                             )
-                            Menu {
-                                Button(String(appLocalized: "Choose your companion")) { showingCompanions = true }
-                                Button(String(appLocalized: "Use a photo")) { showingPhotos = true }
-                            } label: {
+                            Button { showingCompanions = true } label: {
                                 Text(String(appLocalized: "Change picture")).ffType(.label).foregroundStyle(theme.mossText).frame(minHeight: 44)
                             }
                         }
@@ -139,8 +132,6 @@ struct EditProfileView: View {
         .background(theme.bg.ignoresSafeArea())
         .task { await load() }
         .onChange(of: session.authSession?.user.id) { _, _ in settings = nil; dismiss() }
-        .onChange(of: pickerItem) { _, item in Task { await uploadPhoto(item) } }
-        .photosPicker(isPresented: $showingPhotos, selection: $pickerItem, matching: .images)
         .sheet(isPresented: $showingCompanions) {
             CompanionPicker(selection: companions.selection, required: false, isCustom: companions.isCustom, prompt: companions.customPrompt)
                 .fitFightTheme(theme).presentationBackground(theme.bg)
@@ -207,19 +198,5 @@ struct EditProfileView: View {
             return true
         } catch is CancellationError { return false }
         catch { self.error = error.localizedDescription; return false }
-    }
-
-    private func uploadPhoto(_ item: PhotosPickerItem?) async {
-        guard let item, !saving else { return }
-        saving = true
-        defer { saving = false; pickerItem = nil }
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
-                error = String(appLocalized: "That photo could not be read.")
-                return
-            }
-            let media = try await MediaUploader.upload(image, purpose: "profile", session: session)
-            try await session.setAvatar(media)
-        } catch { self.error = error.localizedDescription }
     }
 }

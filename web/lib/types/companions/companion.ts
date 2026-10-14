@@ -16,6 +16,40 @@ export const stockCompanionIdValues = [
 ] as const;
 
 export const limitedCompanionIdValues = [
+    "limited-black-panther",
+    "limited-lone-wolf",
+    "limited-snow-leopard",
+    "limited-tiger",
+    "limited-night-owl",
+    "limited-crocodile",
+    "limited-peacock",
+    "limited-flamingo",
+    "limited-persian-cat",
+    "limited-ostrich",
+    "limited-cheetah",
+    "limited-bald-eagle",
+    "limited-silverback",
+    "limited-kangaroo",
+    "limited-bull",
+    "limited-moose",
+    "limited-bison",
+    "limited-camel",
+    "limited-panda",
+    "limited-capybara",
+    "limited-hedgehog",
+    "limited-ginger-cat",
+    "limited-alpaca",
+    "limited-seal",
+    "limited-hamster",
+    "limited-tree-frog",
+    "limited-mouse",
+    "limited-guinea-pig",
+    "limited-duck",
+    "limited-donkey",
+] as const;
+
+/** The first Specials roster: never sold, retired on 11 Oct 2026, still valid on rows that already hold one. */
+export const retiredLimitedCompanionIdValues = [
     "limited-pangolin",
     "limited-platypus",
     "limited-spotted-quoll",
@@ -58,11 +92,21 @@ export const limitedCompanionIdValues = [
     "limited-markhor",
 ] as const;
 
-export const companionIdValues = [...stockCompanionIdValues, ...limitedCompanionIdValues, "custom"] as const;
+export const specialCompanionIdValues = [
+    ...limitedCompanionIdValues,
+    ...retiredLimitedCompanionIdValues,
+] as const;
+
+export const companionIdValues = [
+    ...stockCompanionIdValues,
+    ...specialCompanionIdValues,
+    "custom",
+] as const;
 
 export const stockCompanionIdSchema = z.enum(stockCompanionIdValues);
 export const companionIdSchema = z.enum(companionIdValues);
 export const limitedCompanionIdSchema = z.enum(limitedCompanionIdValues);
+export const specialCompanionIdSchema = z.enum(specialCompanionIdValues);
 export const companionPromptSchema = z.string().trim().max(1000);
 export const savedCompanionPromptsSchema = z.array(companionPromptSchema.min(1));
 
@@ -71,3 +115,4 @@ export type CompanionId = z.infer<typeof companionIdSchema>;
 export type SavedCompanionPrompts = z.infer<typeof savedCompanionPromptsSchema>;
 
 export type LimitedCompanionId = z.infer<typeof limitedCompanionIdSchema>;
+export type SpecialCompanionId = z.infer<typeof specialCompanionIdSchema>;

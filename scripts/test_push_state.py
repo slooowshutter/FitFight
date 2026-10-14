@@ -18,6 +18,8 @@ harness = harness.replace("// PUSH_SERVICE", push)
 harness = harness.replace("// SESSION_RESTORE_PROPERTY", restore)
 harness = harness.replace("// SESSION_BOOTSTRAP_INITIALIZER", initializer)
 harness = harness.replace("// SESSION_LISTENER", listener)
+# Analytics is out of scope here; a no-op stands in for it.
+harness += "\nenum Analytics { static func identify(userId: UUID) {}; static func reset() {}; static func start() {} }\n"
 app_content = content[content.index("    private var appContent:"):]
 assert app_content.index("if session.isRestoringSession") < app_content.index("if session.isSignedIn"), \
     "Auth restoration must be resolved before choosing the welcome or signed-in screen"

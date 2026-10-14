@@ -1,24 +1,26 @@
 import Combine
 import Foundation
+import PostHog
 import StoreKit
 import UIKit
 
 struct SpecialStoreSnapshot: Decodable {
     struct Edition: Decodable, Identifiable {
+        /// The server now sends only available and yours; servers before 12 Oct 2026 also sent the other three.
         enum Status: String, Decodable { case available, reserved, yours, taken, refunded }
         let id: String
-        let productId: String
         let status: Status
-        enum CodingKeys: String, CodingKey { case id, status; case productId = "product_id" }
     }
     let appAccountToken: UUID
     let environment: String
     let purchasesEnabled: Bool
+    /// The one consumable every Special is bought with. Missing from a server that still sold one-of-a-kind editions.
+    let productId: String?
     let editions: [Edition]
     let conflicts: [SpecialClaimResult]
     enum CodingKeys: String, CodingKey {
         case environment, editions, conflicts
-        case appAccountToken = "app_account_token", purchasesEnabled = "purchases_enabled"
+        case appAccountToken = "app_account_token", purchasesEnabled = "purchases_enabled", productId = "product_id"
     }
 }
 
@@ -33,37 +35,38 @@ struct SpecialClaimResult: Decodable {
     }
 }
 
-private struct SpecialPurchaseAttempt: Codable {
-    enum Phase: String, Codable { case ready, submitted, cancelled }
-    let id: UUID
-    let companionId: String
-    var phase: Phase
-}
-
 @MainActor
 final class SpecialPurchases: ObservableObject {
+    /// Every Special is this one consumable; the server records which Special each charge unlocked.
+    static let productID = "com.fitfight.mvp.special"
+
     @Published private(set) var snapshot: SpecialStoreSnapshot?
-    @Published private(set) var products: [String: Product] = [:]
+    @Published private(set) var product: Product?
     @Published private(set) var isBusy = false
+    /// Apple is still processing a charge, for example Ask to Buy, so a second purchase waits for it.
+    @Published private(set) var pendingPurchase = false
+    /// A paid charge whose chosen Special was lost on this phone; the next Special picked unlocks without paying again.
+    @Published private(set) var hasUnclaimedCharge = false
     @Published var message = ""
-    @Published private var pendingAttempt: SpecialPurchaseAttempt?
     private let api = FitFightAPI()
     private var ownerId: UUID?
     private var processing: Set<UInt64> = []
-    var canCancelCheckout: Bool { pendingAttempt.map { $0.phase != .submitted } ?? false }
+    /// Kept until the server answers, so tapping again after a lost answer cannot use a second free character.
+    private var freeClaim: (companionId: String, key: UUID)?
+
+    private func draftKey(_ userId: UUID) -> String { "ff.special.draft.\(userId.uuidString)" }
+    private func pendingSinceKey(_ userId: UUID) -> String { "ff.special.pending.since.\(userId.uuidString)" }
 
     func observe(session: SessionStore) async {
         ownerId = session.profile?.userId
         snapshot = nil
-        products = [:]
+        product = nil
         message = ""
-        pendingAttempt = nil
+        freeClaim = nil
+        pendingPurchase = false
+        hasUnclaimedCharge = false
         guard let userId = ownerId else { return }
-        do {
-            if let data = UserDefaults.standard.data(forKey: "ff.special.purchase.\(userId.uuidString)") {
-                pendingAttempt = try JSONDecoder().decode(SpecialPurchaseAttempt.self, from: data)
-            }
-        } catch { message = error.localizedDescription }
+        pendingPurchase = UserDefaults.standard.object(forKey: pendingSinceKey(userId)) != nil
         let updates = Task {
             for await result in Transaction.updates {
                 guard !Task.isCancelled else { return }
@@ -94,146 +97,146 @@ final class SpecialPurchases: ObservableObject {
 
     func refresh(session: SessionStore) async throws {
         let userId = session.profile?.userId
-        let settled = pendingAttempt.flatMap { $0.phase == .ready ? nil : $0.id }
         let loaded = try await api.specials(accessToken: session.freshAccessToken())
         try Task.checkCancellation()
         guard userId == session.profile?.userId, userId == ownerId else { throw CancellationError() }
         snapshot = loaded
-        // The server lets an unpaid hold lapse; a late charge still arrives through Transaction.updates.
-        if let userId, let attempt = pendingAttempt, attempt.id == settled,
-           loaded.editions.first(where: { $0.id == attempt.companionId })?.status != .reserved {
-            try persistAttempt(nil, userId: userId)
-        }
-        if products.isEmpty && loaded.purchasesEnabled {
-            let fetched = try await Product.products(for: loaded.editions.map(\.productId))
+        if product == nil && loaded.purchasesEnabled, let productId = loaded.productId {
+            let fetched = try await Product.products(for: [productId])
             try Task.checkCancellation()
             guard userId == ownerId else { throw CancellationError() }
-            products = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
+            product = fetched.first { $0.id == productId && $0.type == .consumable }
         }
     }
 
     func canBuy(_ animal: StockCompanion) -> Bool {
-        guard let snapshot, snapshot.purchasesEnabled,
-              let edition = snapshot.editions.first(where: { $0.id == animal.rawValue }),
-              products[edition.productId] != nil else { return false }
-        if let attempt = pendingAttempt,
-           attempt.phase != .ready || attempt.companionId != animal.rawValue { return false }
-        return (edition.status == .available || (edition.status == .reserved && pendingAttempt?.phase == .ready))
-            && !snapshot.editions.contains(where: {
-                $0.status == .yours || $0.status == .refunded || ($0.status == .reserved && $0.id != animal.rawValue)
-            })
+        guard let snapshot, snapshot.purchasesEnabled, product != nil, !pendingPurchase,
+              let edition = snapshot.editions.first(where: { $0.id == animal.rawValue }) else { return false }
+        return edition.status != .yours
     }
 
-    private func persistAttempt(_ attempt: SpecialPurchaseAttempt?, userId: UUID) throws {
-        let key = "ff.special.purchase.\(userId.uuidString)"
-        if let attempt {
-            UserDefaults.standard.set(try JSONEncoder().encode(attempt), forKey: key)
+    private func setPending(_ pending: Bool, userId: UUID) {
+        if pending {
+            UserDefaults.standard.set(Date(), forKey: pendingSinceKey(userId))
         } else {
-            UserDefaults.standard.removeObject(forKey: key)
+            UserDefaults.standard.removeObject(forKey: pendingSinceKey(userId))
         }
-        if ownerId == userId { pendingAttempt = attempt }
+        if ownerId == userId { pendingPurchase = pending }
+    }
+
+    private func abandon(userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: draftKey(userId))
+        setPending(false, userId: userId)
     }
 
     func buy(_ animal: StockCompanion, session: SessionStore) async -> Bool {
         guard !isBusy, canBuy(animal), let userId = ownerId, userId == session.profile?.userId,
-              let snapshot, let product = products[animal.productId] else { return false }
+              let snapshot, let product else { return false }
         isBusy = true
         message = ""
         defer { isBusy = false }
-        var attempt = pendingAttempt ?? SpecialPurchaseAttempt(id: UUID(), companionId: animal.rawValue, phase: .ready)
         do {
-            try persistAttempt(attempt, userId: userId)
-            try await api.specialCheckout(action: "reserve", companionId: animal.rawValue, attemptId: attempt.id,
-                                          accessToken: session.freshAccessToken())
-            try Task.checkCancellation()
-            guard ownerId == userId, session.profile?.userId == userId else { throw CancellationError() }
-            // Persist before presenting Apple: a crash must never free a potentially paid hold.
-            attempt.phase = .submitted
-            try persistAttempt(attempt, userId: userId)
-            var result = Product.PurchaseResult.userCancelled
-            var purchaseError: Error?
-            do {
-                result = try await product.purchase(options: [.appAccountToken(snapshot.appAccountToken)])
-            } catch StoreKitError.userCancelled {
-                // The person dismissed Apple's sign-in; nothing was charged.
-            } catch let error as Product.PurchaseError {
-                // Apple refused before charging (for example Screen Time), so release the hold like a cancel.
-                // Other errors keep the hold until it lapses, in case Apple charges later.
-                purchaseError = error
+            // An earlier charge still waiting for the server claims its own Special first; one that lost its
+            // Special unlocks this one instead of charging again.
+            if UserDefaults.standard.string(forKey: draftKey(userId)) == nil {
+                UserDefaults.standard.set(animal.rawValue, forKey: draftKey(userId))
             }
+            for await result in Transaction.unfinished {
+                try Task.checkCancellation()
+                guard case .verified(let transaction) = result, transaction.productID == Self.productID else { continue }
+                if let claim = try await deliver(result, session: session), claim.companionId == animal.rawValue {
+                    try await refresh(session: session)
+                    return claim.outcome == .owned
+                }
+            }
+            // Saved before Apple's sheet, so a charge interrupted by a crash still unlocks this Special later.
+            UserDefaults.standard.set(animal.rawValue, forKey: draftKey(userId))
+            setPending(true, userId: userId)
+            let result = try await product.purchase(options: [.appAccountToken(snapshot.appAccountToken)])
             switch result {
             case .success(let verification):
                 let claim = try await deliver(verification, session: session)
+                PostHogSDK.shared.capture("purchase_completed", properties: ["product": "special"])
                 try await refresh(session: session)
-                return claim?.outcome == .owned || self.snapshot?.editions.first(where: { $0.id == animal.rawValue })?.status == .yours
+                return claim?.outcome == .owned && claim?.companionId == animal.rawValue
             case .userCancelled:
-                attempt.phase = .cancelled
-                try persistAttempt(attempt, userId: userId)
-                guard session.profile?.userId == userId else { throw CancellationError() }
-                try await api.specialCheckout(action: "cancel", companionId: animal.rawValue, attemptId: attempt.id,
-                                              accessToken: session.freshAccessToken())
-                try persistAttempt(nil, userId: userId)
-                try await refresh(session: session)
-                if let purchaseError { throw purchaseError }
+                abandon(userId: userId)
             case .pending:
-                message = String(appLocalized: "Apple is processing your purchase. Your Special is held for 30 minutes.")
-                try await refresh(session: session)
+                message = String(appLocalized: "Apple is processing your purchase. Your Special unlocks when it completes.")
             @unknown default:
                 message = String(appLocalized: "Purchase status is unknown. Restore purchases before trying again.")
             }
+        } catch StoreKitError.userCancelled {
+            // The person dismissed Apple's sign-in; nothing was charged.
+            abandon(userId: userId)
+        } catch let error as Product.PurchaseError {
+            // Apple refused before charging, for example Screen Time.
+            abandon(userId: userId)
+            message = error.localizedDescription
         } catch is CancellationError { return false }
         catch { message = error.localizedDescription }
         return false
     }
 
+    /// Unlocks a Special with one free character instead of a charge.
+    func claimFree(_ animal: StockCompanion, session: SessionStore) async -> Bool {
+        guard !isBusy, let userId = ownerId, userId == session.profile?.userId else { return false }
+        isBusy = true
+        message = ""
+        defer { isBusy = false }
+        let key = freeClaim?.companionId == animal.rawValue ? freeClaim?.key ?? UUID() : UUID()
+        freeClaim = (animal.rawValue, key)
+        do {
+            let claim = try await api.claimFreeSpecial(
+                companionId: animal.rawValue, idempotencyKey: key, accessToken: try await session.freshAccessToken()
+            )
+            guard ownerId == userId else { return false }
+            freeClaim = nil
+            PostHogSDK.shared.capture("free_special_claimed")
+            // The Special is owned now; a failed reload must not make the caller think it is not.
+            try? await refresh(session: session)
+            return claim.outcome == .owned && claim.companionId == animal.rawValue
+        } catch is CancellationError { return false }
+        catch { message = error.localizedDescription }
+        return false
+    }
+
+    /// Consumables never come back from Apple, so the server ledger is the record; this finishes unclaimed charges.
     func restore(session: SessionStore) async {
         guard !isBusy else { return }
         isBusy = true
         message = ""
         defer { isBusy = false }
         do {
-            try await AppStore.sync()
-            try await refresh(session: session)
+            var appleSyncFailed = false
+            do { try await AppStore.sync() }
+            catch is CancellationError { return }
+            catch { appleSyncFailed = true }
             try await reconcile(session: session)
-            if message.isEmpty {
-                message = snapshot?.editions.contains(where: { $0.status == .yours }) == true
-                    ? String(appLocalized: "Purchases checked. Your owned Special is ready to use.")
-                    : String(appLocalized: "Purchases checked. No completed purchase was found for this account.")
+            // A pending Ask to Buy has no transaction yet, so an empty reconcile proves nothing until
+            // Apple's 24 hour approval window has passed. After that, Restore is the way out.
+            if !appleSyncFailed, processing.isEmpty, let userId = ownerId,
+               Date().timeIntervalSince(UserDefaults.standard.object(forKey: pendingSinceKey(userId)) as? Date ?? .distantPast) > 86_400 {
+                setPending(false, userId: userId)
             }
-        } catch is CancellationError { return }
-        catch { message = error.localizedDescription }
-    }
-
-    func cancelCheckout(session: SessionStore) async {
-        guard !isBusy, let attempt = pendingAttempt, attempt.phase != .submitted,
-              let userId = ownerId, userId == session.profile?.userId else { return }
-        isBusy = true
-        defer { isBusy = false }
-        do {
-            try await api.specialCheckout(action: "cancel", companionId: attempt.companionId, attemptId: attempt.id,
-                                          accessToken: session.freshAccessToken())
-            try persistAttempt(nil, userId: userId)
-            try await refresh(session: session)
+            if message.isEmpty {
+                message = appleSyncFailed
+                    ? String(appLocalized: "Apple sync could not complete, but FitFight checked your account purchases.")
+                    : pendingPurchase
+                        ? String(appLocalized: "Apple is still processing your Special purchase.")
+                        : snapshot?.editions.contains(where: { $0.status == .yours }) == true
+                            ? String(appLocalized: "Purchases checked. Your Specials are ready to use.")
+                            : String(appLocalized: "Purchases checked. No completed purchase was found for this account.")
+            }
         } catch is CancellationError { return }
         catch { message = error.localizedDescription }
     }
 
     private func reconcile(session: SessionStore) async throws {
-        guard let userId = ownerId else { return }
-        if let attempt = pendingAttempt {
-            if attempt.phase == .cancelled {
-                try await api.specialCheckout(action: "cancel", companionId: attempt.companionId, attemptId: attempt.id,
-                                              accessToken: session.freshAccessToken())
-                try persistAttempt(nil, userId: userId)
-            }
-        }
-        // Includes revoked purchases, so missed refund notifications reconcile on launch.
-        var seen: Set<UInt64> = []
-        for await result in Transaction.all {
+        for await result in Transaction.unfinished {
             try Task.checkCancellation()
             guard case .verified(let transaction) = result,
-                  transaction.productID.hasPrefix("com.fitfight.mvp.special."),
-                  seen.insert(transaction.originalID).inserted else { continue }
+                  transaction.productID.hasPrefix(Self.productID) else { continue }
             _ = try await deliver(result, session: session)
         }
         try await refresh(session: session)
@@ -244,7 +247,9 @@ final class SpecialPurchases: ObservableObject {
         guard case .verified(let transaction) = result else {
             throw NSError(domain: "SpecialPurchase", code: 1, userInfo: [NSLocalizedDescriptionKey: String(appLocalized: "Apple could not verify this purchase.")])
         }
-        guard let animal = StockCompanion.allCases.first(where: { $0.isLimited && $0.productId == transaction.productID }) else { return nil }
+        // Builds before 12 Oct 2026 sold one product per Special; their refunds and late charges still record.
+        let legacy = transaction.productID.hasPrefix(Self.productID + ".")
+        guard legacy || transaction.productID == Self.productID else { return nil }
         guard let userId = ownerId, session.profile?.userId == userId else { throw CancellationError() }
         if snapshot == nil { try await refresh(session: session) }
         guard let snapshot, ownerId == userId else { throw CancellationError() }
@@ -252,19 +257,35 @@ final class SpecialPurchases: ObservableObject {
             message = String(appLocalized: "This purchase belongs to another FitFight account. Sign in to that account or contact support.")
             return nil
         }
+        let companionId = legacy
+            ? "limited-" + transaction.productID.dropFirst(Self.productID.count + 1).replacingOccurrences(of: "_", with: "-")
+            : UserDefaults.standard.string(forKey: draftKey(userId))
+        guard let companionId else {
+            // Left unfinished: Apple keeps offering it until a chosen Special claims it.
+            hasUnclaimedCharge = true
+            message = String(appLocalized: "You paid for a Special that is not unlocked yet. Pick one and tap Unlock.")
+            return nil
+        }
         guard processing.insert(transaction.id).inserted else { return nil }
         defer { processing.remove(transaction.id) }
-        let claim = try await api.claimSpecial(companionId: animal.rawValue, signedTransaction: result.jwsRepresentation,
-                                               accessToken: session.freshAccessToken())
+        let claim = legacy
+            ? try await api.claimSpecial(companionId: companionId, signedTransaction: result.jwsRepresentation,
+                                         accessToken: session.freshAccessToken())
+            : try await api.claimSpecialPurchase(companionId: companionId, signedTransaction: result.jwsRepresentation,
+                                                 accessToken: session.freshAccessToken())
         try Task.checkCancellation()
         guard ownerId == userId, session.profile?.userId == userId else { throw CancellationError() }
-        if claim.outcome != .conflict {
-            await transaction.finish()
-            if pendingAttempt?.companionId == animal.rawValue {
-                try persistAttempt(nil, userId: userId)
-            }
-        } else {
+        if claim.outcome == .conflict {
             message = String(appLocalized: "This purchase could not be assigned. Request a refund from Apple below.")
+            return claim
+        }
+        await transaction.finish()
+        if !legacy {
+            if UserDefaults.standard.string(forKey: draftKey(userId)) == claim.companionId {
+                UserDefaults.standard.removeObject(forKey: draftKey(userId))
+            }
+            hasUnclaimedCharge = false
+            setPending(false, userId: userId)
         }
         return claim
     }

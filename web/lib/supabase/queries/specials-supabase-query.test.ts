@@ -3,16 +3,19 @@ import { test } from "node:test";
 import { GET } from "@/app/api/v1/me/specials/route";
 import { POST as checkout } from "@/app/api/v1/me/specials/checkout/route";
 import { POST as claim } from "@/app/api/v1/me/specials/transactions/route";
+import { POST as purchase } from "@/app/api/v1/me/specials/purchases/route";
 import { POST as notify } from "@/app/api/apple/specials/notifications/[environment]/route";
 import {
     specialCheckoutRequestSchema,
     specialClaimRequestSchema,
+    specialPurchaseRequestSchema,
 } from "@/lib/types/companions/specials";
 
 for (const [path, handler] of [
     ["", GET],
     ["/checkout", checkout],
     ["/transactions", claim],
+    ["/purchases", purchase],
 ] as const) {
     test(`Specials ${path || "store"} requires authentication before reading or writing purchases`, async () => {
         const response = await handler(
@@ -29,7 +32,7 @@ for (const [path, handler] of [
 test("checkout cannot supply an owner, environment, price or entitlement", () => {
     const input = {
         action: "reserve",
-        companion_id: "limited-pangolin",
+        companion_id: "limited-black-panther",
         attempt_id: "6283b4c1-0e8f-4caa-b04b-827b6f1e925b",
     };
     assert.equal(specialCheckoutRequestSchema.safeParse(input).success, true);
@@ -53,12 +56,50 @@ test("checkout cannot supply an owner, environment, price or entitlement", () =>
         false,
     );
     assert.equal(
+        specialCheckoutRequestSchema.safeParse({
+            ...input,
+            companion_id: "limited-pangolin",
+        }).success,
+        false,
+        "A retired Special can no longer be reserved",
+    );
+    assert.equal(
+        specialCheckoutRequestSchema.safeParse({
+            ...input,
+            action: "cancel",
+            companion_id: "limited-pangolin",
+        }).success,
+        true,
+    );
+    assert.equal(
         specialClaimRequestSchema.safeParse({
             companion_id: "limited-pangolin",
             signed_transaction: "",
         }).success,
         false,
     );
+});
+
+test("a Special purchase names a current Special and cannot supply an owner, price or entitlement", () => {
+    const input = {
+        companion_id: "limited-black-panther",
+        signed_transaction: "signed",
+    };
+    assert.equal(specialPurchaseRequestSchema.safeParse(input).success, true);
+    for (const change of [
+        { companion_id: "fox" },
+        { companion_id: "limited-pangolin" },
+        { signed_transaction: "" },
+        { user_id: "6283b4c1-0e8f-4caa-b04b-827b6f1e925b" },
+        { environment: "Production" },
+        { owned: true },
+    ]) {
+        assert.equal(
+            specialPurchaseRequestSchema.safeParse({ ...input, ...change })
+                .success,
+            false,
+        );
+    }
 });
 
 test("notifications reject unknown environments, wrong deployments and unsigned payloads", async () => {

@@ -2,9 +2,10 @@ import { z } from "zod";
 
 export const blendApiKeySchema = z.string().trim().startsWith("bai_").min(8);
 
+/** Without a versionId, Blend runs the latest published version of the workflow. */
 export const blendWorkflowVersionSchema = z.object({
     workflowId: z.string().min(1).max(200),
-    versionId: z.string().min(1).max(200),
+    versionId: z.string().min(1).max(200).optional(),
 });
 
 export const blendRunHandleSchema = blendWorkflowVersionSchema.extend({

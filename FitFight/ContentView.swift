@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 import UIKit
 
@@ -12,6 +13,7 @@ struct ContentView: View {
     @EnvironmentObject private var push: PushNotificationService
     @EnvironmentObject private var companions: CompanionStore
     @Environment(\.colorScheme) private var colorScheme
+    @State private var dismissedAppStoreNotice = false
 
     var body: some View {
         Group {
@@ -121,6 +123,7 @@ struct ContentView: View {
         }
         .onChange(of: session.profile, initial: true) { _, profile in
             companions.apply(profile)
+            if let profile { Analytics.describe(profile) }
             Task { await companions.publishPending(session: session) }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -143,6 +146,11 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showingPreferences) {
             PreferencesView()
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(isPresented: $model.showingBetaTesting) {
+            BetaTestingView()
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
@@ -200,6 +208,30 @@ struct ContentView: View {
         } message: {
             Text(String(appLocalized: "FitFight can remind you when a fight ends and when to sync your steps. Lock-screen alerts never show scores or fight titles."))
         }
+        // TestFlight friends moved to the App Store build, which uses another database. Admins keep TestFlight.
+        .alert(
+            String(appLocalized: "FitFight is on the App Store"),
+            isPresented: Binding(
+                get: {
+                    appUpdate.isTestFlight
+                        && session.isSignedIn
+                        && session.profile != nil
+                        && !session.isFitFightAdmin
+                        && !dismissedAppStoreNotice
+                        && !push.showPrePrompt
+                        && !CompanionPreview.isEnabled
+                        && !ScreenshotExport.isEnabled
+                },
+                set: { if !$0 { dismissedAppStoreNotice = true } }
+            )
+        ) {
+            Button(String(appLocalized: "Open the App Store")) {
+                openURL(URL(string: "https://apps.apple.com/app/id6804230516")!)
+            }
+            Button(String(appLocalized: "Not now"), role: .cancel) {}
+        } message: {
+            Text(String(appLocalized: "FitFight is now on the App Store, and your friends are there. Your steps and stats from this TestFlight beta no longer reach them. Tap below, then sign in with the same Apple ID. If the App Store shows Open, delete this TestFlight app first, then tap Get."))
+        }
     }
 
     @ViewBuilder
@@ -246,19 +278,52 @@ struct ContentView: View {
     }
 
     private var signedInApp: some View {
-        ZStack {
-            tabBody
+        // The strip takes layout space: a top safeAreaInset does not reach screens inside a NavigationStack.
+        VStack(spacing: 0) {
+            if model.environment == "beta" || (model.environment == "production" && session.isFitFightAdmin) {
+                environmentStrip
+            }
+            ZStack {
+                tabBody
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                FFTabBar(tab: $model.tab, onReselect: {
+                    if model.tab == .feedback {
+                        model.feedbackRequestFilter = RequestFilter()
+                    }
+                    model.openFightID = nil
+                })
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            FFTabBar(tab: $model.tab, onReselect: {
-                if model.tab == .feedback {
-                    model.feedbackRequestFilter = RequestFilter()
-                }
-                model.openFightID = nil
-            })
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
+    }
+
+    /// Everyone on the beta sees it. The admin also sees it on the App Store version, both with the
+    /// build, to tell installs apart. It opens Profile's Beta testing setting, which links to both.
+    private var environmentStrip: some View {
+        let beta = model.environment == "beta"
+        let name = beta ? String(appLocalized: "Beta") : "App Store"
+        let version = String(appLocalized: "preferences.version", defaultValue: "\(AppVersion.marketing) · build \(AppVersion.build)")
+        return Button {
+            model.tab = .you
+            model.showingBetaTesting = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: beta ? "flask.fill" : "checkmark.seal.fill")
+                    .font(.system(size: 11, weight: .bold))
+                Text(verbatim: session.isFitFightAdmin ? "\(name) · \(version)" : name)
+                    .ffType(.label)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(beta ? theme.emberText : theme.textSecondary)
+            .frame(maxWidth: .infinity, minHeight: 32)
+            // A color background would otherwise also fill the status bar.
+            .background(beta ? theme.emberWash : theme.control, ignoresSafeAreaEdges: [])
         }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityIdentifier("environment-strip")
     }
 
     @ViewBuilder
@@ -266,8 +331,10 @@ struct ContentView: View {
         switch model.tab {
         case .fights:
             fightsStack
+                .postHogScreenView("Fights")
         case .newFight:
             NewFightView()
+                .postHogScreenView("New")
         case .feed:
             NavigationStack {
                 FeedView()
@@ -277,8 +344,10 @@ struct ContentView: View {
                             .id(target)
                     }
             }
+            .postHogScreenView("Feed")
         case .feedback:
             FeedbackTabView()
+                .postHogScreenView("Feedback")
         case .you:
             NavigationStack {
                 YouView()
@@ -287,6 +356,7 @@ struct ContentView: View {
                         FeedActivityView()
                     }
             }
+            .postHogScreenView("Profile")
         }
     }
 
@@ -305,6 +375,7 @@ struct ContentView: View {
                     Group {
                         if let fight = model.detailFight(for: id) {
                             FightDetailView(fight: fight)
+                                .postHogScreenView("Fight detail")
                         } else {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text(String(appLocalized: "That fight isn’t on your list."))

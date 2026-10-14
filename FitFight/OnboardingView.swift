@@ -6,6 +6,7 @@ struct OnboardingView: View {
     var onFinished: (() -> Void)? = nil
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var companions: CompanionStore
+    @EnvironmentObject private var characters: CustomCharacterPurchases
     @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @State private var progress = FirstFightOnboarding()
@@ -15,11 +16,20 @@ struct OnboardingView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var backwards = false
+    @State private var creatingCharacter = false
+    /// A free character is being drawn; the chosen stock animal stays until it is ready.
+    @State private var characterStarted = false
     @FocusState private var usernameFocused: Bool
     private let animals: [StockCompanion] = [.goat, .fox, .otter, .bear, .rabbit, .sloth, .badger, .raccoon, .redPanda, .boar, .dog, .turtle]
 
+    /// The replay shows only Health, Fight offers and reminders.
     private var previous: FirstFightOnboarding.Page? {
-        isReplay && progress.page == .health ? nil : progress.page.previous
+        guard isReplay else { return progress.page.previous }
+        switch progress.page {
+        case .health: return nil
+        case .firstFight: return .healthResult
+        default: return progress.page.previous
+        }
     }
 
     var body: some View {
@@ -34,9 +44,10 @@ struct OnboardingView: View {
                 case .health, .healthResult:
                     HealthOnboardingView(
                         showingResult: progress.page == .healthResult,
-                        animal: selected, busy: $busy,
+                        animal: selected, referralPending: characters.referralPending, busy: $busy,
                         onResult: { go(.healthResult) },
-                        onFinished: { go(.firstFight) }
+                        // Progress saved by an older build already has its companion.
+                        onFinished: { go(isReplay || companions.hasChosen ? .firstFight : .companion) }
                     )
                 case .firstFight:
                     SuggestedFightsOnboardingView(
@@ -101,25 +112,74 @@ struct OnboardingView: View {
                 disabled: busy
             )
             .modifier(OnboardingEntrance(order: 2))
+            if characterStarted {
+                FFNotice(text: String(appLocalized: "We are drawing your character. Keep going, we will tell you when it is ready."),
+                         tone: .moss, systemImage: "sparkles")
+            } else if characters.freeCharacters > 0 {
+                Button { creatingCharacter = true } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(theme.mossText)
+                            .frame(width: 40, height: 40)
+                            .background(theme.mossWash, in: Circle())
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(String(appLocalized: "Or create your own")).ffType(.heading).foregroundStyle(theme.text)
+                            Text(String(appLocalized: "Describe any animal and we draw it for you."))
+                                .ffType(.caption).foregroundStyle(theme.textSecondary)
+                        }
+                        Spacer(minLength: 0)
+                        FreeCharacterBadge(count: characters.freeCharacters)
+                    }
+                    .padding(14)
+                    .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                    .ffBorder(theme.hairline, radius: theme.radius.card)
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(busy)
+                .modifier(OnboardingEntrance(order: 3))
+            }
             if let error { FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle") }
         } actions: {
             FFScreenCTA(title: String(appLocalized: "onboarding.go-with", defaultValue: "Go with \(selected.name)"), enabled: !busy, busy: busy) {
-                Task {
-                    guard !busy, let ownerID else { return }
-                    busy = true
-                    error = nil
-                    defer { busy = false }
-                    do {
-                        try await session.setCompanion(id: selected.id, prompt: nil)
-                        try Task.checkCancellation()
-                        guard session.profile?.userId == ownerID else { return }
-                        companions.apply(session.profile)
-                        go(.health)
-                    } catch is CancellationError {
-                    } catch { self.error = error.localizedDescription }
-                }
+                Task { await saveCompanion() }
             }
         }
+        .task {
+            // A referred friend's free character arrives just after the first Apple Health upload.
+            for attempt in 0..<4 {
+                if attempt > 0 { try? await Task.sleep(for: .seconds(3)) }
+                try? await characters.refresh(session: session)
+                if !characters.referralPending || Task.isCancelled { break }
+            }
+        }
+        .sheet(isPresented: $creatingCharacter) {
+            OnboardingCharacterSheet(animal: selected) {
+                creatingCharacter = false
+                characterStarted = true
+                // The drawing takes minutes, so onboarding moves on with the stock animal right away.
+                Task { await saveCompanion() }
+            }
+            .fitFightTheme(theme)
+            .presentationBackground(theme.bg)
+            .presentationCornerRadius(theme.radius.shell)
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private func saveCompanion() async {
+        guard !busy, let ownerID else { return }
+        busy = true
+        error = nil
+        defer { busy = false }
+        do {
+            try await session.setCompanion(id: selected.id, prompt: nil)
+            try Task.checkCancellation()
+            guard session.profile?.userId == ownerID else { return }
+            companions.apply(session.profile)
+            go(.firstFight)
+        } catch is CancellationError {
+        } catch { self.error = error.localizedDescription }
     }
 
     private var celebration: some View {
@@ -151,7 +211,7 @@ struct OnboardingView: View {
             try await session.setHandle(handle)
             try Task.checkCancellation()
             guard session.profile?.userId == ownerID else { return }
-            go(.companion)
+            go(.health)
         } catch is CancellationError {
         } catch { self.error = error.localizedDescription }
     }
@@ -162,5 +222,55 @@ struct OnboardingView: View {
             session.finishFirstFightOnboarding(userID: ownerID)
         }
         onFinished?()
+    }
+}
+
+/// Creates a free character from onboarding. The server keeps drawing after this closes, and the
+/// Fights card and a push say when the portraits are ready to pick.
+private struct OnboardingCharacterSheet: View {
+    let animal: StockCompanion
+    let onStarted: () -> Void
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var characters: CustomCharacterPurchases
+    @Environment(\.ffTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
+    @State private var description = ""
+    @State private var error: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                FFSheetHeader(title: String(appLocalized: "Create your own")) { dismiss() }
+                FreeCharacterBadge(count: characters.freeCharacters)
+                Text(String(appLocalized: "We draw three portraits from your words. You pick one, then we make its five fitness poses. It takes a few minutes, so you can keep going."))
+                    .ffType(.body).foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                CharacterIdeas(description: $description, disabled: characters.isBusy)
+                FFField(label: String(appLocalized: "Your animal"), counter: "\(description.count)/1000", minHeight: 120) {
+                    TextField(String(appLocalized: "Species, breed, accessories, colors…"), text: $description, axis: .vertical)
+                        .lineLimit(4...8)
+                        .onChange(of: description) { _, text in description = String(text.prefix(1000)) }
+                }
+                if let error { FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle") }
+                FFButton(title: String(appLocalized: "Create for free"), kind: .primary,
+                         enabled: !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                         busy: characters.isBusy, fullWidth: true) {
+                    Task {
+                        error = nil
+                        do {
+                            try await characters.claimFree(description: description, session: session)
+                            onStarted()
+                        } catch is CancellationError {
+                        } catch { self.error = error.localizedDescription }
+                    }
+                }
+                Text(String(appLocalized: "onboarding.character.keep", defaultValue: "Until it is ready, you keep \(animal.name)."))
+                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+            }
+            .padding(20)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(theme.bg)
+        .interactiveDismissDisabled(characters.isBusy)
     }
 }

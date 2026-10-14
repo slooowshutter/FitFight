@@ -138,6 +138,10 @@ struct FitFightAdminDashboard: Decodable {
         /// nil when neither direction is good or bad.
         let higherIsBetter: Bool?
         let note: String?
+        /// What the card measures, for its detail page. nil from servers before 11 Oct 2026.
+        let definition: String?
+        /// A sentence that reads the card's number, when there is one.
+        let example: String?
 
         enum CodingKeys: String, CodingKey {
             case id
@@ -147,6 +151,8 @@ struct FitFightAdminDashboard: Decodable {
             case unit
             case higherIsBetter = "higher_is_better"
             case note
+            case definition
+            case example
         }
     }
 
@@ -159,6 +165,10 @@ struct FitFightAdminDashboard: Decodable {
         /// date (x is YYYY-MM-DD) or label.
         let xKind: String
         let note: String?
+        /// What the chart measures, for its detail page. nil from servers before 10 Oct 2026.
+        let definition: String?
+        /// A sentence that reads one current number off the chart, when there is one.
+        let example: String?
         /// Line and bar charts. Empty for a heatmap.
         let series: [Series]
         /// Heatmaps only, row-major. Empty otherwise.
@@ -171,6 +181,8 @@ struct FitFightAdminDashboard: Decodable {
             case unit
             case xKind = "x_kind"
             case note
+            case definition
+            case example
             case series
             case cells
         }
@@ -204,6 +216,8 @@ struct FitFightAdminDashboard: Decodable {
     let days: Int
     /// production or staging.
     let environment: String
+    /// day, week or month: the bucket of the charts over time. nil from servers before 10 Oct 2026.
+    let bucket: String?
     let generatedAt: Date
     /// nil from servers older than 30 Sep 2026.
     let sections: [Section]?
@@ -214,9 +228,32 @@ struct FitFightAdminDashboard: Decodable {
         case section
         case days
         case environment
+        case bucket
         case generatedAt = "generated_at"
         case sections
         case cards
         case charts
     }
+}
+
+/// `GET /api/v1/admin/recent-syncs`: accounts whose Apple Health upload reached the server's
+/// database in the last 7 days, newest first. Here for tests/APIContractTests.swift, like the dashboard.
+struct FitFightRecentSyncs: Decodable {
+    struct Person: Decodable, Identifiable {
+        let userId: UUID
+        let handle: String
+        let displayName: String
+        let lastSyncedAt: Date
+
+        var id: UUID { userId }
+
+        enum CodingKeys: String, CodingKey {
+            case userId = "user_id"
+            case handle
+            case displayName = "display_name"
+            case lastSyncedAt = "last_synced_at"
+        }
+    }
+
+    let people: [Person]
 }

@@ -3,9 +3,9 @@ import HealthKit
 
 @MainActor
 enum HealthKitActivitySync {
-    private static let recentDayCount = 40
+    // Finished days stopped changing within 6 days of midnight in staging Fight data (14 Oct 2026).
+    private static let recentDayCount = 7
     private static let historyPageDays = 1_000
-    private static let anchorPageSize = 100
 
     private struct MetricProgress: Codable {
         var historyCursor: Date?
@@ -16,7 +16,6 @@ enum HealthKitActivitySync {
     private struct Progress: Codable {
         var timeZoneIdentifier: String
         var metrics: [String: MetricProgress] = [:]
-        var workoutAnchorData: Data?
     }
 
     static func clear(userId: UUID) {
@@ -26,6 +25,7 @@ enum HealthKitActivitySync {
         }
     }
 
+    /// Uploads daily Steps only. Other activity stays in Apple Health; Profile reads it on the phone.
     static func synchronize(
         store: HKHealthStore,
         api: FitFightAPI,
@@ -35,11 +35,13 @@ enum HealthKitActivitySync {
         timeZone: TimeZone,
         trace: HealthKitSyncTrace
     ) async throws -> Bool {
+        guard let kind = HealthKitActivityAggregates.totalKinds.first(where: { $0.metric == "steps" }) else {
+            return true
+        }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let cutoff = context.serverNow
         let today = calendar.startOfDay(for: cutoff)
-        let recentStart = calendar.date(byAdding: .day, value: 1 - recentDayCount, to: today) ?? today
         let key = stateKey(userId: userId, api: api)
         var progress = UserDefaults.standard.data(forKey: key)
             .flatMap { try? JSONDecoder().decode(Progress.self, from: $0) }
@@ -47,107 +49,62 @@ enum HealthKitActivitySync {
         if progress.timeZoneIdentifier != timeZone.identifier {
             progress = Progress(timeZoneIdentifier: timeZone.identifier)
         }
-
-        for kind in HealthKitActivityAggregates.totalKinds where progress.metrics[kind.metric] == nil {
-            progress.metrics[kind.metric] = MetricProgress()
-        }
-        try save(progress, key: key)
+        var metric = progress.metrics[kind.metric] ?? MetricProgress()
+        // A week before the last upload, so a phone that missed syncs for days leaves no gap.
+        let recentStart = min(
+            calendar.date(byAdding: .day, value: 1 - recentDayCount, to: today) ?? today,
+            metric.acknowledgedThrough.flatMap {
+                calendar.date(byAdding: .day, value: -recentDayCount, to: calendar.startOfDay(for: $0))
+            } ?? today
+        )
         var processingComplete = true
 
         // Current readings lead the upload, so an initial history import never delays live totals.
-        var recent: [FitFightHealthKitStepSync.ActivityDay] = []
-        for kind in HealthKitActivityAggregates.totalKinds {
-            try Task.checkCancellation()
-            recent.append(contentsOf: try await HealthKitActivityAggregates.mergedDays(
-                store: store, kind: kind, start: recentStart, end: cutoff,
-                calendar: calendar, zeroDays: []
-            ))
-        }
+        let recent = try await HealthKitActivityAggregates.mergedDays(
+            store: store, kind: kind, start: recentStart, end: cutoff,
+            calendar: calendar, zeroDays: []
+        )
         for offset in stride(from: 0, to: recent.count, by: 1_000) {
-            let page = Array(recent[offset..<min(offset + 1_000, recent.count)])
             let pageProcessed = try await upload(
-                totals: page, workouts: [], deletions: [], cutoff: cutoff,
+                totals: Array(recent[offset..<min(offset + 1_000, recent.count)]), cutoff: cutoff,
                 timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
             )
             processingComplete = pageProcessed && processingComplete
-            try save(progress, key: key)
         }
-
-        for kind in HealthKitActivityAggregates.totalKinds {
-            progress.metrics[kind.metric]?.acknowledgedThrough = cutoff
-        }
+        metric.acknowledgedThrough = cutoff
+        progress.metrics[kind.metric] = metric
         try save(progress, key: key)
 
-        var workoutAnchor = readAnchor(progress.workoutAnchorData)
-        while true {
-            try Task.checkCancellation()
-            let page = try await changes(
-                store: store, type: .workoutType(), predicate: nil,
-                anchor: workoutAnchor, limit: anchorPageSize
-            )
-            let deletions = page.deleted.map { $0.uuid.uuidString.lowercased() }
-            let deleted = Set(deletions)
-            let workouts = page.added.compactMap { $0 as? HKWorkout }
-                .filter { !deleted.contains($0.uuid.uuidString.lowercased()) }
-                .compactMap { HealthKitActivityAggregates.workoutRecord($0, end: cutoff) }
-            let pageProcessed = try await upload(
-                totals: [], workouts: workouts, deletions: deletions, cutoff: cutoff,
-                timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
-            )
-            processingComplete = pageProcessed && processingComplete
-            workoutAnchor = page.anchor
-            progress.workoutAnchorData = try archiveAnchor(workoutAnchor)
-            try save(progress, key: key)
-            if page.added.count + page.deleted.count < anchorPageSize { break }
-        }
-
-        let recentWorkouts = try await HealthKitActivityAggregates.workouts(
-            store: store, start: recentStart, end: cutoff, limit: HKObjectQueryNoLimit
-        )
-        for offset in stride(from: 0, to: recentWorkouts.count, by: 200) {
-            let pageProcessed = try await upload(
-                totals: [], workouts: Array(recentWorkouts[offset..<min(offset + 200, recentWorkouts.count)]),
-                deletions: [], cutoff: cutoff, timeZone: timeZone,
-                api: api, session: session, trace: trace, userId: userId
-            )
-            processingComplete = pageProcessed && processingComplete
-        }
-
-        for kind in HealthKitActivityAggregates.totalKinds {
-            try Task.checkCancellation()
-            var metric = progress.metrics[kind.metric]!
-            if !metric.historyComplete {
-                if metric.historyCursor == nil {
-                    metric.historyCursor = try await earliestSample(store: store, type: kind.type)
-                        .map { calendar.startOfDay(for: $0) }
-                }
-                if metric.historyCursor == nil {
-                    metric.historyComplete = true
-                }
-                if var cursor = metric.historyCursor {
-                    while cursor < cutoff {
-                        try Task.checkCancellation()
-                        let next = min(calendar.date(byAdding: .day, value: historyPageDays, to: cursor) ?? cutoff, cutoff)
-                        let rows = try await HealthKitActivityAggregates.mergedDays(
-                            store: store, kind: kind, start: cursor, end: next,
-                            calendar: calendar, zeroDays: []
-                        )
-                        let pageProcessed = try await upload(
-                            totals: rows, workouts: [], deletions: [], cutoff: cutoff,
-                            timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
-                        )
-                        processingComplete = pageProcessed && processingComplete
-                        cursor = next
-                        metric.historyCursor = cursor
-                        progress.metrics[kind.metric] = metric
-                        try save(progress, key: key)
-                    }
-                    metric.historyComplete = true
-                }
-                progress.metrics[kind.metric] = metric
-                try save(progress, key: key)
+        if !metric.historyComplete {
+            if metric.historyCursor == nil {
+                metric.historyCursor = try await earliestSample(store: store, type: kind.type)
+                    .map { calendar.startOfDay(for: $0) }
             }
-
+            if metric.historyCursor == nil {
+                metric.historyComplete = true
+            }
+            if var cursor = metric.historyCursor {
+                while cursor < cutoff {
+                    try Task.checkCancellation()
+                    let next = min(calendar.date(byAdding: .day, value: historyPageDays, to: cursor) ?? cutoff, cutoff)
+                    let rows = try await HealthKitActivityAggregates.mergedDays(
+                        store: store, kind: kind, start: cursor, end: next,
+                        calendar: calendar, zeroDays: []
+                    )
+                    let pageProcessed = try await upload(
+                        totals: rows, cutoff: cutoff,
+                        timeZone: timeZone, api: api, session: session, trace: trace, userId: userId
+                    )
+                    processingComplete = pageProcessed && processingComplete
+                    cursor = next
+                    metric.historyCursor = cursor
+                    progress.metrics[kind.metric] = metric
+                    try save(progress, key: key)
+                }
+                metric.historyComplete = true
+            }
+            progress.metrics[kind.metric] = metric
+            try save(progress, key: key)
         }
 
         return processingComplete
@@ -155,8 +112,6 @@ enum HealthKitActivitySync {
 
     private static func upload(
         totals: [FitFightHealthKitStepSync.ActivityDay],
-        workouts: [FitFightHealthKitStepSync.Workout],
-        deletions: [String],
         cutoff: Date,
         timeZone: TimeZone,
         api: FitFightAPI,
@@ -164,7 +119,7 @@ enum HealthKitActivitySync {
         trace: HealthKitSyncTrace,
         userId: UUID
     ) async throws -> Bool {
-        guard !totals.isEmpty || !workouts.isEmpty || !deletions.isEmpty else { return true }
+        guard !totals.isEmpty else { return true }
         try Task.checkCancellation()
         guard session.authSession?.user.id == userId else { throw CancellationError() }
         let token = try await session.freshAccessToken()
@@ -173,8 +128,8 @@ enum HealthKitActivitySync {
             collectedAt: HealthKitStepAggregates.iso8601(cutoff),
             timeZone: timeZone.identifier,
             totals: totals,
-            workouts: workouts,
-            deletedWorkouts: deletions
+            workouts: [],
+            deletedWorkouts: []
         )
         let result = try await api.syncHealthKitActivity(batch, accessToken: token, trace: trace)
         return result.processing == "processed"
@@ -191,34 +146,6 @@ enum HealthKitActivitySync {
             }
             store.execute(query)
         }
-    }
-
-    private static func changes(
-        store: HKHealthStore,
-        type: HKSampleType,
-        predicate: NSPredicate?,
-        anchor: HKQueryAnchor?,
-        limit: Int
-    ) async throws -> (added: [HKSample], deleted: [HKDeletedObject], anchor: HKQueryAnchor?) {
-        try await withCheckedThrowingContinuation { continuation in
-            let query = HKAnchoredObjectQuery(
-                type: type, predicate: predicate, anchor: anchor, limit: limit
-            ) { _, added, deleted, nextAnchor, error in
-                if let error { continuation.resume(throwing: error) }
-                else { continuation.resume(returning: (added ?? [], deleted ?? [], nextAnchor)) }
-            }
-            store.execute(query)
-        }
-    }
-
-    private static func readAnchor(_ data: Data?) -> HKQueryAnchor? {
-        guard let data else { return nil }
-        return try? NSKeyedUnarchiver.unarchivedObject(ofClass: HKQueryAnchor.self, from: data)
-    }
-
-    private static func archiveAnchor(_ anchor: HKQueryAnchor?) throws -> Data? {
-        guard let anchor else { return nil }
-        return try NSKeyedArchiver.archivedData(withRootObject: anchor, requiringSecureCoding: true)
     }
 
     private static func stateKey(userId: UUID, api: FitFightAPI) -> String {

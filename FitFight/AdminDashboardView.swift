@@ -12,13 +12,19 @@ struct AdminDashboardView: View {
     @State private var sectionID = "overview"
     /// The sections listed by the last payload. Empty until the first one loads.
     @State private var sections: [FitFightAdminDashboard.Section] = []
-    @State private var timeframe = Timeframe.week
-    @State private var customDays = 14
+    /// The period of the charts over time only. Cards and breakdowns name their own fixed span.
+    @State private var timeframe = Timeframe.month
+    /// The bucket of the charts over time. Auto lets the server pick by period.
+    @State private var granularity = Granularity.auto
+    /// The period and bucket of the loaded payload, so its charts over time dim while others load.
+    @State private var loaded = ""
+    /// The chart whose page is open.
+    @State private var openChartID: String?
+    /// The card whose page is open.
+    @State private var openCardID: String?
     @State private var dashboard: FitFightAdminDashboard?
     @State private var loading = false
     @State private var failure: String?
-    /// Cards tapped to show the exact value instead of the rounded-down one.
-    @State private var exactCards: Set<String> = []
     /// Refresh and Retry bump this to rerun the load task.
     @State private var reloads = 0
 
@@ -36,30 +42,38 @@ struct AdminDashboardView: View {
     }
 
     enum Timeframe: CaseIterable {
-        case day, week, month, quarter, year, custom
+        case week, month, quarter, year, all
     }
+
+    enum Granularity: String, CaseIterable {
+        case auto, day, week, month
+    }
+
+    private var request: String { "\(days)-\(granularity.rawValue)" }
 
     private var days: Int {
         switch timeframe {
-        case .day: return 1
         case .week: return 7
         case .month: return 30
         case .quarter: return 90
         case .year: return 365
-        case .custom: return customDays
+        // The server starts the charts at the first signup.
+        case .all: return 3650
         }
     }
 
-    /// Only the payload for the selected environment, section and period, so an earlier
-    /// section's cards never sit under a newly selected chip while its data loads.
+    /// Only the payload for the selected environment and section, so an earlier section's cards
+    /// never sit under a newly selected chip while its data loads. Another period keeps the cards
+    /// and breakdowns, which don't depend on it, and dims the charts over time until it loads.
     private var shown: FitFightAdminDashboard? {
-        guard let dashboard, dashboard.section == sectionID, dashboard.days == days,
+        guard let dashboard, dashboard.section == sectionID,
               dashboard.environment == server.rawValue else { return nil }
         return dashboard
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
+            FreeCharactersRow()
             controls
             statusLine
             if let failure {
@@ -78,20 +92,13 @@ struct AdminDashboardView: View {
                         cardTile(card)
                     }
                 }
-                ForEach(dashboard.charts) { chart in
-                    FFCard(padding: 16) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(verbatim: chart.title)
-                                .ffType(.heading)
-                                .foregroundStyle(theme.text)
-                            AdminChart(chart: chart)
-                            if let note = chart.note {
-                                Text(verbatim: note)
-                                    .ffType(.micro)
-                                    .foregroundStyle(theme.textSecondary)
-                            }
-                        }
-                    }
+                // The server's first chart decides which group leads, so Retention keeps its curves on top.
+                if dashboard.charts.first?.xKind == "date" {
+                    trendGroup(dashboard)
+                    breakdownGroup(dashboard)
+                } else {
+                    breakdownGroup(dashboard)
+                    trendGroup(dashboard)
                 }
             } else if loading && failure == nil {
                 ProgressView()
@@ -99,8 +106,22 @@ struct AdminDashboardView: View {
                     .padding(.vertical, 40)
             }
         }
-        .task(id: "\(server)-\(sectionID)-\(days)-\(reloads)") {
+        .task(id: "\(server)-\(sectionID)-\(request)-\(reloads)") {
             await load()
+        }
+        .navigationDestination(item: $openChartID) { id in
+            if let dashboard = shown, let chart = dashboard.charts.first(where: { $0.id == id }) {
+                AdminDetailView(title: chart.title, definition: chart.definition, example: chart.example, note: chart.note) {
+                    AdminChart(chart: chart, bucket: dashboard.bucket, interactive: true, height: 260)
+                }
+            }
+        }
+        .navigationDestination(item: $openCardID) { id in
+            if let card = shown?.cards.first(where: { $0.id == id }) {
+                AdminDetailView(title: card.title, definition: card.definition, example: card.example, note: card.note) {
+                    cardFigure(card)
+                }
+            }
         }
     }
 
@@ -130,30 +151,12 @@ struct AdminDashboardView: View {
                 }
             }
         }
-        FFSegmented(items: Timeframe.allCases, selection: $timeframe) { item in
-            switch item {
-            case .day: "1D"
-            case .week: "7D"
-            case .month: "30D"
-            case .quarter: "90D"
-            case .year: "1Y"
-            case .custom: "Custom"
-            }
-        }
-        if timeframe == .custom {
-            Stepper(value: $customDays, in: 1...3650) {
-                Text(verbatim: customDays == 1 ? "Last 1 day" : "Last \(customDays) days")
-                    .ffType(.label)
-                    .foregroundStyle(theme.text)
-            }
-        }
     }
 
     private var statusLine: some View {
-        let range = days == 1 ? "last day vs the day before" : "last \(days) days vs the \(days) before"
         let time = shown.map { " · " + $0.generatedAt.formatted(date: .omitted, time: .shortened) } ?? ""
         return HStack(spacing: 8) {
-            Text(verbatim: "\(server.title) · \(range)\(time)")
+            Text(verbatim: "\(server.title)\(time)")
                 .ffType(.caption)
                 .foregroundStyle(theme.textSecondary)
                 .lineLimit(1)
@@ -177,11 +180,91 @@ struct AdminDashboardView: View {
         }
     }
 
+    /// Charts over time under the period picker, which scopes only them. A new period dims
+    /// them until it loads.
+    @ViewBuilder
+    private func trendGroup(_ dashboard: FitFightAdminDashboard) -> some View {
+        let trends = dashboard.charts.filter { $0.xKind == "date" }
+        if !trends.isEmpty {
+            groupTitle("Over time")
+            FFSegmented(items: Timeframe.allCases, selection: $timeframe) { item in
+                switch item {
+                case .week: "7D"
+                case .month: "30D"
+                case .quarter: "90D"
+                case .year: "1Y"
+                case .all: "All"
+                }
+            }
+            FFSegmented(items: Granularity.allCases, selection: $granularity) { item in
+                switch item {
+                case .auto: "Auto"
+                case .day: "Day"
+                case .week: "Week"
+                case .month: "Month"
+                }
+            }
+            ForEach(trends) { chart in
+                chartCard(chart, bucket: dashboard.bucket)
+            }
+            .opacity(loaded == request ? 1 : 0.4)
+        }
+    }
+
+    /// Charts with fixed spans named in their titles.
+    @ViewBuilder
+    private func breakdownGroup(_ dashboard: FitFightAdminDashboard) -> some View {
+        let breakdowns = dashboard.charts.filter { $0.xKind != "date" }
+        if !breakdowns.isEmpty {
+            groupTitle("Breakdowns")
+            ForEach(breakdowns) { chart in
+                chartCard(chart, bucket: dashboard.bucket)
+            }
+        }
+    }
+
+    private func groupTitle(_ title: String) -> some View {
+        Text(verbatim: title)
+            .ffType(.sectionEyebrow)
+            .foregroundStyle(theme.textSecondary)
+            .padding(.top, 8)
+    }
+
+    /// Tapping a chart opens its page, where the finger reads values off it.
+    private func chartCard(_ chart: FitFightAdminDashboard.Chart, bucket: String?) -> some View {
+        Button {
+            openChartID = chart.id
+        } label: {
+            FFCard(padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(verbatim: chart.title)
+                            .ffType(.heading)
+                            .foregroundStyle(theme.text)
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                    AdminChart(chart: chart, bucket: bucket)
+                    if let note = chart.note {
+                        Text(verbatim: note)
+                            .ffType(.micro)
+                            .foregroundStyle(theme.textSecondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+    }
+
+    /// Name, number and change only. Tapping opens the card's page with the rest.
     private func cardTile(_ card: FitFightAdminDashboard.Card) -> some View {
-        let exact = exactCards.contains(card.id)
         let change = changeLine(card)
         return Button {
-            exactCards.formSymmetricDifference([card.id])
+            openCardID = card.id
         } label: {
             FFCard(padding: 16) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -189,7 +272,7 @@ struct AdminDashboardView: View {
                         .ffType(.eyebrow)
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(2)
-                    Text(verbatim: card.value.map { adminValue($0, unit: card.unit, exact: exact) } ?? "-")
+                    Text(verbatim: card.value.map { adminValue($0, unit: card.unit) } ?? "-")
                         .font(.ff(28, 800))
                         .monospacedDigit()
                         .foregroundStyle(theme.text)
@@ -200,15 +283,33 @@ struct AdminDashboardView: View {
                             .ffType(.caption)
                             .foregroundStyle(change.color)
                     }
-                    if let note = card.note {
-                        Text(verbatim: note)
-                            .ffType(.micro)
-                            .foregroundStyle(theme.textSecondary)
-                    }
                 }
             }
         }
         .buttonStyle(FFHapticPlainStyle())
+    }
+
+    /// The top of a card's page: the exact number, its change, and the number it compares with.
+    private func cardFigure(_ card: FitFightAdminDashboard.Card) -> some View {
+        let change = changeLine(card)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: card.value.map { adminValue($0, unit: card.unit, exact: true) } ?? "-")
+                .font(.ff(34, 800))
+                .monospacedDigit()
+                .foregroundStyle(theme.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+            if let change {
+                Text(verbatim: change.text)
+                    .ffType(.label)
+                    .foregroundStyle(change.color)
+            }
+            if let previous = card.previous {
+                Text(verbatim: "Previous: " + adminValue(previous, unit: card.unit, exact: true))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
+        }
     }
 
     /// "+12% (+3)", or "+2.5 pts" on a percent card. Moss is good news and ember bad, by the
@@ -238,6 +339,8 @@ struct AdminDashboardView: View {
         let target = server
         let section = sectionID
         let window = days
+        let bucket = granularity == .auto ? nil : granularity.rawValue
+        let requested = request
         loading = true
         do {
             let token = try await session.freshAccessToken()
@@ -245,12 +348,14 @@ struct AdminDashboardView: View {
             let result = try await FitFightAPI(baseURL: target.baseURL).adminDashboard(
                 section: section,
                 days: window,
+                bucket: bucket,
                 environment: target.rawValue,
                 authProject: project,
                 accessToken: token
             )
             try Task.checkCancellation()
             dashboard = result
+            loaded = requested
             if let listed = result.sections {
                 sections = listed
             }
@@ -269,15 +374,291 @@ struct AdminDashboardView: View {
     }
 }
 
-/// One server chart. Unknown kinds draw as bars, unknown units read as counts.
+/// `POST /api/v1/admin/free-characters`: one username, or every current account when `username` is nil.
+struct FitFightFreeCharacterGiftBody: Encodable {
+    let quantity: Int
+    let username: String?
+    let everyone: Bool?
+}
+
+struct FitFightFreeCharacterGift: Decodable {
+    let people: Int
+    let quantity: Int
+}
+
+/// `GET /api/v1/admin/free-characters`: the newest referral characters. A deleted friend has no username.
+struct FitFightFreeCharacterReferrals: Decodable {
+    struct Grant: Decodable {
+        let referrer: String
+        let friend: String?
+        let createdAt: Date
+        enum CodingKeys: String, CodingKey {
+            case referrer, friend
+            case createdAt = "created_at"
+        }
+    }
+    let total: Int
+    let grants: [Grant]
+}
+
+/// Free characters stay behind this row, so the dashboard opens on its charts. Like the gift card, it
+/// reads this build's own data.
+struct FreeCharactersRow: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var referrals: FitFightFreeCharacterReferrals?
+    @State private var failure: String?
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            FFCard {
+                HStack(spacing: 13) {
+                    Image(systemName: "gift").font(.system(size: 20, weight: .semibold)).foregroundStyle(theme.mossText)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Free characters").ffType(.heading).foregroundStyle(theme.text)
+                        Text(verbatim: failure ?? referrals.map { "\($0.total) from referrals. Tap to see them or give some." } ?? "Tap to give some.")
+                            .ffType(.caption)
+                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .task { await load() }
+        .sheet(isPresented: $showing) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                    FreeCharacterGiftCard()
+                    FFCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(verbatim: "Referral characters").ffType(.heading).foregroundStyle(theme.text)
+                            Text(verbatim: "Each friend who connects Apple Health gives 1 to the referrer and 1 to the friend. The newest 100 referrers:")
+                                .ffType(.caption).foregroundStyle(theme.textSecondary)
+                            if let failure {
+                                Text(verbatim: failure).ffType(.caption).foregroundStyle(theme.emberText)
+                            }
+                            ForEach(Array((referrals?.grants ?? []).enumerated()), id: \.offset) { _, grant in
+                                HStack {
+                                    Text(verbatim: "@\(grant.referrer)").ffType(.label).foregroundStyle(theme.text)
+                                    Text(verbatim: "invited \(grant.friend.map { "@\($0)" } ?? "a deleted account")")
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    Spacer(minLength: 0)
+                                    Text(grant.createdAt, format: .dateTime.day().month(.abbreviated))
+                                        .ffType(.caption).foregroundStyle(theme.textTertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(theme.space.screenPadding)
+            }
+            .fitFightTheme(theme)
+            .presentationBackground(theme.bg)
+            .presentationCornerRadius(theme.radius.shell)
+            .presentationDragIndicator(.visible)
+            .task { await load() }
+        }
+    }
+
+    private func load() async {
+        do {
+            let api = AppVersion.backend == "prod" ? FitFightAPI() : FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+            referrals = try await api.freeCharacterReferrals(accessToken: try await session.freshAccessToken())
+            failure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            failure = error.localizedDescription
+        }
+    }
+}
+
+/// Gives free characters on this build's own data: a staging build writes staging accounts through
+/// the preview server, like the rest of this tab; an App Store build writes production accounts.
+/// New accounts get none on their own; referrals and these gifts are the only way.
+struct FreeCharacterGiftCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var everyone = false
+    @State private var username = ""
+    @State private var quantity = 1
+    /// The same gift keeps its key until the server answers, so a retry never gives twice.
+    @State private var key = UUID()
+    @State private var busy = false
+    @State private var confirming = false
+    @State private var result: String?
+    @State private var failure: String?
+
+    private var production: Bool { AppVersion.backend == "prod" }
+
+    var body: some View {
+        FFCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(verbatim: "Free characters").ffType(.heading).foregroundStyle(theme.text)
+                Text(verbatim: "Give to \(production ? "Production" : "Staging") accounts.")
+                    .ffType(.caption).foregroundStyle(theme.textSecondary)
+                FFSegmented(items: [false, true], selection: $everyone, fill: true) { $0 ? "Everyone" : "One person" }
+                if !everyone {
+                    FFField(label: "Username") {
+                        TextField("username" as String, text: $username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
+                }
+                Stepper(value: $quantity, in: 1...10) {
+                    Text(verbatim: "\(quantity) free").ffType(.label).foregroundStyle(theme.text)
+                }
+                FFButton(title: "Give", enabled: everyone || !username.trimmingCharacters(in: .whitespaces).isEmpty,
+                         busy: busy, fullWidth: true) {
+                    if everyone { confirming = true } else { Task { await give() } }
+                }
+                if let failure {
+                    Text(verbatim: failure).ffType(.caption).foregroundStyle(theme.emberText)
+                } else if let result {
+                    Text(verbatim: result).ffType(.caption).foregroundStyle(theme.mossText)
+                }
+            }
+        }
+        .confirmationDialog(Text(verbatim: "Give \(quantity) free to every account?"), isPresented: $confirming, titleVisibility: .visible) {
+            Button { Task { await give() } } label: { Text(verbatim: "Give to everyone") }
+        }
+        .onChange(of: "\(everyone)-\(username)-\(quantity)") { _, _ in key = UUID() }
+    }
+
+    private func give() async {
+        guard !busy else { return }
+        busy = true
+        failure = nil
+        result = nil
+        defer { busy = false }
+        do {
+            let api = production ? FitFightAPI() : FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+            let gift = try await api.giftFreeCharacters(
+                username: everyone ? nil : username.trimmingCharacters(in: .whitespaces),
+                quantity: quantity, idempotencyKey: key, accessToken: try await session.freshAccessToken()
+            )
+            key = UUID()
+            result = "Gave \(gift.quantity) free to \(gift.people) \(gift.people == 1 ? "person" : "people")."
+        } catch FitFightAPIError.http(let status, _, _) where status == 403 {
+            failure = "This account isn't the FitFight admin."
+        } catch FitFightAPIError.http(let status, _, _) where status == 404 {
+            failure = "No account has this username."
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
+}
+
+/// Fights on the staging build, admin only: how many people synced to staging in the last 7 days.
+/// They should be on the App Store version, so the admin can ask them to switch. Like the Admin
+/// tab, it reads the preview server, which always runs the newest `preview` backend on staging data.
+struct RecentSyncsCard: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var people: [FitFightRecentSyncs.Person]?
+    @State private var failure: String?
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            FFCard {
+                HStack(spacing: 13) {
+                    Text(verbatim: people.map { "\($0.count)" } ?? "-")
+                        .font(.ff(22, 800))
+                        .foregroundStyle(theme.text)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Synced on TestFlight").ffType(.heading).foregroundStyle(theme.text)
+                        Text(verbatim: failure ?? "Last 7 days. Tap for the names.")
+                            .ffType(.caption)
+                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .disabled(people?.isEmpty ?? true)
+        .task { await load() }
+        .sheet(isPresented: $showing) {
+            RecentSyncsSheet(people: people ?? [])
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func load() async {
+        do {
+            let token = try await session.freshAccessToken()
+            people = try await FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+                .recentSyncs(accessToken: token).people
+            failure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            failure = error.localizedDescription
+        }
+    }
+}
+
+private struct RecentSyncsSheet: View {
+    let people: [FitFightRecentSyncs.Person]
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSheetHeader(title: "Synced on TestFlight") { dismiss() }
+            Text(verbatim: "Last 7 days, newest first. They should use the App Store version.")
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+            ScrollView {
+                FFGroupedRows {
+                    ForEach(people) { person in
+                        if person.id != people.first?.id { FFDivider() }
+                        FFGroupedRow(
+                            title: person.displayName,
+                            subtitle: "@\(person.handle)",
+                            subtitleTone: .neutral,
+                            trailing: AnyView(
+                                Text(verbatim: model.formatLastSync(person.lastSyncedAt))
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
+    }
+}
+
+/// One server chart. Unknown kinds draw as bars, unknown units read as counts. A chart over
+/// time reads out the latest bucket, or on its page the bucket under the finger.
 private struct AdminChart: View {
     let chart: FitFightAdminDashboard.Chart
+    /// The payload's bucket for charts over time; nil from older servers, then read from the dates.
+    let bucket: String?
+    var interactive = false
+    var height: CGFloat = 160
     @Environment(\.ffTheme) private var theme
+    /// The date under the finger on a chart over time.
+    @State private var selected: Date?
 
     var body: some View {
         let colors = seriesColors
         let marks = plottedMarks(colors: colors)
-        let hasData = chart.kind == "heatmap" ? !chart.cells.isEmpty : !marks.isEmpty
+        let hasData = chart.kind == "heatmap"
+            ? chart.cells.contains(where: { $0.value != 0 })
+            : marks.contains(where: { $0.value != 0 })
         VStack(alignment: .leading, spacing: 10) {
             if !hasData {
                 Text(verbatim: "No data yet")
@@ -285,49 +666,46 @@ private struct AdminChart: View {
                     .foregroundStyle(theme.textSecondary)
             } else if chart.kind == "heatmap" {
                 heatmap
-            } else if chart.kind == "line" {
-                if chart.xKind == "date" {
-                    dateLine(marks, unit: dateUnit)
-                } else {
-                    labelLine(marks)
-                }
             } else if chart.xKind == "date" {
-                columns(marks, unit: dateUnit)
+                let unit = dateUnit
+                let latest = marks.compactMap(\.day).max()
+                let open = inProgress(latest, unit: unit) ? latest : nil
+                let focus = focusDay(marks, unit: unit)
+                let shownDay = focus ?? latest
+                readout(marks.filter { $0.day == shownDay }, day: shownDay, unit: unit, open: shownDay == open)
+                if chart.kind == "line" {
+                    dateLine(marks, unit: unit, focus: focus, open: open)
+                } else {
+                    columns(marks, unit: unit, focus: focus, open: open)
+                }
+            } else if chart.kind == "line" {
+                labelLine(marks)
             } else {
                 rows(marks)
             }
             if hasData, chart.kind != "heatmap", chart.series.count > 1 {
-                FFFlow(spacing: 12) {
-                    ForEach(chart.series.indices, id: \.self) { index in
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(colors[index])
-                                .frame(width: 8, height: 8)
-                            Text(verbatim: chart.series[index].name)
-                        }
-                        .ffType(.micro)
-                        .foregroundStyle(theme.textSecondary)
-                    }
-                }
+                legend(colors)
             }
         }
     }
 
-    /// Current periods take gold, then moss, then ember. Previous periods and any further
-    /// series use the secondary text color.
+    /// Up to three series take moss, gold and ember, the order that keeps neighbours apart for
+    /// colour-blind eyes, and their lines differ by dash too. More series are ordered, like signup
+    /// cohorts newest first, so they share one moss ramp that fades with age. A previous period
+    /// from an older server reads secondary.
     private var seriesColors: [Color] {
-        let palette = [theme.gold, theme.mossFill, theme.emberFill]
-        var colors: [Color] = []
-        var current = 0
-        for series in chart.series {
-            if series.previous {
-                colors.append(theme.textSecondary)
-            } else {
-                colors.append(current < palette.count ? palette[current] : theme.textSecondary)
-                current += 1
-            }
+        chart.series.indices.map { index in
+            if chart.series[index].previous { return theme.textSecondary }
+            if chart.series.count <= 3 { return [theme.mossFill, theme.gold, theme.emberFill][index] }
+            return theme.mossText.opacity(1 - 0.55 * Double(index) / Double(chart.series.count - 1))
         }
-        return colors
+    }
+
+    private func lineDash(_ index: Int) -> [CGFloat] {
+        if chart.series[index].previous { return [4, 3] }
+        guard chart.series.count <= 3 else { return [] }
+        let dashes: [[CGFloat]] = [[], [6, 3], [1, 3]]
+        return dashes[index]
     }
 
     /// Every point flattened with its series style, so each chart builder holds one mark.
@@ -342,7 +720,7 @@ private struct AdminChart: View {
                     id: marks.count,
                     series: series.name,
                     color: colors[index],
-                    dashed: series.previous,
+                    dash: lineDash(index),
                     label: point.x,
                     day: day,
                     value: point.y
@@ -352,15 +730,53 @@ private struct AdminChart: View {
         return marks
     }
 
-    /// Long periods arrive as weekly or monthly points; each bar then spans its whole bucket.
+    /// Weekly or monthly points make each bar span its whole bucket.
     private var dateUnit: Calendar.Component {
+        switch bucket {
+        case "month": return .month
+        case "week": return .weekOfYear
+        case "day": return .day
+        default: break
+        }
         let days = Set(chart.series.filter { !$0.previous }.flatMap { $0.points.compactMap { adminDay($0.x) } }).sorted()
         let gap = zip(days, days.dropFirst()).map { $1.timeIntervalSince($0) }.min() ?? 86_400
         return gap >= 27 * 86_400 ? .month : gap >= 6 * 86_400 ? .weekOfYear : .day
     }
 
-    private func dateLine(_ marks: [AdminMark], unit: Calendar.Component) -> some View {
-        Chart {
+    /// The latest bucket is still filling while it ends after now: today, this week or this month.
+    private func inProgress(_ day: Date?, unit: Calendar.Component) -> Bool {
+        guard let day, let end = Calendar.current.date(byAdding: unit, value: 1, to: day) else { return false }
+        return end > Date()
+    }
+
+    /// The bucket whose middle is nearest the finger.
+    private func focusDay(_ marks: [AdminMark], unit: Calendar.Component) -> Date? {
+        guard let selected else { return nil }
+        func distance(_ day: Date) -> TimeInterval {
+            let end = Calendar.current.date(byAdding: unit, value: 1, to: day) ?? day
+            return abs(day.addingTimeInterval(end.timeIntervalSince(day) / 2).timeIntervalSince(selected))
+        }
+        return Set(marks.compactMap(\.day)).min { distance($0) < distance($1) }
+    }
+
+    /// "Week of 5 Oct so far  DAU 12 · WAU 40": exact values, with series names when there are several.
+    private func readout(_ values: [AdminMark], day: Date?, unit: Calendar.Component, open: Bool) -> some View {
+        let date = day.map { adminBucketLabel($0, unit: unit) } ?? ""
+        let numbers = values.map { mark in
+            let value = adminValue(mark.value, unit: chart.unit, exact: true)
+            return chart.series.count > 1 ? "\(mark.series) \(value)" : value
+        }
+        return (Text(verbatim: open ? "\(date) so far   " : "\(date)   ").foregroundStyle(theme.textSecondary)
+            + Text(verbatim: numbers.joined(separator: " · ")).foregroundStyle(theme.text))
+            .font(.ff(12, 800))
+            .lineLimit(2)
+    }
+
+    /// Lines with dots while each has few points, so a single week still shows. The bucket
+    /// still filling gets a hollow dot.
+    private func dateLine(_ marks: [AdminMark], unit: Calendar.Component, focus: Date?, open: Date?) -> some View {
+        let few = Dictionary(grouping: marks, by: \.series).values.allSatisfy { $0.count <= 14 }
+        return Chart {
             ForEach(marks) { mark in
                 LineMark(
                     x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
@@ -368,12 +784,36 @@ private struct AdminChart: View {
                     series: .value("Series", mark.series)
                 )
                 .foregroundStyle(mark.color)
-                .lineStyle(StrokeStyle(lineWidth: 2, dash: mark.dashed ? [4, 3] : []))
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: mark.dash))
+                .symbol {
+                    if few {
+                        Circle()
+                            .fill(mark.color)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+            }
+            ForEach(marks.filter { open != nil && $0.day == open }) { mark in
+                PointMark(
+                    x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
+                    y: .value("Value", mark.value)
+                )
+                .symbol {
+                    Circle()
+                        .strokeBorder(mark.color, lineWidth: 2)
+                        .background(Circle().fill(theme.card))
+                        .frame(width: 9, height: 9)
+                }
+            }
+            if let focus {
+                RuleMark(x: .value("Day", focus, unit: unit))
+                    .foregroundStyle(theme.textSecondary.opacity(0.4))
             }
         }
         .chartXAxis { dayAxis }
         .chartYAxis { valueAxis }
-        .frame(height: 160)
+        .modifier(AdminChartSelection(enabled: interactive, selected: $selected))
+        .frame(height: height)
     }
 
     private func labelLine(_ marks: [AdminMark]) -> some View {
@@ -385,29 +825,33 @@ private struct AdminChart: View {
                     series: .value("Series", mark.series)
                 )
                 .foregroundStyle(mark.color)
-                .lineStyle(StrokeStyle(lineWidth: 2, dash: mark.dashed ? [4, 3] : []))
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: mark.dash))
             }
         }
         .chartXAxis { labelAxis(leading: false) }
         .chartYAxis { valueAxis }
-        .frame(height: 160)
+        .frame(height: height)
     }
 
-    /// Vertical bars per day, several series side by side.
-    private func columns(_ marks: [AdminMark], unit: Calendar.Component) -> some View {
+    /// Vertical bars per bucket; several series stack. The bucket still filling is faded.
+    private func columns(_ marks: [AdminMark], unit: Calendar.Component, focus: Date?, open: Date?) -> some View {
         Chart {
             ForEach(marks) { mark in
                 BarMark(
                     x: .value("Day", mark.day ?? Date.distantPast, unit: unit),
                     y: .value("Value", mark.value)
                 )
-                .foregroundStyle(mark.color)
-                .position(by: .value("Series", mark.series))
+                .foregroundStyle(mark.color.opacity(open != nil && mark.day == open ? 0.45 : 1))
+            }
+            if let focus {
+                RuleMark(x: .value("Day", focus, unit: unit))
+                    .foregroundStyle(theme.textSecondary.opacity(0.4))
             }
         }
         .chartXAxis { dayAxis }
         .chartYAxis { valueAxis }
-        .frame(height: 160)
+        .modifier(AdminChartSelection(enabled: interactive, selected: $selected))
+        .frame(height: height)
     }
 
     /// Horizontal bars so long labels read in full, with each value at the bar's end.
@@ -437,29 +881,71 @@ private struct AdminChart: View {
         .frame(height: CGFloat(labels) * 26)
     }
 
+    /// One moss shade per cell, darker for more. About six column labels, so hours don't overlap.
     private var heatmap: some View {
         let peak = chart.cells.map(\.value).max() ?? 0
         let shades = chart.cells.map { peak > 0 ? 0.08 + 0.92 * max($0.value / peak, 0) : 0.08 }
         let rowCount = Set(chart.cells.map(\.y)).count
+        var xLabels: [String] = []
+        for cell in chart.cells where !xLabels.contains(cell.x) {
+            xLabels.append(cell.x)
+        }
+        let step = max(1, Int((Double(xLabels.count) / 6).rounded(.up)))
+        let labelled = xLabels.indices.filter { $0 % step == 0 }.map { xLabels[$0] }
         return Chart {
             ForEach(chart.cells.indices, id: \.self) { index in
                 RectangleMark(
                     x: .value("Column", chart.cells[index].x),
                     y: .value("Row", chart.cells[index].y)
                 )
-                .foregroundStyle(theme.gold.opacity(shades[index]))
+                .foregroundStyle(theme.mossText.opacity(shades[index]))
             }
         }
-        .chartXAxis { labelAxis(leading: false) }
+        .chartXAxis {
+            AxisMarks(values: labelled) { value in
+                AxisValueLabel {
+                    Text(verbatim: value.as(String.self) ?? "")
+                        .font(.ff(10, 700))
+                        .foregroundStyle(theme.textSecondary)
+                }
+            }
+        }
         .chartYAxis { labelAxis(leading: true) }
         .frame(height: CGFloat(rowCount) * 24 + 24)
+    }
+
+    /// Line keys for lines and swatches for bars, so the legend mirrors the marks.
+    private func legend(_ colors: [Color]) -> some View {
+        FFFlow(spacing: 12) {
+            ForEach(chart.series.indices, id: \.self) { index in
+                HStack(spacing: 6) {
+                    if chart.kind == "line" {
+                        Path { path in
+                            path.move(to: CGPoint(x: 1, y: 1))
+                            path.addLine(to: CGPoint(x: 15, y: 1))
+                        }
+                        .stroke(colors[index], style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: lineDash(index)))
+                        .frame(width: 16, height: 2)
+                    } else {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(colors[index])
+                            .frame(width: 8, height: 8)
+                    }
+                    Text(verbatim: chart.series[index].name)
+                }
+                .ffType(.micro)
+                .foregroundStyle(theme.textSecondary)
+            }
+        }
     }
 
     private var valueAxis: some AxisContent {
         AxisMarks { value in
             AxisGridLine()
             AxisValueLabel {
-                Text(verbatim: adminValue(value.as(Double.self) ?? 0, unit: chart.unit))
+                // Under 10 the ticks can fall between whole numbers, so they keep one decimal.
+                Text(verbatim: adminValue(value.as(Double.self) ?? 0, unit: chart.unit,
+                                          exact: abs(value.as(Double.self) ?? 0) < 10))
                     .font(.ff(10, 700))
                     .foregroundStyle(theme.textSecondary)
             }
@@ -488,12 +974,83 @@ private struct AdminChart: View {
     }
 }
 
+/// Finger reading only where the chart is the page, so a tap on a list card opens it instead.
+private struct AdminChartSelection: ViewModifier {
+    let enabled: Bool
+    @Binding var selected: Date?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content.chartXSelection(value: $selected)
+        } else {
+            content
+        }
+    }
+}
+
+/// A chart or card on its own page: the chart bigger with the value under the finger, or the
+/// card's exact number, then what it measures and a sentence that reads its current number.
+private struct AdminDetailView<Hero: View>: View {
+    let title: String
+    let definition: String?
+    let example: String?
+    let note: String?
+    @ViewBuilder var hero: Hero
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        FFScreen {
+            FFCard(padding: 16) {
+                hero
+            }
+            if let definition {
+                FFSection(title: "What it shows") {
+                    paragraph(definition)
+                }
+            }
+            if let example {
+                FFSection(title: "In numbers") {
+                    paragraph(example)
+                }
+            }
+            if let note {
+                Text(verbatim: note)
+                    .ffType(.micro)
+                    .foregroundStyle(theme.textSecondary)
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // Two lines, so long names stay whole.
+            ToolbarItem(placement: .principal) {
+                Text(verbatim: title)
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+    }
+
+    private func paragraph(_ text: String) -> some View {
+        FFCard(padding: 16) {
+            Text(verbatim: text)
+                .ffType(.body)
+                .foregroundStyle(theme.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
 /// One plotted value with its series style.
 private struct AdminMark: Identifiable {
     let id: Int
     let series: String
     let color: Color
-    let dashed: Bool
+    let dash: [CGFloat]
     let label: String
     /// Set only on date charts.
     let day: Date?
@@ -516,6 +1073,31 @@ private let adminDayLabel: DateFormatter = {
     formatter.dateFormat = "d MMM"
     return formatter
 }()
+
+/// "Mon 22 Sep" whatever the phone's language.
+private let adminWeekdayLabel: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.dateFormat = "EEE d MMM"
+    return formatter
+}()
+
+/// "Sep 2026" whatever the phone's language.
+private let adminMonthLabel: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.dateFormat = "MMM yyyy"
+    return formatter
+}()
+
+/// A bucket in the readout: "Today", "Mon 22 Sep", "Week of 22 Sep" or "Sep 2026".
+private func adminBucketLabel(_ day: Date, unit: Calendar.Component) -> String {
+    switch unit {
+    case .weekOfYear: return "Week of " + adminDayLabel.string(from: day)
+    case .month: return adminMonthLabel.string(from: day)
+    default: return Calendar.current.isDateInToday(day) ? "Today" : adminWeekdayLabel.string(from: day)
+    }
+}
 
 /// Marc's rule: round down, never up. 999,999 is "999K" and 1,099,999 is "1M".
 private func adminNumber(_ value: Double) -> String {
@@ -542,7 +1124,7 @@ private func adminTenths(_ value: Double) -> String {
     return value < 0 && tenths != 0 ? "-" + digits : digits
 }
 
-/// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead.
+/// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead, whole for steps.
 private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> String {
     let suffix: String
     switch unit {
@@ -554,7 +1136,7 @@ private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> S
     default: suffix = ""
     }
     if exact {
-        return value.formatted(.number.precision(.fractionLength(0...1))) + suffix
+        return value.formatted(.number.precision(.fractionLength(unit == "steps" ? 0...0 : 0...1))) + suffix
     }
     return (unit == "percent" ? adminTenths(value) : adminNumber(value)) + suffix
 }

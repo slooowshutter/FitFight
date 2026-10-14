@@ -41,6 +41,11 @@ struct FightsListView: View {
     var body: some View {
         FFScreen(refresh: fightsRefresh) {
             CompanionIntroduction(surface: .fights)
+            PaidCharacterProgressCard()
+            // Left out, not hidden, so everyone else keeps the same spacing.
+            if session.isFitFightAdmin, AppVersion.backend == "staging", !CompanionPreview.isEnabled {
+                RecentSyncsCard()
+            }
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -147,6 +152,7 @@ struct FightsListView: View {
         FFRefreshConfig(
             isRefreshing: model.isRefreshingFights,
             message: model.refreshStatusText,
+            error: model.refreshError,
             action: {
                 await model.refreshFights(session: session, steps: steps, trigger: .manual)
             }
@@ -247,7 +253,8 @@ struct LiveFightCard: View {
                         people: fight.standings.filter { !$0.invited }.map(\.person),
                         visible: 4,
                         size: 22,
-                        ring: theme.card
+                        ring: theme.card,
+                        halfBody: true
                     )
                     // Joined for the next round: no place this round.
                     if !fight.isUpcoming, fight.standings.contains(where: { $0.person.isYou && !$0.deferred }) {
@@ -337,7 +344,7 @@ struct FinishedRow: View {
 
     var body: some View {
         Button {
-            model.openFightID = fight.id
+            model.openFight(id: fight.id, preserveRound: true)
         } label: {
             HStack(spacing: 13) {
                 FFResultGlyph(result)
@@ -345,7 +352,12 @@ struct FinishedRow: View {
                     Text(fight.listTitle)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
-                    Text(result == .pending ? fight.listSubtitle : (fight.endedLabel ?? fight.listSubtitle))
+                    // Rounds of one series share a name, so the window tells them apart.
+                    let window = String(
+                        appLocalized: "fight.history-window",
+                        defaultValue: "\(Fight.deadlineStamp(fight.windowStart)) - \(Fight.deadlineStamp(fight.windowEnd))"
+                    )
+                    Text(result == .pending ? "\(String(appLocalized: "Pending")) · \(window)" : window)
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }
@@ -354,7 +366,8 @@ struct FinishedRow: View {
                     people: fight.standings.map(\.person),
                     visible: 2,
                     size: 26,
-                    ring: theme.card
+                    ring: theme.card,
+                    halfBody: true
                 )
             }
             .padding(.horizontal, 16)

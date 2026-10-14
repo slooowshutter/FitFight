@@ -61,15 +61,15 @@ enum CompanionStateTests {
 
         session.rejectSave = true
         do {
-            try await store.choose(id: "limited-pangolin", prompt: nil, session: session)
+            try await store.choose(id: "limited-black-panther", prompt: nil, session: session)
             preconditionFailure("A rejected claim must reach the picker")
         } catch { }
         precondition(store.selection == .fox && session.profile?.companionId == "fox")
         precondition(!CompanionStore.hasPendingChoice(for: userId), "A failed claim must never be replayed offline")
         session.rejectSave = false
-        try await store.choose(id: "limited-pangolin", prompt: nil, session: session)
-        precondition(store.selection == .limitedPangolin)
-        precondition(store.animal(for: userId.uuidString, companionID: "limited-pangolin") == .limitedPangolin)
+        try await store.choose(id: "limited-black-panther", prompt: nil, session: session)
+        precondition(store.selection == .limitedBlackPanther)
+        precondition(store.animal(for: userId.uuidString, companionID: "limited-black-panther") == .limitedBlackPanther)
         session.rejectSave = true
         try await store.choose(id: "fox", prompt: nil, session: session)
         precondition(store.selection == .fox && CompanionStore.hasPendingChoice(for: userId), "Stock picks still save offline")
@@ -91,38 +91,25 @@ enum CompanionStateTests {
         restored.apply(FitFightProfile(userId: UUID(), handle: "other", displayName: "Other", handleSetAt: nil))
         precondition(restored.savedPrompts.isEmpty && restored.customPrompt.isEmpty, "Accounts must not share a library")
 
-        // A new device has no account cache and must load the same library from the API.
-        UserDefaults.standard.removeObject(forKey: "ff.companion.library." + userId.uuidString)
-        let newDevice = CompanionStore()
-        precondition(newDevice.savedPrompts.isEmpty && newDevice.customPrompt.isEmpty,
-                     "Descriptions must stay hidden until an account is known")
-        newDevice.apply(session.profile)
-        precondition(newDevice.savedPrompts.isEmpty)
-        try await newDevice.loadSavedPrompts(session: session)
-        precondition(newDevice.savedPrompts == [prompt, second])
-        precondition(newDevice.customPrompt == prompt)
-        try await newDevice.choose(id: "custom", prompt: second, session: session)
-        precondition(session.profile?.companionPrompt == second)
-
-        session.suspendLoad = true
-        let load = Task { try await newDevice.loadSavedPrompts(session: session) }
-        while session.pendingLoad == nil { await Task.yield() }
-        newDevice.apply(nil)
-        session.profile = nil
-        session.pendingLoad?.resume(returning: [prompt, second])
-        do {
-            try await load.value
-            preconditionFailure("A signed-out library request must be discarded")
-        } catch is CancellationError { }
-        precondition(newDevice.savedPrompts.isEmpty && newDevice.customPrompt.isEmpty)
         CompanionStore.deleteLocalLibrary(for: userId)
         precondition(UserDefaults.standard.stringArray(forKey: "ff.companion.library." + userId.uuidString) == nil)
 
         precondition(Set(CompanionCategory.all.animals) == Set(StockCompanion.allCases))
         precondition(CompanionCategory.allCases == [.all, .limited, .yours])
         precondition(CompanionCategory.yours.animals.isEmpty)
-        precondition(CompanionCategory.limited.animals.count == 40)
+        precondition(CompanionCategory.limited.animals.count == 30)
         precondition(CompanionCategory.limited.animals.allSatisfy { $0.isLimited && !$0.caption.isEmpty })
+        precondition(SpecialSeries.allCases.allSatisfy { series in StockCompanion.allCases.filter { $0.series == series }.count == 6 })
+        precondition(CompanionCategory.limited.animals.map(\.series) == CompanionCategory.limited.animals.compactMap(\.series).sorted {
+            SpecialSeries.allCases.firstIndex(of: $0)! < SpecialSeries.allCases.firstIndex(of: $1)!
+        }, "The Specials carousel is ordered by series")
+        precondition(StockCompanion.limitedTiger.effortImage(stage: .peak) == "Companion-limited-tiger-effort-5", "Specials have effort poses")
+
+        // A retired Special id from the first roster stays on its profile and is simply unknown here.
+        let retired = FitFightProfile(userId: UUID(), handle: "retired", displayName: "Retired", handleSetAt: nil, companionId: "limited-pangolin")
+        let retiredStore = CompanionStore()
+        retiredStore.apply(retired)
+        precondition(!retiredStore.hasChosen && retiredStore.animal(for: nil, companionID: "limited-pangolin") == nil)
         let stages = [(0, "resting"), (2_999, "resting"), (3_000, "soft"), (5_999, "soft"),
                       (6_000, "average"), (9_999, "average"), (10_000, "fit"), (14_999, "fit"),
                       (15_000, "strong")]

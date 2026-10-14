@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 29 September 2026</p>
+                <p className="legal-updated">Effective 12 October 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -229,10 +229,9 @@ export default function PrivacyPage() {
                         receive your card or bank details. We send Apple a
                         random purchase account identifier and keep verified
                         transaction identifiers, the purchased Special, purchase
-                        time, price and currency when provided, and ownership,
-                        refund and reservation status. These records let us
-                        deliver and restore purchases and prevent the same
-                        exclusive companion from being sold twice.
+                        time, price and currency when provided, and ownership
+                        and refund status. These records let us deliver and
+                        restore purchases.
                     </p>
                     <p>
                         A purchase belongs to the FitFight account used at
@@ -268,7 +267,12 @@ export default function PrivacyPage() {
                             app, Fight activity, and average daily Steps, to
                             learn whether FitFight helps people move more and
                             to improve it. Only the FitFight operator sees
-                            them;
+                            them, except the published figures below;
+                        </li>
+                        <li>
+                            publish a few anonymous, aggregate figures on
+                            fitfight.app, such as the total Steps recorded.
+                            They never identify a person;
                         </li>
                         <li>answer support requests; and</li>
                         <li>detect errors, abuse, and security problems.</li>
@@ -290,12 +294,13 @@ export default function PrivacyPage() {
                         do not make private Fight or Health data public.
                     </p>
                     <p>
-                        When configured, PostHog receives crash reports linked
-                        to your FitFight account identifier. FitFight disables
-                        session replay and screen and interaction capture; its
-                        crash integration sends crash reports and account
-                        identification. It does not intentionally include Health
-                        values in those reports.
+                        When configured, PostHog receives crash reports, app
+                        opens, the screens you visit, taps, key actions such as
+                        creating or joining a Fight, and session recordings,
+                        linked to your FitFight account identifier and username. We use them
+                        to find bugs and improve the app. Recordings hide all
+                        text and images on screen, so they do not show Health
+                        values, names or photos.
                     </p>
                     <p>
                         When configured, bugs and feature requests are copied to
@@ -367,7 +372,7 @@ export default function PrivacyPage() {
                     <p>
                         In-app deletion does not automatically remove report
                         copies already sent to Notion or Cursor, or crash
-                        records already sent to PostHog. Contact{" "}
+                        and usage records already sent to PostHog. Contact{" "}
                         <a href="mailto:marc@marclamy.com">marc@marclamy.com</a>{" "}
                         to request a review of those copies and their retention.
                     </p>

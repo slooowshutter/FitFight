@@ -22,7 +22,7 @@ export const POST = observeAiHttp(
         correlateAiRequest({
             request_id: saved.id,
             workflow_id: saved.workflow_version.workflowId,
-            version_id: saved.workflow_version.versionId,
+            version_id: saved.workflow_version.versionId ?? null,
             run_id: saved.run_handle?.runId ?? null,
         });
         return json({ request_id: saved.id, status: saved.status });

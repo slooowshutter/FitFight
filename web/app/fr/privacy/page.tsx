@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 29 septembre 2026</p>
+                <p className="legal-updated">En vigueur le 12 octobre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -287,7 +287,13 @@ export default function PrivacyPage() {
                             personnes qui ouvrent l’app, l’activité des défis et
                             la moyenne de pas par jour, pour savoir si FitFight
                             aide à bouger plus et pour l’améliorer. Seul
-                            l’opérateur de FitFight les voit ;
+                            l’opérateur de FitFight les voit, sauf les chiffres
+                            publiés ci-dessous ;
+                        </li>
+                        <li>
+                            publier quelques chiffres anonymes et agrégés sur
+                            fitfight.app, comme le total des pas enregistrés.
+                            Ils n’identifient jamais une personne ;
                         </li>
                         <li>répondre aux demandes d’assistance ;</li>
                         <li>
@@ -314,12 +320,16 @@ export default function PrivacyPage() {
                         Santé.
                     </p>
                     <p>
-                        Lorsque l’intégration est configurée, PostHog reçoit des
-                        rapports de plantage liés à votre identifiant de compte
-                        FitFight. L’app désactive l’enregistrement des sessions,
-                        des écrans et des interactions. Les rapports et
-                        l’identification du compte ne contiennent pas
-                        intentionnellement de valeurs de Santé.
+                        Lorsque l’intégration est configurée, PostHog reçoit les
+                        rapports de plantage, les ouvertures de l’app, les écrans
+                        visités, les touchers, les actions clés comme créer ou
+                        rejoindre un Fight, et des enregistrements de session,
+                        liés à votre identifiant de compte FitFight et à votre nom
+                        d’utilisateur. Nous les
+                        utilisons pour corriger les bugs et améliorer l’app. Les
+                        enregistrements masquent tout le texte et toutes les
+                        images à l’écran, donc ils ne montrent ni valeurs de
+                        Santé, ni noms, ni photos.
                     </p>
                     <p>
                         Lorsque l’intégration est configurée, les bugs et
@@ -400,7 +410,7 @@ export default function PrivacyPage() {
                     <p>
                         La suppression dans l’app n’efface pas automatiquement
                         les copies déjà envoyées à Notion ou Cursor, ni les
-                        rapports de plantage envoyés à PostHog. Contactez{" "}
+                        données de plantage et d’usage envoyées à PostHog. Contactez{" "}
                         <a href="mailto:marc@marclamy.com">marc@marclamy.com</a>{" "}
                         pour demander un examen de ces copies et de leur
                         conservation.

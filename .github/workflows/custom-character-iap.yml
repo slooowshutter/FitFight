@@ -19,7 +19,7 @@ jobs:
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Prepare and verify EUR 4.99 consumable
+            - name: Prepare and verify EUR 2.99 consumable
               env:
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}

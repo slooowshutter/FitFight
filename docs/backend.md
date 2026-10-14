@@ -14,10 +14,25 @@ Postgres RPCs.
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
 
+## Environment and Beta bar (prepared 29 Sep 2026)
+
+Public `GET /api/v1/environment` returns `{ "environment": "beta" }` or
+`{ "environment": "production" }` from `private.environments`. The table has one
+row per Supabase project: `zstzbfocunthczzubggz` (develop) is `beta` and
+`pvqntpteehdvhqyctwum` (production) is `production`. The migration writes both
+rows into every database, and the route reads the row for the project in
+`NEXT_PUBLIC_SUPABASE_URL`, so develop and main answer differently without a
+dashboard step. A project with no row returns `503 config`; a new Supabase
+project needs its row added by migration.
+
+The app shows its environment strip only from this answer, never from its build
+settings: everyone sees it on `beta`, and the admin also sees it on `production`.
+It caches the last answer per API address and keeps it when the call fails.
+
 ## Admin dashboard (prepared 29 Sep 2026)
 
-`GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>` feeds the Admin tab
-in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement`,
+`GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>[&bucket=day|week|month]` feeds the Admin tab
+in Profile -> Dashboard. Sections: `overview`, `retention`, `churn`, `users`, `engagement`,
 `steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
 query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
@@ -27,15 +42,43 @@ chips from that list, so section, card and chart changes need no app release
 (builds from 30 Sep 2026 on; earlier builds have a fixed chip list). A failing
 query only marks its own tile with `Query failed: ...`.
 
-- **Windows:** cards compare the last N days with the N days before (rolling for
-  events, complete Paris calendar days for Steps). Charts use Paris calendar days
-  over max(N, 7) days, bucketed by day (up to 62), week (up to 366) or month, and
-  overlay the previous period shifted onto the current dates.
+- **Windows (10 Oct 2026):** cards have fixed spans named in their titles, so the
+  app's period never changes them. "Weekly" is the last 7 days against the 7
+  before, "Monthly" the last 30 against the 30 before (rolling for events,
+  complete Paris days for Steps); a card without either word is now against 7
+  days ago. `days` sets only the charts over time (`x_kind` date): Paris days from
+  the later of today minus `days` and the first signup, at least 7 days, in whole
+  days (up to 62), weeks (up to 366) or months, with no previous-period overlay.
+  `bucket` (the app's Day, Week or Month choice) overrides that bucket. Each metric
+  is computed per bucket: counts add up, people count once per bucket, averages
+  and shares use every person-day in it, and DAU is the daily average. Activity
+  charts start where sync history starts. Every other chart names its own span
+  ("last 30 days", "all time", "now").
+- **Chart pages (10 Oct 2026):** every chart carries a `definition` (what it
+  measures) and an `example` sentence that reads one current number off it: the
+  newest complete day, week or month, or now for totals and states. Both are built
+  on the server in English, so their wording changes need no app build.
+- **Card pages (11 Oct 2026):** every card also carries a `definition` (what it
+  measures and what it compares with) and an `example` sentence that reads its
+  number and the previous one. A card without a value has no example. The app
+  shows only the name, number and change on a card, and the rest on its page.
 - **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
   (manual refreshes also count as activity). A foreground trace within 60 seconds
-  after a background `observer` sync is the post-sync refresh, not an open. Sync
+  after a background `observer` sync is the post-sync refresh, not an open. The
+  refresh after an action in the app, such as create, join, edit or leave a Fight,
+  sends `manual` since the 12 Oct 2026 change. Older builds send it as
+  `foreground`, so their opens include those actions. Sync
   history is kept since 29 Sep (never-delete rule), so engagement history grows
   from that date; earlier rows were pruned after 7 days.
+- **Churn (14 Oct 2026):** a person churned when they were active in the 7 (or
+  30) complete Paris days before the latest 7 (or 30) and not active in the
+  latest. Two meanings of active: an app open (as above), or a phone sync, which
+  is a complete Apple Health step day as in Retention. Charts read the same
+  windows at the end of each bucket. Churn by app opens reads only periods from
+  2 Oct 2026, because production pruned sync reports until 1 Oct and kept the
+  last reports of people who left; weekly numbers show from 16 Oct, monthly from
+  1 Dec. A returning phone uploads the days it missed, so older sync churn drops
+  when people come back.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
   day. "Health history" cards include imported days before signup.
@@ -50,11 +93,13 @@ query only marks its own tile with `Query failed: ...`.
   synced steps that week: background syncs run without an open until the app is
   deleted or Health is turned off. A person counts for a week only once it has
   passed. Charts draw one line per signup week (last 8) and month (last 6).
-  App opens are not used yet: the servers the app talks to still delete sync
-  reports after 7 days, which would make week 1 look close to 0%.
+  Cards take the signups of the latest 28 days (weeks) or 30 days (months) that
+  got past that week or month, against the span before. App opens are not used
+  yet: the servers the app talks to still delete sync reports after 7 days, which
+  would make week 1 look close to 0%.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
   invitations are automatic.
-- **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or the
+- **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or `rad`, or the
   admin email). The app always sends `X-FitFight-Auth-Project` with its own
   Supabase project ref. When it names the other FitFight project, the backend
   verifies the token with that project's public Auth endpoint and accepts it only
@@ -82,6 +127,17 @@ query only marks its own tile with `Query failed: ...`.
 - **Compatibility:** additive route; no existing contract, schema or migration
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
+
+## Recent syncs (prepared 12 Oct 2026)
+
+`GET /api/v1/admin/recent-syncs` returns `{ "people": [...] }` with `user_id`,
+`handle`, `display_name` and `last_synced_at` for every account whose Apple
+Health upload reached this server's database in the last 7 days, newest first.
+It reads `public.data_sources.last_success_at` (provider `apple_health`), which
+every Steps and activity upload sets, and leaves out deleted accounts. Only the
+FitFight admin (`isFitFightAdmin`) can read it; anyone else gets 403. The staging
+app shows it to the admin on Fights, through the preview server, to find testers
+who still sync to staging instead of using the App Store version.
 
 ## Activity pipeline (prepared 23 Sep 2026)
 
@@ -282,9 +338,11 @@ away when the account is deleted. This stores descriptions, not generated artwor
 Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.
 `GET /api/v1/provider-uploads/context` adds the Fight's `time_zone`. New native
 uploads attach optional `step_checkpoints` to each `fight_aggregates` item. Each
-point is Apple's cumulative query from the same Fight start, through that Fight
-day's end or the current cutoff. The final query supplies both the last point
-and the scored total. The server validates complete day coverage, increasing
+point is cumulative Steps from the Fight start, through that Fight day's end or
+the current cutoff. Since 14 Oct 2026 the first day is an exact query from the
+Fight start, later days add one shared daily read per Fight time zone, and no
+point exceeds the score. The final query supplies both the last point and the
+scored total. The server validates complete day coverage, increasing
 cutoffs and counts, and an identical final cutoff and total.
 
 Checkpoints live on `private.fight_score_snapshots` with their score revision.
@@ -332,10 +390,21 @@ preferences automatically.
 
 Profiles carry a stable, read-only `referral_code`; there is no link-generation endpoint.
 Authenticated `POST /api/v1/referrals` accepts `{ code }` and records the first referrer
-in `private.referrals`. Self-referrals and duplicates do nothing. Relationships use
-account IDs and cascade on deletion of either account. This counts attributed accounts,
-including existing accounts, not clicks or installs. Deploy the referral migration and
-backend before the native build. See the install handoff in [`status.md`](status.md).
+in `private.referrals`. Self-referrals and duplicates do nothing. Only an account created at
+most 7 days before the claim counts; an older one gets `account_not_new: true`.
+Relationships use account IDs and cascade on deletion of either account. Deploy the
+referral migration and backend before the native build. See the install handoff in
+[`status.md`](status.md).
+
+The friend usually claims on the website before installing: `/r/<code>` signs in with
+Apple or Google through Supabase Auth and posts the claim at once. Google first calls
+`POST /api/v1/auth/google`, the same rule as the app, so one email gives one account.
+When the referred account's first Apple Health steps arrive (a `private.activity_metrics`
+day total above 0 from an `apple_health` source), `grantReferralFreeCharacters` gives the
+referrer a `referral` grant and the friend a `referred` grant, both keyed by the friend's
+id, and the referrer gets one push. It runs after a referral claim, after each HealthKit
+upload, and in the 15-minute `close-fights` sweep. See
+[Blend workflows](blend-workflows.md#free-characters).
 
 ## Loop
 
@@ -416,7 +485,7 @@ Posts include additive `archived` and nullable `archive_reason` fields.
 `GET /api/v1/feedback/{postID}` includes `can_launch_fix`, `can_delete`, and
 `can_archive` for the signed-in viewer. Authors can delete their own posts.
 The launch and archive flags require the existing FitFight admin allowlist:
-confirmed account email `marc@marclamy.com`, username `marc`, or extras in
+confirmed account email `marc@marclamy.com`, username `marc` or `rad`, or extras in
 `FITFIGHT_ADMIN_EMAILS` / `FITFIGHT_ADMIN_HANDLES`. User-editable metadata and
 identity email copies never grant admin access.
 
@@ -613,11 +682,13 @@ verification are recorded separately in [status.md](status.md).
 
 An aggregate upload uses at most eight SQL statements, excluding BEGIN/COMMIT, independent of Fight/member count. Finalizing one Fight uses at most six. TypeScript still owns scoring; batched writes preserve the existing transaction and lock boundaries. Snapshot inserts remain separate from reads of the latest snapshot, preserving corrections that return to an earlier total.
 
-Each foreground/manual refresh and observer opportunity owns a trace. Native `ContinuousClock` measures permission prompts separately, today's HealthKit read, context retrieval, merged-day and each exact-window HealthKit query, upload, and final Fights refresh. The total ends after the final requested app work and mapping/cache updates. Observers omit the screen refresh they do not perform; expiry records a cancelled attempt once. Routine token retrieval uses the SDK's valid session accessor; account deletion still explicitly renews its session.
+Each foreground/manual refresh and each observer call that starts an upload owns a trace. One upload reads every HealthKit type, but every changed type calls its own observer. So an observer call answers HealthKit at once and records nothing while another upload runs, or for 15 minutes after a successful Steps upload (12 Oct 2026). Native `ContinuousClock` measures permission prompts separately, today's HealthKit read, context retrieval, merged-day and each exact-window HealthKit query, upload, and final Fights refresh. The total ends after the final requested app work and mapping/cache updates. Observers omit the screen refresh they do not perform; expiry records a cancelled attempt once. Routine token retrieval uses the SDK's valid session accessor; account deletion still explicitly renews its session.
 
 The native API sends `X-FitFight-Trace-ID` for context, upload, and Fights refresh. Their responses include `Server-Timing` for `auth`, `db`, optional `maintenance`, and `total`, including failures. Structured `fitfight_request` Vercel logs contain the same trace ID, fixed operation name, status and durations only. Server `db` includes pool acquisition, locks, and the whole database operation; it is not an isolated query execution time. Server `total` starts at handler entry and excludes earlier cold-start time. Compare each stage's client duration with its server timing; never subtract phone and server wall-clock timestamps.
 
 One immutable completed attempt is logged locally under OSLog category `HealthKitPerformance` and sent through the existing diagnostics endpoint after product work completes. Reporting is best effort and is excluded from the attempt's own duration, avoiding recursive timing reports. Network loss, suspension, or termination can prevent server delivery; there is no background retry queue. The underlying HealthKit callback may still finish after observer expiry, but cancellation prevents a subsequent upload from that expired attempt.
+
+Time limits (12 Oct 2026): requests that carry a trace (context, upload, activity upload, Fights refresh) time out after 120 seconds without data. Slow data that still moves does not count, and the 30-second refresh limit and the 25-second background limit stop sooner. A foreground/manual refresh stops its network part after 30 seconds, records a cancelled attempt, and shows Try again on Fights, a Fight, and Profile. The limit starts after the HealthKit read, because a permission sheet waits for the person. The refresh holds an iOS background task, so leaving the app lets it finish instead of freezing it until the next open. `ContinuousClock` keeps counting while iOS suspends the app, so a very long attempt usually means a suspension, not a slow request. HealthKit error 6 (database inaccessible while the phone is locked) records `protected_data_unavailable`. When a foreground refresh finds read types that the app never requested, such as types added after the person connected Apple Health, it shows the Health sheet again. iOS lists only the new types, which removes HealthKit error 5 from the activity sync.
 
 Failed stages preserve HealthKit/URL/Cocoa numeric errors, HTTP status, decoding/configuration failures, and the app's unavailable/invalid Steps errors. Unknown error domains are reduced to `unknown`; messages, URLs, query predicates and `NSError.userInfo` are never logged. The existing `stages` JSON stores these details without another migration. After authentication and validation, the diagnostics route emits `fitfight_healthkit_failure` to Vercel logs before database persistence, with trace ID, app version/build, trigger, outcome and failed stages. Legacy reports such as build 153 emit their coarse error only; discarded device errors cannot be recovered retroactively.
 
@@ -636,7 +707,17 @@ Supabase will receive a permission error after the migration. Feature-branch pus
 alone do not apply the hosted migration. No existing finalized scores or hosted
 previously-deleted accounts are rewritten by this change.
 
-## Specials: paid limited companions (updated 23 Sep 2026)
+## Specials: paid limited companions (updated 12 Oct 2026)
+
+**Current model, 12 Oct 2026:** Specials are no longer one of a kind. Any account
+may own any number of them. Each is one charge of the consumable
+`com.fitfight.mvp.special`; `POST /api/v1/me/specials/purchases` verifies it
+and records the chosen Special in `private.special_purchases` (one row per
+transaction, `revoked_at` on refund). Ownership is a non-revoked purchase or an
+edition owned under the old model. Holds, Taken and the one-per-account limit
+are gone; `/checkout` refuses `reserve` with `410 special_update_required`. The
+rest of this section describes the retired one-of-a-kind model, whose tables and
+legacy products are kept for existing Sandbox purchases.
 
 The 40 supplied animal photos have stable `limited-*` companion IDs and sell as
 non-consumable StoreKit products at EUR 0.99. Each photo, including alternate
@@ -661,9 +742,12 @@ cancels the matching attempt. Unpaid holds lapse 30 minutes after they are made:
 Account deletion frees a hold at once. A charge that arrives later is owned if
 the edition is still free and the account has no other Special; otherwise it is
 recorded as a conflict and the app offers Apple's refund request. A refund only
-retires an edition its purchase held or owned. On production, accounts listed in
-`APPLE_IAP_REVIEW_USER_IDS` use the Sandbox shelf for App Review once they have
-no hold or purchase; nobody else can reach it.
+retires an edition its purchase held or owned. On production, App Review signs in
+with its own Apple Account and buys in Sandbox: a Special or character charge that
+names Sandbox moves an account with no purchases to the Sandbox shelf, and the
+charge is verified there. Production opens that shelf only while the release
+registry lists a production build in review. App Store users only make
+Production charges.
 
 Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
 app. Let older backend instances drain first, because their schemas list only

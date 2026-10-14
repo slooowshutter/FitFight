@@ -1,10 +1,733 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **29 Sep 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **14 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. Only the public privacy and support pages exist on the web.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
 
 ---
+
+## App Store 1.1.3 with both in-app purchases, prepared 14 Oct 2026
+
+**Apple (checked in App Store Connect, 14 Oct):** two consumables, both complete
+with English and French names, a review screenshot and review notes, available
+in all 175 territories with France as the price base:
+`com.fitfight.mvp.special` at EUR 0.99 and `com.fitfight.mvp.custom_character`
+at EUR 2.99. Both are "Prepare for Submission": Apple reviews a first consumable
+only with a new app version. Paid Apps Agreement, Mercury bank account and W-9
+are Active. The updated Apple Developer Program License Agreement is not accepted
+yet, which blocks every submission.
+
+**Review blocker fixed in code:** App Review signs in with its own Apple Account
+and buys in Sandbox against production. Production has no
+`APPLE_IAP_REVIEW_USER_IDS`, and a list could never name a reviewer in advance,
+so the reviewer's charge failed verification. Now a Special or character charge
+that names Sandbox moves an account with no purchases to the Sandbox shelf, and
+the charge is verified there by Apple's signature. On production this works only
+while the release registry (`testflight-latest/releases.json`, refreshed every
+15 minutes) lists a production build in review. The allowlist is removed.
+App Store users only make Production charges.
+
+**Accepted risk:** during a review window, a TestFlight tester who rewrites the
+app's traffic could buy in Sandbox for their own production account and get a
+Special or a custom character free. This needs deliberate tampering and ends
+when the review ends. The 23 Sep design accepted the same risk without a window.
+
+**Contract:** no API or database change. Purchase requests and responses are
+unchanged.
+
+**Release prep:** the App Store workflows name 1.1.3. Review notes and the
+promotional text no longer say the app has no purchases.
+
+**Checks (local):** `npm run typecheck` and all 445 backend unit tests passed,
+including a new Sandbox-claim test. The rewritten `specials.integration.ts`
+review-shelf test needs the disposable database in CI. No genuine Sandbox
+purchase has been verified on a device.
+## Admin dashboard: Churn tab and local-time opens heatmap, prepared 14 Oct 2026
+
+Marc asked for churn numbers, weekly and monthly, with a trend and charts. He
+also asked for the opens heatmap in each person's time zone, counting people
+instead of opens.
+
+**Server:** a new `churn` section (Churn chip after Retention). A person churned
+when they were active in the 7 (or 30) complete days before the latest 7 (or
+30) and not active in the latest. Two meanings of active:
+
+- **App opens**, as Weekly and Monthly active users. Cards: Weekly churn,
+  Monthly churn, Weekly churned users, Monthly churned users. Charts: weekly and
+  monthly churn over time, weekly users gained and lost (New, Came back, and
+  Stopped below zero), and weekly churn for people in a live fight against
+  people with none.
+- **Phone syncs**, as Retention: a complete Apple Health step day. Cards: Weekly
+  and Monthly sync churn. Chart: both over time. A phone stops syncing when the
+  app is deleted or Health is turned off.
+
+Production deleted sync reports until 1 Oct and kept the last reports of people
+who left, so churn by app opens reads only periods from 2 Oct 2026: weekly
+numbers show from 16 Oct, monthly numbers from 1 Dec, and their comparisons a
+week (or 30 days) later. staging.fitfight.app pruned until it moved to newer
+code after 11 Oct, so staging reads high for a while. A returning phone uploads
+the days it missed, so older sync churn drops when people come back.
+
+The Engagement heatmap "When people open the app, last 30 days" now counts the
+people who opened the app at least once in each weekday and hour, in their own
+saved time zone (Paris when it is missing or invalid), instead of all opens in
+Paris time.
+
+**Compatibility:** additive `section` value in `contracts/openapi.yaml`. The
+response shape does not change, and there is no migration. The app draws chips,
+cards and charts from the payload, so builds from 30 Sep 2026 on show the tab
+with no app build. No release note (admin only).
+
+**Verification (local):** web typecheck and all 444 unit tests passed. The
+dashboard database test passed on Postgres 16 with all 64 migrations. It now
+adds a phone that stopped syncing and checks that Weekly sync churn counts it;
+it failed when churn ignored the latest week. A seeded copy with 11 people and
+known open and sync days gave the expected values: weekly churn 33.3% against
+100%, monthly churn 66.7% against 0%, sync churn 50%, gained and lost 1, 2 and
+-1, churn by fight 0% and 50%, and chart end points equal to the cards. The
+heatmap counted a person once per cell and moved a New York person to 06:00.
+
+**Live deployment:** Marc asked for a PR into `develop` on 14 Oct. Nothing is
+merged or deployed. A `preview` merge deploys the preview server, which serves
+both dashboard environments.
+
+## Steps sync: fewer HealthKit reads, Steps-only history (prepared 14 Oct 2026)
+
+Marc asked for each day to be read once for all Fights, and for the app to stop
+uploading every activity type other than Steps.
+
+**Code:** a Fight upload now runs one exact window query per Fight (the score),
+one exact query for the Fight's first day, and one shared merged daily read per
+Fight time zone for the later days. Three month-long Fights on day 25 drop from
+about 78 HealthKit queries to 7. Earlier checkpoints never exceed the score,
+because summed days can drift a few steps from Apple's window total. The
+activity sync uploads daily Steps only: no other metric, workout summary or
+deletion. It rereads from 7 days before the last acknowledged upload, so a
+phone that missed syncs for days leaves no gap. Only Steps registers for
+background delivery. The upload contracts are unchanged, so no backend or
+database change is needed and older builds keep working. Profile's own activity
+screen still reads workouts directly from Apple Health on the phone.
+
+**Evidence for 7 days (staging, 14 Oct 2026):** across 53 people's Fight
+checkpoints, a finished day still changed later in 6.8% of reads 0-12 h after
+midnight, 3.6% at 12-36 h, 2.2% at 60-72 h, 0.8% at 108-120 h and 0.3% at
+132-144 h. No day read 144 h or more after midnight ever changed (1,919
+reads). Late changes are rare but large: a few hundred to about 2,900 steps.
+Fights still close 24 h after they end, so a rare late Watch sync can miss the
+result; Marc kept that grace period.
+
+**Verification (local):** simulator build and `scripts/test_fight_chart_scores.py`
+passed, including a new overlapping-Fights case. Not on TestFlight yet.
+
+## Referral free characters and website sign-in, prepared 14 Oct 2026
+
+**Product (Marc, 14 Oct 2026):** free characters come only from referrals (and
+Marc's admin gifts). For each new friend you refer, you and the friend each get 1
+free character when the friend connects Apple Health; no monthly limit. New accounts
+get none on their own, and every unused free character given before today is taken
+back. A free character makes your own animal or unlocks any Special. The custom
+character price on the website is EUR 2.99, matching the App Store product.
+
+**Code:**
+
+- Migration `20261014120000_referral_free_characters.sql`: grants may be negative only
+  for reason `taken_back`; one `taken_back` row per account cancels its unused free
+  characters; `special_purchases` gains `free_claim_key` with nullable Apple columns
+  behind a funding check (same shape as free custom characters). No row is changed
+  or removed.
+- `POST /api/v1/referrals` counts only accounts created at most 7 days earlier and
+  adds `account_not_new`.
+- `grantReferralFreeCharacters` (one insert, keyed by the friend's id, so it is
+  idempotent) gives `referral` to the referrer and `referred` to the friend once the
+  friend has an Apple Health steps day above 0. Only referrals recorded since 14 Oct
+  2026, within 7 days of the friend's signup, pay, so old referrals pay nothing. It
+  runs after a claim, after each HealthKit upload (`after()`), and in the 15-minute
+  `close-fights` sweep. The referrer gets one push: "<friend> joined FitFight" /
+  "You have a free character." (French too), respecting
+  `notification_preferences.enabled`; a failed push is logged and not retried.
+- `GET /me/custom-characters` stops adding the `signup` grant and adds
+  `referral_pending`. New `POST /me/specials/free` (Idempotency-Key,
+  `{ companion_id }`). New admin `GET /admin/free-characters` lists referral grants.
+- `POST /auth/google`: `access_token` is optional, because the website's Google button
+  gives only the ID token.
+- Website: `/r/<code>` and `/fr/r/<code>` show Sign in with Apple (Services ID
+  `com.fitfight.mvp.web`, popup) and Sign in with Google (the project's existing Web
+  client), sign in to Supabase with the ID token, and save the referral at once. Then
+  the download step says to sign in with the same email. An older account is told
+  so and sent to the app. "Download without the free character" keeps the old flow.
+  Pricing copy: Make it yours EUR 2.99, "Invite a friend and you each get one free."
+- App: sign-up order is Username, Apple Health, Companion. A referred friend sees
+  "Connect Apple Health to get the free character from your friend's invite", and the
+  Companion step reloads until it arrives. The companion picker shows "N free" and
+  "Unlock with 1 free" on Specials. Refer a friend explains the reward. Admin → Free
+  characters is now a row that opens the gift card and the referral list. Three
+  1.1.3 release notes; the 12 Oct note no longer says every account gets one.
+
+**Contract:** additive. Older apps ignore `account_not_new` and `referral_pending`,
+never call the new routes, and still claim from a reopened link. Older builds
+during onboarding keep their page order. Order: apply the migration, then deploy
+the backend, then ship the app. Between the migration and the backend deploy on
+staging, the old backend can still add a `signup` grant for an account that opens
+the store; check `select * from private.free_character_grants where reason = 'signup'
+and created_at > <migration time>` after the deploy.
+
+**Verification (local, 14 Oct):** local Supabase (CLI 2.109.1, Colima) applied the
+migration; a seeded check took back exactly the unused grants. Strict TypeScript,
+the new `free-characters.integration.ts` (7-day rule, steps rule, once per referral,
+concurrent grants, sweep, muted and deleted referrers, free Special and wearing it,
+negative grants) and the updated referral and custom-character database tests passed.
+Against `next dev` and the local stack: an old account got `account_not_new`; a new
+friend's claim then an Apple Health upload gave both grants once; the referrer
+unlocked and wore a Special for free; the admin list showed the grant. All 444 unit
+tests passed; 101 of 102 database tests passed, and the one failure (admin dashboard
+cards across periods) fails the same way on unchanged `develop` locally. The
+`FitFight` scheme built for the iOS Simulator with Xcode 27, and the native script
+checks passed, including new onboarding-order and free-Special cases. The referral
+page rendered in English and French with both buttons (the Google button text stays
+English until the origin is registered). Not run: a real Apple or Google sign-in
+(needs Marc's setup below), a push on a device, and GitHub CI.
+
+**Known risk:** the steps condition trusts the uploaded steps, so one person with a
+second account and a scripted upload can earn characters. Add a stricter signal
+(steps on two days, a joined Fight) if abuse shows up in the admin list.
+
+**Live:** nothing deployed.
+
+**Marc's setup (staging and production), done by Marc on 14 Oct 2026, not yet checked with a real sign-in:** an Apple Services ID
+`com.fitfight.mvp.web` grouped with the App ID `com.fitfight.mvp`, domains
+`fitfight.app` and `staging.fitfight.app`, return URLs `https://fitfight.app/` and
+`https://staging.fitfight.app/`; add it to the Apple provider client IDs in both
+Supabase projects; add `https://fitfight.app` and `https://staging.fitfight.app` as
+JavaScript origins on each project's existing Google Web client, and publish both
+Google consent screens (both now published). No Supabase redirect URL is needed
+(ID-token sign-in, no redirect).
+
+## Race Day home page: prepared 12 Oct 2026
+
+Marc picked the Race Day landing page design (round 2, design 6) and asked to
+ship it with a wider hero and the phone only, without the race art.
+
+**Code:** `/` and `/fr` now render one shared page from `web/components/landing/`
+in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
+Feedback and Profile screens; text left and phone right on computers, stacked
+on phones; on computers the hero fills the first screen), steps recorded, what it is, the goal, how it
+works (the five New fight steps, nothing is saved), companions (pick one of the
+12 animals and see its five poses), fight options, pricing, FAQ with search,
+and a closing card. All people, fights and posts are fictional. The download
+buttons keep the App Store link in production and the TestFlight dialog on
+staging. The pricing card shows Specials (EUR 0.99, buy any and keep it) and
+Make it yours (EUR 4.99, the first one free) as coming later. Images are WebP copies of the bundled app artwork
+in `web/public/landing/`. The old home page styles and `total-steps.css` are
+removed. The browser tab, `favicon.ico` and iPhone home-screen icons now use the
+app's FF icon instead of the older arch mark. No API, database, app or release setting changed.
+
+**Published figures (Marc chose option A, 12 Oct 2026):** the public steps
+total stays. The privacy policy, English and French, effective 12 Oct 2026,
+now says FitFight may publish anonymous, aggregate figures on fitfight.app,
+such as the total Steps recorded. Marc accepted the remaining risk under Apple
+guideline 5.1.3 (HealthKit data in marketing) for this anonymous total. A
+"change in steps after joining" figure was tried and removed at his request.
+
+**Verification (local):** web typecheck, all 438 unit tests and the CI privacy
+disclosure check passed. A production build kept `/` and `/fr` static with
+hourly revalidation. Against `next start` and a disposable Postgres, both
+languages rendered at 393 and 1440 pixels wide with the sample steps total;
+the phone tabs, the New fight steps, the companion picker, the FAQ search and
+the staging TestFlight dialog worked in Chrome.
+
+**Live deployment:** none. Nothing is merged or deployed.
+
+## Free characters, prepared 12 Oct 2026
+
+**Product (Marc):** no credits. Each account has a number of free characters
+("1 free"). Every account, current and new, gets 1 (changed 14 Oct 2026: only
+referrals and gifts, see above). Marc can give more from the
+app. A later "beat Marc" challenge can add one the same way. Onboarding can
+create one and moves on at once; the push and the Fights card say when it is ready.
+
+**Code:**
+
+- Migration `20261012200000_free_characters.sql` adds `private.free_character_grants`
+  (user, quantity, reason `signup` or `gift`, giver, operation key). Rows are never
+  changed or removed. A free character is a `custom_character_purchases` row with
+  `free_claim_key` instead of the Apple columns, which become nullable behind a
+  check, so it uses the same three portraits, choice, poses, reconciler and pushes.
+- Remaining = sum of grants minus free characters created. The first
+  `GET /me/custom-characters` adds the one `signup` grant (unique per account).
+- `POST /api/v1/me/custom-characters/free` (`Idempotency-Key`, `{ description }`)
+  returns the paid claim's `{ purchase_id, refunded }`; `409 no_free_characters`
+  when none are left. The app then calls `/advance` in the background.
+- `POST /api/v1/admin/free-characters` (`Idempotency-Key`, `{ quantity, username }`
+  or `{ quantity, everyone: true }`), FitFight admin only.
+- App: "N free" on the create screen and on the Create your own tile, "Create for
+  free", four idea cards (real prompt and the portrait it gave, see
+  [Blend workflows](blend-workflows.md#free-characters)), "Or create your own" on the
+  onboarding companion step, and a Free characters card at the top of
+  Profile → Dashboard → Admin. A 1.1.3 release note in English and French.
+
+**Contract:** additive. The store adds `free_characters`; builds that decode it
+read a missing field as 0. Older builds ignore it and still show the price; a
+free character appears to them like a paid one. Both routes are in
+`contracts/openapi.yaml`. Order: apply the migration, then deploy the backend
+(it reads the new table and column), then ship the app.
+
+**Verification (local):** strict TypeScript and all unit tests passed. A local
+Supabase stack (CLI 2.115.0) applied every migration; all database tests passed,
+including a new free-character case (signup grant once, claim replay, no free
+left, another account's key, gift by username and to everyone, gift replay, the
+funding check). pgTAP (308) and schema lint passed. Localization and native API
+boundary checks passed, and every changed Swift file parses (Swift 6.0.3, Linux).
+Not run: the iOS simulator build, which needs CI on a PR, and a device check.
+
+**Live:** nothing deployed. On 12 Oct the new route answered 404 on staging,
+preview and production, as expected. TestFlight builds call staging.fitfight.app,
+which must follow `preview` before they get free characters; the admin card on a
+staging build writes through the preview server. Giving to production accounts
+needs the App Store build.
+
+## Lighter background sync and refresh time limits, prepared 12 Oct 2026
+
+Marc saw about 200 background sync attempts per person each day in
+`private.healthkit_sync_attempts`. 84% of the background attempts only waited
+for another upload, and 7% stopped at the 25-second limit, often after iOS
+suspended the app. Some attempts and refreshes lasted minutes or hours. 3,131
+activity syncs failed with HealthKit error 5 (authorization not determined).
+
+**Code (native only):**
+
+- An observer call answers HealthKit at once and records nothing while a sync
+  runs, or for 15 minutes after a successful Steps upload. One upload reads
+  every type, so no data is skipped.
+- Requests that carry a sync trace time out after 120 seconds without data.
+- A foreground or manual refresh stops its network part after 30 seconds.
+  Fights, a Fight and Profile then show "Refreshing took too long" with Try
+  again. The limit starts after the HealthKit read, so the permission sheet does
+  not count.
+- A refresh holds an iOS background task, so leaving the app lets it finish.
+- A cancelled sync caller now cancels the shared sync.
+- A foreground refresh shows the Health permission sheet again when some read
+  types were never requested. iOS lists only the new types.
+- HealthKit error 6 (phone locked) records `protected_data_unavailable`, not
+  `sync_failed`.
+- Three 1.1.3 release notes, in English and French.
+
+**Contract:** no API, response or database change. The diagnostics endpoint
+receives fewer attempts.
+
+**Verification (local):** `scripts/check_localizations.py` and
+`scripts/check_native_api_boundary.py` passed. Swift 6.0.3 on Linux parsed every
+changed Swift file. It compiled and ran `scripts/test_native_state.py` with a
+stand-in for the Apple-only `AppLocalization.swift`: all 127 checks passed,
+including 2 new ones, and `develop` failed both new checks. A stub check compiled
+the changed `syncToBackend` and showed that a cancelled caller stops the shared
+sync. No iOS simulator build ran, because CI compiles iOS only on a pull request.
+
+**Still needed:** the iOS simulator build in CI, a TestFlight check of the
+permission sheet and the Try again notice, and the attempts queries after the
+release.
+
+## Specials for everyone, one consumable, prepared 12 Oct 2026
+
+**Product (Marc):** Specials are no longer one of a kind. Anyone can buy any Special, an account can own many, and there are no holds, Taken, or one-per-account limit. Every Special is one charge of the consumable `com.fitfight.mvp.special` (EUR 0.99, being created in App Store Connect by someone else); the server records which Special each charge unlocked.
+
+**Code:** Migration `20261012150000_specials_for_everyone.sql` adds `private.special_purchases` (account, environment, `companion_id`, unique transaction id, `revoked_at`, evidence) and widens `private.require_special_ownership` so a profile may equip a Special when the account owns it through a non-revoked purchase or an edition already owned under the old model. Nothing is deleted; `special_editions` and `special_transactions` keep every row. New `POST /api/v1/me/specials/purchases` takes `{ companion_id, signed_transaction }`, verifies the consumable against Apple's current record for this account token, and returns the existing `SpecialClaimResult`. A replay returns the Special the charge first unlocked. App Store refund notifications revoke that one purchase and unequip the Special only when no other ownership remains. The native picker saves the chosen Special before Apple's sheet, shows "Buy for" with StoreKit's price or "Yours", and keeps the picker open after buying. An unfinished charge whose choice was lost unlocks the next Special picked without paying again. Restore purchases finishes unfinished charges and re-reads the server.
+
+**Compatibility:** Additive. `GET /api/v1/me/specials` keeps every field and adds `product_id`; editions now report only `available` or `yours` (never `taken`, `reserved` or `refunded`), and `purchases_enabled` stays `true`. Older builds (206 to 222, production 210) still decode it and can equip owned Specials. Their `POST /checkout` `reserve` now returns `410 special_update_required` with "Update FitFight to buy Specials." before Apple can charge; `cancel` returns `{ saved: true }`. Legacy per-Special non-consumables (Sandbox only) still record through `/transactions` and notifications, never newly sold. Deploy order: migration, backend, then the app.
+
+**Checks:** Strict TypeScript and all 443 backend unit tests passed. Native Special purchase, companion state, localization and API boundary checks passed; the companion preview simulator build succeeded. The rewritten `specials.integration.ts` needs the disposable database (`npm run test:database`) and was not run here. No migration, deployment, App Store or TestFlight change was made.
+
+## No on/off switches for paid features: 12 Oct 2026
+
+Marc removed the `APPLE_SPECIALS_ENABLED`, `APPLE_CUSTOM_CHARACTERS_ENABLED` and
+`BLEND_ENABLED` environment switches. Sales are open wherever the Apple keys are
+configured, and Blend starts wherever its key and workflow ids are configured.
+Apple's own review is the gate: unapproved products never load in StoreKit, so
+the app shows "Purchases unavailable" until approval. `purchases_enabled` stays in
+the API (always `true`) for older builds.
+## TestFlight syncs card for the admin, prepared 12 Oct 2026
+
+On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes
+before. That person should use the App Store version, which uses production.
+Marc asked for a number on Fights, only in the staging app, with the names on tap.
+
+**Code:** new `GET /api/v1/admin/recent-syncs` lists every account whose Apple
+Health upload reached the server's database in the last 7 days
+(`data_sources.last_success_at`, provider `apple_health`). Newest sync is first,
+and deleted accounts are left out. Only the FitFight admin (`marc`, `rad`) can
+read it. Anyone else gets 403. On the staging build, the admin's Fights tab shows
+a card under the header: the count, "Synced on TestFlight" and "Last 7 days". A
+tap opens the names, usernames and the time since each last sync. The card reads
+the preview server, like the Admin tab. App Store builds, other people, the
+companion preview and screenshots do not get the card, and it takes no space for
+them. Admin only, so the copy is English only and there is no release note.
+
+**Contract:** additive route in `contracts/openapi.yaml`, with
+`contracts/fixtures/admin-recent-syncs.json`. No existing route, response or
+table changes, and there is no migration. Older builds never call the route.
+Read-only `/api/app-release` at 10:16 UTC on 12 Oct: staging latest 1.1.1 (201),
+review and internal 1.1.3 (222); production latest 1.1.2 (210), no candidates;
+`enforced: false` on both. The preview server answered 404 for the new route,
+as expected before deployment.
+
+**Verification (local):** web typecheck and all 439 unit tests passed. A local
+Supabase stack (CLI 2.115.0, as in CI) applied every migration and passed all 100
+database tests, including the new `recent-syncs.integration.ts`. It checks the
+7-day window, deleted accounts, the order, 401 without a session, 403 for a
+non-admin and 200 for the admin. It failed when the window was 9 days and when
+the admin check was removed. Swift 6.4 on Linux compiled and ran the native
+contract test with the new fixture, using a stand-in for the Apple-only
+localization file. It failed on a renamed field. The changed Swift files parse,
+and the localization, native API boundary and contract YAML checks passed.
+[PR #357](https://github.com/slooowshutter/FitFight/pull/357) CI passed: the
+simulator build and native checks, migrations and database tests, web tests,
+screen renders and Vercel. Not run: a device check.
+
+**Live deployment:** Marc asked for a PR into `develop` on 12 Oct. Nothing is
+merged or deployed. A `preview` merge
+deploys the route to the preview server and uploads a staging TestFlight build
+with the card. `main` is not needed, because App Store builds never show it.
+
+## Admin dashboard: card pages and sync time percentiles, prepared 11 Oct 2026
+
+Marc asked to see a definition and an example for each card, like the charts.
+He asked for cards with only the name, the number and the change, and for all
+the details on a tap. He also asked for more percentiles on the sync time
+chart, lower and higher than P50 and P90.
+
+**Server:** every card now has a `definition` and an `example`. The definition
+says what the card measures and what it compares with. The example reads the
+number in a sentence, for instance "52 people opened the app in the last 7
+days, against 47 in the 7 days before." A card without a value has no example.
+The App section's sync time chart is now "Sync time: P10 to P99", with seven
+lines: P10, P25, P50, P75, P90, P95 and P99. Chart and card sentences now say
+"1 day" and "1 time" when a value shows as 1.
+
+**App:** a card shows its name, its rounded number and its change. Its note
+moved to the card's page. A tap opens that page: the card name in the bar, the
+exact number, the change, the previous number, "What it shows", "In numbers",
+and the note with the query time. Before, a tap switched the card to the exact
+number. The chart page and the card page share one view. Admin only, no release
+note.
+
+**Compatibility:** additive. The two card fields are optional in
+`contracts/openapi.yaml`. The fixture has one card with the texts and one
+without, and the native contract test decodes both. Older builds ignore the new
+fields and keep the note on the card. The new percentiles reach every build,
+because the server defines the chart.
+
+**Verification (local):** web typecheck passed. The dashboard database test
+passed on Postgres 16 with all 61 migrations. It now also checks that every
+card has a definition, that a card has an example only when it has a value,
+that no sentence prints `undefined` or `NaN`, that the app opens card reads as
+a full sentence, and that the sync time chart has the seven lines in order.
+Every card sentence was read with fake values (1, 0, negative, 1.04 and large)
+and on a seeded copy. The Swift files were parsed with Swift 6.3.3 on Linux,
+and the native contract test compiled and passed there. The SwiftUI views
+compile only in CI.
+
+**Live deployment:** not merged or deployed. After a `preview` merge, the
+preview server sends the texts and the new percentiles to every build. The card
+page needs a new TestFlight build.
+
+## Admin access for username rad, prepared 11 Oct 2026
+
+Marc asked to make his wife an admin. She works on the app with him. Her
+username is `rad`.
+
+**Code:** the server list (`fitFightAdminHandleValues`) and the app
+(`SessionStore.isFitFightAdmin`) accept `rad` next to `marc`. She gets the
+Dashboard Admin tab, the debug menu, Settings → Developer with Broadcast, the
+App Store strip with the build, and feedback archive, delete and Cursor fix.
+Fight management, suggested Fights, profile measurements and AI grants still
+trust only `FITFIGHT_ADMIN_USER_ID`, so she does not get them.
+
+**Risk:** people can change their username. If `rad` is free on staging or
+production, the person who takes it becomes admin there, like `marc` today.
+
+**Compatibility:** no API, database or copy change. Web typecheck and all 438
+unit tests passed. Swift was not compiled here; CI compiles it.
+
+**Live deployment:** Marc asked for `develop` and `preview` on 11 Oct 2026. The
+`preview` merge uploads a staging TestFlight build and deploys the preview
+server, which serves the Admin tab data. Feedback admin and Broadcast call
+staging.fitfight.app, which still serves a deployment from before 1 Oct
+(`/api/v1/environment` answered 404 on 11 Oct). They work for her only after
+staging.fitfight.app follows `preview` (Marc's open Vercel action below). The
+App Store app gets this only after `main` and an App Store release.
+
+## Paid character: three portraits, server-side progress, ready push, prepared 11 Oct 2026
+
+**Code:** A purchase from a current app sends the description with the Apple claim, so the server saves it with the purchase. It then draws three portraits with the pinned avatar workflow (three runs, about $0.09 each). The owner picks one; the other two stay in `private.custom_character_portraits` with no `selected_at`. Only the chosen portrait feeds the five-pose fitness run. Generation no longer needs the app open: `/api/internal/ai/reconcile` now runs every minute on production Vercel Cron (the `blendai` Enterprise team allows it), and a run that settles during reconciliation advances its character in the same call. A new GitHub Actions workflow, `ai-reconcile.yml`, calls staging (and production as a backup) every 5 minutes, because Vercel Cron never runs on Preview. Each "Your character is ready" push (portraits ready to choose, then poses done) is sent at most once through the existing APNs client, honoring the global notification switch. A paid run is exempt from the free three-per-minute cap and from the one-unresolved-request rule within its own purchase. The native screen shows three steps, the three portraits to pick from, a support link for `needs_support`, and keeps working after you leave. `PaidCharacterProgressCard` is ready for Fights. `CustomCharacterPurchases` exposes `inProgress`, `unseenReady`, `portraitURL` and `candidateURLs`.
+
+**Contract:** Additive. Store, `/advance`, and `/choose` progress rows gain `phase`, `portrait_url` and `candidates`; `status` keeps its six values, so the choice reads as `generating` to older builds. The claim body accepts an optional `description`, and `/advance` accepts an optional `choose_portrait`. New `POST /api/v1/me/custom-characters/{purchase_id}/choose` takes `{ "candidate_id": uuid }`. Purchases started by older builds (no `choose_portrait`) keep the single-portrait flow. Migration `20261011120000_custom_character_portrait_choices.sql` adds the portraits table and two push timestamps, and marks finished characters as already notified. It must be applied before the backend deploys. The backend must deploy before a build that sends `description` with the claim, because the old claim schema is strict.
+
+**Checks:** Strict TypeScript and all 438 backend unit tests passed. A new disposable-database case covers claim-time description, three parallel portraits, choice, and chosen-only poses; it needs `DATABASE_URL` and was not run here. Localization and native API boundary checks passed. The simulator build succeeded. No migration, deployment, secret or TestFlight change was made.
+
+**Cron secret:** one `CRON_SECRET` value for Production, Preview and Development in Vercel, copied to the repository secret `CRON_SECRET` for the GitHub backup schedule. GitHub runs schedules only from `main`.
+
+## Personal Dashboard empty on TestFlight, prepared 11 Oct 2026
+
+Marc's build 218, just after midnight: Profile → Dashboard showed 0 steps on
+every day, Profile's By sport showed 0, and the Fights tab showed "-" for won,
+drew and lost while Profile showed 11-4.
+
+**Causes:** (1) staging.fitfight.app, the backend of every TestFlight build,
+still serves a deployment from before 1 Oct: `/api/v1/environment` (added 1
+Oct) answers 404 there and 200 on the preview server. That old backend sends
+no draws or losses. Profile falls back to wins and played; the Dashboard waited
+for every history page instead. (2) The Steps tab and By sport read the last 56
+days from Apple Health on the phone. A failed read showed every day as 0. The
+server numbers on Profile (this week, average, best day) come from earlier
+uploads, so uploads worked. Why the read failed is not proven; reading while
+the iPhone is locked fails that way.
+
+**Code:** the Dashboard Fights tab falls back like Profile: won = wins, lost =
+played - wins, drew "-". The phone's Apple Health read does nothing while the
+iPhone is locked and keeps the last numbers when the read fails; Profile reads
+again when the app opens. No API, database or copy change.
+
+**Marc's action (open since 30 Sep):** in Vercel, set staging.fitfight.app to
+follow the `preview` branch. Until then TestFlight builds miss every backend
+change since that deployment, for example exact won, drew and lost, the
+environment strip, and the never-delete code.
+
+**Verification:** Swift parsed locally and the localization check passed. CI
+compiles the app and runs the native checks.
+
+## Admin dashboard: chart pages and a day, week or month choice, prepared 10 Oct 2026
+
+Marc asked to tap a chart and get its own page: the chart name on top, a back
+arrow, a definition, and a sentence with a real number. He also asked to choose
+the granularity of the charts over time.
+
+**Server:** every chart now has a `definition` and an `example`. The example
+reads one current number off the chart, for instance "41 people opened the app
+on Fri 9 Oct. 50 opened it in the 7 days up to then, and 52 in the 30 days.", or
+"3-5 fighters is the most common size: 22 fights out of 29." Date charts read the
+newest complete day, week or month ("so far" when none is complete yet); totals
+and states read now; breakdowns read their largest row. An optional `bucket`
+(day, week or month) overrides the automatic bucket; each metric is computed per
+bucket (counts add up, people count once, averages use every person-day, DAU is
+the daily average). The response says which bucket it used. Companion names read
+"Red Panda" instead of `red-panda`, and a monthly DAU no longer divides by the days
+before sync history started.
+
+**App:** a chart card has a chevron and opens a page: the chart name in the bar
+(two lines when long), the back arrow, the chart taller, "What it shows" and "In
+numbers". Reading values with a finger moved to that page, so a tap on a list card
+always opens it. Under the period picker, Auto, Day, Week and Month choose the
+bucket; Auto keeps the server's choice. Admin only, no release note.
+
+**Compatibility:** additive. The new query parameter and response fields are
+optional in `contracts/openapi.yaml`; the fixture now has one chart with the texts
+and one without, and the native contract test decodes both. Older builds ignore
+the new fields and keep the automatic bucket.
+
+**Verification (local):** web typecheck, all 437 unit tests and the dashboard
+database test passed on Postgres 16 with every migration. The test now also
+checks that every chart has a definition, that no sentence prints `undefined` or
+`NaN`, and that a chosen week bucket starts on Mondays. Every sentence was read on
+a seeded copy at 30 days by day, 30 days by week, 90 days by month and a year by
+day. Swift was parsed only; CI compiles it.
+
+**Live deployment:** shipped like the change below, on Marc's same request:
+`develop`, then `preview` for the preview server and a staging TestFlight build.
+
+## Admin dashboard: fixed cards, period only on charts over time, prepared 10 Oct 2026
+
+Marc saw the cards change when he moved the period. He asked for cards on a fixed
+weekly or monthly basis named in their titles, the period only on charts that
+show change over time, more of those charts, the charts fixed, and the weak ones
+removed.
+
+**Server:** every card has a fixed span. "Weekly" is the last 7 days against the
+7 before, "Monthly" the last 30 against the 30 before, and a card without either
+word (Total users, Live fights) is now against 7 days ago. `days` sets only the
+charts over time (`x_kind` date). They start no earlier than the first signup,
+so 1Y and All no longer draw empty months before launch. They use whole days,
+weeks or months and no previous-period overlay, and averages skip empty buckets
+instead of dropping to 0. Activity charts start where sync history starts.
+Every other chart names its span in its title ("last 30 days", "all time",
+"now").
+
+- Removed: duplicates (signups per week, steps per month, all-time steps over
+  time, the rolling average, regions, opens by weekday and by hour, opens by
+  version, the Engagement retention heatmap, the Social heatmap) and weak charts
+  (account age, signups by weekday and hour, best single days, steps by region
+  and weekday, Health history depth, fights by state and weekday, public vs
+  private, rounds per series, media uploads, syncs per person-day, errors by
+  status). Cards removed: best day and the two Health history cards.
+- Added over time: onboarding by signup week, retention by signup week, signups
+  with Apple Health, people with step data, steps on fight days against other
+  days, users in a live fight, invites and joins, posts with comments and
+  reactions in one chart, syncs by trigger, and notifications sent.
+
+**App:** the period picker sits under the cards, over the charts over time, with
+7D, 30D (default), 90D, 1Y and All; 1D and Custom are gone. The other charts sit
+under Breakdowns; the server's first chart decides which group leads, so
+Retention keeps its cohort curves on top. A new period keeps the cards and dims the charts until it
+loads. A chart over time reads out the exact value under the finger, else the
+latest bucket, marked "so far" while it is still filling, with that bar faded
+and that point hollow. Several series stack as bars; lines take moss, gold and
+ember (the colour-blind-safe order) with a dash each; cohort curves share one
+moss ramp, newest strongest; heatmaps label about six columns. No release note
+(admin only).
+
+**Also fixed:** five French strings from the fight-leaving change (#347) were
+missing, which stopped the iOS check before it compiled anything.
+
+**Compatibility:** response shape unchanged, no migration. Older builds still
+work: their cards no longer follow their period picker, and charts do (1D draws
+7 days, as before).
+
+**Verification (local):** web typecheck, all 437 unit tests and the dashboard
+database test passed on Postgres 16 with every migration. The test now also
+checks that cards are identical at 1, 30 and 3650 days, that 7 days gives 7
+daily points, and that All starts at the first signup. A seeded copy (90
+people, 50 days) checked every chart's numbers, and a copy with older signups
+checked weekly and monthly buckets. Swift was parsed only; CI compiles it.
+
+**Live deployment:** Marc asked for `develop` and `preview` on 10 Oct 2026. The
+`preview` merge deploys the preview server, which serves both dashboard
+environments, and uploads a staging TestFlight build with the new app layout.
+`main` is not needed.
+
+## Admin dashboard: user growth charts, prepared 7 Oct 2026
+
+Marc asked for week-over-week and month-over-month growth on the Users tab,
+right under the scorecards.
+
+**Code:** the Users section gets two line charts first in its chart list:
+**Week-over-week user growth** and **Month-over-month user growth**. Each point
+is the % change in total users on that date against 7 (or 30) days earlier, so
+each day is its own growth reading. Deleted accounts are not counted, and a date
+with no users 7 (or 30) days earlier is left out. Long periods use the same
+weekly or monthly points as every other chart. Server only: the app draws charts
+from the payload, so no app build, contract or database change.
+
+**Verification (local):** typecheck and all 204 query unit tests passed. The new
+queries ran through `readAdminDashboard` on a scratch Postgres with fake
+profiles for 7, 30, 90 and 400 days. The dashboard database test (every tile
+runs on the migrated schema) runs in CI.
+
+## One push per phone and local deadlines: prepared 5 Oct 2026
+
+Marc, on TestFlight, got "2 pintes: One day left" twice on 5 Oct and "Tournée à la
+félicita: Fight ended" twice on 2 Oct, both showing UTC times.
+
+**Cause:** The 16 Sep beta import copied Fights into production, so both backends
+mint the same recurring rounds with identical end times. TestFlight and App Store
+builds share one APNs token, and production still had Marc's phone. Read-only
+staging checks: each duplicate maps to a single staging intent key, and a staging
+resend would reuse its collapse ID and merge on the phone. Staging closed the
+2 Oct round and minted the next at 18:03:12 UTC, matching the first push; the
+second came about two minutes later. Production's delivery log was not readable
+from this workspace, so its send is inferred, not observed. Twelve recurring series
+from before the import still run on staging, with 23 people. All 26 staging
+profiles have no saved time zone, so push deadlines fell back to UTC.
+
+**Code:** After responding, `POST /api/v1/device-installations` sends the token to
+the other environment's new `POST /api/v1/device-installations/release`, which
+revokes the matching installation with reason `other_environment` for whichever
+account holds it. Push deadlines use the Fight's time zone, as its Details screen
+does, instead of the profile's. Saving the phone's zone on the profile was not
+used: the app splits Health days with the saved profile zone. See
+[notifications](notifications.md#one-backend-per-phone).
+
+**Contract:** Additive release endpoint with no session; body `{ "token": "<hex>" }`
+(strict), response `{ "released": true }`. Registration's request and response are
+unchanged, and a failing other backend cannot fail it. No app, schema or migration
+change. Read-only `/api/app-release` on 5 Oct: staging latest 1.1.1 (201), review
+and internal 1.1.3 (216), `enforced: false`; production latest 1.1.2 (210), no
+candidates, `enforced: false`. Every one of those builds registers through the
+unchanged route.
+
+**Verification (local):** Typecheck and all 437 unit tests passed, including new
+release, environment routing and no-wait registration tests. All 59 migrations
+applied to a scratch Postgres 16 with Supabase stubs, and
+`notification-controls.integration.ts` passed there. On that database, the real
+outbox claimed a 24-hour reminder for an account with no saved zone and produced
+"One day left. Ends Tue 6 Oct, 08:33." (French: "Fin : mar. 6 oct., 08:33."). A
+release revoked only the matching token, across accounts.
+
+**Deployment:** Both backends must run it: staging releases on production and
+production releases on staging. Each phone is fixed at its next app launch.
+Nothing has been committed, pushed, merged or deployed.
+
+## Beta strip: prepared 29 Sep, revised 1 Oct 2026
+
+Marc's P0 backlog item (24 Sep), built on his 29 Sep request: on the beta, show
+a big Beta bar at the top. Tapping it opens the setting in Profile to switch back
+to the other environment. The app learns it is on the beta from an API that reads
+an environment table, not from a build flag alone.
+
+**Code:** Migration `20260929190000_environments.sql` adds
+`private.environments` with one row per Supabase project: develop is `beta`,
+production is `production`. Both databases get both rows. Public
+`GET /api/v1/environment` returns the row for the backend's own
+`NEXT_PUBLIC_SUPABASE_URL` project, so develop answers `beta` and main answers
+`production` with no dashboard step. The app calls it at launch. When the answer
+is `beta`, a slim full-width strip reading Beta, Ember text on the Ember wash,
+sits under the status bar on every tab. On 1 Oct Marc found the first solid
+Ember block behind the status bar too loud and picked this strip over a slim
+solid one. It takes layout space above the tabs because a top `safeAreaInset`
+does not reach screens inside a `NavigationStack`: the first capture had it
+covering the Fights and Feed titles, the Profile version label and the fight
+detail's back button. Tapping it switches to Profile and opens Beta testing, the
+same sheet as Profile → Settings → Preferences → Beta testing; its Return to the
+App Store link is the way back. The answer is cached per API address, so the bar
+shows at once on the next launch and an App Store install that replaces
+TestFlight never inherits it. A failed call keeps the last answer. The build's
+own backend setting is not used for the bar. Also on 1 Oct, Marc asked to see
+which install he is on: the admin (username `marc`) also gets the strip on the
+App Store version, neutral and reading App Store, and on both builds it adds the
+version and build. Other App Store users see nothing, and the admin strip waits
+for the backend's answer. English and French copy and a 1.1.3 release note are
+included. Swift type names are unchanged.
+
+**Contract:** Additive `GET /api/v1/environment`, no sign-in, returning
+`{ "environment": "beta" | "production" }`, in `contracts/openapi.yaml` and
+`contracts/fixtures/environment.json`. A project with no row returns
+`503 config`. No existing route, response or table changes. Read-only checks on
+29 Sep: staging `/api/app-release` lists latest 1.1.1 (201), review 1.1.3 (212),
+internal 1.1.3 (213), `enforced: false`; production lists latest 1.1.2 (210), no
+candidates, `enforced: true`. None of those builds calls the new route, and it
+returns 404 on both hosts today. A new build talking to a backend without the
+route gets 404 and shows no bar.
+
+**Verification (local):** Web typecheck and all 427 unit tests passed. All 59
+migrations applied to a Postgres 16 copy with Supabase stubs. The new
+`environment.integration.ts` passed there: the query and the HTTP route answer
+`beta` and `production` for the two projects without a token, send
+`Cache-Control: no-store`, return 503 for an unknown project, enforce the name
+check, and deny reads to `anon`, `authenticated` and `fitfight_backend_reader`.
+It failed as expected when the develop row was flipped. The row-convention checks
+(id, timestamps, update trigger) found no gaps. Localization, native API boundary
+and destructive-SQL checks passed, and every native test script still extracts
+its source without the new code.
+
+**Verification (hosted simulator):** A throwaway branch, since deleted, built
+the Debug app on GitHub-hosted `macos-26` and captured the fixture preview on an
+iPhone 17 with the Beta answer seeded: Fights, a fight detail, New, Feed,
+Feedback, Profile, and Beta testing in Night and Day
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36638237055)), then
+the softer strip next to a slim solid alternative on 1 Oct
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36838149434)), and
+the admin strip on beta and App Store with a non-admin control
+([run](https://github.com/slooowshutter/FitFight/actions/runs/36889502829)). The
+sheet shot comes from a preview-only launch shortcut that sets the same tab and
+sheet as the tap. The build compiled the change. Without the Beta answer, Fights
+matches the first run's capture pixel for pixel, so the layout change moves
+nothing when the bar is hidden. Not yet verified: the CI database suite (lint,
+pgTAP), a real tap, and the bar on a device.
+
+**Rollout:** A `develop` merge applies the migration to the develop database.
+The route ships with the backend on the next `preview` deployment; the bar
+appears on TestFlight once `staging.fitfight.app` points at that deployment.
+Production gets the table and route when `preview` is merged to `main`; App Store
+builds then read `production` and show no bar. Marc asked for a PR on 1 Oct:
+[#343](https://github.com/slooowshutter/FitFight/pull/343) into `develop`. No
+merge, deployment or TestFlight upload has happened.
 
 ## Admin dashboard speed: prepared 1 Oct 2026
 
@@ -452,10 +1175,6 @@ Sandbox purchase or restore has been verified. Apple's product lookup remains a
 live blocker; Restore purchases cannot make a missing product available.
 
 **Last documented TestFlight upload:** 23 Sep 2026 at 23:03 UTC. **1.1.2 (206)** from preview merge `318e6fb4`, including the Specials and Blend code. [Upload and Apple processing succeeded](https://github.com/slooowshutter/FitFight/actions/runs/35930657617): `VALID`, unexpired, and registered as a staging candidate. External groups were left untouched. The 24 Sep staging release endpoint lists internal 206, review 205 and latest 201; production remains 1.1.1 (202). Upload and processing do not verify a completed Sandbox purchase or installed-device behavior.
-
-## Preview promotion, 23 Sep 2026
-
-Marc asked to merge current `develop` into `preview` for TestFlight. This merge is develop `f77ee7e`. Marketing version stays **1.1.2**. The simulator build for that develop commit passed. Its database workflow failed while pulling Supabase images, not on a migration error. The first preview upload failed because `staging.fitfight.app` still served the previous backend. Marc then aliased that domain to the preview deployment. This follow-up push retries TestFlight. Production stays **1.1.1 (202)** until a later `preview` to `main` ship.
 
 ## Apple Health activity pipeline: prepared 23 Sep 2026
 
@@ -3180,10 +3899,10 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 | Fight end               | Exact `ends_at` is the final cutoff. The fight screen and finished list show that date and time. The live list shows remaining months, weeks, days, hours, and minutes instead of the stop date; under two days it shows days and hours. Opening the app closes due fights; the protected Vercel cron runs daily if nobody opens it. After finalization, later Steps cannot change the result. **Fix in PR (not on TestFlight yet):** Finished shows **P** during `awaiting_final_sync`. After 24h, people who did not submit forfeit; both miss is a draw.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Tabs                    | Fights, New, Profile, Feedback. Feedback holds the same fight posts Feed, Bugs & requests, Top ranking, and a Report form. The old Requests tab and Design are removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Look                    | Night/Day, Nunito, fixed Moss/Ember/Gold semantics; no accent picker or public design-system showcase.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Versions                | Works under Profile → Settings (the public changelog). The version label is only on Profile. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Versions                | Works under Profile → Settings (the public changelog). The version label is only on Profile. Do not put it on Fights, New, Feed, or Feedback. Tapping it opens the admin/debug menu only for signed-in username `marc` or `rad`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Bugs & requests         | Works on the Feedback tab (Bugs, Top, and Report), with a shortcut still on Profile above Settings. Signed-in people can post a bug or a feature request, attach a photo, a video, or any file, browse the board, upvote, and comment with their username. Device/debug metadata is stored when someone posts or comments, omitted from the board API, and attached again when Marc taps Send to Cursor (original snapshot plus the phone that sent it, plus attachment links). After `NOTION_TOKEN` is on Vercel, each new post also lands as a P0 Inbox row in the Product Backlog. After `CURSOR_API_KEY` is on Vercel, Marc sees **Send to Cursor** on a post and can start a cloud agent with the post, comments, those device snapshots, and attachment URLs. A successful send moves the matching Notion Product Backlog row to Building; when that agent finishes and opens a PR, FitFight marks the same row Done.                                                                                                                                                                                                                                                                                                                                                                       |
 | Privacy / Support       | Pages are implemented and linked under Profile → Settings. Staging uses `staging.fitfight.app`; production uses `fitfight.app`. Each route must be deployed before that build is tested or submitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Fight posts / Feed      | Marc (username `marc`, Profile → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. Profile → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Details and recurring History alongside it. Details shows the round schedule, time zone, creator, current participant count, and sharing controls. Recurring fights retain earlier posts; invited-only people gain access after joining. |
+| Fight posts / Feed      | An admin (username `marc` or `rad`, Profile → Developer) can post one Broadcast that every signed-in user sees on the Feed tab; it is a normal post, not copied into each Fight, and it does not send a new lock-screen alert. Accepted and waiting-next-round members can post a short note, up to four photos, or one short video. Root Feedback → Feed is the same fight posts list as before (not a Recent/Top ranking of loaded posts). Root + chooses a new post or a new request. Media can take a photo with the camera or pick photos and video from the library. Posting to several fights keeps one post and shows those fight names; All fights shows Public. A fight’s Feed tab starts on that fight and can add other channels. There is no Main destination or tag-people picker. Each card puts its plain channel label, then the relative time, beneath the author, with actions at the top right. Posts support emoji reactions, nested comments, editing/deleting your own post, reporting another post and hiding its author. Other members of that fight can get a push when you post in that fight’s Feed; the post author can get comments and reactions; a reply notifies the parent commenter, not sibling commenters. Profile → Settings → Notifications turns each of those on or off, plus challenge reminders and daily status. Fight detail opens on Stats, with Feed, Details and recurring History alongside it. Details shows the round schedule, time zone, creator, current participant count, and sharing controls. Recurring fights retain earlier posts; invited-only people gain access after joining. |
 | Companion               | Saved on the account. Change animal opens the animal grid. Make it yours opens a description to edit and save (species, breed or race, accessories, colors, and other details). You can change animals anytime. That text is stored for later image generation; generation is not built. Other people see the stock animal, or initials until a custom image exists. People who have not chosen an animal are asked the next time they open a build that includes this. Pose and generation controls are not shown.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Account deletion        | Permanently deletes the profile, photos, username, authentication, Health/Steps data, relationships, invitations, memberships, scores, owned Fights, fight posts, and bugs/requests the User posted; removes participation from other Fights; clears local Health sync state; and revokes a stored Apple credential when available.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | WHOOP / Strava          | Not built                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -3198,7 +3917,7 @@ The native Fight path uses the API to create and join; Apple Health synchronizat
 - Apple may revise its merged total after a Watch sync, edit, or deletion. Live snapshots can change until the exact Fight-end value is finalized; chart buckets never overwrite that exact-window score.
 - Same Apple ID on production vs staging is **two** accounts.
 - `web/` owns Apple Health aggregate ingestion and account deletion. There are no app-facing Postgres RPCs.
-- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. The 12 regular stock animals have five effort forms each on You and fights, chosen by today's steps (3k / 6k / 10k / 15k).
+- Companion sport scenes are not generated. Custom descriptions are stored on the account for a later job. The 12 regular stock animals have five effort forms each on You and fights, chosen by today's steps (3k / 6k / 10k / 15k). Tapping the companion on Fights opens a levels drawer with each form, its step minimum, and the steps left today for the next one, plus a Change animal button that opens the picker; Specials have no effort forms, so tapping a Special does not open it.
 
 ---
 

@@ -28,6 +28,7 @@ export async function readFightSnapshot(
     userId: string,
     timeZone: string,
     database: Sql = createDatabaseClient(),
+    hosted = false,
 ): Promise<FightSnapshot> {
     const row = await database.begin("read only", async (sql) => {
         await sql`set local role fitfight_backend_reader`;
@@ -39,13 +40,21 @@ export async function readFightSnapshot(
             with visible_fights as materialized (
                 select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id,
                     (ends_at + (final_sync_grace_seconds * interval '1 second')) as grace_ends_at
-                from public.fights
-                where host_id is distinct from ${userId}
-                    and id in (
-                        select id from public.fights where owner_id = ${userId}
-                        union
-                        select fight_id from public.fight_members where user_id = ${userId}
-                    )
+                from public.fights as fight
+                where ${hosted
+                    // ponytail: every current hosted round in one payload; page it if a host has thousands.
+                    ? sql`fight.host_id = ${userId} and fight.state in ('live', 'awaiting_final_sync')
+                        and (
+                            select count(*) from public.fight_members as racer
+                            where racer.fight_id = fight.id and racer.user_id in (fight.owner_id, fight.host_id)
+                                and racer.state = 'accepted'
+                        ) = 2`
+                    : sql`fight.host_id is distinct from ${userId}
+                        and fight.id in (
+                            select id from public.fights where owner_id = ${userId}
+                            union
+                            select fight_id from public.fight_members where user_id = ${userId}
+                        )`}
             ), visible_members as materialized (
                 select member.fight_id, member.user_id, member.state, member.current_value,
                     member.rank, member.final_value, member.last_synced_at, member.final_steps_complete,
@@ -109,7 +118,24 @@ export async function readFightSnapshot(
                 'members', coalesce((select jsonb_agg(to_jsonb(m) order by fight_id, user_id) from visible_members m), '[]'::jsonb),
                 'profiles', coalesce((select jsonb_agg(to_jsonb(p) order by user_id) from visible_profiles p), '[]'::jsonb),
                 'series', coalesce((select jsonb_agg(to_jsonb(s) order by id) from visible_series s), '[]'::jsonb),
-                'step_days', coalesce((select jsonb_agg(to_jsonb(d) order by day, user_id) from visible_days d), '[]'::jsonb)
+                'step_days', coalesce((select jsonb_agg(to_jsonb(d) order by day, user_id) from visible_days d), '[]'::jsonb),
+                'hosted', (
+                    select jsonb_build_object(
+                        'name', min(series.name), 'rounds', count(*),
+                        'leading', count(*) filter (
+                            where coalesce(host.current_value, 0) > coalesce(challenger.current_value, 0)
+                        )
+                    )
+                    from public.fights as fight
+                    join public.fight_series as series on series.id = fight.series_id
+                    join public.fight_members as host
+                        on host.fight_id = fight.id and host.user_id = fight.host_id and host.state = 'accepted'
+                    join public.fight_members as challenger
+                        on challenger.fight_id = fight.id and challenger.user_id = fight.owner_id
+                        and challenger.state = 'accepted'
+                    where fight.host_id = ${userId} and fight.state in ('live', 'awaiting_final_sync')
+                    having count(*) > 0
+                )
             ) as snapshot
         `;
         return snapshotRowSchema.parse(result.snapshot);

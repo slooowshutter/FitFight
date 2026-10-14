@@ -12,10 +12,21 @@ struct FightStepCheckpoint: Codable, Equatable {
 }
 
 struct FitFightSnapshot: Decodable {
+    /// One card for everything the caller hosts, such as Fight Marc. nil for everyone who hosts
+    /// nothing, and from servers before 14 Oct 2026.
+    struct Hosted: Decodable {
+        let name: String
+        /// Current rounds whose challenger is still in.
+        let rounds: Int
+        /// Rounds the host is strictly ahead in.
+        let leading: Int
+    }
+
     let fights: [FightRow]
     let members: [MemberRow]
     let profiles: [FitFightProfile]
     let series: [SeriesRow]
+    let hosted: Hosted?
 }
 
 struct SeriesRow: Decodable {

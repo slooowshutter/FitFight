@@ -694,14 +694,17 @@ struct FitFightAPI {
         )
     }
 
+    /// `hosted` returns only the caller's current hosted rounds instead of their own Fights.
     func fightsSnapshot(
-        accessToken: String, trace: HealthKitSyncTrace, performMaintenance: Bool = true
+        accessToken: String, trace: HealthKitSyncTrace?, performMaintenance: Bool = true, hosted: Bool = false
     ) async throws -> FitFightSnapshot {
         try await request(
             path: performMaintenance ? "fights/refresh" : "fights/snapshot",
             method: "POST",
             accessToken: accessToken,
-            body: Self.encoder.encode(["time_zone": Calendar.current.timeZone.identifier]),
+            body: Self.encoder.encode(
+                FightSnapshotRequest(timeZone: Calendar.current.timeZone.identifier, hosted: hosted ? true : nil)
+            ),
             trace: trace,
             traceStage: .fightsRefresh
         )
@@ -1689,6 +1692,17 @@ struct FitFightAPI {
 }
 
 private struct EmptyJSON: Encodable {}
+
+/// `hosted` is left out unless set: older servers reject unknown snapshot fields.
+private struct FightSnapshotRequest: Encodable {
+    let timeZone: String
+    let hosted: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case timeZone = "time_zone"
+        case hosted
+    }
+}
 
 private struct ProfileUpdate: Encodable {
     let handle: String?

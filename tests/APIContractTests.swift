@@ -157,6 +157,12 @@ struct APIContractTests {
         let zonedSnapshot = try decoder.decode(FitFightSnapshot.self,
             from: JSONSerialization.data(withJSONObject: extendedSnapshot))
         precondition(zonedSnapshot.fights[0].timeZone == "Europe/Paris")
+        precondition(snapshot.hosted?.name == "Fight Marc" && snapshot.hosted?.rounds == 20
+                     && snapshot.hosted?.leading == 12)
+        extendedSnapshot.removeValue(forKey: "hosted")
+        let unhostedSnapshot = try decoder.decode(FitFightSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: extendedSnapshot))
+        precondition(unhostedSnapshot.hosted == nil, "Servers before the hosted summary remain decodable")
         precondition(snapshot.fights[0].name == "September Steps" && snapshot.fights[0].actionText == nil)
         precondition(snapshot.members[0].currentValue == 8500 && snapshot.members[0].rank == 1)
         precondition(snapshot.members[0].lastSyncedAt != nil && snapshot.members[0].finalValue == nil)
@@ -171,6 +177,7 @@ struct APIContractTests {
         let checkpoints = try decoder.decode(FitFightSnapshot.self, from: checkpointData)
         precondition(checkpoints.members[0].stepCheckpoints?.last?.steps == 8500)
         precondition(checkpoints.members[1].stepCheckpoints == nil)
+        precondition(checkpoints.hosted == nil, "Someone who hosts nothing gets a null hosted summary")
 
         // Same date handling as FitFightAPI.decoder: generated_at carries milliseconds.
         let serverDecoder = JSONDecoder()

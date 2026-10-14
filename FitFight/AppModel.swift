@@ -196,6 +196,7 @@ final class AppModel: ObservableObject {
         didSet {
             if oldValue != tab {
                 openFightID = nil
+                showingHosted = false
                 openPost = nil
                 showingActivity = false
             }
@@ -242,6 +243,11 @@ final class AppModel: ObservableObject {
 
     @Published var you: Person
     @Published var fights: [Fight]
+    /// What you host, such as Fight Marc. Its rounds stay out of `fights` and its cache.
+    @Published private(set) var hosted: FitFightSnapshot.Hosted?
+    @Published private(set) var hostedRounds: [Fight] = []
+    /// The hosted screen, under any open fight in the Fights stack.
+    @Published var showingHosted = false
     @Published private(set) var joinableFights: [FitFightJoinableFight] = []
     @Published private(set) var suggestedFights: [FitFightJoinableFight] = []
     @Published private(set) var isLoadingDiscovery = false
@@ -339,6 +345,7 @@ final class AppModel: ObservableObject {
     func fight(id: String) -> Fight? {
         fights.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
             ?? pendingJoinable.flatMap { $0.id.caseInsensitiveCompare(id) == .orderedSame ? $0 : nil }
+            ?? hostedRounds.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
     }
 
     func canonicalFight(for id: String) -> Fight? {
@@ -497,11 +504,15 @@ final class AppModel: ObservableObject {
             snapshotGeneration += 1
             cachedUserID = nil
             fights = []
+            hosted = nil
+            hostedRounds = []
             return
         }
         guard cachedUserID != userID else { return }
         snapshotGeneration += 1
         cachedUserID = userID
+        hosted = nil
+        hostedRounds = []
         guard
             let data = UserDefaults.standard.data(forKey: Self.fightsCachePrefix + userID.uuidString),
             let cached = try? JSONDecoder().decode([Fight].self, from: data)
@@ -567,6 +578,17 @@ final class AppModel: ObservableObject {
     /// Lets a screen read server data after a launch or foreground upload without starting another one.
     func waitForRefresh() async {
         await refreshTask?.value
+    }
+
+    /// Reads the rounds behind `hosted` through their own snapshot, mapped like the Fights list.
+    func refreshHostedRounds() async throws {
+        guard let session, let userId = session.authSession?.user.id else { return }
+        let snapshot = try await api.fightsSnapshot(
+            accessToken: try await session.freshAccessToken(), trace: nil, performMaintenance: false, hosted: true
+        )
+        guard session.authSession?.user.id == userId else { return }
+        hosted = snapshot.hosted
+        hostedRounds = mapSnapshot(snapshot, userId: userId)
     }
 
     private func performRefreshFights(
@@ -701,25 +723,10 @@ final class AppModel: ObservableObject {
             }
             // A newer read owns publication; superseding this response is not a sync failure.
             guard generation == snapshotGeneration else { return }
-            let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
-            let members = Dictionary(grouping: snapshot.members, by: \.fightId)
-            let mine = Dictionary(
-                snapshot.members.filter { $0.userId == userId }.map { ($0.fightId, $0) },
-                uniquingKeysWith: { _, last in last }
-            )
-            let series = Dictionary(snapshot.series.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
-            let loaded = snapshot.fights.compactMap { row -> Fight? in
-                guard var fight = Self.mapFight(
-                    row, members: members[row.id] ?? [], mine: mine[row.id], profiles: profiles,
-                    series: row.seriesId.flatMap { series[$0] }, userId: userId, formatScore: formatScore
-                ) else { return nil }
-                fight.days = Self.dayCards(
-                    from: members[row.id] ?? [], standings: fight.standings
-                )
-                return fight
-            }
+            let loaded = mapSnapshot(snapshot, userId: userId)
             guard session.authSession?.user.id == userId else { throw CancellationError() }
             fights = loaded
+            hosted = snapshot.hosted
             cachedUserID = userId
             if let data = try? JSONEncoder().encode(loaded) {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
@@ -732,6 +739,26 @@ final class AppModel: ObservableObject {
         } catch {
             attempt.fail(HealthKitStepsStore.errorCode(for: error))
             // Keep the last successful result visible while the phone is offline.
+        }
+    }
+
+    private func mapSnapshot(_ snapshot: FitFightSnapshot, userId: UUID) -> [Fight] {
+        let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
+        let members = Dictionary(grouping: snapshot.members, by: \.fightId)
+        let mine = Dictionary(
+            snapshot.members.filter { $0.userId == userId }.map { ($0.fightId, $0) },
+            uniquingKeysWith: { _, last in last }
+        )
+        let series = Dictionary(snapshot.series.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+        return snapshot.fights.compactMap { row -> Fight? in
+            guard var fight = Self.mapFight(
+                row, members: members[row.id] ?? [], mine: mine[row.id], profiles: profiles,
+                series: row.seriesId.flatMap { series[$0] }, userId: userId, formatScore: formatScore
+            ) else { return nil }
+            fight.days = Self.dayCards(
+                from: members[row.id] ?? [], standings: fight.standings
+            )
+            return fight
         }
     }
 

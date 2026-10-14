@@ -49,6 +49,17 @@ those fields, so the server ignores them instead of rejecting the save.
   the Everybody page. Admin tab: "Founder fights" lists every challenger. Release note
   1.1.3, 14 Oct, English and French.
 
+**Host view (14 Oct, Marc):** every round Marc hosts is one card at the top of his Fights
+tab, with the challenge name and "Leading 12 of 20". Tapping it shows the same summary and
+each 1v1 as a normal Fights card under the challenger's handle; tapping one opens the
+normal fight screen. It is keyed on `host_id`, not on Marc, so a future host of any
+challenge gets the same card. `POST /api/v1/fights/snapshot` and `/refresh` return an
+additive `hosted` summary (null for everyone else) and accept an optional `hosted: true`
+that returns only the caller's current hosted rounds where both racers are still in, in the
+same shape. Older builds never send the flag and ignore the field. The admin menu cannot make
+a founder round public, and so cannot suggest it. In a round, Leave is still shown to the
+host: it ends that challenger's series. No release note: only hosts see this.
+
 **Known limits:** Marc forfeits a round if his phone does not sync within the 24-hour final
 sync grace after it ends. While his phone is in another zone, his days are that zone's
 local days. A new round shows Marc at 0 until his phone's next sync. A result appears at

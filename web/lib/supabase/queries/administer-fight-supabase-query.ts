@@ -13,13 +13,16 @@ export async function administerFight(userId: string, fightId: string, input: Ad
         if (!row) throw new ApiError(404, "not_found", "Fight not found");
         const fight = administeredFightSchema.parse(row);
         if (!fight.series_id) throw new ApiError(409, "conflict", "This fight has no series");
-        const [seriesRow] = await sql`select id, visibility::text, paused_at, current_fight_id from public.fight_series where id = ${fight.series_id} for update`;
+        const [seriesRow] = await sql`select id, visibility::text, paused_at, current_fight_id, host_id from public.fight_series where id = ${fight.series_id} for update`;
         const series = administeredSeriesSchema.parse(seriesRow);
         if (input.action === "stop_round" && ["final", "cancelled"].includes(fight.state)) {
             throw new ApiError(409, "conflict", "A finalized or cancelled round cannot be stopped");
         }
         if ((input.visibility !== undefined || input.recurring !== undefined) && series.current_fight_id !== fight.id) {
             throw new ApiError(409, "conflict", "Open the current round to edit its series");
+        }
+        if (input.visibility !== undefined && series.host_id) {
+            throw new ApiError(409, "conflict", "A founder fight stays one on one");
         }
         if (input.visibility !== undefined) {
             await sql`update public.fight_series set visibility = ${input.visibility} where id = ${series.id}`;

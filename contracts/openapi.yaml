@@ -1515,6 +1515,9 @@ paths:
                                         maxLength: 100,
                                         example: Europe/Paris,
                                     }
+                                hosted:
+                                    type: boolean
+                                    description: Return only the caller's current hosted rounds, such as a founder's challengers, in the same shape. Without it, hosted rounds are left out.
             responses:
                 "200":
                     description: One confirmed snapshot under the authenticated User's current access.
@@ -3322,6 +3325,14 @@ components:
                             user_id: { type: string, format: uuid }
                             day: { type: string, format: date }
                             steps: { type: integer, minimum: 0 }
+                hosted:
+                    description: One card for everything the caller hosts, or null. leading counts the current rounds the host is strictly ahead in.
+                    type: [object, "null"]
+                    required: [name, rounds, leading]
+                    properties:
+                        name: { type: string }
+                        rounds: { type: integer, minimum: 1 }
+                        leading: { type: integer, minimum: 0 }
         Profile:
             type: object
             required:

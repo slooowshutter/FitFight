@@ -9,7 +9,9 @@ import { healthKitActivityBatchSchema } from "@/lib/types/healthkit/healthkit-ac
 import { healthKitAggregateSyncSchema } from "@/lib/types/healthkit/healthkit-aggregate";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { receiveHealthKitActivity } from "./activity-pipeline-supabase-query";
+import { administerFight } from "./administer-fight-supabase-query";
 import { createInvite } from "./create-invite-supabase-query";
+import { readFightSnapshot } from "./fight-snapshot-supabase-query";
 import { createFounderFight, readFounderChallengers } from "./founder-fight-supabase-query";
 import { joinFight } from "./join-fight-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
@@ -112,11 +114,27 @@ test("a founder fight scores the founder from stored daily Steps and stays off h
     await assert.rejects(joinFight(randomUUID(), { code: joinCode, start: "now" }, null, admin, new Date(), database),
         /cannot be joined/);
 
+    process.env.FITFIGHT_ADMIN_USER_ID = founder;
+    await assert.rejects(administerFight(founder, fight.id, { visibility: "joinable" }, database), /one on one/,
+        "the admin menu cannot open a founder 1v1 to everyone");
+    delete process.env.FITFIGHT_ADMIN_USER_ID;
+
     const record = await readFounderChallengers(founder, database);
     assert.deepEqual(record.challengers.map((row) => [row.user_id, row.day, row.days, row.founder_steps, row.wins]),
         [[challenger, 1, 30, 5_000, 0]]);
 
+    const home = await readFightSnapshot(founder, zone, database);
+    assert.ok(!home.fights.some((round) => round.id === fight.id), "his Fights list never carries founder rounds");
+    assert.deepEqual(home.hosted, { name: "Fight Marc", rounds: 1, leading: 1 });
+    const hosted = await readFightSnapshot(founder, zone, database, true);
+    assert.deepEqual(hosted.fights.map((round) => round.id), [fight.id]);
+    assert.deepEqual(hosted.members.map((member) => member.user_id).sort(), [challenger, founder].sort());
+    const challengerHome = await readFightSnapshot(challenger, zone, database);
+    assert.ok(challengerHome.fights.some((round) => round.id === fight.id));
+    assert.equal(challengerHome.hosted, null);
+
     await departFightMemberships(challenger, fight.id, challenger, database);
+    assert.equal((await readFightSnapshot(founder, zone, database)).hosted, null, "a challenger who left is not counted");
     const [series] = await database<{ paused: boolean; owner_id: string }[]>`
         select paused_at is not null as paused, owner_id from public.fight_series where id = ${round.series_id}
     `;

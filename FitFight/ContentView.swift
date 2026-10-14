@@ -293,6 +293,7 @@ struct ContentView: View {
                         model.feedbackRequestFilter = RequestFilter()
                     }
                     model.openFightID = nil
+                    model.showingHosted = false
                 })
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
             }
@@ -360,10 +361,16 @@ struct ContentView: View {
         }
     }
 
+    /// Fight ids, after the hosted screen when it is open. No fight id equals this.
+    private static let hostedRoute = "hosted"
+
     private var fightsPath: Binding<[String]> {
         Binding(
-            get: { model.openFightID.map { [$0] } ?? [] },
-            set: { model.openFightID = $0.last }
+            get: { (model.showingHosted ? [Self.hostedRoute] : []) + (model.openFightID.map { [$0] } ?? []) },
+            set: { path in
+                model.showingHosted = path.first == Self.hostedRoute
+                model.openFightID = path.last == Self.hostedRoute ? nil : path.last
+            }
         )
     }
 
@@ -373,7 +380,9 @@ struct ContentView: View {
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: String.self) { id in
                     Group {
-                        if let fight = model.detailFight(for: id) {
+                        if id == Self.hostedRoute {
+                            HostedFightsView()
+                        } else if let fight = model.detailFight(for: id) {
                             FightDetailView(fight: fight)
                                 .postHogScreenView("Fight detail")
                         } else {
@@ -391,7 +400,7 @@ struct ContentView: View {
                     }
                     .background(InteractivePopGestureEnabler(canPop: true, ownsDelegate: false))
                 }
-                .background(InteractivePopGestureEnabler(canPop: model.openFightID != nil, ownsDelegate: true))
+                .background(InteractivePopGestureEnabler(canPop: model.openFightID != nil || model.showingHosted, ownsDelegate: true))
         }
     }
 }

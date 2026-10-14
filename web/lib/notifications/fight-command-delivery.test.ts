@@ -63,6 +63,7 @@ for (const entry of [
             suggested: false,
             visibility: "joinable",
             current_fight_id: fightId,
+            host_id: null,
             paused_at: null,
             join_code: "ABCD",
         };

@@ -205,7 +205,14 @@ struct APIContractTests {
             from: Data(contentsOf: fixtures.appendingPathComponent("admin-recent-syncs.json")))
         precondition(syncs.people.map(\.handle) == ["marc", "lea"] && syncs.people[1].displayName == "Léa")
         precondition(syncs.people[0].lastSyncedAt == parseServerDate("2026-10-12T09:15:00Z"))
-        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, recent syncs passed")
+        let founder = try serverDecoder.decode(FitFightFounderFights.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("admin-founder-fights.json")))
+        precondition(founder.challengers.map(\.handle) == ["lea", "tom"] && founder.challengers[0].displayName == "Lea")
+        precondition(founder.challengers[0].day == 5 && founder.challengers[0].days == 30)
+        precondition(founder.challengers[0].steps == 41250 && founder.challengers[0].founderSteps == 52010)
+        precondition(founder.challengers[1].state == "awaiting_final_sync")
+        precondition(founder.challengers[1].wins == 0 && founder.challengers[1].losses == 2 && founder.challengers[1].draws == 1)
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, recent syncs, founder fights passed")
     }
 }
 

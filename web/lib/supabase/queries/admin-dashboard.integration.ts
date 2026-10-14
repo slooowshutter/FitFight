@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import postgres from "postgres";
+import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { adminDashboardSectionValues } from "@/lib/types/admin/admin-dashboard";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { readAdminDashboard } from "./admin-dashboard-supabase-query";
@@ -102,4 +103,75 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     const weeks = weekly.charts.find((chart) => chart.id === "new_users_per_bucket")?.series[0]?.points ?? [];
     assert.ok(weeks.length >= 3 && weeks.every((point) => new Date(`${point.x}T00:00:00Z`).getUTCDay() === 1), "A chosen week bucket starts on Mondays");
     assert.equal((await readAdminDashboard("overview", 365, "staging", database, "day")).bucket, "day");
+});
+
+test("founder fights stay out of the fight, signup, fight-day and social metrics", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [founder, challenger] = users;
+    const sourceId = randomUUID(), seriesId = randomUUID(), previousId = randomUUID(), fightId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id in (${previousId}, ${fightId})`;
+        await database`delete from public.fight_series where id = ${seriesId}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const id of users) await database`insert into auth.users(id, created_at) values (${id}, now() - interval '20 days')`;
+    await database`update public.profiles set created_at = now() - interval '20 days' where user_id in ${database(users)}`;
+    await database`
+        insert into public.data_sources(id, user_id, provider, source_label, connection_route, capabilities, status,
+            connected_at, last_success_at)
+        values (${sourceId}, ${challenger}, 'apple_health', 'Apple Health', 'healthkit', array['steps'], 'healthy',
+            now() - interval '20 days', now() - interval '1 hour')
+    `;
+    await database`
+        insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+            observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+        select ${challenger}, ${sourceId}, 'day', 'day:' || day::date, 'steps', day, day + interval '1 day',
+            day + interval '1 day', day::date, 'Europe/Paris', 4000 + extract(day from day) * 300, 'count',
+            array[gen_random_uuid()], 1
+        from generate_series(current_date - 20, current_date - 1, interval '1 day') as day
+    `;
+    const cardIds = ["fight_rate", "days_to_first_fight", "fight_day_lift", "fights_started", "joins", "fighters_per_fight",
+        "cancel_rate", "recurring_share", "live_fights", "people_in_fights", "rounds_finished", "winning_margin"];
+    const chartIds = ["fight_vs_other_days", "live_fights_over_time", "people_in_fights_over_time",
+        "rounds_finished_per_bucket", "margins", "posts_by_fight"];
+    const read = async () => {
+        const dashboards = await Promise.all((["users", "steps", "fights", "social"] as const)
+            .map((section) => readAdminDashboard(section, 30, "staging", database)));
+        const cards = dashboards.flatMap((dashboard) => dashboard.cards);
+        const charts = dashboards.flatMap((dashboard) => dashboard.charts);
+        return [
+            ...cardIds.map((id) => {
+                const card = cards.find((item) => item.id === id);
+                assert.ok(card, id);
+                return [id, card.value, card.previous];
+            }),
+            ...chartIds.map((id) => {
+                const chart = charts.find((item) => item.id === id);
+                assert.ok(chart, id);
+                return [id, chart.series];
+            }),
+        ];
+    };
+    const before = await read();
+    await database`
+        insert into public.fight_series (id, owner_id, host_id, name, visibility, recurring, duration_seconds, time_zone, join_code)
+        values (${seriesId}, ${challenger}, ${founder}, 'Fight Marc', 'invite_only', true, 2592000, 'UTC', ${randomJoinCode()})
+    `;
+    await database`
+        insert into public.fights (id, owner_id, host_id, name, series_id, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values
+            (${previousId}, ${challenger}, ${founder}, 'Fight Marc', ${seriesId}, 'live', now() - interval '32 days',
+                now() - interval '2 days', 'UTC', 'highest_total', 'shared'),
+            (${fightId}, ${challenger}, ${founder}, 'Fight Marc', ${seriesId}, 'live', now() - interval '2 days',
+                now() + interval '28 days', 'UTC', 'highest_total', 'shared')
+    `;
+    await database`insert into public.fight_members (fight_id, user_id, state, accepted_at) values
+        (${previousId}, ${challenger}, 'accepted', now()), (${previousId}, ${founder}, 'accepted', now()),
+        (${fightId}, ${challenger}, 'accepted', now()), (${fightId}, ${founder}, 'accepted', now())`;
+    await database`update public.fight_members set current_value = case when user_id = ${challenger} then 1000 else 500 end,
+        final_value = case when user_id = ${challenger} then 1000 else 500 end,
+        rank = case when user_id = ${challenger} then 1 else 2 end, final_steps_complete = true where fight_id = ${previousId}`;
+    await database`update public.fights set state = 'final' where id = ${previousId}`;
+    await database`insert into public.fight_posts (fight_id, audience, author_id, body) values (${fightId}, 'fight', ${challenger}, 'Round two')`;
+    assert.deepEqual(await read(), before);
 });

@@ -51,6 +51,11 @@ export const fightTotalPayloadSchema = z.object({
     step_checkpoints: z.array(fightStepCheckpointSchema).nullable(),
 });
 
+/** One member's exact-window total, from a phone upload or a host's stored daily Steps. */
+export const fightScoreTotalSchema = fightTotalPayloadSchema.omit({ time_zone: true }).extend({
+    input_hash: z.string().min(1),
+});
+
 export const workoutPayloadSchema = healthKitWorkoutSchema;
 export const samplePayloadSchema = healthKitSampleSchema;
 
@@ -96,6 +101,7 @@ export const activityMeasurementSchema = z.object({
 export type ActivityRecordKind = (typeof activityRecordKindValues)[number];
 export type DayTotalPayload = z.infer<typeof dayTotalPayloadSchema>;
 export type FightTotalPayload = z.infer<typeof fightTotalPayloadSchema>;
+export type FightScoreTotal = z.infer<typeof fightScoreTotalSchema>;
 export type WorkoutPayload = z.infer<typeof workoutPayloadSchema>;
 export type SamplePayload = z.infer<typeof samplePayloadSchema>;
 export type SelectedActivityRaw = z.infer<typeof selectedActivityRawSchema>;

@@ -46,6 +46,7 @@ async function loadProfileAccessRows(sql: TransactionSql, viewerId: string, targ
                     join public.fights fight on fight.id = mine.fight_id
                     where mine.user_id = ${viewerId} and theirs.user_id = profile.id
                         and mine.state = 'accepted' and theirs.state = 'accepted'
+                        and fight.host_id is null
                         and fight.starts_at <= now()
                         and fight.state in ('live', 'awaiting_final_sync')
                         and now() < fight.ends_at + fight.final_sync_grace_seconds * interval '1 second'
@@ -95,7 +96,7 @@ export async function loadProfileFightFacts(
         from public.fights fight
         join private.fight_record_contexts context on context.fight_id = fight.id
         join private.fight_participation_records mine on mine.fight_id = fight.id
-        where mine.user_id = ${userId}
+        where mine.user_id = ${userId} and fight.host_id is null
             ${page?.fightIds ? sql`and fight.id = any(${sql.array(page.fightIds)}::uuid[])` : sql``}
             ${page?.cursor ? sql`and (fight.ends_at, fight.id) <= (
                 select cursor_fight.ends_at, cursor_fight.id from private.fight_participation_records cursor_member

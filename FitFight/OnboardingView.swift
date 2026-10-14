@@ -40,8 +40,9 @@ struct OnboardingView: View {
                         showingResult: progress.page == .healthResult,
                         animal: selected, busy: $busy,
                         onResult: { go(.healthResult) },
-                        onFinished: { go(.firstFight) }
+                        onFinished: { go(.founderFight) }
                     )
+                case .founderFight: founderFight
                 case .firstFight:
                     SuggestedFightsOnboardingView(
                         onFinished: { go(.reminders) },
@@ -167,12 +168,46 @@ struct OnboardingView: View {
         } catch { self.error = error.localizedDescription }
     }
 
+    /// One tap is the consent: it starts the repeating fight against Marc, then moves on.
+    private var founderFight: some View {
+        OnboardingPage {
+            OnboardingHeading(title: String(appLocalized: "Fight Marc"))
+            OnboardingSpeech(animal: selected, text: String(appLocalized: "FitFight's founder. 30 days, most steps wins. It starts again every 30 days."))
+            if let error { FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle") }
+        } actions: {
+            FFScreenCTA(title: error == nil ? String(appLocalized: "Fight Marc") : String(appLocalized: "Retry"),
+                        enabled: !busy, busy: busy) {
+                Task { await joinFounderFight() }
+            }
+            OnboardingSkip(title: String(appLocalized: "Not now")) { go(.firstFight) }
+                .disabled(busy)
+        }
+    }
+
+    private func joinFounderFight() async {
+        guard !busy, let ownerID else { return }
+        busy = true
+        error = nil
+        defer { busy = false }
+        do {
+            let fight = try await FitFightAPI().joinFounderFight(accessToken: try await session.freshAccessToken())
+            try Task.checkCancellation()
+            guard session.profile?.userId == ownerID else { return }
+            progress.founderFightID = fight.id
+            await model.syncStepsAfterMembershipChange(session: session)
+            try Task.checkCancellation()
+            guard session.profile?.userId == ownerID else { return }
+            go(.firstFight)
+        } catch is CancellationError {
+        } catch { self.error = error.localizedDescription }
+    }
+
     private var celebration: some View {
         OnboardingPage {
             OnboardingCelebration(animal: selected)
             OnboardingHeading(
                 title: String(appLocalized: "onboarding.youre-in", defaultValue: "You're in,\n\(session.profile?.handle ?? handle)."),
-                subtitle: progress.joinedFightName
+                subtitle: progress.joinedFightName ?? (progress.founderFightID == nil ? nil : String(appLocalized: "Fight Marc"))
             )
         } actions: {
             FFScreenCTA(title: String(appLocalized: "Continue")) { finish() }

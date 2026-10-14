@@ -117,6 +117,7 @@ export async function processNotificationOutbox(
         )
         select claimed.id, claimed.user_id, claimed.fight_id, claimed.kind, claimed.slot,
             claimed.route, claimed.copy_key, claimed.alert_body, claimed.expires_at, fight.state::text as fight_state,
+            fight.host_id as fight_host_id,
             member.final_steps_complete, member.state::text as member_state,
             coalesce(fight.name, '') as fight_name, owner.handle as owner_handle,
             fight.ends_at, fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' as sync_deadline,
@@ -148,6 +149,12 @@ export async function processNotificationOutbox(
 
         if (intent.kind !== "social_digest" && (row.fight_state === "cancelled" || row.fight_state === null)) {
             await markIntent(database, intent.id, "skipped", "fight_cancelled");
+            result.skipped += 1;
+            continue;
+        }
+
+        if (row.fight_host_id === intent.user_id) {
+            await markIntent(database, intent.id, "skipped", "founder_fight_host");
             result.skipped += 1;
             continue;
         }

@@ -1,16 +1,17 @@
 import Foundation
 
-/// Local progress belongs to one account. Health reveal remains step four; celebration is unnumbered.
+/// Local progress belongs to one account. Health reveal remains step four, the founder fight shares
+/// step five with the first Fight, and celebration is unnumbered.
 struct FirstFightOnboarding: Codable, Equatable {
     enum Page: String, Codable, Hashable {
-        case username, companion, health, healthResult, firstFight, reminders, celebration
+        case username, companion, health, healthResult, founderFight, firstFight, reminders, celebration
 
         var step: Int? {
             switch self {
             case .username: 2
             case .companion: 3
             case .health, .healthResult: 4
-            case .firstFight: 5
+            case .founderFight, .firstFight: 5
             case .reminders: 6
             case .celebration: nil
             }
@@ -22,7 +23,8 @@ struct FirstFightOnboarding: Codable, Equatable {
             case .companion: .username
             case .health: .companion
             case .healthResult: .health
-            case .firstFight: .healthResult
+            case .founderFight: .healthResult
+            case .firstFight: .founderFight
             case .reminders: .firstFight
             }
         }
@@ -31,7 +33,8 @@ struct FirstFightOnboarding: Codable, Equatable {
     var page: Page = .username
     var joinedFightID: UUID?
     var joinedFightName: String?
+    var founderFightID: UUID?
 
     /// Going back or exploring cannot undo a membership already accepted by the server.
-    var pageAfterReminders: Page? { joinedFightID == nil ? nil : .celebration }
+    var pageAfterReminders: Page? { joinedFightID == nil && founderFightID == nil ? nil : .celebration }
 }

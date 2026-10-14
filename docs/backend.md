@@ -89,7 +89,8 @@ query only marks its own tile with `Query failed: ...`.
   yet: the servers the app talks to still delete sync reports after 7 days, which
   would make week 1 look close to 0%.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
-  invitations are automatic.
+  invitations are automatic, and founder fights (`fights.host_id`), which every
+  new user may start against Marc.
 - **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or `rad`, or the
   admin email). The app always sends `X-FitFight-Auth-Project` with its own
   Supabase project ref. When it names the other FitFight project, the backend

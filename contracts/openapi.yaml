@@ -1089,6 +1089,45 @@ paths:
                     description: Missing or invalid session
                 "403":
                     description: Not the FitFight admin
+    /admin/founder-fights:
+        get:
+            operationId: readFounderChallengers
+            summary: Admin only. Every challenger's current founder fight round and the founder's record against them.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Newest challenger first. Deleted accounts are left out. wins, losses and draws are the founder's results over finished rounds.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [challengers]
+                                properties:
+                                    challengers:
+                                        type: array
+                                        items:
+                                            type: object
+                                            required: [user_id, handle, display_name, fight_id, day, days, steps, founder_steps, state, wins, losses, draws]
+                                            properties:
+                                                user_id: { type: string, format: uuid }
+                                                handle: { type: string }
+                                                display_name: { type: string }
+                                                fight_id: { type: string, format: uuid }
+                                                day: { type: integer, description: "Day of the current round, from 1" }
+                                                days: { type: integer }
+                                                steps: { type: number }
+                                                founder_steps: { type: number }
+                                                state: { type: string }
+                                                wins: { type: integer }
+                                                losses: { type: integer }
+                                                draws: { type: integer }
+                "401":
+                    description: Missing or invalid session
+                "403":
+                    description: Not the FitFight admin
     /admin/free-characters:
         post:
             operationId: giftFreeCharacters
@@ -2093,6 +2132,28 @@ paths:
                         application/json:
                             schema:
                                 { $ref: "#/components/schemas/FightSummary" }
+    /founder-fight:
+        post:
+            operationId: createFounderFight
+            summary: Start, or return, the caller's repeating 30-day 1v1 Steps fight against the founder.
+            description: Onboarding's one tap records consent. One series per user; calling again returns its current round. The founder is an accepted member scored by the backend from his stored daily Steps.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: The current round
+                    content:
+                        application/json:
+                            schema:
+                                { $ref: "#/components/schemas/FightSummary" }
+                "400":
+                    description: The caller is the founder
+                "401":
+                    description: Missing or invalid session
+                "503":
+                    description: The environment is not configured, or the founder has no stored daily Steps
     /fights/sync-due:
         post:
             operationId: syncDueFights

@@ -40,11 +40,12 @@ export async function readFightSnapshot(
                 select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id,
                     (ends_at + (final_sync_grace_seconds * interval '1 second')) as grace_ends_at
                 from public.fights
-                where id in (
-                    select id from public.fights where owner_id = ${userId}
-                    union
-                    select fight_id from public.fight_members where user_id = ${userId}
-                )
+                where host_id is distinct from ${userId}
+                    and id in (
+                        select id from public.fights where owner_id = ${userId}
+                        union
+                        select fight_id from public.fight_members where user_id = ${userId}
+                    )
             ), visible_members as materialized (
                 select member.fight_id, member.user_id, member.state, member.current_value,
                     member.rank, member.final_value, member.last_synced_at, member.final_steps_complete,

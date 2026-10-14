@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 14,
+            notes: "Fight Marc: when you sign up, you can start a 30-day Steps fight against Marc, FitFight's founder. It starts again every 30 days."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 13,
             notes: "Your own characters no longer sit on a grey square: their transparent background shows the card behind them."
         ),

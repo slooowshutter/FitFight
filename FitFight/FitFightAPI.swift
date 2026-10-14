@@ -1308,6 +1308,10 @@ struct FitFightAPI {
         try await get(path: "admin/recent-syncs", accessToken: accessToken)
     }
 
+    func founderFights(accessToken: String) async throws -> FitFightFounderFights {
+        try await get(path: "admin/founder-fights", accessToken: accessToken)
+    }
+
     /// Admin only. A nil username gives to every current account.
     func giftFreeCharacters(username: String?, quantity: Int, idempotencyKey: UUID, accessToken: String) async throws -> FitFightFreeCharacterGift {
         try await post(path: "admin/free-characters", accessToken: accessToken,
@@ -1356,6 +1360,11 @@ struct FitFightAPI {
         )
         PostHogSDK.shared.capture("fight_joined")
         return fight
+    }
+
+    /// Starts the caller's repeating 30-day fight against the founder, or returns the one they have.
+    func joinFounderFight(accessToken: String) async throws -> FitFightSummary {
+        try await post(path: "founder-fight", accessToken: accessToken, body: EmptyJSON())
     }
 
     func leaveFight(fightID: UUID, newOwnerID: UUID? = nil, accessToken: String) async throws -> FitFightSummary {

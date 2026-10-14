@@ -445,6 +445,10 @@ the app shows "Purchases unavailable" until approval. `purchases_enabled` stays 
 the API (always `true`) for older builds.
 ## TestFlight syncs card for the admin, prepared 12 Oct 2026
 
+**Removed from the app 14 Oct 2026** at Marc's request: the card, its sheet and
+the native client for the route are gone. The `GET /api/v1/admin/recent-syncs`
+route stays, because installed staging builds still call it.
+
 On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes
 before. That person should use the App Store version, which uses production.
 Marc asked for a number on Fights, only in the staging app, with the names on tap.

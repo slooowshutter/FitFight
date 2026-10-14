@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 14,
+            notes: "Steps sync faster and wake your phone less: each day is read once for all your fights, and FitFight now uploads only your Steps."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
             notes: "Past now shows every finished round of a repeating fight with its dates, and tapping one opens that round’s result."
         ),
         ReleaseNote(

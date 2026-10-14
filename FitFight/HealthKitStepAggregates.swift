@@ -28,33 +28,32 @@ enum HealthKitStepAggregates {
         calendar.timeZone = timeZone
         let mergedDays: [FitFightHealthKitStepSync.MergedDay] = []
 
+        // One daily read per Fight time zone covers every Fight's whole days, so overlapping Fights
+        // never read the same day twice. It starts where the earliest Fight's first day ends.
+        var dailySteps: [String: [String: Double]] = [:]
+        for timeZone in Set(context.fightWindows.compactMap(\.timeZone)) {
+            guard let zone = TimeZone(identifier: timeZone) else { continue }
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = zone
+            let windows = context.fightWindows.filter { $0.timeZone == timeZone }
+            guard let start = windows.compactMap({
+                      calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: $0.startsAt))
+                  }).min(),
+                  let end = windows.map(\.cutoffAt).max(),
+                  start < end else { continue }
+            try Task.checkCancellation()
+            dailySteps[timeZone] = try await trace.measure(.healthKitDaily) {
+                try await HealthKitActivityAggregates.dailyTotals(
+                    store: store, type: type, unit: .count(), start: start, end: end, calendar: calendar
+                )
+            }
+        }
+
         var fightAggregates: [FitFightHealthKitStepSync.FightAggregate] = []
         fightAggregates.reserveCapacity(context.fightWindows.count)
         var sawAccessibleSteps = false
         for window in context.fightWindows {
             try Task.checkCancellation()
-            var checkpoints: [FightStepCheckpoint]? = nil
-            var fightCalendar: Calendar? = nil
-            var partialDay: Date? = nil
-            if let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
-                var calendar = Calendar(identifier: .gregorian)
-                calendar.timeZone = zone
-                fightCalendar = calendar
-                checkpoints = []
-                var day = calendar.startOfDay(for: window.startsAt)
-                while let nextDay = calendar.date(byAdding: .day, value: 1, to: day),
-                      nextDay < window.cutoffAt {
-                    try Task.checkCancellation()
-                    let count = try await trace.measure(.healthKitFight) {
-                        try await total(store: store, type: type, start: window.startsAt, end: nextDay)
-                    }
-                    checkpoints?.append(FightStepCheckpoint(
-                        day: dayStamp(day, calendar: calendar), cutoffAt: iso8601(nextDay), steps: count ?? 0
-                    ))
-                    day = nextDay
-                }
-                partialDay = day
-            }
             let counted = try await trace.measure(.healthKitFight) {
                 try await total(
                     store: store,
@@ -66,8 +65,33 @@ enum HealthKitStepAggregates {
             if counted != nil {
                 sawAccessibleSteps = true
             }
-            if let calendar = fightCalendar, let day = partialDay {
-                // The score reuses this final query; separately rounded daily totals cannot define it.
+            var checkpoints: [FightStepCheckpoint]? = nil
+            if let timeZone = window.timeZone, let zone = TimeZone(identifier: timeZone) {
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = zone
+                checkpoints = []
+                var day = calendar.startOfDay(for: window.startsAt)
+                var steps = 0.0
+                while let nextDay = calendar.date(byAdding: .day, value: 1, to: day),
+                      nextDay < window.cutoffAt {
+                    try Task.checkCancellation()
+                    if checkpoints?.isEmpty == true {
+                        // The first day starts at the Fight's start time, so it gets its own read.
+                        steps = Double(try await trace.measure(.healthKitFight) {
+                            try await total(store: store, type: type, start: window.startsAt, end: nextDay)
+                        } ?? 0)
+                    } else {
+                        steps += dailySteps[timeZone]?[dayStamp(day, calendar: calendar)] ?? 0
+                    }
+                    // Summed days can drift a few steps from Apple's window total; the server rejects a
+                    // checkpoint above a later one, so none may pass the score.
+                    checkpoints?.append(FightStepCheckpoint(
+                        day: dayStamp(day, calendar: calendar), cutoffAt: iso8601(nextDay),
+                        steps: min(Int(steps.rounded()), counted ?? 0)
+                    ))
+                    day = nextDay
+                }
+                // The score reuses the window query; separately rounded daily totals cannot define it.
                 checkpoints?.append(FightStepCheckpoint(
                     day: dayStamp(day, calendar: calendar),
                     cutoffAt: iso8601(window.cutoffAt), steps: counted ?? 0

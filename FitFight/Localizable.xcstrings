@@ -14460,6 +14460,16 @@
                 }
             }
         },
+        "Steps sync faster and wake your phone less: each day is read once for all your fights, and FitFight now uploads only your Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La synchronisation des pas est plus rapide et réveille moins ton téléphone : chaque jour est lu une seule fois pour tous tes défis, et FitFight n’envoie plus que tes pas."
+                    }
+                }
+            }
+        },
         "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop.": {
             "localizations": {
                 "fr": {

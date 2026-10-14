@@ -23,7 +23,7 @@ These are the recommended calls that will still look sensible in a year:
 4. **Keep application database access behind the backend.** Swift uses Supabase for Auth and the FitFight API for all database reads and writes. The backend owns stable contracts, validation, authorization, and queries; clients never decide scores, ranks, state transitions, or final results.
 5. **Start with Apple Health as the iOS data gateway.** It already aggregates Apple Watch, iPhone, WHOOP, Garmin, Strava, and many other apps when users enable those connections.
 6. **Put provider behavior behind adapters while keeping available provenance visible.** Provider-specific APIs do not enter scoring logic. Every score identifies its selected provider; originating app/device detail is shown only when FitFight deliberately collects and can support that provenance. The aggregate-only Apple Health MVP labels the source as Apple Health and does not infer an underlying device.
-7. **Synchronize the approved activity history after one clear Collection consent.** Query exact active/ending Fight windows and cumulative checkpoints for scoring. Import accessible Apple-merged daily totals and workout summaries for personal history, and keep a legacy Steps mirror for installed clients. Supported individual HealthKit samples are uploaded into private raw storage.
+7. **Synchronize the approved activity history after one clear Collection consent.** Query exact active/ending Fight windows and cumulative checkpoints for scoring. Import accessible Apple-merged daily Steps for personal history, and keep a legacy Steps mirror for installed clients. Since 14 Oct 2026 the native app uploads no other activity type, workout summary, or individual sample; the server still accepts them from older builds.
 8. **Make data sharing part of Fight acceptance.** Accepting a Fight authorizes its relevant stored Metric and selected Data source to produce a derived score visible to the other members; it does not require a second granular health-permission flow.
 9. **Use one scoring Data source per member, per Metric, per Fight.** Do not add Apple Health steps to Garmin steps or a WHOOP workout to its Strava copy. Show the chosen source so everyone understands the comparison.
 10. **Keep one authoritative representation per calculation.** Apple's merged Fight-window Steps total and same-revision checkpoints determine scores and charts. Apple-merged daily totals determine personal activity; workout summaries determine workout counts and duration. Keep local per-type anchors and upload explicit sample and workout deletion IDs for correction. Retain limited sample source metadata privately. Do not upload per-source statistics or GPS routes.
@@ -320,8 +320,8 @@ When a User connects Apple Health, FitFight asks for ongoing Collection consent.
 Once accepted, the approved collector:
 
 - Queries Apple-merged cumulative Steps for each live or awaiting-final-sync Fight window and its same-revision chart checkpoints.
-- Imports accessible merged daily totals for the supported activity types and workout summaries, then rereads recent days and locally detects changes with per-type anchors.
-- Sends individual supported quantity/category samples, limited source metadata, and explicit sample/workout deletion UUIDs. Per-source statistics, GPS routes, and local anchors remain on the phone.
+- Imports accessible merged daily Steps history once, then rereads from 7 days before the last acknowledged upload. Finished days stopped changing within 6 days of midnight in staging Fight data (14 Oct 2026).
+- Uploads no other activity type, workout summary, or individual sample (14 Oct 2026). Older builds may still send them.
 - Retries acknowledged pages on failure; a server intake acknowledgement advances the local checkpoint even when processing remains pending.
 - Stops future collection when access or Collection consent is revoked. Already uploaded data is removed through account deletion.
 
@@ -500,7 +500,7 @@ Future running, swimming, volleyball, and similar records are **Activities**, no
 
 The diagram below is logical. It does not mean FitFight needs a fleet of microservices:
 
-- **SwiftUI is the native client.** It uses Supabase Swift directly for Auth and the versioned FitFight backend for every application database read and write. It asks HealthKit for exact-window Steps and merged daily activity statistics, reads workout summaries, and sends one Fight request plus acknowledged activity pages to Next.js. Local anchors stay on the phone. It uploads supported raw samples to the private activity store; it does not use TUS, hold provider secrets, consume queues, normalize cloud-provider payloads, or finalize Fights.
+- **SwiftUI is the native client.** It uses Supabase Swift directly for Auth and the versioned FitFight backend for every application database read and write. It asks HealthKit for exact-window Steps and merged daily Steps, and sends one Fight request plus acknowledged daily Steps pages to Next.js. It does not use TUS, hold provider secrets, consume queues, normalize cloud-provider payloads, or finalize Fights.
 - **Next.js is the only TypeScript backend and the website.** Node.js Route Handlers expose the iOS application API, receive OAuth callbacks and webhooks, and run bounded worker batches. Marketing/legal/auth pages live in the same project; native product screens do not.
 - **Supabase Postgres is the database**, with backend-accessible `public` product models and unexposed `private` health/integration data.
 - **Normalizer and Scoring engine are ordinary backend TypeScript modules**, imported by Next.js workers. Their names describe responsibilities, not machines.
@@ -553,7 +553,7 @@ Future direct-provider adapters produce canonical Observations with units and in
 
 ### Layer 4: aggregation
 
-Apple computes the v1 Steps aggregate. The exact `starts_at...cutoff_at` cumulative statistic becomes the per-member Fight snapshot and is authoritative for scoring. The final cumulative checkpoint and score reuse the same query. Earlier checkpoints use the same Fight start and successive Fight-day cutoffs. Their differences supply daily charts. Legacy Apple-merged calendar buckets cannot overwrite the score or supply a new chart. Live values remain provisional because Apple may incorporate a late device sync, edit, or deletion; finished Fights freeze the exact-window snapshot at `ends_at`. Future interval Metrics must still split at Fight boundaries before aggregation.
+Apple computes the v1 Steps aggregate. The exact `starts_at...cutoff_at` cumulative statistic becomes the per-member Fight snapshot and is authoritative for scoring. The final cumulative checkpoint and score reuse the same query. The first Fight day is its own exact query from `starts_at`; later days come from one shared merged daily read per Fight time zone, so overlapping Fights never reread a day. Earlier checkpoints never exceed the score. Their differences supply daily charts. Legacy Apple-merged calendar buckets cannot overwrite the score or supply a new chart. Live values remain provisional because Apple may incorporate a late device sync, edit, or deletion; finished Fights freeze the exact-window snapshot at `ends_at`. Future interval Metrics must still split at Fight boundaries before aggregation.
 
 ### Layer 5: scoring
 
@@ -1071,7 +1071,7 @@ Provider integrations require sandbox fixtures and a replay harness. Never make 
 - Authentication includes native Apple, Google, and email magic link/OTP, with one identity system for native and web.
 - Swift uses Supabase directly only for Auth. Next.js Node.js Route Handlers own every application database read/write and maintain explicit API contracts. The restricted backend read role preserves RLS independently of client grants. Supabase Edge Functions are not used.
 - The same Next.js project hosts only marketing/legal/auth/invite pages visually; native Fights and friendships have no web equivalent.
-- The approved Apple Health collector synchronizes exact active/ending Fight windows, accessible merged daily activity history, and workout summaries. It uploads supported individual samples with per-type acknowledged anchors.
+- The approved Apple Health collector synchronizes exact active/ending Fight windows and accessible merged daily Steps history.
 - There is no granular per-Fight health grant; acceptance selects the source and agrees to derived Fight sharing.
 - The selected provider identity is visible in standings. More detailed source provenance appears only in a future integration that deliberately collects and supports it.
 - Steps is the only production scoring Metric. Apple's merged Fight-window aggregate and saved cumulative checkpoints supply scores and charts. `private.activity_raw` and `private.activity_metrics` retain the approved activity summaries; legacy daily Steps tables remain for older clients. Contributing-source labels are not collected.

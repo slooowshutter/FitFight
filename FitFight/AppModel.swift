@@ -417,9 +417,17 @@ final class AppModel: ObservableObject {
             .filter { $0.status == .invited }
             .sorted { $0.windowStart > $1.windowStart }
     }
+    /// Every ended round, so a repeating fight's result stays visible after its next round starts.
+    /// Non-canonical rounds need you as a real member, which hides rounds you were only invited to.
     var finished: [Fight] {
-        canonicalFights
-            .filter { $0.status == .pending || $0.status == .finished }
+        let canonicalIDs = Set(canonicalFights.map(\.id))
+        return fights
+            .filter { fight in
+                guard fight.status == .pending || fight.status == .finished else { return false }
+                if canonicalIDs.contains(fight.id) { return true }
+                guard let you = youStanding(in: fight) else { return false }
+                return !you.invited && !you.deferred
+            }
             .sorted { $0.windowStart > $1.windowStart }
     }
 

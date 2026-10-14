@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 14,
+            notes: "Past now shows every finished round of a repeating fight with its dates, and tapping one opens that round’s result."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 13,
             notes: "Your own characters no longer sit on a grey square: their transparent background shows the card behind them."
         ),

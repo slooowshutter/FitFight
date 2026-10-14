@@ -4,6 +4,7 @@ import { z } from "zod";
 export const adminDashboardSectionValues = [
     "overview",
     "retention",
+    "churn",
     "users",
     "engagement",
     "steps",

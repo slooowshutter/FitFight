@@ -395,11 +395,16 @@ test("production keeps App Review Sandbox charges on a separate Sandbox shelf", 
     process.env.NEXT_PUBLIC_SUPABASE_URL = appReleaseProjectValues[1];
     const release = { version: "1.1.3", build: 230, update_url: "https://apps.apple.com/app/id6804230516" };
     let review: typeof release | null = null;
-    context.mock.method(globalThis, "fetch", async () =>
-        Response.json({
-            staging: { latest: null, review: null, enforced: false },
-            prod: { latest: null, review, enforced: false },
-        }),
+    const realFetch = globalThis.fetch;
+    context.mock.method(globalThis, "fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+        String(input).includes("/releases.json")
+            ? Promise.resolve(
+                  Response.json({
+                      staging: { latest: null, review: null, enforced: false },
+                      prod: { latest: null, review, enforced: false },
+                  }),
+              )
+            : realFetch(input, init),
     );
     try {
         const { users, accounts } = await specialUsers(context);

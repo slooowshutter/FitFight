@@ -317,3 +317,13 @@ export function verifySpecialConsumablePurchase(
 ) {
     return verifyConsumablePurchase(signedTransaction, expected, appleSpecialConsumableTransactionSchema);
 }
+
+/** Unverified: only picks the shelf the charge is then verified against. */
+export function claimsSandbox(signedTransaction: string) {
+    try {
+        const payload = Buffer.from(signedTransaction.split(".")[1], "base64url").toString();
+        return JSON.parse(payload).environment === "Sandbox";
+    } catch {
+        return false;
+    }
+}

@@ -38,8 +38,9 @@ async function saveCustomCharacterDescription(
 export async function readCustomCharacterStore(
     userId: string,
     database: Sql = createDatabaseClient(),
+    sandbox = false,
 ) {
-    const account = await readSpecialStore(userId, database);
+    const account = await readSpecialStore(userId, database, sandbox);
     const purchases = customCharacterPurchaseRowSchema.array().parse(
         await database`select * from private.custom_character_purchases
             where account_id = ${account.app_account_token} order by created_at desc`,

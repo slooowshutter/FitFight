@@ -32,7 +32,7 @@ It caches the last answer per API address and keeps it when the call fails.
 ## Admin dashboard (prepared 29 Sep 2026)
 
 `GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>[&bucket=day|week|month]` feeds the Admin tab
-in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement`,
+in Profile -> Dashboard. Sections: `overview`, `retention`, `churn`, `users`, `engagement`,
 `steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
 query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
@@ -70,6 +70,15 @@ query only marks its own tile with `Query failed: ...`.
   `foreground`, so their opens include those actions. Sync
   history is kept since 29 Sep (never-delete rule), so engagement history grows
   from that date; earlier rows were pruned after 7 days.
+- **Churn (14 Oct 2026):** a person churned when they were active in the 7 (or
+  30) complete Paris days before the latest 7 (or 30) and not active in the
+  latest. Two meanings of active: an app open (as above), or a phone sync, which
+  is a complete Apple Health step day as in Retention. Charts read the same
+  windows at the end of each bucket. Churn by app opens reads only periods from
+  2 Oct 2026, because production pruned sync reports until 1 Oct and kept the
+  last reports of people who left; weekly numbers show from 16 Oct, monthly from
+  1 Dec. A returning phone uploads the days it missed, so older sync churn drops
+  when people come back.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
   day. "Health history" cards include imported days before signup.
@@ -734,9 +743,12 @@ cancels the matching attempt. Unpaid holds lapse 30 minutes after they are made:
 Account deletion frees a hold at once. A charge that arrives later is owned if
 the edition is still free and the account has no other Special; otherwise it is
 recorded as a conflict and the app offers Apple's refund request. A refund only
-retires an edition its purchase held or owned. On production, accounts listed in
-`APPLE_IAP_REVIEW_USER_IDS` use the Sandbox shelf for App Review once they have
-no hold or purchase; nobody else can reach it.
+retires an edition its purchase held or owned. On production, App Review signs in
+with its own Apple Account and buys in Sandbox: a Special or character charge that
+names Sandbox moves an account with no purchases to the Sandbox shelf, and the
+charge is verified there. Production opens that shelf only while the release
+registry lists a production build in review. App Store users only make
+Production charges.
 
 Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
 app. Let older backend instances drain first, because their schemas list only

@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 14,
+            notes: "Trophies now follow each finished round’s winner: History shows the trophy next to who won that round, and finished fights show one on their winner. ×N still counts rounds won in a row."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
             notes: "Steps sync faster and wake your phone less: each day is read once for all your fights, and FitFight now uploads only your Steps."
         ),
         ReleaseNote(

@@ -15,9 +15,11 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     const userId = randomUUID();
     const sourceId = randomUUID();
     const fightId = randomUUID();
+    const stoppedId = randomUUID();
+    const stoppedSourceId = randomUUID();
     t.after(async () => {
         await database`delete from public.fights where id = ${fightId}`;
-        await database`delete from auth.users where id = ${userId}`;
+        await database`delete from auth.users where id in (${userId}, ${stoppedId})`;
     });
     await database`insert into auth.users(id, created_at) values (${userId}, now() - interval '20 days')`;
     await database`
@@ -54,6 +56,22 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
             'Europe/Paris', 'highest_total', 'shared')
     `;
     await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${userId}, 'accepted', now())`;
+    // A second phone synced steps from 30 to 10 days ago, then stopped.
+    await database`insert into auth.users(id, created_at) values (${stoppedId}, now() - interval '30 days')`;
+    await database`update public.profiles set created_at = now() - interval '30 days' where user_id = ${stoppedId}`;
+    await database`
+        insert into public.data_sources(id, user_id, provider, source_label, connection_route, capabilities, status,
+            connected_at, last_success_at)
+        values (${stoppedSourceId}, ${stoppedId}, 'apple_health', 'Apple Health', 'healthkit', array['steps'], 'healthy',
+            now() - interval '30 days', now() - interval '10 days')
+    `;
+    await database`
+        insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+            observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+        select ${stoppedId}, ${stoppedSourceId}, 'day', 'day:' || day::date, 'steps', day, day + interval '1 day',
+            day + interval '1 day', day::date, 'Europe/Paris', 4000, 'count', array[gen_random_uuid()], 1
+        from generate_series(current_date - 29, current_date - 10, interval '1 day') as day
+    `;
 
     for (const section of adminDashboardSectionValues) {
         const cardValues: string[] = [];
@@ -87,6 +105,10 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
     // Seven days of two foreground traces each; the one 20 seconds after a background sync is not an open.
     assert.ok(opens?.value !== undefined && opens.value !== null && opens.value >= 7);
     assert.match(opens.example ?? "", /^The app was opened \d+ times in the last 7 days, against \d+ in the 7 days before\.$/);
+    const syncChurn = (await readAdminDashboard("churn", 30, "staging", database)).cards
+        .find((card) => card.id === "weekly_sync_churn");
+    assert.ok(syncChurn?.value, "The phone that stopped syncing counts as lost");
+    assert.match(syncChurn.example ?? "", /^\d+(\.\d)?% of the people whose phone synced steps 8 to 14 days ago synced none in the last 7 days/);
     const syncTimes = (await readAdminDashboard("app", 30, "staging", database)).charts.find((chart) => chart.id === "sync_durations");
     assert.deepEqual(syncTimes?.series.map((line) => line.name), ["P10", "P25", "P50", "P75", "P90", "P95", "P99"]);
 

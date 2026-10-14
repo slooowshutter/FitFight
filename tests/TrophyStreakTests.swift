@@ -48,12 +48,25 @@ import Foundation
                      "A cancelled round ends the streak instead of being skipped")
         precondition(streak([round(0, [ana]), round(1, [ana, ben])], for: round(2, [], state: "live")) == "none",
                      "A tied previous round has no single winner")
-        precondition(streak([round(0, [ana]), round(1, [ana]), round(3, [ben])], for: round(2, [ben])) == "ana x2",
-                     "A historical round counts only the rounds before it")
+        precondition(streak([round(0, [ana]), round(1, [ana]), round(3, [ana])], for: round(2, [ben])) == "ben x1",
+                     "A final round's own winner holds its trophy, counting only rounds up to it")
+        precondition(streak([round(0, [ana]), round(1, [ana])], for: round(2, [ana])) == "ana x3",
+                     "A final round counts itself in its winner's streak")
+        let history = [round(0, [ana]), round(1, [ana]), round(2, [ana]), round(3, [ben]), round(4, [ana])]
+        precondition(streak(history, for: round(5, [], state: "live")) == "ana x1",
+                     "A loss resets the live round's count even when the holder won more rounds before")
+        precondition(streak(history.filter { $0.id != "round-3" }, for: round(3, [ben])) == "ben x1",
+                     "A History card puts the trophy on that round's winner, not the previous round's")
+        precondition(streak([round(0, [ana])], for: round(1, [], state: "cancelled")) == "none",
+                     "A cancelled round has no trophy holder")
+        var single = round(0, [ana])
+        single.seriesId = nil
+        precondition(streak([], for: single) == "ana x1",
+                     "A one-off final fight gives its winner the trophy")
         var truncated = round(2, [ana])
         truncated.windowEnd = current.windowStart.addingTimeInterval(0.000_4)
         precondition(streak([round(1, [ana]), truncated], for: current) == "ana x2",
                      "Server millisecond truncation still chains adjacent rounds")
-        print("PASS: trophy streaks follow directly preceding rounds and stop at missing, cancelled, tied, or lost rounds")
+        print("PASS: trophy streaks follow each round's own result and stop at missing, cancelled, tied, or lost rounds")
     }
 }

@@ -889,6 +889,12 @@ struct FitFightAPI {
             body: ["companion_id": companionId, "signed_transaction": signedTransaction], expected: [200])
     }
 
+    /// Unlocks a Special with one free character instead of a charge.
+    func claimFreeSpecial(companionId: String, idempotencyKey: UUID, accessToken: String) async throws -> SpecialClaimResult {
+        try await post(path: "me/specials/free", accessToken: accessToken, body: ["companion_id": companionId],
+                       idempotencyKey: idempotencyKey.uuidString.lowercased())
+    }
+
     func claimSpecial(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
         try await post(path: "me/specials/transactions", accessToken: accessToken,
             body: ["companion_id": companionId, "signed_transaction": signedTransaction], expected: [200])
@@ -1306,6 +1312,11 @@ struct FitFightAPI {
 
     func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
         try await get(path: "admin/recent-syncs", accessToken: accessToken)
+    }
+
+    /// Admin only. The newest referral characters.
+    func freeCharacterReferrals(accessToken: String) async throws -> FitFightFreeCharacterReferrals {
+        try await get(path: "admin/free-characters", accessToken: accessToken)
     }
 
     /// Admin only. A nil username gives to every current account.

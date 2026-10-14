@@ -1,3 +1,4 @@
+import { rewardReferrals } from "@/lib/domain/referrals/referral-rewards";
 import { apiRoute, json, requireCronSecret } from "@/lib/http";
 import { processActivity } from "@/lib/supabase/queries/activity-pipeline-supabase-query";
 import { closeDueFights } from "@/lib/supabase/queries/close-due-fights-supabase-query";
@@ -11,6 +12,8 @@ async function handle(request: Request) {
     // Resume received activity first, so a Fight closes with every reading that already arrived.
     const activity = await processActivity({ limit: 500, budgetMs: 20_000 });
     const result = await closeDueFights();
+    // Steps resolved here, or by an upload whose reward failed, still pay the referral.
+    await rewardReferrals(null);
     return json({ ok: true, activity, ...result });
 }
 

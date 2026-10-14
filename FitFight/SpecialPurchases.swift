@@ -51,6 +51,8 @@ final class SpecialPurchases: ObservableObject {
     private let api = FitFightAPI()
     private var ownerId: UUID?
     private var processing: Set<UInt64> = []
+    /// Kept until the server answers, so tapping again after a lost answer cannot use a second free character.
+    private var freeClaim: (companionId: String, key: UUID)?
 
     private func draftKey(_ userId: UUID) -> String { "ff.special.draft.\(userId.uuidString)" }
     private func pendingSinceKey(_ userId: UUID) -> String { "ff.special.pending.since.\(userId.uuidString)" }
@@ -60,6 +62,7 @@ final class SpecialPurchases: ObservableObject {
         snapshot = nil
         product = nil
         message = ""
+        freeClaim = nil
         pendingPurchase = false
         hasUnclaimedCharge = false
         guard let userId = ownerId else { return }
@@ -170,6 +173,29 @@ final class SpecialPurchases: ObservableObject {
             // Apple refused before charging, for example Screen Time.
             abandon(userId: userId)
             message = error.localizedDescription
+        } catch is CancellationError { return false }
+        catch { message = error.localizedDescription }
+        return false
+    }
+
+    /// Unlocks a Special with one free character instead of a charge.
+    func claimFree(_ animal: StockCompanion, session: SessionStore) async -> Bool {
+        guard !isBusy, let userId = ownerId, userId == session.profile?.userId else { return false }
+        isBusy = true
+        message = ""
+        defer { isBusy = false }
+        let key = freeClaim?.companionId == animal.rawValue ? freeClaim?.key ?? UUID() : UUID()
+        freeClaim = (animal.rawValue, key)
+        do {
+            let claim = try await api.claimFreeSpecial(
+                companionId: animal.rawValue, idempotencyKey: key, accessToken: try await session.freshAccessToken()
+            )
+            guard ownerId == userId else { return false }
+            freeClaim = nil
+            PostHogSDK.shared.capture("free_special_claimed")
+            // The Special is owned now; a failed reload must not make the caller think it is not.
+            try? await refresh(session: session)
+            return claim.outcome == .owned && claim.companionId == animal.rawValue
         } catch is CancellationError { return false }
         catch { message = error.localizedDescription }
         return false

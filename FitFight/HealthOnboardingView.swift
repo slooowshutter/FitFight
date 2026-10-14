@@ -3,6 +3,8 @@ import SwiftUI
 struct HealthOnboardingView: View {
     let showingResult: Bool
     let animal: StockCompanion
+    /// A referred friend gets their free character when their first steps arrive.
+    var referralPending = false
     @Binding var busy: Bool
     let onResult: () -> Void
     let onFinished: () -> Void
@@ -62,6 +64,10 @@ struct HealthOnboardingView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .accessibilityHidden(true)
+                if referralPending {
+                    FFNotice(text: String(appLocalized: "Connect Apple Health to get the free character from your friend's invite. You can use it on the next step."),
+                             tone: .moss, systemImage: "gift")
+                }
                 ForEach([
                     ["figure.walk", String(appLocalized: "Uploads the Apple Health activity you allow, including individual records and workouts. Stored privately.")],
                     ["person.2", String(appLocalized: "Fight participants see your steps and standings.")],
@@ -76,7 +82,7 @@ struct HealthOnboardingView: View {
             }
         } actions: {
             if showingResult {
-                FFScreenCTA(title: String(appLocalized: "Find your first Fight")) { onFinished() }
+                FFScreenCTA(title: String(appLocalized: "Continue")) { onFinished() }
             } else {
                 FFScreenCTA(title: String(appLocalized: "Connect Apple Health"), enabled: !busy, busy: busy) {
                     Task {

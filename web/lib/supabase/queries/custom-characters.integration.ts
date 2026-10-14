@@ -320,10 +320,11 @@ test("a description saved at claim draws three portraits; the owner picks one an
     assert.deepEqual(poses.portraits, ["https://cdn.tryblend.ai/candidate-1.png"]);
 });
 
-test("every account gets one free character, gifts add more, and a free claim draws three portraits", async (context) => {
+test("new accounts get no free character, gifts add some, and a free claim draws three portraits", async (context) => {
     const owner = randomUUID();
     const admin = randomUUID();
     const handle = `free_${randomUUID().slice(0, 8)}`;
+    const firstGiftKey = randomUUID();
     const giftKey = randomUUID();
     const everyoneKey = randomUUID();
     await database`insert into auth.users (id) values (${owner}), (${admin})`;
@@ -334,7 +335,7 @@ test("every account gets one free character, gifts add more, and a free claim dr
     const account = (await readSpecialStore(owner, database)).app_account_token;
     context.after(async () => {
         await database`delete from private.free_character_grants
-            where user_id in (${owner}, ${admin}) or operation_key in (${giftKey}, ${everyoneKey})`;
+            where user_id in (${owner}, ${admin}) or operation_key in (${firstGiftKey}, ${giftKey}, ${everyoneKey})`;
         await database`delete from private.ai_requests where user_id = ${owner}`;
         await database`delete from private.custom_character_portraits where purchase_id in (
             select id from private.custom_character_purchases where account_id = ${account})`;
@@ -343,7 +344,13 @@ test("every account gets one free character, gifts add more, and a free claim dr
         await database`delete from auth.users where id in (${owner}, ${admin})`;
     });
 
-    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 1);
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 0);
+    assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 0);
+    assert.equal((await database`select 1 from private.free_character_grants where user_id = ${owner}`).length, 0);
+    await assert.rejects(claimFreeCustomCharacter(owner, randomUUID(), "A plump grey city pigeon", database), {
+        code: "no_free_characters",
+    });
+    await giftFreeCharacters(admin, firstGiftKey, { username: handle, quantity: 1 }, database);
     assert.equal((await readCustomCharacterStore(owner, database)).free_characters, 1);
 
     const key = randomUUID();

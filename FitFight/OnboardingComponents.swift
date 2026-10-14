@@ -21,8 +21,8 @@ struct OnboardingHeader: View {
         switch step {
         case 1: String(appLocalized: "Your account")
         case 2: String(appLocalized: "Your username")
-        case 3: String(appLocalized: "Your companion")
-        case 4: String(appLocalized: "Apple Health")
+        case 3: String(appLocalized: "Apple Health")
+        case 4: String(appLocalized: "Your companion")
         case 5: String(appLocalized: "Your first Fight")
         case 6: String(appLocalized: "Reminders")
         default: "FitFight"

@@ -93,6 +93,17 @@ struct FitFightAPI {
         Self.owned.insert(companion)
         return .init(outcome: .owned, transactionId: key, companionId: companion)
     }
+    static var freeKeys: [UUID] = []
+    func claimFreeSpecial(companionId: String, idempotencyKey: UUID, accessToken: String) async throws -> SpecialClaimResult {
+        Self.freeKeys.append(idempotencyKey)
+        if Self.failClaim {
+            Self.failClaim = false
+            throw URLError(.networkConnectionLost)
+        }
+        Self.owned.insert(companionId)
+        return .init(outcome: .owned, transactionId: idempotencyKey.uuidString, companionId: companionId)
+    }
+
     func claimSpecial(companionId: String, signedTransaction: String, accessToken: String) async throws -> SpecialClaimResult {
         Self.legacyClaims.append(companionId)
         Self.owned.insert(companionId)
@@ -216,6 +227,17 @@ struct SpecialPurchaseTests {
         Transaction.pending = [legacy]
         await recovering.restore(session: session)
         precondition(legacy.finished && FitFightAPI.legacyClaims == ["limited-black-panther"])
-        print("Special purchase decoding, many-per-account ownership, pending, interrupted, orphaned, failed-claim, account binding and legacy checks passed")
+
+        // A free character unlocks a Special without Apple; a retry after a lost answer reuses the key.
+        let shown = Product.presented
+        FitFightAPI.failClaim = true
+        let lost = await recovering.claimFree(.tiger, session: session)
+        precondition(!lost && !recovering.message.isEmpty)
+        let freed = await recovering.claimFree(.tiger, session: session)
+        precondition(freed && FitFightAPI.freeKeys.count == 2 && FitFightAPI.freeKeys[0] == FitFightAPI.freeKeys[1])
+        precondition(Product.presented == shown, "A free unlock never opens Apple's sheet")
+        _ = await recovering.claimFree(.loneWolf, session: session)
+        precondition(FitFightAPI.freeKeys[2] != FitFightAPI.freeKeys[1], "A new free claim gets a new key")
+        print("Special purchase decoding, many-per-account ownership, pending, interrupted, orphaned, failed-claim, account binding, legacy and free-character checks passed")
     }
 }

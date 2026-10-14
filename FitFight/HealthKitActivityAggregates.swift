@@ -126,7 +126,7 @@ enum HealthKitActivityAggregates {
         return kinds
     }
 
-    private static func dailyTotals(
+    static func dailyTotals(
         store: HKHealthStore,
         type: HKQuantityType,
         unit: HKUnit,
@@ -196,132 +196,6 @@ enum HealthKitActivityAggregates {
             totals[HealthKitStepAggregates.dayStamp(sample.startDate, calendar: calendar), default: 0] += 1
         }
         return totals
-    }
-
-    static func workouts(
-        store: HKHealthStore,
-        start: Date,
-        end: Date,
-        limit: Int = 200
-    ) async throws -> [FitFightHealthKitStepSync.Workout] {
-        let samples: [HKWorkout] = try await withCheckedThrowingContinuation { continuation in
-            let predicate = HKQuery.predicateForSamples(
-                withStart: start,
-                end: end,
-                options: .strictStartDate
-            )
-            let query = HKSampleQuery(
-                sampleType: .workoutType(),
-                predicate: predicate,
-                limit: limit,
-                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
-            ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
-            }
-            store.execute(query)
-        }
-        return samples.compactMap { workoutRecord($0, end: end) }
-    }
-
-    static func workoutRecord(_ workout: HKWorkout, end: Date) -> FitFightHealthKitStepSync.Workout? {
-        guard workout.endDate > workout.startDate,
-              workout.endDate <= end,
-              workout.duration >= 0,
-              workout.duration <= 7 * 24 * 60 * 60
-        else { return nil }
-        return FitFightHealthKitStepSync.Workout(
-            healthkitUuid: workout.uuid.uuidString.lowercased(),
-            startedAt: HealthKitStepAggregates.iso8601(workout.startDate),
-            endedAt: HealthKitStepAggregates.iso8601(workout.endDate),
-            activityType: activityTypeName(workout.workoutActivityType),
-            durationSeconds: max(0, workout.duration),
-            activeMinutes: quantityValue(
-                HKQuantityType.quantityType(forIdentifier: .appleExerciseTime)
-                    .flatMap { workout.statistics(for: $0)?.sumQuantity() },
-                unit: .minute()
-            ),
-            distanceM: workoutDistanceMeters(workout),
-            energyKcal: quantityValue(
-                HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)
-                    .flatMap { workout.statistics(for: $0)?.sumQuantity() },
-                unit: .kilocalorie()
-            ),
-            effort: workoutEffort(workout)
-        )
-    }
-
-    private static func workoutDistanceMeters(_ workout: HKWorkout) -> Double? {
-        var identifiers: [HKQuantityTypeIdentifier] = [
-            .distanceWalkingRunning,
-            .distanceCycling,
-            .distanceSwimming,
-            .distanceWheelchair,
-            .distanceDownhillSnowSports,
-        ]
-        if #available(iOS 18.0, *) {
-            identifiers.append(contentsOf: [
-                .distanceRowing,
-                .distancePaddleSports,
-                .distanceSkatingSports,
-                .distanceCrossCountrySkiing,
-            ])
-        }
-        return identifiers.compactMap { identifier in
-            guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
-            return quantityValue(workout.statistics(for: type)?.sumQuantity(), unit: .meter())
-        }.max()
-    }
-
-    private static func workoutEffort(_ workout: HKWorkout) -> Double? {
-        if #available(iOS 18.0, *) {
-            for identifier in [HKQuantityTypeIdentifier.workoutEffortScore, .estimatedWorkoutEffortScore] {
-                guard let type = HKQuantityType.quantityType(forIdentifier: identifier),
-                      let value = quantityValue(
-                        workout.statistics(for: type)?.averageQuantity()
-                            ?? workout.statistics(for: type)?.sumQuantity(),
-                        unit: .appleEffortScore()
-                      )
-                else { continue }
-                return value
-            }
-        }
-        guard let type = HKQuantityType.quantityType(forIdentifier: .physicalEffort) else { return nil }
-        let quantity = workout.statistics(for: type)?.averageQuantity()
-            ?? workout.statistics(for: type)?.sumQuantity()
-        let metabolic = HKUnit.kilocalorie().unitDivided(
-            by: HKUnit.gramUnit(with: .kilo).unitMultiplied(by: .hour())
-        )
-        return quantityValue(quantity, unit: metabolic) ?? quantityValue(quantity, unit: .count())
-    }
-
-    private static func activityTypeName(_ type: HKWorkoutActivityType) -> String {
-        switch type {
-        case .walking: return "walking"
-        case .running: return "running"
-        case .cycling: return "cycling"
-        case .swimming: return "swimming"
-        case .hiking: return "hiking"
-        case .wheelchairWalkPace, .wheelchairRunPace: return "wheelchair"
-        case .functionalStrengthTraining, .traditionalStrengthTraining: return "strength"
-        case .highIntensityIntervalTraining: return "hiit"
-        case .yoga: return "yoga"
-        case .coreTraining: return "core"
-        case .flexibility: return "flexibility"
-        case .dance: return "dance"
-        case .elliptical: return "elliptical"
-        case .rowing: return "rowing"
-        case .stairClimbing: return "stairs"
-        case .downhillSkiing: return "downhill_ski"
-        case .snowboarding: return "snowboarding"
-        case .crossCountrySkiing: return "cross_country_ski"
-        case .paddleSports: return "paddle"
-        case .skatingSports: return "skating"
-        default: return "type_\(type.rawValue)"
-        }
     }
 
     private static func quantityValue(_ quantity: HKQuantity?, unit: HKUnit) -> Double? {

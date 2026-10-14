@@ -47,10 +47,18 @@ struct TestPublisher { func send() {} }
         restored.authSession = session.authSession
         restored.profile = session.profile
         precondition(restored.firstFightOnboarding == progress)
-        precondition(progress.page.step == 4 && FirstFightOnboarding.Page.health.step == 4)
-        precondition(FirstFightOnboarding.Page.founderFight.previous == .healthResult)
+        precondition(progress.page.step == 3 && FirstFightOnboarding.Page.health.step == 3)
+        precondition(FirstFightOnboarding.Page.companion.step == 4 && FirstFightOnboarding.Page.companion.previous == .healthResult)
+        precondition(FirstFightOnboarding.Page.founderFight.previous == .companion)
         precondition(FirstFightOnboarding.Page.firstFight.previous == .founderFight)
         print("PASS: relaunch restores the same Health step for the same account")
+
+        defaults.set(Data(#"{"page":"companion"}"#.utf8), forKey: "ff.onboarding.firstFight." + first.uuidString)
+        precondition(restored.firstFightOnboarding?.page == .health, "An older build's companion page still needs Health")
+        restored.saveFirstFightOnboarding(FirstFightOnboarding(page: .companion), userID: first)
+        precondition(restored.firstFightOnboarding?.page == .companion)
+        restored.saveFirstFightOnboarding(progress, userID: first)
+        print("PASS: progress saved before Health moved first resumes at Health")
 
         session.authSession = TestSession(user: TestUser(id: second))
         precondition(session.firstFightOnboarding == nil)
@@ -94,7 +102,7 @@ struct TestPublisher { func send() {} }
 
         session.authSession = TestSession(user: TestUser(id: second))
         defaults.set(true, forKey: "ff.onboarding.needsHealth")
-        precondition(session.firstFightOnboarding?.page == .companion)
+        precondition(session.firstFightOnboarding?.page == .health)
         session.profile?.companionId = "goat"
         precondition(session.firstFightOnboarding?.page == .health)
         defaults.removeObject(forKey: "ff.onboarding.needsHealth")

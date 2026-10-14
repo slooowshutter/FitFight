@@ -5,6 +5,7 @@ import { canAdministerFights } from "@/lib/admin/can-administer-fights";
 import { isFitFightAdmin } from "@/lib/admin/is-fitfight-admin";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authProjects } from "@/lib/supabase/auth-projects";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     adminDashboardIdentityRowSchema,
@@ -144,18 +145,6 @@ export async function readAdminViewer(
     const emails = user.email && user.email_confirmed_at ? [user.email] : [];
     return { handle: profile.data.handle, emails };
 }
-
-/** Both projects' public Auth endpoints. Publishable keys are client configuration, not secrets. */
-const authProjects: Record<string, { url: string; publishableKey: string }> = {
-    pvqntpteehdvhqyctwum: {
-        url: "https://pvqntpteehdvhqyctwum.supabase.co",
-        publishableKey: "sb_publishable_6wP1KNFvJwIE_hX1U2aTfg_u3sk40Li",
-    },
-    zstzbfocunthczzubggz: {
-        url: "https://zstzbfocunthczzubggz.supabase.co",
-        publishableKey: "sb_publishable_7lCDQ1YbMJVUyKZ6Ezq1LA_I-0rZGig",
-    },
-};
 
 /**
  * The dashboard reads aggregates only. A login from the other FitFight project (an App Store

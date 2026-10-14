@@ -22,8 +22,14 @@ struct OnboardingView: View {
     @FocusState private var usernameFocused: Bool
     private let animals: [StockCompanion] = [.goat, .fox, .otter, .bear, .rabbit, .sloth, .badger, .raccoon, .redPanda, .boar, .dog, .turtle]
 
+    /// The replay shows only Health, Fight offers and reminders.
     private var previous: FirstFightOnboarding.Page? {
-        isReplay && progress.page == .health ? nil : progress.page.previous
+        guard isReplay else { return progress.page.previous }
+        switch progress.page {
+        case .health: return nil
+        case .founderFight: return .healthResult
+        default: return progress.page.previous
+        }
     }
 
     var body: some View {
@@ -38,9 +44,10 @@ struct OnboardingView: View {
                 case .health, .healthResult:
                     HealthOnboardingView(
                         showingResult: progress.page == .healthResult,
-                        animal: selected, busy: $busy,
+                        animal: selected, referralPending: characters.referralPending, busy: $busy,
                         onResult: { go(.healthResult) },
-                        onFinished: { go(.founderFight) }
+                        // Progress saved by an older build already has its companion.
+                        onFinished: { go(isReplay || companions.hasChosen ? .founderFight : .companion) }
                     )
                 case .founderFight: founderFight
                 case .firstFight:
@@ -139,6 +146,14 @@ struct OnboardingView: View {
                 Task { await saveCompanion() }
             }
         }
+        .task {
+            // A referred friend's free character arrives just after the first Apple Health upload.
+            for attempt in 0..<4 {
+                if attempt > 0 { try? await Task.sleep(for: .seconds(3)) }
+                try? await characters.refresh(session: session)
+                if !characters.referralPending || Task.isCancelled { break }
+            }
+        }
         .sheet(isPresented: $creatingCharacter) {
             OnboardingCharacterSheet(animal: selected) {
                 creatingCharacter = false
@@ -163,7 +178,7 @@ struct OnboardingView: View {
             try Task.checkCancellation()
             guard session.profile?.userId == ownerID else { return }
             companions.apply(session.profile)
-            go(.health)
+            go(.founderFight)
         } catch is CancellationError {
         } catch { self.error = error.localizedDescription }
     }
@@ -231,7 +246,7 @@ struct OnboardingView: View {
             try await session.setHandle(handle)
             try Task.checkCancellation()
             guard session.profile?.userId == ownerID else { return }
-            go(.companion)
+            go(.health)
         } catch is CancellationError {
         } catch { self.error = error.localizedDescription }
     }

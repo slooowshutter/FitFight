@@ -424,9 +424,17 @@ final class AppModel: ObservableObject {
             .filter { $0.status == .invited }
             .sorted { $0.windowStart > $1.windowStart }
     }
+    /// Every ended round, so a repeating fight's result stays visible after its next round starts.
+    /// Non-canonical rounds need you as a real member, which hides rounds you were only invited to.
     var finished: [Fight] {
-        canonicalFights
-            .filter { $0.status == .pending || $0.status == .finished }
+        let canonicalIDs = Set(canonicalFights.map(\.id))
+        return fights
+            .filter { fight in
+                guard fight.status == .pending || fight.status == .finished else { return false }
+                if canonicalIDs.contains(fight.id) { return true }
+                guard let you = youStanding(in: fight) else { return false }
+                return !you.invited && !you.deferred
+            }
             .sorted { $0.windowStart > $1.windowStart }
     }
 
@@ -578,17 +586,6 @@ final class AppModel: ObservableObject {
     /// Lets a screen read server data after a launch or foreground upload without starting another one.
     func waitForRefresh() async {
         await refreshTask?.value
-    }
-
-    /// Reads the rounds behind `hosted` through their own snapshot, mapped like the Fights list.
-    func refreshHostedRounds() async throws {
-        guard let session, let userId = session.authSession?.user.id else { return }
-        let snapshot = try await api.fightsSnapshot(
-            accessToken: try await session.freshAccessToken(), trace: nil, performMaintenance: false, hosted: true
-        )
-        guard session.authSession?.user.id == userId else { return }
-        hosted = snapshot.hosted
-        hostedRounds = mapSnapshot(snapshot, userId: userId)
     }
 
     private func performRefreshFights(
@@ -769,6 +766,17 @@ final class AppModel: ObservableObject {
         isCreatingFight = true
         createError = nil
         return true
+    }
+
+    /// Reads the rounds behind `hosted` through their own snapshot, mapped like the Fights list.
+    func refreshHostedRounds() async throws {
+        guard let session, let userId = session.authSession?.user.id else { return }
+        let snapshot = try await api.fightsSnapshot(
+            accessToken: try await session.freshAccessToken(), trace: nil, performMaintenance: false, hosted: true
+        )
+        guard session.authSession?.user.id == userId else { return }
+        hosted = snapshot.hosted
+        hostedRounds = mapSnapshot(snapshot, userId: userId)
     }
 
     func createAndStartFight(

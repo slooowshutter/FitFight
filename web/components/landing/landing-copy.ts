@@ -284,8 +284,8 @@ const en = {
             ],
             [
                 "Make it yours",
-                "€4.99",
-                "Describe any animal and get your own companion in five poses. Your first one is free.",
+                "€2.99",
+                "Describe any animal and get your own companion in five poses. Invite a friend and you each get one free.",
             ],
         ],
     },
@@ -754,8 +754,8 @@ const fr: typeof en = {
             ],
             [
                 "À ton image",
-                "4,99 €",
-                "Décrivez n’importe quel animal et obtenez votre propre compagnon en cinq poses. Le premier est offert.",
+                "2,99 €",
+                "Décrivez n’importe quel animal et obtenez votre propre compagnon en cinq poses. Invitez un ami et vous en recevez chacun un gratuit.",
             ],
         ],
     },

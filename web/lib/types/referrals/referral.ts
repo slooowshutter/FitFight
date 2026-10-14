@@ -5,7 +5,11 @@ export const claimReferralRequestSchema = z
     .object({ code: referralCodeSchema })
     .strict();
 export const claimReferralResponseSchema = z
-    .object({ recorded: z.boolean() })
+    .object({
+        recorded: z.boolean(),
+        /** The account is older than 7 days, so it cannot be referred. */
+        account_not_new: z.boolean(),
+    })
     .strict();
 
 export type ReferralCode = z.infer<typeof referralCodeSchema>;

@@ -2,9 +2,23 @@ import Foundation
 
 // API_MODELS
 struct HKQuantityType {}
+struct HKUnit { static func count() -> HKUnit { HKUnit() } }
 final class HKHealthStore {
     var samples: [(Date, Int)] = []
     var reads: [(Date, Date)] = []
+    var dailyReads: [(Date, Date)] = []
+}
+enum HealthKitActivityAggregates {
+    static func dailyTotals(
+        store: HKHealthStore, type: HKQuantityType, unit: HKUnit, start: Date, end: Date, calendar: Calendar
+    ) async throws -> [String: Double] {
+        store.dailyReads.append((start, end))
+        var totals: [String: Double] = [:]
+        for (date, steps) in store.samples where date >= start && date < end {
+            totals[HealthKitStepAggregates.dayStamp(date, calendar: calendar), default: 0] += Double(steps)
+        }
+        return totals
+    }
 }
 struct HealthKitSyncTrace {
     enum Stage { case healthKitDaily, healthKitFight }
@@ -46,6 +60,16 @@ enum HealthKitStepAggregates {
         precondition(fight.stepCheckpoints?.map(\.cutoffAt) == ["2026-03-28T23:00:00.000Z", "2026-03-29T22:00:00.000Z", "2026-03-30T12:00:00.000Z"])
         precondition(store.reads.allSatisfy { $0.0 == start && $0.1 <= cutoff }, "All cumulative points use the identical Fight start")
         precondition(store.reads.filter { $0.1 == cutoff }.count == 1, "The total must reuse the final checkpoint query")
+        precondition(store.reads.count == 2 && store.dailyReads.count == 1, "One window read, one first-day read, one daily read")
+        store.reads = []
+        store.dailyReads = []
+        let overlapping = FitFightHealthKitContext(serverNow: cutoff, fightWindows: context.fightWindows + [
+            .init(fightId: UUID(), state: "live", startsAt: start.addingTimeInterval(3600), endsAt: cutoff, cutoffAt: cutoff, timeZone: "Europe/Paris")
+        ])
+        let both = try await HealthKitStepAggregates.read(store: store, type: HKQuantityType(), context: overlapping, trace: HealthKitSyncTrace())
+        precondition(store.dailyReads.count == 1, "Overlapping Fights share one daily read")
+        precondition(store.reads.count == 4, "Each Fight reads only its window and its first day")
+        precondition(both.fightAggregates.map { $0.stepCheckpoints?.map(\.steps) } == [[4000, 7000, 9000], [4000, 7000, 9000]])
         let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result)) as! [String: Any]
         let aggregates = encoded["fight_aggregates"] as! [[String: Any]]
         precondition((aggregates[0]["step_checkpoints"] as? [[String: Any]])?.count == 3)

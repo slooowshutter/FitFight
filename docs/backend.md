@@ -330,9 +330,11 @@ away when the account is deleted. This stores descriptions, not generated artwor
 Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.
 `GET /api/v1/provider-uploads/context` adds the Fight's `time_zone`. New native
 uploads attach optional `step_checkpoints` to each `fight_aggregates` item. Each
-point is Apple's cumulative query from the same Fight start, through that Fight
-day's end or the current cutoff. The final query supplies both the last point
-and the scored total. The server validates complete day coverage, increasing
+point is cumulative Steps from the Fight start, through that Fight day's end or
+the current cutoff. Since 14 Oct 2026 the first day is an exact query from the
+Fight start, later days add one shared daily read per Fight time zone, and no
+point exceeds the score. The final query supplies both the last point and the
+scored total. The server validates complete day coverage, increasing
 cutoffs and counts, and an identical final cutoff and total.
 
 Checkpoints live on `private.fight_score_snapshots` with their score revision.
@@ -380,10 +382,21 @@ preferences automatically.
 
 Profiles carry a stable, read-only `referral_code`; there is no link-generation endpoint.
 Authenticated `POST /api/v1/referrals` accepts `{ code }` and records the first referrer
-in `private.referrals`. Self-referrals and duplicates do nothing. Relationships use
-account IDs and cascade on deletion of either account. This counts attributed accounts,
-including existing accounts, not clicks or installs. Deploy the referral migration and
-backend before the native build. See the install handoff in [`status.md`](status.md).
+in `private.referrals`. Self-referrals and duplicates do nothing. Only an account created at
+most 7 days before the claim counts; an older one gets `account_not_new: true`.
+Relationships use account IDs and cascade on deletion of either account. Deploy the
+referral migration and backend before the native build. See the install handoff in
+[`status.md`](status.md).
+
+The friend usually claims on the website before installing: `/r/<code>` signs in with
+Apple or Google through Supabase Auth and posts the claim at once. Google first calls
+`POST /api/v1/auth/google`, the same rule as the app, so one email gives one account.
+When the referred account's first Apple Health steps arrive (a `private.activity_metrics`
+day total above 0 from an `apple_health` source), `grantReferralFreeCharacters` gives the
+referrer a `referral` grant and the friend a `referred` grant, both keyed by the friend's
+id, and the referrer gets one push. It runs after a referral claim, after each HealthKit
+upload, and in the 15-minute `close-fights` sweep. See
+[Blend workflows](blend-workflows.md#free-characters).
 
 ## Loop
 

@@ -12,7 +12,6 @@ export const POST = apiRoute(async (request) => {
     return json(
         await reconcileGoogleIdentity({
             idToken: body.id_token,
-            accessToken: body.access_token,
             nonce: body.nonce,
         }),
     );

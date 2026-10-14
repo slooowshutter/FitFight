@@ -70,6 +70,10 @@ export const specialPurchaseRequestSchema = z
         signed_transaction: z.string().min(1).max(30_000),
     })
     .strict();
+/** A Special unlocked with one free character instead of an Apple charge. */
+export const specialFreeClaimRequestSchema = z
+    .object({ companion_id: limitedCompanionIdSchema })
+    .strict();
 export const specialOutcomeValues = ["owned", "refunded", "conflict"] as const;
 export const specialClaimResultSchema = z.object({
     outcome: z.enum(specialOutcomeValues),

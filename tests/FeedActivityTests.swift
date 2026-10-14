@@ -31,6 +31,8 @@ struct Fight {
     // MODEL_STATE
     var fights: [Fight] = []
     var pendingJoinable: Fight?
+    var hostedRounds: [Fight] = []
+    var showingHosted = false
     var dailyRecapID: String?
     static let pendingFightRouteKey = "fitfight.tests.activity.route"
     static let pendingDailyStatusKey = "fitfight.tests.activity.daily"

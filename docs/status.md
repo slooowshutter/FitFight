@@ -12,7 +12,8 @@ Marc asked (11 and 14 Oct) that every new user can fight him 1v1 on Steps, repea
 steps wins, no prize. Each user sees only their own fight against him. He sees every
 challenger on one admin page. Decisions: 30-day rounds from the day the user joins, new
 users only (offered in onboarding), one tap records consent, and no wait for the Steps sync
-rework.
+rework. That rework (#376) landed first: the activity sync still uploads daily Steps, which
+is what scores Marc, so nothing here changed for it.
 
 **Why Marc is not an ordinary member of hundreds of 1v1s:** his phone would run about 31
 Apple Health queries per fight on every sync, `POST /api/v1/healthkit/steps` takes at most
@@ -45,8 +46,8 @@ those fields, so the server ignores them instead of rejecting the save.
   them.
 - Nobody can invite or join into a founder fight. Leaving it, or removing anyone from it,
   pauses the series; the owner does not need a successor there.
-- App: a "Fight Marc" page after Apple Health in onboarding ("Fight Marc" or "Not now"), then
-  the Everybody page. Admin tab: "Founder fights" lists every challenger. Release note
+- App: a "Fight Marc" page in onboarding ("Fight Marc" or "Not now") after Apple Health and
+  the companion, right before the Everybody page; both share step 5. Admin tab: "Founder fights" lists every challenger. Release note
   1.1.3, 14 Oct, English and French.
 
 **Host view (14 Oct, Marc):** every round Marc hosts is one card at the top of his Fights
@@ -88,8 +89,8 @@ for each of them and would reject his Steps sync.
 local Supabase rebuilt from every migration, in CI's order: schema lint clean, build 113
 compatibility 1 of 1, pgTAP 316 of 316 (including `supabase/tests/founder_fights.sql`: no
 fight or Feed ping to the host, no Main post visibility through a founder round),
-`test:database` 104 of 105, then with direct access closed pgTAP 18 of 18 and
-`test:database` 103 of 105 with 1 skipped. The one failure in both runs, "every admin
+`test:database` 109 of 110, then with direct access closed pgTAP 18 of 18 and
+`test:database` 108 of 110 with 1 skipped (after merging develop at 21f52d57). The one failure in both runs, "every admin
 dashboard card and chart runs on the migrated schema", fails the same way with develop's code
 on that database (local clock skew), so CI decides it. The skipped case renames a founder
 fight; with direct access closed every service-role fight update already fails on
@@ -99,10 +100,121 @@ another zone, no push queued for him at the end of a round, idempotency, his Ste
 no founder totals, his source left untouched by signups, the upload context, invite, join and
 edit guards, the admin list, leaving pausing the series and the next round keeping its host.
 The Feed, mention, push, profile and admin cases cover the exclusions. iOS simulator build of
-the FitFight scheme succeeded, and the onboarding state, localization and API contract checks
+the FitFight scheme succeeded, and every iOS CI script, localization and API contract check
 passed. Not deployed; no staging or production check of the new code.
 
 ---
+
+## Steps sync: fewer HealthKit reads, Steps-only history (prepared 14 Oct 2026)
+
+Marc asked for each day to be read once for all Fights, and for the app to stop
+uploading every activity type other than Steps.
+
+**Code:** a Fight upload now runs one exact window query per Fight (the score),
+one exact query for the Fight's first day, and one shared merged daily read per
+Fight time zone for the later days. Three month-long Fights on day 25 drop from
+about 78 HealthKit queries to 7. Earlier checkpoints never exceed the score,
+because summed days can drift a few steps from Apple's window total. The
+activity sync uploads daily Steps only: no other metric, workout summary or
+deletion. It rereads from 7 days before the last acknowledged upload, so a
+phone that missed syncs for days leaves no gap. Only Steps registers for
+background delivery. The upload contracts are unchanged, so no backend or
+database change is needed and older builds keep working. Profile's own activity
+screen still reads workouts directly from Apple Health on the phone.
+
+**Evidence for 7 days (staging, 14 Oct 2026):** across 53 people's Fight
+checkpoints, a finished day still changed later in 6.8% of reads 0-12 h after
+midnight, 3.6% at 12-36 h, 2.2% at 60-72 h, 0.8% at 108-120 h and 0.3% at
+132-144 h. No day read 144 h or more after midnight ever changed (1,919
+reads). Late changes are rare but large: a few hundred to about 2,900 steps.
+Fights still close 24 h after they end, so a rare late Watch sync can miss the
+result; Marc kept that grace period.
+
+**Verification (local):** simulator build and `scripts/test_fight_chart_scores.py`
+passed, including a new overlapping-Fights case. Not on TestFlight yet.
+
+## Referral free characters and website sign-in, prepared 14 Oct 2026
+
+**Product (Marc, 14 Oct 2026):** free characters come only from referrals (and
+Marc's admin gifts). For each new friend you refer, you and the friend each get 1
+free character when the friend connects Apple Health; no monthly limit. New accounts
+get none on their own, and every unused free character given before today is taken
+back. A free character makes your own animal or unlocks any Special. The custom
+character price on the website is EUR 2.99, matching the App Store product.
+
+**Code:**
+
+- Migration `20261014120000_referral_free_characters.sql`: grants may be negative only
+  for reason `taken_back`; one `taken_back` row per account cancels its unused free
+  characters; `special_purchases` gains `free_claim_key` with nullable Apple columns
+  behind a funding check (same shape as free custom characters). No row is changed
+  or removed.
+- `POST /api/v1/referrals` counts only accounts created at most 7 days earlier and
+  adds `account_not_new`.
+- `grantReferralFreeCharacters` (one insert, keyed by the friend's id, so it is
+  idempotent) gives `referral` to the referrer and `referred` to the friend once the
+  friend has an Apple Health steps day above 0. Only referrals recorded since 14 Oct
+  2026, within 7 days of the friend's signup, pay, so old referrals pay nothing. It
+  runs after a claim, after each HealthKit upload (`after()`), and in the 15-minute
+  `close-fights` sweep. The referrer gets one push: "<friend> joined FitFight" /
+  "You have a free character." (French too), respecting
+  `notification_preferences.enabled`; a failed push is logged and not retried.
+- `GET /me/custom-characters` stops adding the `signup` grant and adds
+  `referral_pending`. New `POST /me/specials/free` (Idempotency-Key,
+  `{ companion_id }`). New admin `GET /admin/free-characters` lists referral grants.
+- `POST /auth/google`: `access_token` is optional, because the website's Google button
+  gives only the ID token.
+- Website: `/r/<code>` and `/fr/r/<code>` show Sign in with Apple (Services ID
+  `com.fitfight.mvp.web`, popup) and Sign in with Google (the project's existing Web
+  client), sign in to Supabase with the ID token, and save the referral at once. Then
+  the download step says to sign in with the same email. An older account is told
+  so and sent to the app. "Download without the free character" keeps the old flow.
+  Pricing copy: Make it yours EUR 2.99, "Invite a friend and you each get one free."
+- App: sign-up order is Username, Apple Health, Companion. A referred friend sees
+  "Connect Apple Health to get the free character from your friend's invite", and the
+  Companion step reloads until it arrives. The companion picker shows "N free" and
+  "Unlock with 1 free" on Specials. Refer a friend explains the reward. Admin → Free
+  characters is now a row that opens the gift card and the referral list. Three
+  1.1.3 release notes; the 12 Oct note no longer says every account gets one.
+
+**Contract:** additive. Older apps ignore `account_not_new` and `referral_pending`,
+never call the new routes, and still claim from a reopened link. Older builds
+during onboarding keep their page order. Order: apply the migration, then deploy
+the backend, then ship the app. Between the migration and the backend deploy on
+staging, the old backend can still add a `signup` grant for an account that opens
+the store; check `select * from private.free_character_grants where reason = 'signup'
+and created_at > <migration time>` after the deploy.
+
+**Verification (local, 14 Oct):** local Supabase (CLI 2.109.1, Colima) applied the
+migration; a seeded check took back exactly the unused grants. Strict TypeScript,
+the new `free-characters.integration.ts` (7-day rule, steps rule, once per referral,
+concurrent grants, sweep, muted and deleted referrers, free Special and wearing it,
+negative grants) and the updated referral and custom-character database tests passed.
+Against `next dev` and the local stack: an old account got `account_not_new`; a new
+friend's claim then an Apple Health upload gave both grants once; the referrer
+unlocked and wore a Special for free; the admin list showed the grant. All 444 unit
+tests passed; 101 of 102 database tests passed, and the one failure (admin dashboard
+cards across periods) fails the same way on unchanged `develop` locally. The
+`FitFight` scheme built for the iOS Simulator with Xcode 27, and the native script
+checks passed, including new onboarding-order and free-Special cases. The referral
+page rendered in English and French with both buttons (the Google button text stays
+English until the origin is registered). Not run: a real Apple or Google sign-in
+(needs Marc's setup below), a push on a device, and GitHub CI.
+
+**Known risk:** the steps condition trusts the uploaded steps, so one person with a
+second account and a scripted upload can earn characters. Add a stricter signal
+(steps on two days, a joined Fight) if abuse shows up in the admin list.
+
+**Live:** nothing deployed.
+
+**Marc's setup (staging and production), done by Marc on 14 Oct 2026, not yet checked with a real sign-in:** an Apple Services ID
+`com.fitfight.mvp.web` grouped with the App ID `com.fitfight.mvp`, domains
+`fitfight.app` and `staging.fitfight.app`, return URLs `https://fitfight.app/` and
+`https://staging.fitfight.app/`; add it to the Apple provider client IDs in both
+Supabase projects; add `https://fitfight.app` and `https://staging.fitfight.app` as
+JavaScript origins on each project's existing Google Web client, and publish both
+Google consent screens (both now published). No Supabase redirect URL is needed
+(ID-token sign-in, no redirect).
 
 ## Race Day home page: prepared 12 Oct 2026
 
@@ -142,7 +254,8 @@ the staging TestFlight dialog worked in Chrome.
 ## Free characters, prepared 12 Oct 2026
 
 **Product (Marc):** no credits. Each account has a number of free characters
-("1 free"). Every account, current and new, gets 1. Marc can give more from the
+("1 free"). Every account, current and new, gets 1 (changed 14 Oct 2026: only
+referrals and gifts, see above). Marc can give more from the
 app. A later "beat Marc" challenge can add one the same way. Onboarding can
 create one and moves on at once; the push and the Fights card say when it is ready.
 

@@ -464,7 +464,21 @@ struct YouView: View {
         FFGroupedRows {
             if let code = session.profile?.referralCode {
                 ShareLink(item: APIConfig.publicOrigin.appending(path: "r/\(code.uuidString.lowercased())")) {
-                    rowLabel(title: String(appLocalized: "Refer a friend"), destructive: false)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(String(appLocalized: "Refer a friend"))
+                                .ffType(.rowTitle)
+                                .foregroundStyle(theme.text)
+                            Text(String(appLocalized: "When they connect Apple Health, you each get a free character."))
+                                .ffType(.caption)
+                                .foregroundStyle(theme.textSecondary)
+                        }
+                        Spacer()
+                        FFChevron()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(FFHapticPlainStyle())
                 FFDivider()

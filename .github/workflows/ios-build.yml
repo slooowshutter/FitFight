@@ -34,6 +34,7 @@ on:
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
             - "scripts/test_trophy_streak.py"
+            - "scripts/test_past_rounds.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -71,6 +72,7 @@ on:
             - "scripts/test_slide_haptics.py"
             - "scripts/test_feed_activity.py"
             - "scripts/test_trophy_streak.py"
+            - "scripts/test_past_rounds.py"
             - "docs/design/source/tokens.json"
             - "scripts/check_localizations.py"
             - "fastlane/**"
@@ -188,6 +190,9 @@ jobs:
 
             - name: Verify series trophy streaks
               run: python3 scripts/test_trophy_streak.py
+
+            - name: Verify Past lists every finished round
+              run: python3 scripts/test_past_rounds.py
 
             - name: Verify native API contracts
               run: |

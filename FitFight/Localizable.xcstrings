@@ -14470,6 +14470,16 @@
                 }
             }
         },
+        "Past now shows every finished round of a repeating fight with its dates, and tapping one opens that round’s result.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Passés affiche maintenant chaque manche terminée d’un défi récurrent avec ses dates, et en toucher une ouvre le résultat de cette manche."
+                    }
+                }
+            }
+        },
         "Your own characters no longer sit on a grey square: their transparent background shows the card behind them.": {
             "localizations": {
                 "fr": {

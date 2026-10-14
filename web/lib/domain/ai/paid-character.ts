@@ -1,19 +1,12 @@
 import { startAiRun, readAiRun } from "@/lib/domain/ai/workflow-requests";
-import { sendApnsAlert } from "@/lib/apns/apns-client";
-import { readApnsEnvironment } from "@/lib/apns/apns-config";
 import { ApiError } from "@/lib/http";
-import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { sendUserAlert } from "@/lib/notifications/send-user-alert";
 import {
     chooseCustomCharacterPortrait,
     claimCustomCharacterPush,
     prepareCustomCharacterStage,
     readCustomCharacterStore,
 } from "@/lib/supabase/queries/custom-characters-supabase-query";
-import {
-    decryptInstallationToken,
-    readActiveDeviceInstallations,
-    revokeDeviceInstallation,
-} from "@/lib/supabase/queries/device-installations-supabase-query";
 import type { CustomCharacterAdvanceRequest } from "@/lib/types/ai/custom-character";
 
 /** Start rejections that the per-minute reconciler retries on its own. */
@@ -79,42 +72,18 @@ export async function advancePaidCharacter(
         ? "portraits" as const
         : character.phase === "complete" ? "poses" as const : null;
     // Claim even without APNs, so an owed push cannot keep the purchase in every reconcile batch.
-    const apns = milestone && await claimCustomCharacterPush(userId, purchaseId, milestone) ? readApnsEnvironment() : null;
-    if (milestone && apns) {
-        const database = createDatabaseClient();
-        const installations = await readActiveDeviceInstallations(userId, database);
-        const french = installations[0]?.locale === "fr";
-        const alert = milestone === "portraits"
+    if (milestone && await claimCustomCharacterPush(userId, purchaseId, milestone)) {
+        await sendUserAlert(userId, (french) => milestone === "portraits"
             ? french
                 ? { title: "Ton personnage est prêt", body: "Choisis ton portrait préféré parmi les trois." }
                 : { title: "Your character is ready", body: "Pick your favourite of the three portraits." }
             : french
                 ? { title: "Ton personnage est prêt", body: "Ses cinq poses fitness sont prêtes. Fais-en ton compagnon." }
-                : { title: "Your character is ready", body: "All five fitness poses are done. Make it your companion." };
-        // Best effort, like the other alerts: the first installation that accepts the push is enough.
-        for (const installation of installations) {
-            let deviceToken: string;
-            try {
-                deviceToken = decryptInstallationToken(installation);
-            } catch {
-                await revokeDeviceInstallation(installation.id, "decrypt_failed", database);
-                continue;
-            }
-            const sent = await sendApnsAlert({
-                deviceToken,
-                environment: installation.apns_environment,
-                topic: apns.topic,
-                ...alert,
-                route: `/characters/${purchaseId}`,
-                collapseId: `${purchaseId}:${milestone}`,
-                imageUrl: character.portrait_url ?? undefined,
-            });
-            if (sent.unregistered) {
-                await revokeDeviceInstallation(installation.id, sent.reason ?? "unregistered", database);
-                continue;
-            }
-            if (sent.httpStatus === 200 || sent.retryLater || sent.invalidProviderToken) break;
-        }
+                : { title: "Your character is ready", body: "All five fitness poses are done. Make it your companion." }, {
+            route: `/characters/${purchaseId}`,
+            collapseId: `${purchaseId}:${milestone}`,
+            imageUrl: character.portrait_url ?? undefined,
+        });
     }
     return character;
 }

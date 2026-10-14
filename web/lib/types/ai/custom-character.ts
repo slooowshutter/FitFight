@@ -58,8 +58,10 @@ export const customCharacterStoreSchema = z.object({
     environment: applePurchaseEnvironmentSchema,
     purchases_enabled: z.boolean(),
     product_id: z.literal(customCharacterProductId),
-    /** Characters this person can still create without paying. */
+    /** Characters or Specials this person can still get without paying. */
     free_characters: z.number().int().nonnegative(),
+    /** Referred, and the referral character waits for this account's first Apple Health steps. */
+    referral_pending: z.boolean(),
     characters: z.array(customCharacterProgressSchema),
 });
 
@@ -83,6 +85,22 @@ export const freeCharacterGiftRequestSchema = z.union([
 export const freeCharacterGiftResultSchema = z.object({
     people: z.number().int().nonnegative(),
     quantity: z.number().int().positive(),
+});
+
+/** A referrer paid by one grant call. The friend's username is null until they choose one. */
+export const referralPayoutSchema = z.object({
+    referrer_id: z.string().uuid(),
+    friend_handle: z.string().nullable(),
+    notify: z.boolean(),
+});
+
+export const freeCharacterReferralGrantsSchema = z.object({
+    total: z.number().int().nonnegative(),
+    grants: z.array(z.object({
+        referrer: z.string(),
+        friend: z.string().nullable(),
+        created_at: z.coerce.date(),
+    })),
 });
 
 export const customCharacterAdvanceRequestSchema = z.object({

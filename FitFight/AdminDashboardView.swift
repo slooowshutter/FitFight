@@ -73,7 +73,7 @@ struct AdminDashboardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
-            FreeCharacterGiftCard()
+            FreeCharactersRow()
             controls
             statusLine
             if let failure {
@@ -386,9 +386,98 @@ struct FitFightFreeCharacterGift: Decodable {
     let quantity: Int
 }
 
+/// `GET /api/v1/admin/free-characters`: the newest referral characters. A deleted friend has no username.
+struct FitFightFreeCharacterReferrals: Decodable {
+    struct Grant: Decodable {
+        let referrer: String
+        let friend: String?
+        let createdAt: Date
+        enum CodingKeys: String, CodingKey {
+            case referrer, friend
+            case createdAt = "created_at"
+        }
+    }
+    let total: Int
+    let grants: [Grant]
+}
+
+/// Free characters stay behind this row, so the dashboard opens on its charts. Like the gift card, it
+/// reads this build's own data.
+struct FreeCharactersRow: View {
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    @State private var referrals: FitFightFreeCharacterReferrals?
+    @State private var failure: String?
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            FFCard {
+                HStack(spacing: 13) {
+                    Image(systemName: "gift").font(.system(size: 20, weight: .semibold)).foregroundStyle(theme.mossText)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "Free characters").ffType(.heading).foregroundStyle(theme.text)
+                        Text(verbatim: failure ?? referrals.map { "\($0.total) from referrals. Tap to see them or give some." } ?? "Tap to give some.")
+                            .ffType(.caption)
+                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
+                }
+            }
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .task { await load() }
+        .sheet(isPresented: $showing) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                    FreeCharacterGiftCard()
+                    FFCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(verbatim: "Referral characters").ffType(.heading).foregroundStyle(theme.text)
+                            Text(verbatim: "Each friend who connects Apple Health gives 1 to the referrer and 1 to the friend. The newest 100 referrers:")
+                                .ffType(.caption).foregroundStyle(theme.textSecondary)
+                            if let failure {
+                                Text(verbatim: failure).ffType(.caption).foregroundStyle(theme.emberText)
+                            }
+                            ForEach(Array((referrals?.grants ?? []).enumerated()), id: \.offset) { _, grant in
+                                HStack {
+                                    Text(verbatim: "@\(grant.referrer)").ffType(.label).foregroundStyle(theme.text)
+                                    Text(verbatim: "invited \(grant.friend.map { "@\($0)" } ?? "a deleted account")")
+                                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    Spacer(minLength: 0)
+                                    Text(grant.createdAt, format: .dateTime.day().month(.abbreviated))
+                                        .ffType(.caption).foregroundStyle(theme.textTertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(theme.space.screenPadding)
+            }
+            .fitFightTheme(theme)
+            .presentationBackground(theme.bg)
+            .presentationCornerRadius(theme.radius.shell)
+            .presentationDragIndicator(.visible)
+            .task { await load() }
+        }
+    }
+
+    private func load() async {
+        do {
+            let api = AppVersion.backend == "prod" ? FitFightAPI() : FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+            referrals = try await api.freeCharacterReferrals(accessToken: try await session.freshAccessToken())
+            failure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            failure = error.localizedDescription
+        }
+    }
+}
+
 /// Gives free characters on this build's own data: a staging build writes staging accounts through
 /// the preview server, like the rest of this tab; an App Store build writes production accounts.
-/// Every account already gets one on its own.
+/// New accounts get none on their own; referrals and these gifts are the only way.
 struct FreeCharacterGiftCard: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
@@ -408,7 +497,7 @@ struct FreeCharacterGiftCard: View {
         FFCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text(verbatim: "Free characters").ffType(.heading).foregroundStyle(theme.text)
-                Text(verbatim: "Everyone gets 1 on their own. Give more to \(production ? "Production" : "Staging") accounts.")
+                Text(verbatim: "Give to \(production ? "Production" : "Staging") accounts.")
                     .ffType(.caption).foregroundStyle(theme.textSecondary)
                 FFSegmented(items: [false, true], selection: $everyone, fill: true) { $0 ? "Everyone" : "One person" }
                 if !everyone {

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Sql, TransactionSql } from "postgres";
 import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { readFreeCharacters, readReferralPending } from "@/lib/supabase/queries/free-characters-supabase-query";
 import { readSpecialStore } from "@/lib/supabase/queries/specials-supabase-query";
 import { customCharacterProductId, type AppleCustomCharacterTransaction } from "@/lib/types/apple/custom-character-purchase";
 import {
@@ -31,18 +32,6 @@ async function saveCustomCharacterDescription(
         await sql`insert into private.custom_character_portraits (purchase_id, slot, action_key)
             values (${purchaseId}, 1, ${key}), (${purchaseId}, 2, ${randomUUID()}), (${purchaseId}, 3, ${randomUUID()})`;
     return customCharacterPurchaseRowSchema.parse(saved);
-}
-
-/** Every account gets one signup character the first time this runs; admin gifts add more. Each free character uses one. */
-async function readFreeCharacters(sql: Sql | TransactionSql, userId: string) {
-    await sql`insert into private.free_character_grants (user_id, quantity, reason, operation_key)
-        values (${userId}, 1, 'signup', ${randomUUID()}) on conflict do nothing`;
-    const [row] = await sql`select
-        (select coalesce(sum(quantity), 0) from private.free_character_grants where user_id = ${userId})
-        - (select count(*) from private.custom_character_purchases purchase
-            join private.special_accounts account on account.id = purchase.account_id
-            where account.user_id = ${userId} and purchase.free_claim_key is not null) as remaining`;
-    return Number(row.remaining);
 }
 
 /** Apple account tokens are shared with Specials; only this purchase flag controls new character checkout. */
@@ -142,6 +131,7 @@ export async function readCustomCharacterStore(
         purchases_enabled: true,
         product_id: customCharacterProductId,
         free_characters: await readFreeCharacters(database, userId),
+        referral_pending: await readReferralPending(userId, database),
         characters,
     });
 }

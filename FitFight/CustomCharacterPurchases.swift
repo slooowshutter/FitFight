@@ -10,6 +10,8 @@ struct CustomCharacterStoreSnapshot: Decodable {
     let productId: String
     /// Characters this person can still create without paying. A server without the field means none.
     let freeCharacters: Int
+    /// Referred, and the referral character waits for this account's first Apple Health steps. Missing means no.
+    let referralPending: Bool
     let characters: [CustomCharacterProgress]
 
     enum CodingKeys: String, CodingKey {
@@ -18,6 +20,7 @@ struct CustomCharacterStoreSnapshot: Decodable {
         case purchasesEnabled = "purchases_enabled"
         case productId = "product_id"
         case freeCharacters = "free_characters"
+        case referralPending = "referral_pending"
     }
 
     init(from decoder: Decoder) throws {
@@ -27,6 +30,7 @@ struct CustomCharacterStoreSnapshot: Decodable {
         purchasesEnabled = try container.decode(Bool.self, forKey: .purchasesEnabled)
         productId = try container.decode(String.self, forKey: .productId)
         freeCharacters = try container.decodeIfPresent(Int.self, forKey: .freeCharacters) ?? 0
+        referralPending = try container.decodeIfPresent(Bool.self, forKey: .referralPending) ?? false
         characters = try container.decode([CustomCharacterProgress].self, forKey: .characters)
     }
 }
@@ -139,8 +143,10 @@ final class CustomCharacterPurchases: ObservableObject {
     /// Kept until the server answers, so tapping again after a lost answer cannot use a second free character.
     private var freeClaimKey: UUID?
 
-    /// Characters this person can still create without paying.
+    /// Characters or Specials this person can still get without paying.
     var freeCharacters: Int { snapshot?.freeCharacters ?? 0 }
+    /// Referred, and the referral character waits for this account's first Apple Health steps.
+    var referralPending: Bool { snapshot?.referralPending ?? false }
 
     /// Characters the server is still drawing, waiting for a portrait choice, or stuck on a failure.
     var inProgress: [CustomCharacterProgress] {

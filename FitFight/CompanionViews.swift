@@ -1242,6 +1242,14 @@ struct CompanionPicker: View {
                 .font(.custom("Nunito-Bold", size: 13, relativeTo: .body))
                 .foregroundStyle(theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if characterPurchases.freeCharacters > 0 {
+                HStack(spacing: 10) {
+                    FreeCharacterBadge(count: characterPurchases.freeCharacters)
+                    Text(String(appLocalized: "Unlock any Special or create your own."))
+                        .ffType(.caption).foregroundStyle(theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             FFSegmented(items: CompanionCategory.allCases.filter { $0 != .limited || CompanionCategory.limited.animals.contains(where: shows) },
                         selection: $category, fill: true) { $0.name }
             .disabled(isSaving)
@@ -1467,9 +1475,11 @@ struct CompanionPicker: View {
                         title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned
                             ? purchases.hasUnclaimedCharge
                                 ? String(appLocalized: "Unlock this Special")
-                                : specialPrice.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable")
+                                : unlocksFree
+                                    ? String(appLocalized: "Unlock with 1 free")
+                                    : specialPrice.map { String(appLocalized: "special.buy", defaultValue: "Buy for \($0)") } ?? String(appLocalized: "Purchases unavailable")
                             : String(appLocalized: "Save companion"),
-                        enabled: (!paid || owned || canBuy) && (!draft.isLimited || status(draft) != nil),
+                        enabled: (!paid || owned || canBuy || unlocksFree) && (!draft.isLimited || status(draft) != nil),
                         busy: isSaving || purchases.isBusy, fullWidth: true
                     ) { Task { await saveStock(draft) } }
                 }
@@ -1501,7 +1511,11 @@ struct CompanionPicker: View {
                 return
             }
         }
-        .task(id: session.profile?.userId) { await loadLimitedEditions() }
+        .task(id: session.profile?.userId) {
+            // A referral character can arrive while the app is open, so the balance is read again here.
+            try? await characterPurchases.refresh(session: session)
+            await loadLimitedEditions()
+        }
         .onChange(of: category, initial: true) { _, category in
             error = ""
             // The stage always shows an animal, so keep the draft on one from this tab.
@@ -1562,6 +1576,11 @@ struct CompanionPicker: View {
         purchases.product?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
     }
 
+    /// A free character pays for a Special, unless an earlier paid charge is still waiting to unlock one.
+    private var unlocksFree: Bool {
+        characterPurchases.freeCharacters > 0 && !purchases.hasUnclaimedCharge
+    }
+
     /// Specials stay hidden while sales are off, except one this account already owns.
     private func shows(_ animal: StockCompanion) -> Bool {
         !animal.isLimited || CompanionPreview.isEnabled || purchases.snapshot?.purchasesEnabled == true || status(animal) == .yours
@@ -1577,11 +1596,14 @@ struct CompanionPicker: View {
             var bought = false
             if animal.isLimited && !CompanionPreview.isEnabled,
                purchases.snapshot?.editions.first(where: { $0.id == animal.rawValue })?.status != .yours {
-                guard await purchases.buy(animal, session: session) else {
+                let free = unlocksFree
+                guard free ? await purchases.claimFree(animal, session: session) : await purchases.buy(animal, session: session) else {
                     self.error = purchases.message
+                    if free { try? await characterPurchases.refresh(session: session) }
                     await loadLimitedEditions()
                     return
                 }
+                if free { try? await characterPurchases.refresh(session: session) }
                 bought = true
             }
             try await companions.choose(id: animal.rawValue, prompt: nil, session: session)
@@ -1596,7 +1618,10 @@ struct CompanionPicker: View {
             return
         } catch {
             self.error = error.localizedDescription
-            if animal.isLimited { await loadLimitedEditions() }
+            if animal.isLimited {
+                try? await characterPurchases.refresh(session: session)
+                await loadLimitedEditions()
+            }
         }
     }
 

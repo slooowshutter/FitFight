@@ -23,7 +23,7 @@ export const POST = apiRoute(async (request, { timing }) => {
     const { userId } = await measureRequestStage(timing, "auth", () =>
         verifyUser(request),
     );
-    const { time_zone: timeZone } = fightSnapshotRequestSchema.parse(
+    const { time_zone: timeZone, hosted } = fightSnapshotRequestSchema.parse(
         await readJson(request),
     );
     const sql = createDatabaseClient();
@@ -36,7 +36,7 @@ export const POST = apiRoute(async (request, { timing }) => {
     after(() => processDueNotifications(new Date(), sql));
     return json(
         await measureRequestStage(timing, "db", () =>
-            readFightSnapshot(userId, timeZone),
+            readFightSnapshot(userId, timeZone, undefined, hosted),
         ),
     );
 }, "fights_refresh");

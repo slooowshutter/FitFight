@@ -244,16 +244,17 @@ function definitions(
         select s.*, exists (
             select 1 from public.fight_members as m
             join public.fights as f on f.id = m.fight_id
-            where m.user_id = s.user_id and m.state = 'accepted' and f.state <> 'cancelled'
+            where m.user_id = s.user_id and m.state = 'accepted' and f.state <> 'cancelled' and f.host_id is null
                 and f.starts_at < (s.day + 1)::timestamp and f.ends_at > s.day::timestamp
         ) as in_fight
         from (${recentSteps}) as s
     `;
-    // The app-wide and suggested Fights invite people automatically; they distort social metrics.
+    // The app-wide and suggested Fights invite people automatically, and the founder is in every
+    // founder Fight; they distort social metrics.
     const realFights = sql`
         select f.* from public.fights as f
         left join public.fight_series as series on series.id = f.series_id
-        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false)
+        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false) and f.host_id is null
     `;
     const firstRounds = sql`
         select f.id, f.owner_id as user_id, f.created_at as at from (${realFights}) as f
@@ -307,19 +308,19 @@ function definitions(
     };
     const liveFights: AdminDashboardCardDefinition = {
         id: "live_fights", title: "Live fights", unit: "count", better: true,
-        note: "Now, vs 7 days ago. App-wide Fight included.",
-        definition: "Fights running now, compared with 7 days ago. The app-wide Fight counts. Drafts and cancelled Fights do not.",
+        note: "Now, vs 7 days ago. App-wide Fight included, founder Fights not.",
+        definition: "Fights running now, compared with 7 days ago. The app-wide Fight counts. Drafts, cancelled Fights and founder Fights do not.",
         example: (r) => `${r.count(r.value, "fight is", "fights are")} live now${r.against("a week ago")}.`,
         query: sql`
             select count(*) filter (where starts_at <= ${w.now} and ends_at > ${w.now})::float8 as value,
                 count(*) filter (where starts_at <= ${ago(7)} and ends_at > ${ago(7)})::float8 as previous
-            from public.fights where state not in ('draft', 'cancelled')
+            from public.fights where state not in ('draft', 'cancelled') and host_id is null
         `,
     };
     const weeklyFightsCreated: AdminDashboardCardDefinition = {
         id: "fights_started", title: "Weekly fights created", unit: "count", better: true,
-        note: "New Fights, not later rounds or app-wide ones. Last 7 days vs the 7 before.",
-        definition: "New Fights created in the last 7 days, up to now, compared with the 7 days before. Later rounds of a repeating Fight, the app-wide Fight and suggested Fights are not counted.",
+        note: "New Fights, not later rounds, app-wide or founder ones. Last 7 days vs the 7 before.",
+        definition: "New Fights created in the last 7 days, up to now, compared with the 7 days before. Later rounds of a repeating Fight, the app-wide Fight, suggested Fights and founder Fights are not counted.",
         example: (r) => `${r.count(r.value, "new fight was", "new fights were")} created in the last 7 days${r.against("in the 7 days before")}.`,
         query: eventCard(sql, w, 7, firstRounds, count),
     };
@@ -368,12 +369,12 @@ function definitions(
     };
     const fightsCreatedChart: AdminDashboardChartDefinition = {
         id: "fights_created_per_bucket", title: `Fights created ${per}`, kind: "bar", unit: "count", x: "date",
-        definition: `New Fights created in each ${w.bucket}. Later rounds of a repeating Fight, the app-wide Fight and suggested Fights are not counted.`,
+        definition: `New Fights created in each ${w.bucket}. Later rounds of a repeating Fight, the app-wide Fight, suggested Fights and founder Fights are not counted.`,
         example: (r) => {
             const n = r.at();
             return n === undefined ? null : `${r.count(n, "new fight was", "new fights were")} created ${r.when}.`;
         },
-        note: "New Fights, not later rounds. App-wide and suggested Fights excluded.",
+        note: "New Fights, not later rounds. App-wide, suggested and founder Fights excluded.",
         query: perBucket(sql, w, firstRounds, count),
     };
     const stepsChart: AdminDashboardChartDefinition = {
@@ -446,7 +447,7 @@ function definitions(
                         },
                         {
                             id: "fight_rate", title: "Monthly fight join rate", did: "joined a fight",
-                            definition: "Of the people who signed up in the last 30 days, the share who have joined a fight, compared with the people who signed up in the 30 days before. Creating a fight counts. The app-wide Fight and suggested Fights do not. Recent signups have had less time to do it.",
+                            definition: "Of the people who signed up in the last 30 days, the share who have joined a fight, compared with the people who signed up in the 30 days before. Creating a fight counts. The app-wide Fight, suggested Fights and founder Fights do not. Recent signups have had less time to do it.",
                             condition: sql`exists (
                                 select 1 from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
                                 where m.user_id = p.user_id and m.state = 'accepted')`,
@@ -474,7 +475,7 @@ function definitions(
                     {
                         id: "days_to_first_fight", title: "Monthly days to first fight", unit: "days", better: false,
                         note: "Median, for the last 30 days' signups who joined a fight, vs the 30 days before.",
-                        definition: "The median time from signup to joining a first fight, for the people who signed up in the last 30 days and have joined one, compared with the people who signed up in the 30 days before. Half of them joined faster. Creating a fight counts. The app-wide Fight and suggested Fights do not.",
+                        definition: "The median time from signup to joining a first fight, for the people who signed up in the last 30 days and have joined one, compared with the people who signed up in the 30 days before. Half of them joined faster. Creating a fight counts. The app-wide Fight, suggested Fights and founder Fights do not.",
                         example: (r) => `Half of the people who signed up in the last 30 days and joined a fight did it within ${r.format(r.value)}${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select * from (
@@ -524,7 +525,7 @@ function definitions(
                     newUsersChart, totalUsersChart,
                     {
                         id: "onboarding_by_signup", title: `Onboarding by signup ${w.bucket}`, kind: "line", unit: "percent", x: "date",
-                        definition: `For the people who signed up in each ${w.bucket}: the share who picked a username, connected Apple Health and joined a fight, as of now. Recent signups have had less time, so their shares can still grow.`,
+                        definition: `For the people who signed up in each ${w.bucket}: the share who picked a username, connected Apple Health and joined a fight, as of now. App-wide, suggested and founder Fights do not count. Recent signups have had less time, so their shares can still grow.`,
                         example: (r) => {
                             const name = r.at("Picked a username");
                             const health = r.at("Connected Apple Health");
@@ -563,7 +564,7 @@ function definitions(
                         { id: "funnel_all", title: "Onboarding funnel, all users", who: "all users", scope: sql`true` },
                     ].map(({ id, title, who, scope }): AdminDashboardChartDefinition => ({
                         id, title, kind: "bar", unit: "count", x: "label",
-                        definition: `How far ${who} got: picking a username, connecting Apple Health, joining a first fight, finishing one and joining a second.`,
+                        definition: `How far ${who} got: picking a username, connecting Apple Health, joining a first fight, finishing one and joining a second. App-wide, suggested and founder Fights do not count.`,
                         example: (r) => {
                             const signed = r.row("Signed up");
                             const joined = r.row("Joined a fight");
@@ -990,7 +991,7 @@ function definitions(
                     },
                     {
                         id: "churn_by_fight", title: "Weekly churn, in a fight or not", kind: "bar", unit: "percent", x: "label",
-                        definition: `People who opened the app 8 to 14 days ago, split by whether they were in a live fight when the last 7 complete days started. Each bar is the share who did not open the app in those 7 days. The app-wide Fight and suggested Fights do not count. ${kept}, so it shows from 16 Oct.`,
+                        definition: `People who opened the app 8 to 14 days ago, split by whether they were in a live fight when the last 7 complete days started. Each bar is the share who did not open the app in those 7 days. The app-wide Fight, suggested Fights and founder Fights do not count. ${kept}, so it shows from 16 Oct.`,
                         example: (r) => {
                             const fighting = r.row("In a live fight");
                             const idle = r.row("No live fight");
@@ -1347,7 +1348,7 @@ function definitions(
                     {
                         id: "fight_day_lift", title: "Monthly fight-day lift", unit: "percent", better: true,
                         note: "Extra steps on days in a live Fight vs other days. Last 30 days vs the 30 before.",
-                        definition: "How many more steps people walk on days they are in a live Fight than on their other days, in percent. Average steps per person-day over the 30 complete days before today, compared with the 30 days before. Every Fight counts, the app-wide one included.",
+                        definition: "How many more steps people walk on days they are in a live Fight than on their other days, in percent. Average steps per person-day over the 30 complete days before today, compared with the 30 days before. The app-wide Fight counts. Founder Fights do not.",
                         example: (r) => `People walked ${r.format(Math.abs(r.value))} ${r.value < 0 ? "fewer" : "more"} steps on fight days than on other days in the last 30 complete days${r.against("in the 30 days before")}.`,
                         query: sql`
                             with windows as (
@@ -1555,32 +1556,32 @@ function definitions(
                     {
                         id: "rounds_finished", title: "Weekly rounds finished", unit: "count", better: true,
                         note: "Last 7 days vs the 7 before.",
-                        definition: "Fight rounds that ended with results in the last 7 days, up to now, compared with the 7 days before. Every round of a repeating Fight counts, the app-wide Fight included.",
+                        definition: "Fight rounds that ended with results in the last 7 days, up to now, compared with the 7 days before. Every round of a repeating Fight counts, the app-wide Fight included. Founder Fights do not.",
                         example: (r) => `${r.count(r.value, "round", "rounds")} finished in the last 7 days${r.against("in the 7 days before")}.`,
-                        query: eventCard(sql, w, 7, sql`select ends_at as at from public.fights where state = 'final'`, count),
+                        query: eventCard(sql, w, 7, sql`select ends_at as at from public.fights where state = 'final' and host_id is null`, count),
                     },
                     {
                         id: "joins", title: "Weekly fight joins", unit: "count", better: true,
-                        note: "People joining someone else's Fight, app-wide ones excluded. Last 7 days vs the 7 before.",
-                        definition: "How many times people joined someone else's Fight in the last 7 days, up to now, compared with the 7 days before. The app-wide Fight and suggested Fights do not count.",
+                        note: "People joining someone else's Fight, app-wide and founder ones excluded. Last 7 days vs the 7 before.",
+                        definition: "How many times people joined someone else's Fight in the last 7 days, up to now, compared with the 7 days before. The app-wide Fight, suggested Fights and founder Fights do not count.",
                         example: (r) => `People joined someone else's fight ${r.count(r.value, "time", "times")} in the last 7 days${r.against("in the 7 days before")}.`,
                         query: eventCard(sql, w, 7, joins, count),
                     },
                     {
                         id: "people_in_fights", title: "Users in a live fight", unit: "percent", better: true,
                         note: "Share of all users, now vs 7 days ago.",
-                        definition: "The share of all users who are in a live Fight now, compared with 7 days ago. The app-wide Fight counts.",
+                        definition: "The share of all users who are in a live Fight now, compared with 7 days ago. The app-wide Fight counts. Founder Fights do not.",
                         example: (r) => `${r.format(r.value)} of users are in a live fight now${r.against("a week ago")}.`,
                         query: sql`
                             select 100.0 * (select count(distinct m.user_id) from public.fight_members as m
                                     join public.fights as f on f.id = m.fight_id
-                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
+                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled') and f.host_id is null
                                         and f.starts_at <= ${w.now} and f.ends_at > ${w.now})
                                     / nullif((select count(*) from public.profiles
                                         where deleted_at is null and created_at < ${w.now}), 0) as value,
                                 100.0 * (select count(distinct m.user_id) from public.fight_members as m
                                     join public.fights as f on f.id = m.fight_id
-                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
+                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled') and f.host_id is null
                                         and f.starts_at <= ${ago(7)} and f.ends_at > ${ago(7)})
                                     / nullif((select count(*) from public.profiles
                                         where deleted_at is null and created_at < ${ago(7)}), 0) as previous
@@ -1589,7 +1590,7 @@ function definitions(
                     {
                         id: "fighters_per_fight", title: "Monthly fighters per fight", unit: "count", better: true,
                         note: "Average accepted fighters in Fights that started in the last 30 days, vs the 30 before.",
-                        definition: "The average number of accepted fighters in the Fights that started in the last 30 days, up to now, compared with the 30 days before. Every round counts. Cancelled Fights, the app-wide Fight and suggested Fights do not.",
+                        definition: "The average number of accepted fighters in the Fights that started in the last 30 days, up to now, compared with the 30 days before. Every round counts. Cancelled Fights, the app-wide Fight, suggested Fights and founder Fights do not.",
                         example: (r) => `Fights that started in the last 30 days had ${r.count(r.value, "fighter", "fighters")} on average${r.against("in the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select f.starts_at as at, (select count(*) from public.fight_members as m
@@ -1600,7 +1601,7 @@ function definitions(
                     {
                         id: "invite_acceptance", title: "Monthly invite acceptance", unit: "percent", better: true,
                         note: "Share of people invited in the last 30 days who are now in the Fight, vs the 30 before.",
-                        definition: "Of the invitations sent in the last 30 days, up to now, the share whose invited person is in the Fight now, compared with the 30 days before. The app-wide Fight and suggested Fights do not count.",
+                        definition: "Of the invitations sent in the last 30 days, up to now, the share whose invited person is in the Fight now, compared with the 30 days before. The app-wide Fight, suggested Fights and founder Fights do not count.",
                         example: (r) => `${r.format(r.value)} of the people invited in the last 30 days are in the fight now${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select event.occurred_at as at, bool_or(m.state = 'accepted') as accepted
@@ -1614,7 +1615,7 @@ function definitions(
                     {
                         id: "cancel_rate", title: "Monthly cancel rate", unit: "percent", better: false,
                         note: "Share of Fights starting in the last 30 days that were cancelled, vs the 30 before.",
-                        definition: "Of the Fights due to start in the last 30 days, up to now, the share that were cancelled, compared with the 30 days before. Every round counts. The app-wide Fight and suggested Fights do not.",
+                        definition: "Of the Fights due to start in the last 30 days, up to now, the share that were cancelled, compared with the 30 days before. Every round counts. The app-wide Fight, suggested Fights and founder Fights do not.",
                         example: (r) => `${r.format(r.value)} of the fights due to start in the last 30 days were cancelled${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`select starts_at as at, state from (${realFights}) as f`,
                             sql`avg(case when e.state = 'cancelled' then 100.0 else 0 end)`),
@@ -1622,17 +1623,17 @@ function definitions(
                     {
                         id: "recurring_share", title: "Monthly recurring share", unit: "percent", better: null,
                         note: "Share of new Fights created as recurring, last 30 days vs the 30 before.",
-                        definition: "The share of new Fights created as recurring in the last 30 days, up to now, compared with the 30 days before. A recurring Fight starts a new round when one ends. The app-wide Fight and suggested Fights do not count.",
+                        definition: "The share of new Fights created as recurring in the last 30 days, up to now, compared with the 30 days before. A recurring Fight starts a new round when one ends. The app-wide Fight, suggested Fights and founder Fights do not count.",
                         example: (r) => `${r.format(r.value)} of the fights created in the last 30 days are recurring${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select series.created_at as at, series.recurring from public.fight_series as series
-                            where series.join_code <> 'PGG7' and not series.suggested
+                            where series.join_code <> 'PGG7' and not series.suggested and series.host_id is null
                         `, sql`avg(case when e.recurring then 100.0 else 0 end)`),
                     },
                     {
                         id: "winning_margin", title: "Monthly winning margin", unit: "percent", better: null,
                         note: "Median lead of the winner over second place, Fights finished in the last 30 days vs the 30 before.",
-                        definition: "How far the winner was ahead of second place, as a share of the winner's steps, in the median Fight that finished in the last 30 days, up to now, compared with the 30 days before. Only Fights with two or more fighters count. The app-wide Fight counts.",
+                        definition: "How far the winner was ahead of second place, as a share of the winner's steps, in the median Fight that finished in the last 30 days, up to now, compared with the 30 days before. Only Fights with two or more fighters count. The app-wide Fight counts. Founder Fights do not.",
                         example: (r) => `In half of the fights that finished in the last 30 days, the winner led second place by ${r.format(r.value)} or less${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select f.ends_at as at, 100.0 * (ranked.first - ranked.second) / nullif(ranked.first, 0) as margin
@@ -1642,7 +1643,7 @@ function definitions(
                                     max(m.final_value) filter (where m.rank = 2) as second
                                 from public.fight_members as m where m.fight_id = f.id and m.state = 'accepted'
                             ) as ranked
-                            where f.state = 'final' and ranked.second is not null
+                            where f.state = 'final' and f.host_id is null and ranked.second is not null
                         `, sql`percentile_cont(0.5) within group (order by e.margin)`),
                     },
                 ],
@@ -1650,23 +1651,23 @@ function definitions(
                     fightsCreatedChart,
                     {
                         id: "live_fights_over_time", title: "Live fights", kind: "line", unit: "count", x: "date",
-                        definition: `Fights running at the end of each ${w.bucket}, and now for the last point. The app-wide Fight counts.`,
+                        definition: `Fights running at the end of each ${w.bucket}, and now for the last point. The app-wide Fight counts. Founder Fights do not.`,
                         example: (r) => {
                             const n = r.latest();
                             return n === undefined ? null : `${r.count(n, "fight is", "fights are")} live now.`;
                         },
-                        note: `At the end of each ${w.bucket}, now for the last one. App-wide Fight included.`,
+                        note: `At the end of each ${w.bucket}, now for the last one. App-wide Fight included, founder Fights not.`,
                         query: sql`
                             select point.bucket::text as x, (
                                 select count(*) from public.fights as f
-                                where f.state not in ('draft', 'cancelled') and f.starts_at <= point.at and f.ends_at > point.at
+                                where f.state not in ('draft', 'cancelled') and f.host_id is null and f.starts_at <= point.at and f.ends_at > point.at
                             )::float8 as y
                             from (${instants}) as point order by point.bucket
                         `,
                     },
                     {
                         id: "people_in_fights_over_time", title: "Users in a live fight", kind: "line", unit: "percent", x: "date",
-                        definition: `Share of all users who are in a live Fight, at the end of each ${w.bucket} and now for the last point.`,
+                        definition: `Share of all users who are in a live Fight, at the end of each ${w.bucket} and now for the last point. Founder Fights do not count.`,
                         example: (r) => {
                             const n = r.latest();
                             return n === undefined ? null : `${r.format(n)} of users are in a live fight now.`;
@@ -1676,7 +1677,7 @@ function definitions(
                             select point.bucket::text as x, (100.0 * (
                                 select count(distinct m.user_id) from public.fight_members as m
                                 join public.fights as f on f.id = m.fight_id
-                                where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
+                                where m.state = 'accepted' and f.state not in ('draft', 'cancelled') and f.host_id is null
                                     and f.starts_at <= point.at and f.ends_at > point.at
                             ) / users.total)::float8 as y
                             from (${instants}) as point
@@ -1689,23 +1690,23 @@ function definitions(
                     },
                     {
                         id: "rounds_finished_per_bucket", title: `Rounds finished ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Fight rounds that ended with results, in each ${w.bucket}. Every round of a repeating Fight counts.`,
+                        definition: `Fight rounds that ended with results, in each ${w.bucket}. Every round of a repeating Fight counts. Founder Fights do not.`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `${r.count(n, "round", "rounds")} finished ${r.when}.`;
                         },
-                        query: perBucket(sql, w, sql`select ends_at as at from public.fights where state = 'final'`, count),
+                        query: perBucket(sql, w, sql`select ends_at as at from public.fights where state = 'final' and host_id is null`, count),
                     },
                     {
                         id: "invites_and_joins", title: `Invites and joins ${per}`, kind: "line", unit: "count", x: "date",
-                        definition: `Invitations sent to Fights, and people who joined someone else's Fight, in each ${w.bucket}. App-wide and suggested Fights are not counted.`,
+                        definition: `Invitations sent to Fights, and people who joined someone else's Fight, in each ${w.bucket}. App-wide, suggested and founder Fights are not counted.`,
                         example: (r) => {
                             const sent = r.at("Invites sent");
                             const joined = r.at("People joining");
                             return sent === undefined || joined === undefined ? null
                                 : `${r.count(sent, "invite was", "invites were")} sent ${r.when}, and ${r.count(joined, "person", "people")} joined a fight.`;
                         },
-                        note: "App-wide and suggested Fights excluded.",
+                        note: "App-wide, suggested and founder Fights excluded.",
                         query: perBucket(sql, w, sql`
                             select event.occurred_at as at, 'Invites sent' as series
                             from private.fight_membership_events as event
@@ -1717,7 +1718,7 @@ function definitions(
                     },
                     {
                         id: "fight_sizes", title: "Fight sizes, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Fights that started in the last 30 days, by their number of accepted fighters. Cancelled Fights are not counted.",
+                        definition: "Fights that started in the last 30 days, by their number of accepted fighters. Cancelled, app-wide, suggested and founder Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0
                             ? `${r.top.x}${/^\d/.test(r.top.x) ? " fighters" : ""} is the most common size: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.`
                             : null),
@@ -1738,7 +1739,7 @@ function definitions(
                     },
                     {
                         id: "durations", title: "Fight durations, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "How long Fights last, all time. App-wide and suggested Fights are not counted.",
+                        definition: "How long Fights last, all time. App-wide, suggested and founder Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} is the most common length: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.` : null),
                         query: sql`
                             select duration.x, count(series.id)::float8 as y from (values
@@ -1746,13 +1747,13 @@ function definitions(
                                 (4, '8-14 days', 604801, 1209600), (5, '15-31 days', 1209601, 2678400), (6, 'Longer', 2678401, 2147483647)
                             ) as duration(position, x, low, high)
                             left join public.fight_series as series on series.duration_seconds between duration.low and duration.high
-                                and series.join_code <> 'PGG7' and not series.suggested
+                                and series.join_code <> 'PGG7' and not series.suggested and series.host_id is null
                             group by duration.position, duration.x order by duration.position
                         `,
                     },
                     {
                         id: "margins", title: "How close fights end, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "Finished Fights with two or more fighters, by how far the winner was ahead of second place, as a share of the winner's steps.",
+                        definition: "Finished Fights with two or more fighters, by how far the winner was ahead of second place, as a share of the winner's steps. Founder Fights are not counted.",
                         example: (r) => {
                             const close = r.row("Under 5%") ?? 0;
                             return r.total > 0
@@ -1769,7 +1770,7 @@ function definitions(
                                         max(m.final_value) filter (where m.rank = 2) as second
                                     from public.fight_members as m where m.fight_id = f.id and m.state = 'accepted'
                                 ) as ranked
-                                where f.state = 'final' and ranked.second is not null
+                                where f.state = 'final' and f.host_id is null and ranked.second is not null
                             )
                             select band.x, count(margins.margin)::float8 as y from (values
                                 (1, 'Under 5%', 0, 5), (2, '5-15%', 5, 15), (3, '15-30%', 15, 30),
@@ -1781,7 +1782,7 @@ function definitions(
                     },
                     {
                         id: "time_to_first_fight", title: "Time from signup to first fight, all users", kind: "bar", unit: "count", x: "label",
-                        definition: "Every user by the time between signing up and first joining a fight. Not yet means they have not joined one.",
+                        definition: "Every user by the time between signing up and first joining a fight. Not yet means they have not joined one. App-wide, suggested and founder Fights do not count.",
                         example: (r) => {
                             const same = r.row("Same day") ?? 0;
                             const waiting = r.row("Not yet") ?? 0;
@@ -1808,7 +1809,7 @@ function definitions(
                     },
                     {
                         id: "top_fighters", title: "Most fights joined, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People who joined the most Fights, all time. App-wide and suggested Fights are not counted.",
+                        definition: "People who joined the most Fights, all time. App-wide, suggested and founder Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} joined ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
@@ -1819,7 +1820,7 @@ function definitions(
                     },
                     {
                         id: "top_winners", title: "Most wins, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People who won the most finished Fights that had at least two fighters, all time.",
+                        definition: "People who won the most finished Fights that had at least two fighters, all time. App-wide, suggested and founder Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} won ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
@@ -1833,12 +1834,12 @@ function definitions(
                     },
                     {
                         id: "loser_actions", title: "Most common loser actions, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "The actions losers most often have to do, as people typed them, all time.",
+                        definition: "The actions losers most often have to do, as people typed them, all time. App-wide, suggested and founder Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common action, in ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
                             select left(lower(trim(action_text)), 40) as x, count(*)::float8 as y
                             from public.fight_series where action_text is not null and trim(action_text) <> ''
-                                and join_code <> 'PGG7' and not suggested
+                                and join_code <> 'PGG7' and not suggested and host_id is null
                             group by 1 order by 2 desc, 1 limit 10
                         `,
                     },
@@ -1993,11 +1994,12 @@ function definitions(
                     },
                     {
                         id: "posts_by_fight", title: "Fights with the most posts, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "Fights with the most posts in their feed, all time.",
+                        definition: "Fights with the most posts in their feed, all time. Founder Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has ${r.count(r.top.y, "post", "posts")}.` : null),
                         query: sql`
                             select left(f.name, 40) as x, count(*)::float8 as y
                             from public.fight_posts as post join public.fights as f on f.id = post.fight_id
+                            where f.host_id is null
                             group by f.id, f.name order by 2 desc, 1 limit 10
                         `,
                     },

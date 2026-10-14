@@ -6,6 +6,7 @@ export const notificationDeliveryRowSchema = pendingNotificationIntentSchema.ext
     expires_at: z.coerce.date(),
     alert_body: z.string().nullable(),
     fight_state: z.string().nullable(),
+    fight_host_id: z.string().uuid().nullable(),
     fight_name: z.string(),
     owner_handle: z.string().nullable(),
     ends_at: z.coerce.date(),

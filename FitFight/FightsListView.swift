@@ -95,7 +95,7 @@ struct FightsListView: View {
                 )
             }
 
-            if !isEmpty, selectedFights.isEmpty {
+            if !isEmpty, selectedFights.isEmpty, filter != .current || model.hosted == nil {
                 Text(filter == .current ? String(appLocalized: "No current fights")
                      : filter == .invited ? String(appLocalized: "No invitations")
                      : String(appLocalized: "No past fights"))
@@ -118,14 +118,30 @@ struct FightsListView: View {
             }
 
             if filter == .current {
+                if let hosted = model.hosted {
+                    Button { model.showingHosted = true } label: {
+                        HStack(spacing: 13) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: hosted.name)
+                                    .ffType(.heading)
+                                    .foregroundStyle(theme.text)
+                                Text(hosted.leadingSummary)
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                            }
+                            Spacer(minLength: 8)
+                            FFChevron()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                        .ffBorder(theme.hairline, radius: theme.radius.card)
+                    }
+                    .buttonStyle(FFPressStyle())
+                }
                 ForEach(sorted(model.live)) { fight in
-                    let standing = difference(in: fight)
-                    LiveFightCard(
-                        fight: fight,
-                        metric: fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text,
-                        metricColor: fight.isUpcoming || !standing.isGap ? theme.text
-                            : standing.ahead ? theme.mossText : theme.emberText
-                    ) { model.openFightID = fight.id }
+                    LiveFightCard(fight: fight) { model.openFightID = fight.id }
                 }
             }
 
@@ -160,7 +176,7 @@ struct FightsListView: View {
     }
 
     private var isEmpty: Bool {
-        model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty
+        model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty && model.hosted == nil
     }
 
     private var selectedFights: [Fight] {
@@ -198,55 +214,35 @@ struct FightsListView: View {
             return lhs.id < rhs.id
         }
     }
-
-    /// The number on the right is your distance from whoever you are actually
-    /// racing: the leader when you are behind, the runner-up when you are ahead.
-    /// Nobody else has a score yet in a fresh fight, so that row shows your total.
-    private func difference(in fight: Fight) -> (text: String, ahead: Bool, isGap: Bool) {
-        if model.youStanding(in: fight)?.deferred == true {
-            return (String(appLocalized: "Next round"), true, false)
-        }
-        let rivals = fight.standings.filter { !$0.person.isYou && !$0.invited && !$0.deferred }.map(\.score)
-        guard let mine = model.youStanding(in: fight)?.score else {
-            guard let leader = rivals.max() else { return ("-", true, false) }
-            return (stepCount(leader), true, false)
-        }
-        guard let best = rivals.max() else { return (stepCount(mine), true, false) }
-        let gap = mine - best
-        guard gap != 0 else { return (String(appLocalized: "Tied"), true, false) }
-        return ("\(gap < 0 ? "−" : "+")\(stepCount(abs(gap)))", gap > 0, true)
-    }
-
-    /// Whole steps with the locale's grouping. A gap of 840 must not read "0.8k".
-    private func stepCount(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(0)))
-    }
 }
 
 /// A current fight: title and gap, avatars and place, a gold bar for how far through it is, then the day and time left.
 struct LiveFightCard: View {
     let fight: Fight
-    let metric: String
-    let metricColor: Color
+    /// Replaces the fight's name, such as with the challenger in a hosted round.
+    var title: String?
     let onOpen: () -> Void
+    @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
 
     var body: some View {
         let total = max(fight.windowEnd.timeIntervalSince(fight.windowStart), 1)
         let elapsed = min(max(Date().timeIntervalSince(fight.windowStart), 0), total)
         let day = min(Int(elapsed / 86_400) + 1, max(fight.lengthDays, 1))
+        let standing = difference(in: fight)
         Button(action: onOpen) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(verbatim: fight.listTitle)
+                    Text(verbatim: title ?? fight.listTitle)
                         .ffType(.heading)
                         .foregroundStyle(theme.text)
                         .lineLimit(1)
                     Spacer(minLength: 8)
-                    Text(metric)
+                    Text(fight.isUpcoming ? String(appLocalized: "Scheduled") : standing.text)
                         .font(.ff(22, 800))
                         .tracking(22 * -0.02)
-                        .foregroundStyle(metricColor)
+                        .foregroundStyle(fight.isUpcoming || !standing.isGap ? theme.text
+                            : standing.ahead ? theme.mossText : theme.emberText)
                 }
                 HStack(spacing: 8) {
                     CompanionAvatarStack(
@@ -286,6 +282,29 @@ struct LiveFightCard: View {
             .ffBorder(theme.hairline, radius: theme.radius.card)
         }
         .buttonStyle(FFPressStyle())
+    }
+
+    /// The number on the right is your distance from whoever you are actually
+    /// racing: the leader when you are behind, the runner-up when you are ahead.
+    /// Nobody else has a score yet in a fresh fight, so that row shows your total.
+    private func difference(in fight: Fight) -> (text: String, ahead: Bool, isGap: Bool) {
+        if model.youStanding(in: fight)?.deferred == true {
+            return (String(appLocalized: "Next round"), true, false)
+        }
+        let rivals = fight.standings.filter { !$0.person.isYou && !$0.invited && !$0.deferred }.map(\.score)
+        guard let mine = model.youStanding(in: fight)?.score else {
+            guard let leader = rivals.max() else { return ("-", true, false) }
+            return (stepCount(leader), true, false)
+        }
+        guard let best = rivals.max() else { return (stepCount(mine), true, false) }
+        let gap = mine - best
+        guard gap != 0 else { return (String(appLocalized: "Tied"), true, false) }
+        return ("\(gap < 0 ? "−" : "+")\(stepCount(abs(gap)))", gap > 0, true)
+    }
+
+    /// Whole steps with the locale's grouping. A gap of 840 must not read "0.8k".
+    private func stepCount(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0)))
     }
 }
 
@@ -411,5 +430,83 @@ private struct FightsSortSheet: View {
         .foregroundStyle(theme.text)
         .padding(.horizontal, theme.space.screenPadding)
         .padding(.top, 16)
+    }
+}
+
+extension FitFightSnapshot.Hosted {
+    var leadingSummary: String {
+        String(appLocalized: "fights.hosted-leading", defaultValue: "Leading \(leading) of \(rounds)")
+    }
+}
+
+/// Everything you host, such as Fight Marc: how many rounds you lead, then each 1v1 as a Fights
+/// card under the challenger's name. Its rounds come from their own snapshot, never the Fights list.
+struct HostedFightsView: View {
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var steps: HealthKitStepsStore
+    @Environment(\.ffTheme) private var theme
+    @State private var loading = false
+    @State private var failure: String?
+
+    var body: some View {
+        FFScreen(top: AnyView(nav), refresh: FFRefreshConfig(
+            isRefreshing: model.isRefreshingFights || loading,
+            message: model.isRefreshingFights ? model.refreshStatusText : String(appLocalized: "Loading"),
+            error: failure,
+            action: {
+                // Your Apple Health sync is what scores your side of every round.
+                await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                await load()
+            }
+        )) {
+            ForEach(model.hostedRounds.sorted { ($0.windowEnd, $0.id) < ($1.windowEnd, $1.id) }) { fight in
+                LiveFightCard(fight: fight, title: fight.inviter?.name) { model.openFightID = fight.id }
+            }
+        }
+        .task { await load() }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var nav: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Button { model.showingHosted = false } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(theme.text)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(FFHapticPlainStyle())
+            .accessibilityLabel(String(appLocalized: "Back"))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(verbatim: model.hosted?.name ?? "")
+                    .font(.custom("Nunito-ExtraBold", size: 18, relativeTo: .headline))
+                    .foregroundStyle(theme.text)
+                if let hosted = model.hosted {
+                    Text(hosted.leadingSummary)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.bottom, 4)
+        .background(theme.bg)
+    }
+
+    private func load() async {
+        loading = true
+        defer { loading = false }
+        do {
+            try await model.refreshHostedRounds()
+            failure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            failure = error.localizedDescription
+        }
     }
 }

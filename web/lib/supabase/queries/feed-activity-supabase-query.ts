@@ -18,6 +18,7 @@ export async function listFeedActivity(
             from public.fights f
             join public.fight_members m on m.fight_id = f.id
             where m.user_id = ${userId} and m.state in ('accepted', 'deferred', 'invited')
+                and f.host_id is null
         ), visible_posts as (
             select p.id, p.author_id, p.body, p.created_at, channel.id as fight_id,
                 channel.name as fight_name

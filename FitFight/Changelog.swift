@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 14,
+            notes: "Fight Marc: when you sign up, you can start a 30-day Steps fight against Marc, FitFight's founder. It starts again every 30 days."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
             notes: "Trophies now follow each finished round’s winner: History shows the trophy next to who won that round, and finished fights show one on their winner. ×N still counts rounds won in a row."
         ),
         ReleaseNote(

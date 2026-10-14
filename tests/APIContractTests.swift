@@ -157,6 +157,12 @@ struct APIContractTests {
         let zonedSnapshot = try decoder.decode(FitFightSnapshot.self,
             from: JSONSerialization.data(withJSONObject: extendedSnapshot))
         precondition(zonedSnapshot.fights[0].timeZone == "Europe/Paris")
+        precondition(snapshot.hosted?.name == "Fight Marc" && snapshot.hosted?.rounds == 20
+                     && snapshot.hosted?.leading == 12)
+        extendedSnapshot.removeValue(forKey: "hosted")
+        let unhostedSnapshot = try decoder.decode(FitFightSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: extendedSnapshot))
+        precondition(unhostedSnapshot.hosted == nil, "Servers before the hosted summary remain decodable")
         precondition(snapshot.fights[0].name == "September Steps" && snapshot.fights[0].actionText == nil)
         precondition(snapshot.members[0].currentValue == 8500 && snapshot.members[0].rank == 1)
         precondition(snapshot.members[0].lastSyncedAt != nil && snapshot.members[0].finalValue == nil)
@@ -171,6 +177,7 @@ struct APIContractTests {
         let checkpoints = try decoder.decode(FitFightSnapshot.self, from: checkpointData)
         precondition(checkpoints.members[0].stepCheckpoints?.last?.steps == 8500)
         precondition(checkpoints.members[1].stepCheckpoints == nil)
+        precondition(checkpoints.hosted == nil, "Someone who hosts nothing gets a null hosted summary")
 
         // Same date handling as FitFightAPI.decoder: generated_at carries milliseconds.
         let serverDecoder = JSONDecoder()
@@ -205,7 +212,14 @@ struct APIContractTests {
             from: Data(contentsOf: fixtures.appendingPathComponent("admin-recent-syncs.json")))
         precondition(syncs.people.map(\.handle) == ["marc", "lea"] && syncs.people[1].displayName == "Léa")
         precondition(syncs.people[0].lastSyncedAt == parseServerDate("2026-10-12T09:15:00Z"))
-        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, recent syncs passed")
+        let founder = try serverDecoder.decode(FitFightFounderFights.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("admin-founder-fights.json")))
+        precondition(founder.challengers.map(\.handle) == ["lea", "tom"] && founder.challengers[0].displayName == "Lea")
+        precondition(founder.challengers[0].day == 5 && founder.challengers[0].days == 30)
+        precondition(founder.challengers[0].steps == 41250 && founder.challengers[0].founderSteps == 52010)
+        precondition(founder.challengers[1].state == "awaiting_final_sync")
+        precondition(founder.challengers[1].wins == 0 && founder.challengers[1].losses == 2 && founder.challengers[1].draws == 1)
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, recent syncs, founder fights passed")
     }
 }
 

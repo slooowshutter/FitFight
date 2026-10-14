@@ -9,7 +9,7 @@ import { defaultProfileSettings, profilePageQuerySchema, type ProfileRivalrySumm
 import { friendsQuerySchema } from "@/lib/types/friends/friendship";
 import { readOwnRivalries, readSharedProfile, readProfileHistory, readProfileSettings, updateProfileSettings } from "./shared-profiles-supabase-query";
 import { blockProfile, changeFriendship, listProfileFriends } from "./profile-friends-supabase-query";
-import { recordProfileView } from "./profile-events-supabase-query";
+import { recordProfileView, recordSharedFightParticipation } from "./profile-events-supabase-query";
 import { deleteAccount } from "./delete-account-supabase-query";
 import { departFightMemberships } from "./membership-departure-supabase-query";
 
@@ -674,4 +674,42 @@ test("only active accepted opponents see private records, with independent bound
     await database`update public.fights set starts_at = now() - interval '1 day', ends_at = now() - interval '1 hour', state = 'final' where id = ${fightId}`;
     assert.equal((await readSharedProfile(opponent, owner, undefined, database)).record, null);
     assert.equal((await readProfileHistory(opponent, owner, profilePageQuerySchema.parse({ shared: "true" }), database)).results.length, 1);
+});
+
+test("a founder fight grants no opponent access, record, rivalry or shared-fight event", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [founder, challenger] = users;
+    const fightId = randomUUID();
+    process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED = "true";
+    t.after(async () => {
+        delete process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED;
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
+    for (const id of users) await database`insert into auth.users(id) values (${id})`;
+    await database`insert into public.fights(id, owner_id, host_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${challenger}, ${founder}, 'Fight Marc', 'live', now() - interval '1 hour', now() + interval '1 day', 'UTC', 'highest_total', 'shared')`;
+    for (const id of users) {
+        await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${id}, 'accepted', now())`;
+    }
+    await database.begin((sql) => recordSharedFightParticipation(sql, fightId, null));
+    const [events] = await database`select count(*)::int n from private.profile_events where fight_id = ${fightId}`;
+    assert.equal(events.n, 0);
+    await updateProfileSettings(founder, { competitive: true, activity_audience: "opponents" }, database);
+    const live = await readSharedProfile(challenger, founder, undefined, database);
+    assert.equal(live.access, "private");
+    assert.equal(live.record, null);
+    assert.equal(live.activity, null);
+
+    await database`update public.fight_members set current_value = case when user_id = ${challenger} then 1000 else 500 end,
+        rank = case when user_id = ${challenger} then 1 else 2 end, final_steps_complete = true where fight_id = ${fightId}`;
+    await database`update public.fights set state = 'final' where id = ${fightId}`;
+    for (const id of users) await updateProfileSettings(id, { competitive: true, audience: "public" }, database);
+    for (const [viewer, target] of [[challenger, founder], [founder, challenger]]) {
+        const profile = await readSharedProfile(viewer, target, undefined, database);
+        assert.equal(profile.record?.played, 0);
+        assert.deepEqual(profile.rivalry, { wins: 0, losses: 0, draws: 0, rematch: null });
+        assert.deepEqual((await readProfileHistory(viewer, target, profilePageQuerySchema.parse({}), database)).results, []);
+        assert.deepEqual(await readOwnRivalries(viewer, database), []);
+    }
 });

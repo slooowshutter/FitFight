@@ -17,7 +17,7 @@ export async function setFightSuggested(userId: string, fightId: string, suggest
         if (!row) throw new ApiError(404, "not_found", "Fight not found");
         const fight = administeredFightSchema.parse(row);
         if (!fight.series_id) throw new ApiError(409, "conflict", "This fight cannot be suggested");
-        const [seriesRow] = await sql`select id, visibility::text, paused_at, current_fight_id, owner_id, name, join_code, suggested from public.fight_series where id = ${fight.series_id} for update`;
+        const [seriesRow] = await sql`select id, visibility::text, paused_at, current_fight_id, host_id, owner_id, name, join_code, suggested from public.fight_series where id = ${fight.series_id} for update`;
         const series = suggestedSeriesSchema.parse(seriesRow);
         const now = new Date();
         if (suggested && (series.visibility !== "joinable" || series.paused_at !== null || series.current_fight_id !== fight.id

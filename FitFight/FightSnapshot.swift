@@ -12,10 +12,21 @@ struct FightStepCheckpoint: Codable, Equatable {
 }
 
 struct FitFightSnapshot: Decodable {
+    /// One card for everything the caller hosts, such as Fight Marc. nil for everyone who hosts
+    /// nothing, and from servers before 14 Oct 2026.
+    struct Hosted: Decodable {
+        let name: String
+        /// Current rounds whose challenger is still in.
+        let rounds: Int
+        /// Rounds the host is strictly ahead in.
+        let leading: Int
+    }
+
     let fights: [FightRow]
     let members: [MemberRow]
     let profiles: [FitFightProfile]
     let series: [SeriesRow]
+    let hosted: Hosted?
 }
 
 struct SeriesRow: Decodable {
@@ -256,4 +267,45 @@ struct FitFightRecentSyncs: Decodable {
     }
 
     let people: [Person]
+}
+
+/// `GET /api/v1/admin/founder-fights`: everyone fighting the founder, newest first. Here for
+/// tests/APIContractTests.swift, like recent syncs.
+struct FitFightFounderFights: Decodable {
+    struct Challenger: Decodable, Identifiable {
+        let userId: UUID
+        let handle: String
+        let displayName: String
+        let fightId: UUID
+        /// The current round's day, from 1, of `days`.
+        let day: Int
+        let days: Int
+        /// The challenger's Steps this round.
+        let steps: Double
+        let founderSteps: Double
+        let state: String
+        /// The founder's results against this challenger over finished rounds.
+        let wins: Int
+        let losses: Int
+        let draws: Int
+
+        var id: UUID { userId }
+
+        enum CodingKeys: String, CodingKey {
+            case userId = "user_id"
+            case handle
+            case displayName = "display_name"
+            case fightId = "fight_id"
+            case day
+            case days
+            case steps
+            case founderSteps = "founder_steps"
+            case state
+            case wins
+            case losses
+            case draws
+        }
+    }
+
+    let challengers: [Challenger]
 }

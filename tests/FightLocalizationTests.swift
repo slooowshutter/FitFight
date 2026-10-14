@@ -59,6 +59,8 @@ enum Stage { case session }
     var cachedUserID: UUID?
     var you = Person(id: "you", name: "@you", handle: "@you", initials: "Y", isYou: true)
     var fights: [Fight] = []
+    var hosted: FitFightSnapshot.Hosted?
+    var hostedRounds: [Fight] = []
     var pendingJoinable: Fight?
     static var fightsCachePrefix: String { "fitfight.localization-test.\(AppLocalization.languageCode)." }
 

@@ -1,17 +1,18 @@
 import Foundation
 
 /// Local progress belongs to one account. Apple Health comes before the companion, so a referred friend's free
-/// character is there to use when they choose. Celebration is unnumbered.
+/// character is there to use when they choose. The founder fight shares step five with the first Fight, and
+/// celebration is unnumbered.
 struct FirstFightOnboarding: Codable, Equatable {
     enum Page: String, Codable, Hashable {
-        case username, health, healthResult, companion, firstFight, reminders, celebration
+        case username, health, healthResult, companion, founderFight, firstFight, reminders, celebration
 
         var step: Int? {
             switch self {
             case .username: 2
             case .health, .healthResult: 3
             case .companion: 4
-            case .firstFight: 5
+            case .founderFight, .firstFight: 5
             case .reminders: 6
             case .celebration: nil
             }
@@ -23,7 +24,8 @@ struct FirstFightOnboarding: Codable, Equatable {
             case .health: .username
             case .healthResult: .health
             case .companion: .healthResult
-            case .firstFight: .companion
+            case .founderFight: .companion
+            case .firstFight: .founderFight
             case .reminders: .firstFight
             }
         }
@@ -34,7 +36,8 @@ struct FirstFightOnboarding: Codable, Equatable {
     var order: Int? = 2
     var joinedFightID: UUID?
     var joinedFightName: String?
+    var founderFightID: UUID?
 
     /// Going back or exploring cannot undo a membership already accepted by the server.
-    var pageAfterReminders: Page? { joinedFightID == nil ? nil : .celebration }
+    var pageAfterReminders: Page? { joinedFightID == nil && founderFightID == nil ? nil : .celebration }
 }

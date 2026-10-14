@@ -257,8 +257,10 @@ export async function enqueueFightFeedPostNotifications(
             member.user_id,
             member.fight_id
         from public.fight_members as member
+        join public.fights as fight on fight.id = member.fight_id
         where member.state in ('accepted', 'deferred')
             and member.user_id <> ${input.actorId}
+            and fight.host_id is distinct from member.user_id
             and (
                 member.fight_id = ${input.fightId}
                 or exists (
@@ -371,6 +373,13 @@ export async function enqueueFightFeedReactionNotifications(
         )
     ).get(post.author_id);
     if (!fightId) return;
+    const [hosted] = await sql`
+        select 1
+        from public.fights
+        where id = ${fightId}
+            and host_id = ${post.author_id}
+    `;
+    if (hosted) return;
     await insertSocialIntents(
         sql,
         input.actorId,
@@ -443,6 +452,7 @@ export async function eligibleMentionUserIds(
                             and done_me.state = 'accepted'
                             and done_them.state = 'accepted'
                             and done_fight.state = 'final'
+                            and done_fight.host_id is null
                     )
                 limit 20
             `
@@ -461,6 +471,7 @@ export async function eligibleMentionUserIds(
                     and me.state = 'accepted'
                     and them.state = 'accepted'
                     and fight.state = 'final'
+                    and fight.host_id is null
                     and (
                         (${uniqueTags.length > 0}::boolean and them.user_id in ${sql(tagIds)})
                         or (${uniqueHandles.length > 0}::boolean and profile.handle in ${sql(handleValues)})
@@ -497,8 +508,10 @@ export async function enqueueMentionNotifications(
                 member.user_id,
                 member.fight_id
             from public.fight_members as member
+            join public.fights as fight on fight.id = member.fight_id
             where member.user_id in ${sql(missing)}
                 and member.state in ('accepted', 'deferred')
+                and fight.host_id is distinct from member.user_id
             order by member.user_id, member.fight_id
         `;
         for (const row of fallbacks) {

@@ -196,6 +196,9 @@ struct FightDetailView: View {
                     await fightFeed.load(session: session, fightID: fightID)
                 } else {
                     await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                    if model.hostedRounds.contains(where: { $0.id == fight.id }) {
+                        try? await model.refreshHostedRounds()
+                    }
                 }
             }
         )

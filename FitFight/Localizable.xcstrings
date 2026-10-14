@@ -15860,6 +15860,53 @@
                     }
                 }
             }
+        },
+        "Fight Marc": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Affronte Marc"
+                    }
+                }
+            }
+        },
+        "FitFight's founder. 30 days, most steps wins. It starts again every 30 days.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le fondateur de FitFight. 30 jours, le plus de pas gagne. Ça recommence tous les 30 jours."
+                    }
+                }
+            }
+        },
+        "Fight Marc: when you sign up, you can start a 30-day Steps fight against Marc, FitFight's founder. It starts again every 30 days.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Affronte Marc : à l’inscription, tu peux lancer contre Marc, le fondateur de FitFight, un Fight de 30 jours sur les pas. Il recommence tous les 30 jours."
+                    }
+                }
+            }
+        },
+        "fights.hosted-leading": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Leading %1$lld of %2$lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En tête dans %1$lld sur %2$lld"
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

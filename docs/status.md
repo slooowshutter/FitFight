@@ -6,6 +6,105 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Fight Marc (founder fight): prepared 14 Oct 2026
+
+Marc asked (11 and 14 Oct) that every new user can fight him 1v1 on Steps, repeating, most
+steps wins, no prize. Each user sees only their own fight against him. He sees every
+challenger on one admin page. Decisions: 30-day rounds from the day the user joins, new
+users only (offered in onboarding), one tap records consent, and no wait for the Steps sync
+rework. That rework (#376) landed first: the activity sync still uploads daily Steps, which
+is what scores Marc, so nothing here changed for it.
+
+**Why Marc is not an ordinary member of hundreds of 1v1s:** his phone would run about 31
+Apple Health queries per fight on every sync, `POST /api/v1/healthkit/steps` takes at most
+100 fight totals and rejects an upload that leaves out a live fight, and his snapshot,
+pushes, Feed, profile access and rivalry would fill with every challenger.
+
+**Design: a virtual opponent.** Migration `20261014140000_founder_fights.sql` adds
+`fight_series.host_id` and `fights.host_id` (copied to every round), with one series per
+user and host. Marc is an accepted member of every round, so older builds show a normal 1v1.
+The backend scores him from his stored daily Steps (`private.activity_metrics`, scope `day`):
+the sum of the round's dates, published through the same snapshot path as a phone upload.
+That runs for all his founder rounds whenever his phone's activity sync stores daily Steps,
+and once when a round is created. His score is complete once the round's last date is.
+Rounds run on GMT days (his phone stores GMT days; no daylight saving, so repeating rounds
+keep midnight bounds) and last 30 days. Matching dates rather than instants keeps every day
+counted while his phone is in another zone. The challenger owns the series and can rename
+it, but its schedule, visibility and repetition stay fixed; older Edit screens still send
+those fields, so the server ignores them instead of rejecting the save.
+
+- `POST /api/v1/founder-fight`: idempotent, one series per user, returns `{ id, state }`.
+  The founder id per environment is in `web/lib/types/fights/founder-fight.ts`, resolved with
+  `readEnvironment`.
+- `GET /api/v1/admin/founder-fights`: admin only. Each challenger's current round (day,
+  their Steps, Marc's Steps, or `left`) and Marc's wins, losses and draws over finished
+  rounds.
+- Founder rounds are left out of Marc's upload context, Steps sync check, snapshot, due-fight
+  closing, live-update pings, reminders, daily status and pushes. They create no Main Feed
+  visibility, Feed activity, tag or mention eligibility, current-opponent profile access,
+  record, rivalry or share event, in either direction, and no admin social metric counts
+  them.
+- Nobody can invite or join into a founder fight. Leaving it, or removing anyone from it,
+  pauses the series; the owner does not need a successor there.
+- App: a "Fight Marc" page in onboarding ("Fight Marc" or "Not now") after Apple Health and
+  the companion, right before the Everybody page; both share step 5. Admin tab: "Founder fights" lists every challenger. Release note
+  1.1.3, 14 Oct, English and French.
+
+**Host view (14 Oct, Marc):** every round Marc hosts is one card at the top of his Fights
+tab, with the challenge name and "Leading 12 of 20". Tapping it shows the same summary and
+each 1v1 as a normal Fights card under the challenger's handle; tapping one opens the
+normal fight screen. It is keyed on `host_id`, not on Marc, so a future host of any
+challenge gets the same card. `POST /api/v1/fights/snapshot` and `/refresh` return an
+additive `hosted` summary (null for everyone else) and accept an optional `hosted: true`
+that returns only the caller's current hosted rounds where both racers are still in, in the
+same shape. Older builds never send the flag and ignore the field. The admin menu cannot make
+a founder round public, and so cannot suggest it. In a round, Leave is still shown to the
+host: it ends that challenger's series. No release note: only hosts see this.
+
+**Known limits:** Marc forfeits a round if his phone does not sync within the 24-hour final
+sync grace after it ends. While his phone is in another zone, his days are that zone's
+local days. A new round shows Marc at 0 until his phone's next sync. A result appears at
+the challenger's next refresh, or when the grace ends.
+
+**Everybody fight on production is full:** read-only on 14 Oct, `PGG7` had 50 of 50
+accepted or deferred members (the cap), 11 more invited who cannot accept, and 81 profiles.
+New users already see "Couldn't accept." on that onboarding page. The cap is unchanged here.
+
+**Contract:** `/api/v1` unchanged for every installed build. Two new endpoints; no request or
+response field changed. Read-only `/api/app-release` on 14 Oct: production latest 1.1.2
+(210); staging latest 1.1.1 (201), review and internal 1.1.3 (224); enforcement off. Those
+builds never call the new endpoints. For them a founder round is an ordinary 1v1. Marc's
+own builds get fewer fight windows and fights, which they already handle. An owner leaving
+from an older build still sends a successor, which the server ignores for founder series.
+
+**Deployment order:** migration (additive columns, three replaced trigger and policy
+functions), then backend, then the app. The new backend reads `host_id` in the snapshot,
+upload context, Steps sync, closer and outbox, so confirm the migration has applied before
+the backend promotes; both run from the same merge. No founder round exists until the new
+backend creates one, so an older backend instance never sees a `host_id`. Do not roll the
+backend back once founder rounds exist: older code expects Marc's phone to upload a total
+for each of them and would reject his Steps sync.
+
+**Verification (local):** web typecheck and all 449 unit tests passed. On a disposable
+local Supabase rebuilt from every migration, in CI's order: schema lint clean, build 113
+compatibility 1 of 1, pgTAP 316 of 316 (including `supabase/tests/founder_fights.sql`: no
+fight or Feed ping to the host, no Main post visibility through a founder round),
+`test:database` 109 of 110, then with direct access closed pgTAP 18 of 18 and
+`test:database` 108 of 110 with 1 skipped (after merging develop at 21f52d57). The one failure in both runs, "every admin
+dashboard card and chart runs on the migrated schema", fails the same way with develop's code
+on that database (local clock skew), so CI decides it. The skipped case renames a founder
+fight; with direct access closed every service-role fight update already fails on
+`allow_score_correction`, which predates this change. The founder-fight integration tests
+cover scoring from daily rows, rescoring on his activity sync, completion with his phone in
+another zone, no push queued for him at the end of a round, idempotency, his Steps sync with
+no founder totals, his source left untouched by signups, the upload context, invite, join and
+edit guards, the admin list, leaving pausing the series and the next round keeping its host.
+The Feed, mention, push, profile and admin cases cover the exclusions. iOS simulator build of
+the FitFight scheme succeeded, and every iOS CI script, localization and API contract check
+passed. Not deployed; no staging or production check of the new code.
+
+---
+
 ## App Store 1.1.3 with both in-app purchases, prepared 14 Oct 2026
 
 **Apple (checked in App Store Connect, 14 Oct):** two consumables, both complete

@@ -36,6 +36,7 @@ export type FightRow = {
     final_sync_grace_seconds: number;
     created_at: string;
     series_id: string | null;
+    host_id: string | null;
 };
 
 export type FightMemberRow = {
@@ -93,6 +94,7 @@ export type FightSeriesRow = {
     created_at: string;
     suggested: boolean;
     suggested_at: string | null;
+    host_id: string | null;
 };
 
 export function asNumber(

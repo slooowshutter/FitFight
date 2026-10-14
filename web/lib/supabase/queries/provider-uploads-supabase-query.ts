@@ -174,6 +174,7 @@ export async function getProviderUploadContext(
         where member.user_id = ${userId}
             and member.state = 'accepted'
             and fight.state in ('live', 'awaiting_final_sync')
+            and fight.host_id is distinct from ${userId}
         order by fight.starts_at, fight.id
     `,
     );

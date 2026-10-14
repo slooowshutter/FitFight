@@ -4,7 +4,10 @@ import {
     readSpecialStore,
     recordSpecialPurchase,
 } from "@/lib/supabase/queries/specials-supabase-query";
-import { verifySpecialConsumablePurchase } from "@/lib/apple/special-purchase";
+import {
+    claimsSandbox,
+    verifySpecialConsumablePurchase,
+} from "@/lib/apple/special-purchase";
 import { specialPurchaseRequestSchema } from "@/lib/types/companions/specials";
 
 export const runtime = "nodejs";
@@ -13,7 +16,11 @@ export const POST = apiRoute(async (request) => {
     const input = specialPurchaseRequestSchema.parse(
         await readJson(request, 32_768),
     );
-    const store = await readSpecialStore(userId);
+    const store = await readSpecialStore(
+        userId,
+        undefined,
+        claimsSandbox(input.signed_transaction),
+    );
     const transaction = await verifySpecialConsumablePurchase(
         input.signed_transaction,
         {

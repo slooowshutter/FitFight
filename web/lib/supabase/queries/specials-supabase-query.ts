@@ -24,14 +24,17 @@ import {
     type SpecialStore,
 } from "@/lib/types/companions/specials";
 
-/** The shelf comes exclusively from deployment configuration, never a client header. */
+/**
+ * The shelf comes from deployment configuration. `sandbox` is set only while claiming a charge that names Sandbox; the
+ * charge is then verified as Sandbox, so a false claim only moves the caller's own account while it has no purchase.
+ */
 export async function readSpecialStore(
     userId: string,
     database: Sql = createDatabaseClient(),
+    sandbox = false,
 ): Promise<SpecialStore> {
     const configured = specialsConfigurationSchema.safeParse({
         environment: process.env.APPLE_IAP_ENVIRONMENT,
-        reviewers: process.env.APPLE_IAP_REVIEW_USER_IDS,
     });
     if (!configured.success)
         throw new ApiError(
@@ -49,12 +52,8 @@ export async function readSpecialStore(
                 "profile_missing",
                 "Invalid or deleted account",
             );
-        // NOTE: App Review buys in Sandbox against production. Only configured review accounts use that shelf.
-        const environment =
-            configuration.environment === "Production" &&
-            configuration.reviewers.includes(userId.toLowerCase())
-                ? "Sandbox"
-                : configuration.environment;
+        // NOTE: App Review signs in with its own Apple Account and buys in Sandbox against production.
+        const environment = sandbox ? "Sandbox" : configuration.environment;
         await sql`
             insert into private.special_accounts (user_id, environment) values (${userId}, ${environment})
             on conflict (user_id) do nothing

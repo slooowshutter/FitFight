@@ -742,9 +742,10 @@ cancels the matching attempt. Unpaid holds lapse 30 minutes after they are made:
 Account deletion frees a hold at once. A charge that arrives later is owned if
 the edition is still free and the account has no other Special; otherwise it is
 recorded as a conflict and the app offers Apple's refund request. A refund only
-retires an edition its purchase held or owned. On production, accounts listed in
-`APPLE_IAP_REVIEW_USER_IDS` use the Sandbox shelf for App Review once they have
-no hold or purchase; nobody else can reach it.
+retires an edition its purchase held or owned. On production, App Review signs in
+with its own Apple Account and buys in Sandbox: a Special or character charge that
+names Sandbox moves an account with no purchases to the Sandbox shelf, and the
+charge is verified there. App Store users only make Production charges.
 
 Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
 app. Let older backend instances drain first, because their schemas list only

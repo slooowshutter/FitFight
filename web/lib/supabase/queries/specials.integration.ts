@@ -388,32 +388,25 @@ test("legacy charges keep their recorded outcomes and identities", async (contex
     assert.equal(await status(users[0], "limited-black-panther"), "available");
 });
 
-test("production keeps configured App Review accounts on a separate Sandbox shelf", async (context) => {
+test("production keeps App Review Sandbox charges on a separate Sandbox shelf", async (context) => {
     process.env.APPLE_IAP_ENVIRONMENT = "Production";
     try {
         const { users, accounts } = await specialUsers(context);
-        process.env.APPLE_IAP_REVIEW_USER_IDS = users[0].toUpperCase();
         assert.equal(
-            (await readSpecialStore(users[0], database)).environment,
+            (await readSpecialStore(users[0], database, true)).environment,
             "Sandbox",
-            "An unused configured review account moves to the Sandbox shelf",
+            "An unused account moves to the Sandbox shelf for a Sandbox charge",
         );
         await recordSpecialPurchase(
             charge(accounts[1], "300000051", "Production"),
             "limited-lone-wolf",
             database,
         );
-        process.env.APPLE_IAP_REVIEW_USER_IDS = `${users[0]}, ${users[1]}`;
         assert.equal(
-            (await readSpecialStore(users[1], database)).environment,
+            (await readSpecialStore(users[1], database, true)).environment,
             "Production",
             "An account with a purchase never changes shelf",
         );
-        process.env.APPLE_IAP_REVIEW_USER_IDS = "not-a-user-id";
-        await assert.rejects(readSpecialStore(users[1], database), {
-            code: "config",
-        });
-        process.env.APPLE_IAP_REVIEW_USER_IDS = users[0];
         assert.equal(
             (
                 await recordSpecialPurchase(
@@ -423,6 +416,11 @@ test("production keeps configured App Review accounts on a separate Sandbox shel
                 )
             )?.outcome,
             "owned",
+        );
+        assert.equal(
+            (await readSpecialStore(users[0], database)).environment,
+            "Sandbox",
+            "A Sandbox purchase keeps the account on the Sandbox shelf",
         );
         await updateProfile(
             users[0],
@@ -438,6 +436,5 @@ test("production keeps configured App Review accounts on a separate Sandbox shel
         );
     } finally {
         process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";
-        delete process.env.APPLE_IAP_REVIEW_USER_IDS;
     }
 });

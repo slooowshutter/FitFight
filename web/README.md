@@ -50,7 +50,6 @@ Deployment variables (configured separately from the private keys):
 | --- | --- | --- |
 | `APPLE_IAP_ENVIRONMENT` | `Sandbox` | `Production` |
 | `APPLE_SPECIALS_ENABLED` | `true` | `false` |
-| `APPLE_IAP_REVIEW_USER_IDS` | empty | App Review account IDs |
 
 The paid migration must land before the backend, then the native app. StoreKit
 reserves an edition through `/api/v1/me/specials/checkout` before presenting the
@@ -75,10 +74,10 @@ production domain, only with its separately authorized rollout. Request and
 verify an Apple test notification before device testing. Notifications and
 restores share signature verification and the same transactional ledger.
 
-Production sale remains disabled, and the app hides Specials while it is. Enable
-it on production while a build is in review. App Review buys in Sandbox, so give
-it a dedicated sign-in and list that FitFight user ID in production
-`APPLE_IAP_REVIEW_USER_IDS`; only listed accounts use the separate Sandbox shelf.
+App Review signs in with its own Apple Account and buys in Sandbox against
+production. A charge that names Sandbox moves an account with no purchases to the
+separate Sandbox shelf and is verified there; App Store users only make
+Production charges.
 See [current evidence](../docs/status.md)
 and [Apple purchase research](../docs/research/apple-specials-purchases.md).
 

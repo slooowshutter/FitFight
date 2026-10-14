@@ -1,10 +1,38 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **14 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
 
 ---
+
+## Steps sync: fewer HealthKit reads, Steps-only history (prepared 14 Oct 2026)
+
+Marc asked for each day to be read once for all Fights, and for the app to stop
+uploading every activity type other than Steps.
+
+**Code:** a Fight upload now runs one exact window query per Fight (the score),
+one exact query for the Fight's first day, and one shared merged daily read per
+Fight time zone for the later days. Three month-long Fights on day 25 drop from
+about 78 HealthKit queries to 7. Earlier checkpoints never exceed the score,
+because summed days can drift a few steps from Apple's window total. The
+activity sync uploads daily Steps only: no other metric, workout summary or
+deletion. It rereads from 7 days before the last acknowledged upload, so a
+phone that missed syncs for days leaves no gap. Only Steps registers for
+background delivery. The upload contracts are unchanged, so no backend or
+database change is needed and older builds keep working. Profile's own activity
+screen still reads workouts directly from Apple Health on the phone.
+
+**Evidence for 7 days (staging, 14 Oct 2026):** across 53 people's Fight
+checkpoints, a finished day still changed later in 6.8% of reads 0-12 h after
+midnight, 3.6% at 12-36 h, 2.2% at 60-72 h, 0.8% at 108-120 h and 0.3% at
+132-144 h. No day read 144 h or more after midnight ever changed (1,919
+reads). Late changes are rare but large: a few hundred to about 2,900 steps.
+Fights still close 24 h after they end, so a rare late Watch sync can miss the
+result; Marc kept that grace period.
+
+**Verification (local):** simulator build and `scripts/test_fight_chart_scores.py`
+passed, including a new overlapping-Fights case. Not on TestFlight yet.
 
 ## Race Day home page: prepared 12 Oct 2026
 

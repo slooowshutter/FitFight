@@ -158,8 +158,8 @@ final class HealthKitStepsStore: ObservableObject {
             updateDiagnostics { $0.errorCode = .healthKitUnavailable }
             return
         }
-        // Only types the sync reads may wake the app. Older builds also registered raw-sample types.
-        let sampleTypes = HealthKitActivityAggregates.totalKinds.map(\.type) + [HKObjectType.workoutType()]
+        // Only Steps are uploaded, so only Steps may wake the app. Older builds also registered other types.
+        let sampleTypes: [HKSampleType] = HKQuantityType.quantityType(forIdentifier: .stepCount).map { [$0] } ?? []
         for sampleType in HealthKitActivityAggregates.readTypes.compactMap({ $0 as? HKSampleType })
             where !sampleTypes.contains(sampleType) {
             store.disableBackgroundDelivery(for: sampleType) { _, _ in }
@@ -229,8 +229,7 @@ final class HealthKitStepsStore: ObservableObject {
         deliveryRegistrationResults.removeAll()
         for sampleType in sampleTypes {
             let identifier = sampleType.identifier
-            let frequency: HKUpdateFrequency = sampleType is HKWorkoutType ? .immediate : .hourly
-            store.enableBackgroundDelivery(for: sampleType, frequency: frequency) { [weak self] success, _ in
+            store.enableBackgroundDelivery(for: sampleType, frequency: .hourly) { [weak self] success, _ in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     self.deliveryRegistrationResults[identifier] = success

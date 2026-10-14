@@ -329,9 +329,11 @@ away when the account is deleted. This stores descriptions, not generated artwor
 Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.
 `GET /api/v1/provider-uploads/context` adds the Fight's `time_zone`. New native
 uploads attach optional `step_checkpoints` to each `fight_aggregates` item. Each
-point is Apple's cumulative query from the same Fight start, through that Fight
-day's end or the current cutoff. The final query supplies both the last point
-and the scored total. The server validates complete day coverage, increasing
+point is cumulative Steps from the Fight start, through that Fight day's end or
+the current cutoff. Since 14 Oct 2026 the first day is an exact query from the
+Fight start, later days add one shared daily read per Fight time zone, and no
+point exceeds the score. The final query supplies both the last point and the
+scored total. The server validates complete day coverage, increasing
 cutoffs and counts, and an identical final cutoff and total.
 
 Checkpoints live on `private.fight_score_snapshots` with their score revision.

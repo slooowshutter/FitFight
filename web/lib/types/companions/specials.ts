@@ -7,17 +7,6 @@ import {
 
 export const specialsConfigurationSchema = z.object({
     environment: applePurchaseEnvironmentSchema,
-    /** Comma-separated user IDs App Review signs in with; on production they buy on the Sandbox shelf. */
-    reviewers: z
-        .string()
-        .default("")
-        .transform((value) =>
-            value
-                .split(",")
-                .map((id) => id.trim().toLowerCase())
-                .filter(Boolean),
-        )
-        .pipe(z.array(z.string().uuid())),
 });
 export const specialAccountSchema = z.object({
     id: z.string().uuid(),

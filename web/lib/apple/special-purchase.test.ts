@@ -24,6 +24,7 @@ import {
 import { appleCustomCharacterTransactionSchema, customCharacterProductId } from "@/lib/types/apple/custom-character-purchase";
 import appleRootCertificates from "./apple-root-certificates.json";
 import {
+    claimsSandbox,
     verifySpecialPurchase,
     verifySpecialNotification,
     verifyCustomCharacterPurchase,
@@ -484,4 +485,11 @@ test("Apple Special refund notifications route a verified consumable for revocat
     const result = await verifySpecialNotification("signed-envelope", "Production");
     assert.equal(result.transaction?.productId, specialProductId);
     assert.equal(result.transaction?.revocationDate, special.signedDate! + 500);
+});
+
+test("only a charge that names Sandbox claims the Sandbox shelf", () => {
+    const signed = (payload: object) => `e30.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.sig`;
+    assert.equal(claimsSandbox(signed({ environment: "Sandbox" })), true);
+    assert.equal(claimsSandbox(signed({ environment: "Production" })), false);
+    assert.equal(claimsSandbox("not a transaction"), false);
 });

@@ -6,6 +6,42 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## App Store 1.1.3 with both in-app purchases, prepared 14 Oct 2026
+
+**Apple (checked in App Store Connect, 14 Oct):** two consumables, both complete
+with English and French names, a review screenshot and review notes, available
+in all 175 territories with France as the price base:
+`com.fitfight.mvp.special` at EUR 0.99 and `com.fitfight.mvp.custom_character`
+at EUR 2.99. Both are "Prepare for Submission": Apple reviews a first consumable
+only with a new app version. Paid Apps Agreement, Mercury bank account and W-9
+are Active. The updated Apple Developer Program License Agreement is not accepted
+yet, which blocks every submission.
+
+**Review blocker fixed in code:** App Review signs in with its own Apple Account
+and buys in Sandbox against production. Production has no
+`APPLE_IAP_REVIEW_USER_IDS`, and a list could never name a reviewer in advance,
+so the reviewer's charge failed verification. Now a Special or character charge
+that names Sandbox moves an account with no purchases to the Sandbox shelf, and
+the charge is verified there by Apple's signature. On production this works only
+while the release registry (`testflight-latest/releases.json`, refreshed every
+15 minutes) lists a production build in review. The allowlist is removed.
+App Store users only make Production charges.
+
+**Accepted risk:** during a review window, a TestFlight tester who rewrites the
+app's traffic could buy in Sandbox for their own production account and get a
+Special or a custom character free. This needs deliberate tampering and ends
+when the review ends. The 23 Sep design accepted the same risk without a window.
+
+**Contract:** no API or database change. Purchase requests and responses are
+unchanged.
+
+**Release prep:** the App Store workflows name 1.1.3. Review notes and the
+promotional text no longer say the app has no purchases.
+
+**Checks (local):** `npm run typecheck` and all 445 backend unit tests passed,
+including a new Sandbox-claim test. The rewritten `specials.integration.ts`
+review-shelf test needs the disposable database in CI. No genuine Sandbox
+purchase has been verified on a device.
 ## Admin dashboard: Churn tab and local-time opens heatmap, prepared 14 Oct 2026
 
 Marc asked for churn numbers, weekly and monthly, with a trend and charts. He

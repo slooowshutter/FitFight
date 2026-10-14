@@ -18,7 +18,7 @@ Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French t
 | Bundle ID          | `com.fitfight.mvp`              |
 | SKU                | `fitfight`                      |
 | Price              | Free                            |
-| In-app purchases   | None                            |
+| In-app purchases   | Special companion `com.fitfight.mvp.special` (EUR 0.99), Custom character `com.fitfight.mvp.custom_character` (EUR 2.99), both consumable |
 | Advertising        | None                            |
 | Privacy Policy URL | `https://fitfight.app/privacy`  |
 | Support URL        | `https://fitfight.app/support`  |
@@ -28,7 +28,7 @@ Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French t
 
 ## Promotional text
 
-> Challenge friends to private Steps fights, compare Apple Health totals, and see who finishes on top. Free, with no ads, purchases, or tracking.
+> Challenge friends to private Steps fights, compare Apple Health totals, and see who finishes on top. Free, with no ads or tracking.
 
 ## Description
 
@@ -91,7 +91,7 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 ### Promotional text
 
-> Lancez des défis de pas privés à vos amis, comparez vos totaux Santé d’Apple et découvrez qui termine en tête. Gratuit, sans publicité, achat ni suivi.
+> Lancez des défis de pas privés à vos amis, comparez vos totaux Santé d’Apple et découvrez qui termine en tête. Gratuit, sans publicité ni suivi.
 
 ### Description
 

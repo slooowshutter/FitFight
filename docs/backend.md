@@ -32,7 +32,7 @@ It caches the last answer per API address and keeps it when the call fails.
 ## Admin dashboard (prepared 29 Sep 2026)
 
 `GET /api/v1/admin/dashboard?section=<section>&days=<1-3650>[&bucket=day|week|month]` feeds the Admin tab
-in Profile -> Dashboard. Sections: `overview`, `retention`, `users`, `engagement`,
+in Profile -> Dashboard. Sections: `overview`, `retention`, `churn`, `users`, `engagement`,
 `steps`, `fights`, `social`, `app`. Everything is plain SQL on Postgres, computed on each
 request; there is no warehouse, rollup table or cron. Each card and chart is one
 query in `web/lib/supabase/queries/admin-dashboard-supabase-query.ts`: add a
@@ -70,6 +70,15 @@ query only marks its own tile with `Query failed: ...`.
   `foreground`, so their opens include those actions. Sync
   history is kept since 29 Sep (never-delete rule), so engagement history grows
   from that date; earlier rows were pruned after 7 days.
+- **Churn (14 Oct 2026):** a person churned when they were active in the 7 (or
+  30) complete Paris days before the latest 7 (or 30) and not active in the
+  latest. Two meanings of active: an app open (as above), or a phone sync, which
+  is a complete Apple Health step day as in Retention. Charts read the same
+  windows at the end of each bucket. Churn by app opens reads only periods from
+  2 Oct 2026, because production pruned sync reports until 1 Oct and kept the
+  last reports of people who left; weekly numbers show from 16 Oct, monthly from
+  1 Dec. A returning phone uploads the days it missed, so older sync churn drops
+  when people come back.
 - **Steps:** the profile-statistics rule (newest complete Apple Health day,
   `activity_metrics` over legacy `metric_days`), counted from each person's signup
   day. "Health history" cards include imported days before signup.
@@ -329,9 +338,11 @@ away when the account is deleted. This stores descriptions, not generated artwor
 Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.
 `GET /api/v1/provider-uploads/context` adds the Fight's `time_zone`. New native
 uploads attach optional `step_checkpoints` to each `fight_aggregates` item. Each
-point is Apple's cumulative query from the same Fight start, through that Fight
-day's end or the current cutoff. The final query supplies both the last point
-and the scored total. The server validates complete day coverage, increasing
+point is cumulative Steps from the Fight start, through that Fight day's end or
+the current cutoff. Since 14 Oct 2026 the first day is an exact query from the
+Fight start, later days add one shared daily read per Fight time zone, and no
+point exceeds the score. The final query supplies both the last point and the
+scored total. The server validates complete day coverage, increasing
 cutoffs and counts, and an identical final cutoff and total.
 
 Checkpoints live on `private.fight_score_snapshots` with their score revision.
@@ -379,10 +390,21 @@ preferences automatically.
 
 Profiles carry a stable, read-only `referral_code`; there is no link-generation endpoint.
 Authenticated `POST /api/v1/referrals` accepts `{ code }` and records the first referrer
-in `private.referrals`. Self-referrals and duplicates do nothing. Relationships use
-account IDs and cascade on deletion of either account. This counts attributed accounts,
-including existing accounts, not clicks or installs. Deploy the referral migration and
-backend before the native build. See the install handoff in [`status.md`](status.md).
+in `private.referrals`. Self-referrals and duplicates do nothing. Only an account created at
+most 7 days before the claim counts; an older one gets `account_not_new: true`.
+Relationships use account IDs and cascade on deletion of either account. Deploy the
+referral migration and backend before the native build. See the install handoff in
+[`status.md`](status.md).
+
+The friend usually claims on the website before installing: `/r/<code>` signs in with
+Apple or Google through Supabase Auth and posts the claim at once. Google first calls
+`POST /api/v1/auth/google`, the same rule as the app, so one email gives one account.
+When the referred account's first Apple Health steps arrive (a `private.activity_metrics`
+day total above 0 from an `apple_health` source), `grantReferralFreeCharacters` gives the
+referrer a `referral` grant and the friend a `referred` grant, both keyed by the friend's
+id, and the referrer gets one push. It runs after a referral claim, after each HealthKit
+upload, and in the 15-minute `close-fights` sweep. See
+[Blend workflows](blend-workflows.md#free-characters).
 
 ## Loop
 
@@ -720,9 +742,12 @@ cancels the matching attempt. Unpaid holds lapse 30 minutes after they are made:
 Account deletion frees a hold at once. A charge that arrives later is owned if
 the edition is still free and the account has no other Special; otherwise it is
 recorded as a conflict and the app offers Apple's refund request. A refund only
-retires an edition its purchase held or owned. On production, accounts listed in
-`APPLE_IAP_REVIEW_USER_IDS` use the Sandbox shelf for App Review once they have
-no hold or purchase; nobody else can reach it.
+retires an edition its purchase held or owned. On production, App Review signs in
+with its own Apple Account and buys in Sandbox: a Special or character charge that
+names Sandbox moves an account with no purchases to the Sandbox shelf, and the
+charge is verified there. Production opens that shelf only while the release
+registry lists a production build in review. App Store users only make
+Production charges.
 
 Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
 app. Let older backend instances drain first, because their schemas list only

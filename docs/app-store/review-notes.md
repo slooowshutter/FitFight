@@ -1,10 +1,10 @@
 # App Review Notes
 
-Technical draft updated 23 Sep 2026. Test these instructions on the selected production candidate before pasting. This uses the normal two-person product flow, with no reviewer-only mode, bot, hidden username, or shared Apple credentials.
+Technical draft updated 14 Oct 2026 for the 1.1.3 in-app purchases. Test these instructions on the selected production candidate before pasting. This uses the normal two-person product flow, with no reviewer-only mode, bot, hidden username, or shared Apple credentials.
 
 ## Paste into App Review Notes
 
-> FitFight is free Steps competition with friends. No ads, tracking, purchases, entry fees, money wagers, payouts, prizes, or medical diagnosis. Push permission is optional.
+> FitFight is free Steps competition with friends. No ads, tracking, entry fees, money wagers, payouts, prizes, or medical diagnosis. Optional in-app purchases unlock companion animals. Push permission is optional.
 >
 > SIGN-IN AND TEST SETUP
 >
@@ -20,6 +20,15 @@ Technical draft updated 23 Sep 2026. Test these instructions on the selected pro
 > 4. On both devices, sync under Profile → Apple Health Steps, then open the Fight. Its Stats tab shows the participants, Fight-window totals, daily chart totals, and rank. A custom scheduled Fight starts at the time chosen in step 2.
 > 5. After the selected end time, reopen both devices and sync Apple Health again. The Fight may show that final Steps are syncing before its result is frozen. Activity after the exact end time does not count toward that result.
 > 6. Open the Fight's Feed tab, post a note or photo/video, and react or reply from the other account. Its menu offers reporting and hiding an author. The app Feed lists posts across your Fights. Feedback has Bugs, Top, and Report, with optional attachments.
+>
+> IN-APP PURCHASES
+>
+> Both products are consumables and work with a Sandbox account on the production server.
+>
+> - Special companion (com.fitfight.mvp.special): open Profile, tap your animal, open the Specials tab, pick any Special and tap Buy. The chosen Special unlocks for good on that FitFight account.
+> - Custom character (com.fitfight.mvp.custom_character): open Profile, tap your animal, open the Yours tab and tap Create your own. Describe an animal. One purchase draws three portraits; pick one, then five fitness poses are generated.
+>
+> FitFight's server records each purchase, so Restore purchases re-syncs it.
 >
 > Optional notifications include Fight reminders, posts, comments, replies, reactions, and daily status. Manage them under Profile → Settings → Notifications. The app remains usable when notification permission is declined.
 >

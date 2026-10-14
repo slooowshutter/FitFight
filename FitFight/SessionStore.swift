@@ -45,13 +45,15 @@ final class SessionStore: ObservableObject {
         guard !screenshotSignedIn, isSignedIn, let profile,
               authSession?.user.id == profile.userId else { return nil }
         if let data = UserDefaults.standard.data(forKey: Self.firstFightPrefix + profile.userId.uuidString),
-           let progress = try? JSONDecoder().decode(FirstFightOnboarding.self, from: data) {
+           var progress = try? JSONDecoder().decode(FirstFightOnboarding.self, from: data) {
+            // Before 14 Oct 2026 the companion came before Health, so that saved page still needs Health.
+            if progress.order == nil && progress.page == .companion { progress.page = .health }
             return progress
         }
         if needsOnboarding { return FirstFightOnboarding() }
         // Resume incomplete setup from older builds without enrolling completed accounts again.
         if UserDefaults.standard.bool(forKey: Self.needsHealthKey) {
-            return FirstFightOnboarding(page: profile.companionId == nil ? .companion : .health)
+            return FirstFightOnboarding(page: .health)
         }
         if UserDefaults.standard.bool(forKey: Self.needsNotificationKey)
             || UserDefaults.standard.bool(forKey: Self.needsRequestsKey)
@@ -62,6 +64,8 @@ final class SessionStore: ObservableObject {
     }
 
     func saveFirstFightOnboarding(_ progress: FirstFightOnboarding, userID: UUID) {
+        var progress = progress
+        progress.order = 2
         guard authSession?.user.id == userID,
               let data = try? JSONEncoder().encode(progress) else { return }
         UserDefaults.standard.set(data, forKey: Self.firstFightPrefix + userID.uuidString)
@@ -379,7 +383,7 @@ final class SessionStore: ObservableObject {
             }
             UserDefaults.standard.set(true, forKey: Self.needsSuggestedPrefix + userId.uuidString)
             var progress = firstFightOnboarding ?? FirstFightOnboarding()
-            progress.page = .companion
+            progress.page = .health
             saveFirstFightOnboarding(progress, userID: userId)
             cacheProfile(updated, for: userId)
         } catch is CancellationError {

@@ -1,10 +1,206 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **12 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **14 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
 
 ---
+
+## App Store 1.1.3 with both in-app purchases, prepared 14 Oct 2026
+
+**Apple (checked in App Store Connect, 14 Oct):** two consumables, both complete
+with English and French names, a review screenshot and review notes, available
+in all 175 territories with France as the price base:
+`com.fitfight.mvp.special` at EUR 0.99 and `com.fitfight.mvp.custom_character`
+at EUR 2.99. Both are "Prepare for Submission": Apple reviews a first consumable
+only with a new app version. Paid Apps Agreement, Mercury bank account and W-9
+are Active. The updated Apple Developer Program License Agreement is not accepted
+yet, which blocks every submission.
+
+**Review blocker fixed in code:** App Review signs in with its own Apple Account
+and buys in Sandbox against production. Production has no
+`APPLE_IAP_REVIEW_USER_IDS`, and a list could never name a reviewer in advance,
+so the reviewer's charge failed verification. Now a Special or character charge
+that names Sandbox moves an account with no purchases to the Sandbox shelf, and
+the charge is verified there by Apple's signature. On production this works only
+while the release registry (`testflight-latest/releases.json`, refreshed every
+15 minutes) lists a production build in review. The allowlist is removed.
+App Store users only make Production charges.
+
+**Accepted risk:** during a review window, a TestFlight tester who rewrites the
+app's traffic could buy in Sandbox for their own production account and get a
+Special or a custom character free. This needs deliberate tampering and ends
+when the review ends. The 23 Sep design accepted the same risk without a window.
+
+**Contract:** no API or database change. Purchase requests and responses are
+unchanged.
+
+**Release prep:** the App Store workflows name 1.1.3. Review notes and the
+promotional text no longer say the app has no purchases.
+
+**Checks (local):** `npm run typecheck` and all 445 backend unit tests passed,
+including a new Sandbox-claim test. The rewritten `specials.integration.ts`
+review-shelf test needs the disposable database in CI. No genuine Sandbox
+purchase has been verified on a device.
+## Admin dashboard: Churn tab and local-time opens heatmap, prepared 14 Oct 2026
+
+Marc asked for churn numbers, weekly and monthly, with a trend and charts. He
+also asked for the opens heatmap in each person's time zone, counting people
+instead of opens.
+
+**Server:** a new `churn` section (Churn chip after Retention). A person churned
+when they were active in the 7 (or 30) complete days before the latest 7 (or
+30) and not active in the latest. Two meanings of active:
+
+- **App opens**, as Weekly and Monthly active users. Cards: Weekly churn,
+  Monthly churn, Weekly churned users, Monthly churned users. Charts: weekly and
+  monthly churn over time, weekly users gained and lost (New, Came back, and
+  Stopped below zero), and weekly churn for people in a live fight against
+  people with none.
+- **Phone syncs**, as Retention: a complete Apple Health step day. Cards: Weekly
+  and Monthly sync churn. Chart: both over time. A phone stops syncing when the
+  app is deleted or Health is turned off.
+
+Production deleted sync reports until 1 Oct and kept the last reports of people
+who left, so churn by app opens reads only periods from 2 Oct 2026: weekly
+numbers show from 16 Oct, monthly numbers from 1 Dec, and their comparisons a
+week (or 30 days) later. staging.fitfight.app pruned until it moved to newer
+code after 11 Oct, so staging reads high for a while. A returning phone uploads
+the days it missed, so older sync churn drops when people come back.
+
+The Engagement heatmap "When people open the app, last 30 days" now counts the
+people who opened the app at least once in each weekday and hour, in their own
+saved time zone (Paris when it is missing or invalid), instead of all opens in
+Paris time.
+
+**Compatibility:** additive `section` value in `contracts/openapi.yaml`. The
+response shape does not change, and there is no migration. The app draws chips,
+cards and charts from the payload, so builds from 30 Sep 2026 on show the tab
+with no app build. No release note (admin only).
+
+**Verification (local):** web typecheck and all 444 unit tests passed. The
+dashboard database test passed on Postgres 16 with all 64 migrations. It now
+adds a phone that stopped syncing and checks that Weekly sync churn counts it;
+it failed when churn ignored the latest week. A seeded copy with 11 people and
+known open and sync days gave the expected values: weekly churn 33.3% against
+100%, monthly churn 66.7% against 0%, sync churn 50%, gained and lost 1, 2 and
+-1, churn by fight 0% and 50%, and chart end points equal to the cards. The
+heatmap counted a person once per cell and moved a New York person to 06:00.
+
+**Live deployment:** Marc asked for a PR into `develop` on 14 Oct. Nothing is
+merged or deployed. A `preview` merge deploys the preview server, which serves
+both dashboard environments.
+
+## Steps sync: fewer HealthKit reads, Steps-only history (prepared 14 Oct 2026)
+
+Marc asked for each day to be read once for all Fights, and for the app to stop
+uploading every activity type other than Steps.
+
+**Code:** a Fight upload now runs one exact window query per Fight (the score),
+one exact query for the Fight's first day, and one shared merged daily read per
+Fight time zone for the later days. Three month-long Fights on day 25 drop from
+about 78 HealthKit queries to 7. Earlier checkpoints never exceed the score,
+because summed days can drift a few steps from Apple's window total. The
+activity sync uploads daily Steps only: no other metric, workout summary or
+deletion. It rereads from 7 days before the last acknowledged upload, so a
+phone that missed syncs for days leaves no gap. Only Steps registers for
+background delivery. The upload contracts are unchanged, so no backend or
+database change is needed and older builds keep working. Profile's own activity
+screen still reads workouts directly from Apple Health on the phone.
+
+**Evidence for 7 days (staging, 14 Oct 2026):** across 53 people's Fight
+checkpoints, a finished day still changed later in 6.8% of reads 0-12 h after
+midnight, 3.6% at 12-36 h, 2.2% at 60-72 h, 0.8% at 108-120 h and 0.3% at
+132-144 h. No day read 144 h or more after midnight ever changed (1,919
+reads). Late changes are rare but large: a few hundred to about 2,900 steps.
+Fights still close 24 h after they end, so a rare late Watch sync can miss the
+result; Marc kept that grace period.
+
+**Verification (local):** simulator build and `scripts/test_fight_chart_scores.py`
+passed, including a new overlapping-Fights case. Not on TestFlight yet.
+
+## Referral free characters and website sign-in, prepared 14 Oct 2026
+
+**Product (Marc, 14 Oct 2026):** free characters come only from referrals (and
+Marc's admin gifts). For each new friend you refer, you and the friend each get 1
+free character when the friend connects Apple Health; no monthly limit. New accounts
+get none on their own, and every unused free character given before today is taken
+back. A free character makes your own animal or unlocks any Special. The custom
+character price on the website is EUR 2.99, matching the App Store product.
+
+**Code:**
+
+- Migration `20261014120000_referral_free_characters.sql`: grants may be negative only
+  for reason `taken_back`; one `taken_back` row per account cancels its unused free
+  characters; `special_purchases` gains `free_claim_key` with nullable Apple columns
+  behind a funding check (same shape as free custom characters). No row is changed
+  or removed.
+- `POST /api/v1/referrals` counts only accounts created at most 7 days earlier and
+  adds `account_not_new`.
+- `grantReferralFreeCharacters` (one insert, keyed by the friend's id, so it is
+  idempotent) gives `referral` to the referrer and `referred` to the friend once the
+  friend has an Apple Health steps day above 0. Only referrals recorded since 14 Oct
+  2026, within 7 days of the friend's signup, pay, so old referrals pay nothing. It
+  runs after a claim, after each HealthKit upload (`after()`), and in the 15-minute
+  `close-fights` sweep. The referrer gets one push: "<friend> joined FitFight" /
+  "You have a free character." (French too), respecting
+  `notification_preferences.enabled`; a failed push is logged and not retried.
+- `GET /me/custom-characters` stops adding the `signup` grant and adds
+  `referral_pending`. New `POST /me/specials/free` (Idempotency-Key,
+  `{ companion_id }`). New admin `GET /admin/free-characters` lists referral grants.
+- `POST /auth/google`: `access_token` is optional, because the website's Google button
+  gives only the ID token.
+- Website: `/r/<code>` and `/fr/r/<code>` show Sign in with Apple (Services ID
+  `com.fitfight.mvp.web`, popup) and Sign in with Google (the project's existing Web
+  client), sign in to Supabase with the ID token, and save the referral at once. Then
+  the download step says to sign in with the same email. An older account is told
+  so and sent to the app. "Download without the free character" keeps the old flow.
+  Pricing copy: Make it yours EUR 2.99, "Invite a friend and you each get one free."
+- App: sign-up order is Username, Apple Health, Companion. A referred friend sees
+  "Connect Apple Health to get the free character from your friend's invite", and the
+  Companion step reloads until it arrives. The companion picker shows "N free" and
+  "Unlock with 1 free" on Specials. Refer a friend explains the reward. Admin → Free
+  characters is now a row that opens the gift card and the referral list. Three
+  1.1.3 release notes; the 12 Oct note no longer says every account gets one.
+
+**Contract:** additive. Older apps ignore `account_not_new` and `referral_pending`,
+never call the new routes, and still claim from a reopened link. Older builds
+during onboarding keep their page order. Order: apply the migration, then deploy
+the backend, then ship the app. Between the migration and the backend deploy on
+staging, the old backend can still add a `signup` grant for an account that opens
+the store; check `select * from private.free_character_grants where reason = 'signup'
+and created_at > <migration time>` after the deploy.
+
+**Verification (local, 14 Oct):** local Supabase (CLI 2.109.1, Colima) applied the
+migration; a seeded check took back exactly the unused grants. Strict TypeScript,
+the new `free-characters.integration.ts` (7-day rule, steps rule, once per referral,
+concurrent grants, sweep, muted and deleted referrers, free Special and wearing it,
+negative grants) and the updated referral and custom-character database tests passed.
+Against `next dev` and the local stack: an old account got `account_not_new`; a new
+friend's claim then an Apple Health upload gave both grants once; the referrer
+unlocked and wore a Special for free; the admin list showed the grant. All 444 unit
+tests passed; 101 of 102 database tests passed, and the one failure (admin dashboard
+cards across periods) fails the same way on unchanged `develop` locally. The
+`FitFight` scheme built for the iOS Simulator with Xcode 27, and the native script
+checks passed, including new onboarding-order and free-Special cases. The referral
+page rendered in English and French with both buttons (the Google button text stays
+English until the origin is registered). Not run: a real Apple or Google sign-in
+(needs Marc's setup below), a push on a device, and GitHub CI.
+
+**Known risk:** the steps condition trusts the uploaded steps, so one person with a
+second account and a scripted upload can earn characters. Add a stricter signal
+(steps on two days, a joined Fight) if abuse shows up in the admin list.
+
+**Live:** nothing deployed.
+
+**Marc's setup (staging and production), done by Marc on 14 Oct 2026, not yet checked with a real sign-in:** an Apple Services ID
+`com.fitfight.mvp.web` grouped with the App ID `com.fitfight.mvp`, domains
+`fitfight.app` and `staging.fitfight.app`, return URLs `https://fitfight.app/` and
+`https://staging.fitfight.app/`; add it to the Apple provider client IDs in both
+Supabase projects; add `https://fitfight.app` and `https://staging.fitfight.app` as
+JavaScript origins on each project's existing Google Web client, and publish both
+Google consent screens (both now published). No Supabase redirect URL is needed
+(ID-token sign-in, no redirect).
 
 ## Race Day home page: prepared 12 Oct 2026
 
@@ -44,7 +240,8 @@ the staging TestFlight dialog worked in Chrome.
 ## Free characters, prepared 12 Oct 2026
 
 **Product (Marc):** no credits. Each account has a number of free characters
-("1 free"). Every account, current and new, gets 1. Marc can give more from the
+("1 free"). Every account, current and new, gets 1 (changed 14 Oct 2026: only
+referrals and gifts, see above). Marc can give more from the
 app. A later "beat Marc" challenge can add one the same way. Onboarding can
 create one and moves on at once; the push and the Fights card say when it is ready.
 

@@ -187,7 +187,7 @@ struct RemotePhoto<Placeholder: View>: View {
 
     var body: some View {
         ZStack {
-            placeholder()
+            // The placeholder only stands in while loading; behind a loaded transparent PNG it shows as a square.
             if let image {
                 Image(uiImage: image)
                     .resizable()
@@ -195,6 +195,8 @@ struct RemotePhoto<Placeholder: View>: View {
                     .aspectRatio(contentMode: contentMode)
                     .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                     .clipped()
+            } else {
+                placeholder()
             }
         }
         .contentShape(Rectangle())

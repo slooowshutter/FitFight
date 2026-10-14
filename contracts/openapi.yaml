@@ -910,7 +910,7 @@ paths:
                     "required": true,
                     "schema": {
                         "type": "string",
-                        "enum": ["overview", "retention", "users", "engagement", "steps", "fights", "social", "app"]
+                        "enum": ["overview", "retention", "churn", "users", "engagement", "steps", "fights", "social", "app"]
                     }
                 },
                 {
@@ -1090,10 +1090,40 @@ paths:
                 "403":
                     description: Not the FitFight admin
     /admin/free-characters:
+        get:
+            operationId: readFreeCharacterReferrals
+            summary: Admin only. The newest 100 referral characters, each given to a referrer when their friend's first Apple Health steps arrived.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: total counts every referral character; grants are newest first. friend is null for a deleted account.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [total, grants]
+                                properties:
+                                    total: { type: integer, minimum: 0 }
+                                    grants:
+                                        type: array
+                                        items:
+                                            type: object
+                                            required: [referrer, friend, created_at]
+                                            properties:
+                                                referrer: { type: string }
+                                                friend: { type: [string, "null"] }
+                                                created_at: { type: string, format: date-time }
+                "401":
+                    description: Missing or invalid session
+                "403":
+                    description: Not the FitFight admin
         post:
             operationId: giftFreeCharacters
             summary: Admin only. Gives free characters to one username or to every current account.
-            description: Each account also gets one free character on its own. A repeated Idempotency-Key never gives twice and returns the same count.
+            description: New accounts get none on their own; referrals and these gifts are the only grants. A repeated Idempotency-Key never gives twice and returns the same count.
             security: [{ bearerAuth: [] }]
             parameters:
                 - { $ref: "#/components/parameters/AppVersion" }
@@ -1607,15 +1637,16 @@ paths:
                         schema: { $ref: "#/components/schemas/ReferralLink" }
             responses:
                 "200":
-                    description: recorded is false for self-referrals, unavailable codes/accounts, or existing attribution.
+                    description: recorded is false for self-referrals, unavailable codes/accounts, existing attribution, or an account created more than 7 days ago; account_not_new is true only in that last case. Once the referred account's first Apple Health steps arrive, the referrer and the referred account each get one free character.
                     content:
                         application/json:
                             schema:
                                 type: object
                                 additionalProperties: false
-                                required: [recorded]
+                                required: [recorded, account_not_new]
                                 properties:
                                     recorded: { type: boolean }
+                                    account_not_new: { type: boolean, description: Added 14 Oct 2026. Older apps ignore it. }
     /app-release:
         servers: [{ url: /api }]
         get:
@@ -1947,6 +1978,35 @@ paths:
                 "409": { description: special_account when the charge is bound to another account, or Apple's record changed. }
                 "502": { description: Current Apple evidence could not be verified. }
                 "503": { description: Verification or configuration temporarily unavailable. }
+    /me/specials/free:
+        post:
+            operationId: claimFreeSpecial
+            summary: Unlock a Special with one free character instead of an Apple charge.
+            description: A repeated Idempotency-Key returns the same Special. A Special the account already owns uses nothing. GET /me/custom-characters reports the remaining count in free_characters.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+                - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [companion_id]
+                            properties:
+                                companion_id: { type: string, pattern: '^limited-', description: A current Special. }
+            responses:
+                "200":
+                    description: outcome is owned; transaction_id is the Idempotency-Key.
+                    content:
+                        application/json:
+                            schema: { $ref: "#/components/schemas/SpecialClaimResult" }
+                "400": { description: Invalid Special or missing Idempotency-Key. }
+                "401": { description: Invalid or deleted account. }
+                "409": { description: "no_free_characters when none are left; ai_request_conflict when the key belongs to another account." }
     /me/specials/transactions:
         post:
             operationId: claimSpecialPurchase

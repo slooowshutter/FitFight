@@ -3,7 +3,8 @@ import { z } from "zod";
 export const googleIdentityRequestSchema = z
     .object({
         id_token: z.string().min(1).max(16_384),
-        access_token: z.string().min(1).max(16_384),
+        /** The app sends it; the website's Google button has only the ID token. Never verified. */
+        access_token: z.string().min(1).max(16_384).optional(),
         nonce: z.string().min(16).max(128),
     })
     .strict();

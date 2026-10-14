@@ -28,6 +28,55 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 14,
+            notes: "Trophies now follow each finished round’s winner: History shows the trophy next to who won that round, and finished fights show one on their winner. ×N still counts rounds won in a row."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "Steps sync faster and wake your phone less: each day is read once for all your fights, and FitFight now uploads only your Steps."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "Past now shows every finished round of a repeating fight with its dates, and tapping one opens that round’s result."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "Free characters now come from invites. When a friend you invite connects Apple Health, you each get one. New accounts no longer get one on their own."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "A free character can also unlock any Special, and the companion picker shows how many you have."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "During sign-up, you now connect Apple Health before you choose your companion."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 13,
+            notes: "Your own characters no longer sit on a grey square: their transparent background shows the card behind them."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 13,
             notes: "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop."
         ),
@@ -43,7 +92,7 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 12,
-            notes: "Free characters: every account now gets one free custom companion. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn."
+            notes: "Free characters: create a custom companion with a free character. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn."
         ),
         ReleaseNote(
             version: "1.1.3",

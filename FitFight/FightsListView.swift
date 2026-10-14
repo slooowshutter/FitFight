@@ -344,7 +344,7 @@ struct FinishedRow: View {
 
     var body: some View {
         Button {
-            model.openFightID = fight.id
+            model.openFight(id: fight.id, preserveRound: true)
         } label: {
             HStack(spacing: 13) {
                 FFResultGlyph(result)
@@ -352,7 +352,12 @@ struct FinishedRow: View {
                     Text(fight.listTitle)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
-                    Text(result == .pending ? fight.listSubtitle : (fight.endedLabel ?? fight.listSubtitle))
+                    // Rounds of one series share a name, so the window tells them apart.
+                    let window = String(
+                        appLocalized: "fight.history-window",
+                        defaultValue: "\(Fight.deadlineStamp(fight.windowStart)) - \(Fight.deadlineStamp(fight.windowEnd))"
+                    )
+                    Text(result == .pending ? "\(String(appLocalized: "Pending")) · \(window)" : window)
                         .ffType(.caption)
                         .foregroundStyle(theme.textSecondary)
                 }

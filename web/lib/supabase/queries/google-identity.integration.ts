@@ -94,7 +94,6 @@ test("Google tokens attach to an existing Apple account with the same verified e
     const result = await reconcileGoogleIdentity(
         {
             idToken: "unused",
-            accessToken: "google-access-token",
             nonce: "abcDEF0123456789-_xyzXYZ01234567",
         },
         {

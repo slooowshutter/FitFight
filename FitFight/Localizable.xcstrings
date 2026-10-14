@@ -14460,6 +14460,56 @@
                 }
             }
         },
+        "Steps sync faster and wake your phone less: each day is read once for all your fights, and FitFight now uploads only your Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La synchronisation des pas est plus rapide et réveille moins ton téléphone : chaque jour est lu une seule fois pour tous tes défis, et FitFight n’envoie plus que tes pas."
+                    }
+                }
+            }
+        },
+        "Everyone's animal now shows in full body in standings, Feed and Profile, and from head to waist on the Fights cards, instead of a round face crop.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’animal de chacun s’affiche maintenant en entier dans le classement, Fil et Profil, et de la tête à la taille sur les cartes Défis, au lieu d’un visage rogné dans un rond."
+                    }
+                }
+            }
+        },
+        "Trophies now follow each finished round’s winner: History shows the trophy next to who won that round, and finished fights show one on their winner. ×N still counts rounds won in a row.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les trophées suivent maintenant le gagnant de chaque manche terminée : Historique affiche le trophée à côté de qui a gagné cette manche, et les défis terminés en affichent un sur leur gagnant. ×N compte toujours les manches gagnées d’affilée."
+                    }
+                }
+            }
+        },
+        "Past now shows every finished round of a repeating fight with its dates, and tapping one opens that round’s result.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Passés affiche maintenant chaque manche terminée d’un défi récurrent avec ses dates, et en toucher une ouvre le résultat de cette manche."
+                    }
+                }
+            }
+        },
+        "Your own characters no longer sit on a grey square: their transparent background shows the card behind them.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tes propres personnages ne sont plus posés sur un carré gris : leur fond transparent laisse voir la carte derrière eux."
+                    }
+                }
+            }
+        },
         "Rest": {
             "localizations": {
                 "fr": {
@@ -15691,12 +15741,12 @@
                 }
             }
         },
-        "Free characters: every account now gets one free custom companion. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn.": {
+        "Free characters: create a custom companion with a free character. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Personnages gratuits : chaque compte reçoit un compagnon personnalisé gratuit. Choisissez une idée ou décrivez votre animal, même à l’inscription, et continuez pendant qu’il est dessiné."
+                        "value": "Personnages gratuits : créez un compagnon personnalisé avec un personnage gratuit. Choisissez une idée ou décrivez votre animal, même à l’inscription, et continuez pendant qu’il est dessiné."
                     }
                 }
             }
@@ -15737,6 +15787,76 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les versions TestFlight indiquent maintenant à tout le monde, sauf aux admins, que FitFight est sur l'App Store, avec un bouton pour l'ouvrir."
+                    }
+                }
+            }
+        },
+        "Unlock any Special or create your own.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Débloque n’importe quel Spécial ou crée le tien."
+                    }
+                }
+            }
+        },
+        "Unlock with 1 free": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Débloquer avec 1 gratuit"
+                    }
+                }
+            }
+        },
+        "Connect Apple Health to get the free character from your friend's invite. You can use it on the next step.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte Apple Santé pour recevoir le personnage gratuit de l’invitation de ton ami. Tu pourras l’utiliser à l’étape suivante."
+                    }
+                }
+            }
+        },
+        "When they connect Apple Health, you each get a free character.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand ton ami connecte Apple Santé, vous recevez chacun un personnage gratuit."
+                    }
+                }
+            }
+        },
+        "Free characters now come from invites. When a friend you invite connects Apple Health, you each get one. New accounts no longer get one on their own.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les personnages gratuits viennent maintenant des invitations. Quand un ami que tu invites connecte Apple Santé, vous en recevez chacun un. Les nouveaux comptes n’en reçoivent plus d’office."
+                    }
+                }
+            }
+        },
+        "A free character can also unlock any Special, and the companion picker shows how many you have.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un personnage gratuit peut aussi débloquer n’importe quel Spécial, et le choix du compagnon affiche combien il t’en reste."
+                    }
+                }
+            }
+        },
+        "During sign-up, you now connect Apple Health before you choose your companion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À l’inscription, tu connectes maintenant Apple Santé avant de choisir ton compagnon."
                     }
                 }
             }

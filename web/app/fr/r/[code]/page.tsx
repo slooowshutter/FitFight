@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { InviteDownload } from "@/components/testflight-invite";
+import { ReferralSignIn } from "@/components/referral-sign-in";
 import { appDownload } from "@/lib/releases/app-download";
 import { referralCodeSchema } from "@/lib/types/referrals/referral";
 
@@ -40,7 +40,11 @@ export default async function FrenchReferralPage({
                     marcher plus, comparez vos pas et faites compter chaque
                     journée.
                 </p>
-                <InviteDownload {...appDownload()} language="fr" />
+                <ReferralSignIn
+                    code={parsed.data}
+                    language="fr"
+                    download={appDownload()}
+                />
             </article>
             <footer className="legal-footer">
                 <span>© 2026 FitFight</span>

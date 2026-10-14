@@ -39,13 +39,15 @@ test("referrals are stable, first-claim-only, private account relationships with
     assert.notEqual(links[0].code, links[1].code);
     assert.deepEqual(await claimReferral(first, links[0], database), {
         recorded: false,
+        account_not_new: false,
     });
     assert.deepEqual(
         await claimReferral(recipient, { code: randomUUID() }, database),
-        { recorded: false },
+        { recorded: false, account_not_new: false },
     );
     assert.deepEqual(await claimReferral(randomUUID(), links[0], database), {
         recorded: false,
+        account_not_new: false,
     });
 
     const claims = await Promise.all([
@@ -59,9 +61,11 @@ test("referrals are stable, first-claim-only, private account relationships with
     assert.ok([first, second].includes(original.referrer_user_id));
     assert.deepEqual(await claimReferral(recipient, links[0], database), {
         recorded: false,
+        account_not_new: false,
     });
     assert.deepEqual(await claimReferral(recipient, links[1], database), {
         recorded: false,
+        account_not_new: false,
     });
     const [unchanged] = await database`
         select referrer_user_id, created_at from private.referrals where referred_user_id = ${recipient}
@@ -72,15 +76,18 @@ test("referrals are stable, first-claim-only, private account relationships with
     await database`update public.profiles set deleted_at = now() where user_id = ${first}`;
     assert.deepEqual(await claimReferral(otherRecipient, links[0], database), {
         recorded: false,
+        account_not_new: false,
     });
     await database`update public.profiles set deleted_at = null where user_id = ${first}`;
     await database`update public.profiles set deleted_at = now() where user_id = ${otherRecipient}`;
     assert.deepEqual(await claimReferral(otherRecipient, links[0], database), {
         recorded: false,
+        account_not_new: false,
     });
     await database`update public.profiles set deleted_at = null where user_id = ${otherRecipient}`;
     assert.deepEqual(await claimReferral(otherRecipient, links[0], database), {
         recorded: true,
+        account_not_new: false,
     });
 
     await assert.rejects(
@@ -106,5 +113,6 @@ test("referrals are stable, first-claim-only, private account relationships with
     );
     assert.deepEqual(await claimReferral(otherRecipient, links[0], database), {
         recorded: false,
+        account_not_new: false,
     });
 });

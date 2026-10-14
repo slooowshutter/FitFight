@@ -7,17 +7,6 @@ import {
 
 export const specialsConfigurationSchema = z.object({
     environment: applePurchaseEnvironmentSchema,
-    /** Comma-separated user IDs App Review signs in with; on production they buy on the Sandbox shelf. */
-    reviewers: z
-        .string()
-        .default("")
-        .transform((value) =>
-            value
-                .split(",")
-                .map((id) => id.trim().toLowerCase())
-                .filter(Boolean),
-        )
-        .pipe(z.array(z.string().uuid())),
 });
 export const specialAccountSchema = z.object({
     id: z.string().uuid(),
@@ -69,6 +58,10 @@ export const specialPurchaseRequestSchema = z
         companion_id: limitedCompanionIdSchema,
         signed_transaction: z.string().min(1).max(30_000),
     })
+    .strict();
+/** A Special unlocked with one free character instead of an Apple charge. */
+export const specialFreeClaimRequestSchema = z
+    .object({ companion_id: limitedCompanionIdSchema })
     .strict();
 export const specialOutcomeValues = ["owned", "refunded", "conflict"] as const;
 export const specialClaimResultSchema = z.object({

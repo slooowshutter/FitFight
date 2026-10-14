@@ -38,7 +38,7 @@ struct FFLeaderboardRow: View {
     let name: String
     let value: String
     var isYou: Bool = false
-    /// Consecutive previous-round wins: one trophy, with ×N when N > 1.
+    /// Rounds the trophy holder has won in a row: one trophy, with ×N when N > 1.
     var trophies: Int = 0
     var avatar: AnyView? = nil
     var captionUrgent: Bool = false

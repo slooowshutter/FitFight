@@ -745,7 +745,9 @@ recorded as a conflict and the app offers Apple's refund request. A refund only
 retires an edition its purchase held or owned. On production, App Review signs in
 with its own Apple Account and buys in Sandbox: a Special or character charge that
 names Sandbox moves an account with no purchases to the Sandbox shelf, and the
-charge is verified there. App Store users only make Production charges.
+charge is verified there. Production opens that shelf only while the release
+registry lists a production build in review. App Store users only make
+Production charges.
 
 Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
 app. Let older backend instances drain first, because their schemas list only

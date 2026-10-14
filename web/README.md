@@ -75,9 +75,10 @@ verify an Apple test notification before device testing. Notifications and
 restores share signature verification and the same transactional ledger.
 
 App Review signs in with its own Apple Account and buys in Sandbox against
-production. A charge that names Sandbox moves an account with no purchases to the
-separate Sandbox shelf and is verified there; App Store users only make
-Production charges.
+production. While the release registry lists a production build in review, a
+charge that names Sandbox moves an account with no purchases to the separate
+Sandbox shelf and is verified there. App Store users only make Production
+charges.
 See [current evidence](../docs/status.md)
 and [Apple purchase research](../docs/research/apple-specials-purchases.md).
 

@@ -14,6 +14,8 @@ import {
     recordSpecialPurchase,
     recordSpecialTransaction,
 } from "./specials-supabase-query";
+import { resetAppReleasePolicyCacheForTests } from "@/lib/releases/app-release";
+import { appReleaseProjectValues } from "@/lib/types/releases/app-release";
 import { readProfile, updateProfile } from "./profiles-supabase-query";
 import { deleteAccount } from "./delete-account-supabase-query";
 
@@ -390,8 +392,24 @@ test("legacy charges keep their recorded outcomes and identities", async (contex
 
 test("production keeps App Review Sandbox charges on a separate Sandbox shelf", async (context) => {
     process.env.APPLE_IAP_ENVIRONMENT = "Production";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = appReleaseProjectValues[1];
+    const release = { version: "1.1.3", build: 230, update_url: "https://apps.apple.com/app/id6804230516" };
+    let review: typeof release | null = null;
+    context.mock.method(globalThis, "fetch", async () =>
+        Response.json({
+            staging: { latest: null, review: null, enforced: false },
+            prod: { latest: null, review, enforced: false },
+        }),
+    );
     try {
         const { users, accounts } = await specialUsers(context);
+        assert.equal(
+            (await readSpecialStore(users[0], database, true)).environment,
+            "Production",
+            "Without a build in review, production never opens the Sandbox shelf",
+        );
+        review = release;
+        resetAppReleasePolicyCacheForTests();
         assert.equal(
             (await readSpecialStore(users[0], database, true)).environment,
             "Sandbox",
@@ -436,5 +454,7 @@ test("production keeps App Review Sandbox charges on a separate Sandbox shelf", 
         );
     } finally {
         process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";
+        process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
+        resetAppReleasePolicyCacheForTests();
     }
 });

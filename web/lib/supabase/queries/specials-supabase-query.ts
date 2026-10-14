@@ -1,5 +1,6 @@
 import type { Sql } from "postgres";
 import { ApiError } from "@/lib/http";
+import { appReleasePolicy } from "@/lib/releases/app-release";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     appleSpecialProductIds,
@@ -26,7 +27,8 @@ import {
 
 /**
  * The shelf comes from deployment configuration. `sandbox` is set only while claiming a charge that names Sandbox; the
- * charge is then verified as Sandbox, so a false claim only moves the caller's own account while it has no purchase.
+ * charge is then verified as Sandbox, so a false claim only moves the caller's own account while it has no purchase,
+ * and on production only while a build is in review.
  */
 export async function readSpecialStore(
     userId: string,
@@ -43,6 +45,14 @@ export async function readSpecialStore(
             "Special purchases are not configured",
         );
     const configuration = configured.data;
+    // NOTE: App Review signs in with its own Apple Account and buys in Sandbox against production, so production opens
+    // the Sandbox shelf only while the release registry lists a build in review.
+    const environment =
+        sandbox &&
+        (configuration.environment === "Sandbox" ||
+            (await appReleasePolicy()).review !== null)
+            ? "Sandbox"
+            : configuration.environment;
     return database.begin(async (sql) => {
         const profiles =
             await sql`select id from public.profiles where id = ${userId} and deleted_at is null for key share`;
@@ -52,8 +62,6 @@ export async function readSpecialStore(
                 "profile_missing",
                 "Invalid or deleted account",
             );
-        // NOTE: App Review signs in with its own Apple Account and buys in Sandbox against production.
-        const environment = sandbox ? "Sandbox" : configuration.environment;
         await sql`
             insert into private.special_accounts (user_id, environment) values (${userId}, ${environment})
             on conflict (user_id) do nothing

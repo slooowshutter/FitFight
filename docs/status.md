@@ -22,8 +22,15 @@ and buys in Sandbox against production. Production has no
 `APPLE_IAP_REVIEW_USER_IDS`, and a list could never name a reviewer in advance,
 so the reviewer's charge failed verification. Now a Special or character charge
 that names Sandbox moves an account with no purchases to the Sandbox shelf, and
-the charge is verified there by Apple's signature. The allowlist is removed.
+the charge is verified there by Apple's signature. On production this works only
+while the release registry (`testflight-latest/releases.json`, refreshed every
+15 minutes) lists a production build in review. The allowlist is removed.
 App Store users only make Production charges.
+
+**Accepted risk:** during a review window, a TestFlight tester who rewrites the
+app's traffic could buy in Sandbox for their own production account and get a
+Special or a custom character free. This needs deliberate tampering and ends
+when the review ends. The 23 Sep design accepted the same risk without a window.
 
 **Contract:** no API or database change. Purchase requests and responses are
 unchanged.

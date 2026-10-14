@@ -360,13 +360,18 @@ final class AppModel: ObservableObject {
             .sorted { $0.windowStart > $1.windowStart }
     }
 
-    /// Winner of the previous round and how many rounds in a row they have won.
+    /// Who holds the trophy in this round and how many rounds in a row they have won.
+    /// A final round's own winner holds it, so History cards match their result. A round still
+    /// being played shows the previous round's winner, and a cancelled round has no holder.
     /// ponytail: only rounds this user was in are in the snapshot; a skipped or cancelled round ends the streak early.
     func trophyStreak(for fight: Fight) -> (userId: String, count: Int)? {
+        if fight.serverState == "cancelled" { return nil }
+        let ended = fight.serverState == "final"
         var holder: String?
         var count = 0
-        var nextStart = fight.windowStart
-        for round in seriesHistory(for: fight) where round.windowStart < fight.windowStart {
+        var nextStart = ended ? fight.windowEnd : fight.windowStart
+        let earlier = seriesHistory(for: fight).filter { $0.windowStart < fight.windowStart }
+        for round in (ended ? [fight] : []) + earlier {
             // The server starts each round at the previous round's end, truncated to milliseconds.
             guard abs(round.windowEnd.timeIntervalSince(nextStart)) < 1, round.serverState == "final" else { break }
             nextStart = round.windowStart

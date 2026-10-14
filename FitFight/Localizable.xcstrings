@@ -14480,6 +14480,16 @@
                 }
             }
         },
+        "Trophies now follow each finished round’s winner: History shows the trophy next to who won that round, and finished fights show one on their winner. ×N still counts rounds won in a row.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les trophées suivent maintenant le gagnant de chaque manche terminée : Historique affiche le trophée à côté de qui a gagné cette manche, et les défis terminés en affichent un sur leur gagnant. ×N compte toujours les manches gagnées d’affilée."
+                    }
+                }
+            }
+        },
         "Past now shows every finished round of a repeating fight with its dates, and tapping one opens that round’s result.": {
             "localizations": {
                 "fr": {

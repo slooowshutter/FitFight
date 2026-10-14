@@ -86,14 +86,17 @@ function TestflightInstallSteps({ language }: { language: SiteLanguage }) {
     );
 }
 
+/** `signedIn`: the referral is already saved, so the friend need not reopen the link after installing. */
 export function InviteDownload({
     isStaging,
     url,
     language,
+    signedIn = false,
 }: {
     isStaging: boolean;
     url: string;
     language: SiteLanguage;
+    signedIn?: boolean;
 }) {
     const text = copy[language];
 
@@ -115,9 +118,11 @@ export function InviteDownload({
             <h2>{text.getFitFight}</h2>
             <p>{isStaging ? text.betaOpens : text.storeOpens}</p>
             {isStaging ? <TestflightInstallSteps language={language} /> : null}
-            <p>
-                <strong>{text.returnToMessage}</strong> {text.signIn}
-            </p>
+            {signedIn ? null : (
+                <p>
+                    <strong>{text.returnToMessage}</strong> {text.signIn}
+                </p>
+            )}
             <a
                 className="primary-action invite-download"
                 href={url}
@@ -125,7 +130,7 @@ export function InviteDownload({
             >
                 {isStaging ? text.openTestflight : text.download}
             </a>
-            <p>{text.alreadyInstalled}</p>
+            {signedIn ? null : <p>{text.alreadyInstalled}</p>}
         </section>
     );
 }

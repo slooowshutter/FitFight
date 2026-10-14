@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { rewardReferrals } from "@/lib/domain/referrals/referral-rewards";
 import {
     apiRoute,
     corsPreflight,
@@ -17,6 +19,7 @@ export const POST = apiRoute(async (request, { timing }) => {
         verifyUser(request),
     );
     const input = healthKitActivityBatchSchema.parse(await readJson(request));
+    after(() => rewardReferrals(userId));
     return json(
         await measureRequestStage(timing, "db", () =>
             receiveHealthKitActivity(userId, input),

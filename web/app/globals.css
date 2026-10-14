@@ -373,3 +373,28 @@ footer {
         animation-iteration-count: 1 !important;
     }
 }
+
+.referral-sign-in {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.referral-sign-in[hidden] {
+    display: none;
+}
+
+.referral-sign-in #appleid-signin {
+    width: 300px;
+    height: 40px;
+    cursor: pointer;
+}
+
+.legal-content .referral-skip {
+    width: auto;
+    margin-top: 18px;
+    padding: 0;
+    color: var(--secondary);
+    text-align: left;
+}

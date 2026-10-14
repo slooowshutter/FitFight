@@ -34,6 +34,89 @@ result; Marc kept that grace period.
 **Verification (local):** simulator build and `scripts/test_fight_chart_scores.py`
 passed, including a new overlapping-Fights case. Not on TestFlight yet.
 
+## Referral free characters and website sign-in, prepared 14 Oct 2026
+
+**Product (Marc, 14 Oct 2026):** free characters come only from referrals (and
+Marc's admin gifts). For each new friend you refer, you and the friend each get 1
+free character when the friend connects Apple Health; no monthly limit. New accounts
+get none on their own, and every unused free character given before today is taken
+back. A free character makes your own animal or unlocks any Special. The custom
+character price on the website is EUR 2.99, matching the App Store product.
+
+**Code:**
+
+- Migration `20261014120000_referral_free_characters.sql`: grants may be negative only
+  for reason `taken_back`; one `taken_back` row per account cancels its unused free
+  characters; `special_purchases` gains `free_claim_key` with nullable Apple columns
+  behind a funding check (same shape as free custom characters). No row is changed
+  or removed.
+- `POST /api/v1/referrals` counts only accounts created at most 7 days earlier and
+  adds `account_not_new`.
+- `grantReferralFreeCharacters` (one insert, keyed by the friend's id, so it is
+  idempotent) gives `referral` to the referrer and `referred` to the friend once the
+  friend has an Apple Health steps day above 0. Only referrals recorded since 14 Oct
+  2026, within 7 days of the friend's signup, pay, so old referrals pay nothing. It
+  runs after a claim, after each HealthKit upload (`after()`), and in the 15-minute
+  `close-fights` sweep. The referrer gets one push: "<friend> joined FitFight" /
+  "You have a free character." (French too), respecting
+  `notification_preferences.enabled`; a failed push is logged and not retried.
+- `GET /me/custom-characters` stops adding the `signup` grant and adds
+  `referral_pending`. New `POST /me/specials/free` (Idempotency-Key,
+  `{ companion_id }`). New admin `GET /admin/free-characters` lists referral grants.
+- `POST /auth/google`: `access_token` is optional, because the website's Google button
+  gives only the ID token.
+- Website: `/r/<code>` and `/fr/r/<code>` show Sign in with Apple (Services ID
+  `com.fitfight.mvp.web`, popup) and Sign in with Google (the project's existing Web
+  client), sign in to Supabase with the ID token, and save the referral at once. Then
+  the download step says to sign in with the same email. An older account is told
+  so and sent to the app. "Download without the free character" keeps the old flow.
+  Pricing copy: Make it yours EUR 2.99, "Invite a friend and you each get one free."
+- App: sign-up order is Username, Apple Health, Companion. A referred friend sees
+  "Connect Apple Health to get the free character from your friend's invite", and the
+  Companion step reloads until it arrives. The companion picker shows "N free" and
+  "Unlock with 1 free" on Specials. Refer a friend explains the reward. Admin → Free
+  characters is now a row that opens the gift card and the referral list. Three
+  1.1.3 release notes; the 12 Oct note no longer says every account gets one.
+
+**Contract:** additive. Older apps ignore `account_not_new` and `referral_pending`,
+never call the new routes, and still claim from a reopened link. Older builds
+during onboarding keep their page order. Order: apply the migration, then deploy
+the backend, then ship the app. Between the migration and the backend deploy on
+staging, the old backend can still add a `signup` grant for an account that opens
+the store; check `select * from private.free_character_grants where reason = 'signup'
+and created_at > <migration time>` after the deploy.
+
+**Verification (local, 14 Oct):** local Supabase (CLI 2.109.1, Colima) applied the
+migration; a seeded check took back exactly the unused grants. Strict TypeScript,
+the new `free-characters.integration.ts` (7-day rule, steps rule, once per referral,
+concurrent grants, sweep, muted and deleted referrers, free Special and wearing it,
+negative grants) and the updated referral and custom-character database tests passed.
+Against `next dev` and the local stack: an old account got `account_not_new`; a new
+friend's claim then an Apple Health upload gave both grants once; the referrer
+unlocked and wore a Special for free; the admin list showed the grant. All 444 unit
+tests passed; 101 of 102 database tests passed, and the one failure (admin dashboard
+cards across periods) fails the same way on unchanged `develop` locally. The
+`FitFight` scheme built for the iOS Simulator with Xcode 27, and the native script
+checks passed, including new onboarding-order and free-Special cases. The referral
+page rendered in English and French with both buttons (the Google button text stays
+English until the origin is registered). Not run: a real Apple or Google sign-in
+(needs Marc's setup below), a push on a device, and GitHub CI.
+
+**Known risk:** the steps condition trusts the uploaded steps, so one person with a
+second account and a scripted upload can earn characters. Add a stricter signal
+(steps on two days, a joined Fight) if abuse shows up in the admin list.
+
+**Live:** nothing deployed.
+
+**Marc's setup (staging and production), done by Marc on 14 Oct 2026, not yet checked with a real sign-in:** an Apple Services ID
+`com.fitfight.mvp.web` grouped with the App ID `com.fitfight.mvp`, domains
+`fitfight.app` and `staging.fitfight.app`, return URLs `https://fitfight.app/` and
+`https://staging.fitfight.app/`; add it to the Apple provider client IDs in both
+Supabase projects; add `https://fitfight.app` and `https://staging.fitfight.app` as
+JavaScript origins on each project's existing Google Web client, and publish both
+Google consent screens (both now published). No Supabase redirect URL is needed
+(ID-token sign-in, no redirect).
+
 ## Race Day home page: prepared 12 Oct 2026
 
 Marc picked the Race Day landing page design (round 2, design 6) and asked to
@@ -72,7 +155,8 @@ the staging TestFlight dialog worked in Chrome.
 ## Free characters, prepared 12 Oct 2026
 
 **Product (Marc):** no credits. Each account has a number of free characters
-("1 free"). Every account, current and new, gets 1. Marc can give more from the
+("1 free"). Every account, current and new, gets 1 (changed 14 Oct 2026: only
+referrals and gifts, see above). Marc can give more from the
 app. A later "beat Marc" challenge can add one the same way. Onboarding can
 create one and moves on at once; the push and the Fights card say when it is ready.
 

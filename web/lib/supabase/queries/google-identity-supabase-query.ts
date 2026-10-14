@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import type { Sql } from "postgres";
-import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     emailFromGoogleClaims,
@@ -193,7 +192,7 @@ async function attachGoogleIdentity(
 }
 
 export async function reconcileGoogleIdentity(
-    input: { idToken: string; accessToken: string; nonce: string },
+    input: { idToken: string; nonce: string },
     options: {
         database?: Sql;
         verify?: typeof verifyGoogleIdToken;
@@ -205,9 +204,6 @@ export async function reconcileGoogleIdentity(
         input.nonce,
         { projectURL: options.projectURL },
     );
-    if (!input.accessToken) {
-        throw new ApiError(401, ERROR_CODES.unauthorized, "Invalid Google token");
-    }
     const database = options.database ?? createDatabaseClient();
     const email = emailFromGoogleClaims(claims);
     return database.begin("read write", async (sql) => {

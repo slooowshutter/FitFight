@@ -15731,12 +15731,12 @@
                 }
             }
         },
-        "Free characters: every account now gets one free custom companion. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn.": {
+        "Free characters: create a custom companion with a free character. Pick an idea or describe your own animal, even during sign-up, and keep going while it is drawn.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Personnages gratuits : chaque compte reçoit un compagnon personnalisé gratuit. Choisissez une idée ou décrivez votre animal, même à l’inscription, et continuez pendant qu’il est dessiné."
+                        "value": "Personnages gratuits : créez un compagnon personnalisé avec un personnage gratuit. Choisissez une idée ou décrivez votre animal, même à l’inscription, et continuez pendant qu’il est dessiné."
                     }
                 }
             }
@@ -15777,6 +15777,76 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les versions TestFlight indiquent maintenant à tout le monde, sauf aux admins, que FitFight est sur l'App Store, avec un bouton pour l'ouvrir."
+                    }
+                }
+            }
+        },
+        "Unlock any Special or create your own.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Débloque n’importe quel Spécial ou crée le tien."
+                    }
+                }
+            }
+        },
+        "Unlock with 1 free": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Débloquer avec 1 gratuit"
+                    }
+                }
+            }
+        },
+        "Connect Apple Health to get the free character from your friend's invite. You can use it on the next step.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte Apple Santé pour recevoir le personnage gratuit de l’invitation de ton ami. Tu pourras l’utiliser à l’étape suivante."
+                    }
+                }
+            }
+        },
+        "When they connect Apple Health, you each get a free character.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand ton ami connecte Apple Santé, vous recevez chacun un personnage gratuit."
+                    }
+                }
+            }
+        },
+        "Free characters now come from invites. When a friend you invite connects Apple Health, you each get one. New accounts no longer get one on their own.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les personnages gratuits viennent maintenant des invitations. Quand un ami que tu invites connecte Apple Santé, vous en recevez chacun un. Les nouveaux comptes n’en reçoivent plus d’office."
+                    }
+                }
+            }
+        },
+        "A free character can also unlock any Special, and the companion picker shows how many you have.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un personnage gratuit peut aussi débloquer n’importe quel Spécial, et le choix du compagnon affiche combien il t’en reste."
+                    }
+                }
+            }
+        },
+        "During sign-up, you now connect Apple Health before you choose your companion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À l’inscription, tu connectes maintenant Apple Santé avant de choisir ton compagnon."
                     }
                 }
             }

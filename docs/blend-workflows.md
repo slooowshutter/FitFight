@@ -123,12 +123,21 @@ descriptions remain available. A 1.1.2 release note and English/French copy were
 ## Free characters
 
 Marc's rule (12 Oct 2026): no credits for characters. An account has a number of
-free characters. Every account gets one `signup` grant; the admin gives more
-(`gift`) from Profile → Dashboard → Admin, to one username or to every account.
-`private.free_character_grants` keeps every grant. A free character is a
+free characters. Since 14 Oct 2026 they come only from referrals and admin gifts:
+when a referred friend's first Apple Health steps arrive, the referrer gets a
+`referral` grant and the friend a `referred` grant, both keyed by the friend's id.
+New accounts get no `signup` grant, and every unused free character given before
+14 Oct was taken back by one negative `taken_back` grant per account. The admin
+gives more (`gift`) from Profile → Dashboard → Admin → Free characters, to one
+username or to every account. `private.free_character_grants` keeps every grant.
+Remaining = sum of grants minus free characters and free Specials used.
+
+A free character either creates your own animal or unlocks any Special
+(`POST /api/v1/me/specials/free`, a `special_purchases` row with `free_claim_key`
+and no Apple fields). A free own character is a
 `custom_character_purchases` row with `free_claim_key` and no Apple fields, so it
 follows the paid flow exactly: three portraits, the owner's choice, five poses,
-reconciliation and the two pushes. It cannot be refunded. A free claim saves the
+reconciliation and the two pushes. Neither can be refunded. A free claim saves the
 description and portrait rows in one transaction; a replayed key returns the same
 character. Each free character costs the Blend runs of a paid one.
 

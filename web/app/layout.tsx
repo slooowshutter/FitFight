@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 
-import "./globals.css";
-
 const nunito = localFont({
     src: [
         {

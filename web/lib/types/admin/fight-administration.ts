@@ -14,7 +14,7 @@ export const administeredFightSchema = z.object({
 });
 export const administeredSeriesSchema = z.object({
     id: z.string().uuid(), visibility: fightVisibilitySchema, paused_at: z.coerce.date().nullable(),
-    current_fight_id: z.string().uuid().nullable(),
+    current_fight_id: z.string().uuid().nullable(), host_id: z.string().uuid().nullable(),
 });
 export const suggestedSeriesSchema = administeredSeriesSchema.extend({
     owner_id: z.string().uuid(), name: z.string(), join_code: z.string().nullable(), suggested: z.boolean(),

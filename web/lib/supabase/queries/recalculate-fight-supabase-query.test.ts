@@ -37,6 +37,7 @@ test("finalizing a fight uses a bounded number of writes as the roster grows", a
                             outcome_rule: "highest_total",
                             stake_minor: null,
                             default_goal_value: null,
+                            host_id: null,
                         },
                     ]);
                 if (query.includes("from public.fight_members"))
@@ -152,6 +153,7 @@ function mockRecalculateDatabase(input: {
                         outcome_rule: "highest_total",
                         stake_minor: null,
                         default_goal_value: null,
+                        host_id: null,
                     },
                 ]);
             if (query.includes("from public.fight_members"))

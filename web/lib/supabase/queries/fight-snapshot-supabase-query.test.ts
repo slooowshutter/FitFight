@@ -40,12 +40,17 @@ test("the shared native snapshot fixture preserves the API contract and strips i
     assert.equal(fixture.members[0].current_value, 8500);
     assert.equal(fixture.profiles[0].companion_id, "fox");
     assert.equal(fixture.profiles[1].companion_id, null);
+    assert.deepEqual(fixture.hosted, { name: "Fight Marc", rounds: 20, leading: 12 });
 });
 
 test("snapshot validates the requested timezone and returns five empty arrays", () => {
     assert.deepEqual(
         fightSnapshotRequestSchema.parse({ time_zone: "Europe/Paris" }),
         { time_zone: "Europe/Paris" },
+    );
+    assert.deepEqual(
+        fightSnapshotRequestSchema.parse({ time_zone: "UTC", hosted: true }),
+        { time_zone: "UTC", hosted: true },
     );
     assert.equal(
         fightSnapshotRequestSchema.safeParse({ time_zone: "Mars/Olympus" })
@@ -66,8 +71,9 @@ test("snapshot validates the requested timezone and returns five empty arrays", 
             profiles: [],
             series: [],
             step_days: [],
+            hosted: null,
         }),
-        { fights: [], members: [], profiles: [], series: [], step_days: [] },
+        { fights: [], members: [], profiles: [], series: [], step_days: [], hosted: null },
     );
 });
 
@@ -99,6 +105,7 @@ test("snapshot establishes transaction-local caller permissions before its singl
         profiles: [],
         series: [],
         step_days: [],
+        hosted: null,
     };
     const calls: Array<{ query: string; values: unknown[] }> = [];
     const sql = async (strings: TemplateStringsArray, ...values: unknown[]) => {
@@ -119,7 +126,9 @@ test("snapshot establishes transaction-local caller permissions before its singl
         await readFightSnapshot(userId, "Europe/Paris", database as never),
         snapshot,
     );
-    assert.equal(calls.length, 3);
+    // The visibility condition is a nested fragment (calls[2]) inside the one data query.
+    assert.equal(calls.length, 4);
+    assert.match(calls[2].query, /host_id is distinct from/);
     assert.equal(calls[0].query, "set local role fitfight_backend_reader");
     assert.ok(
         calls[1].query.includes("set_config('request.jwt.claim.sub', ?, true)"),
@@ -128,12 +137,12 @@ test("snapshot establishes transaction-local caller permissions before its singl
         userId,
         JSON.stringify({ sub: userId, role: "authenticated" }),
     ]);
-    assert.ok(calls[2].values.includes("Europe/Paris"));
-    assert.match(calls[2].query, /as grace_ends_at/);
-    assert.match(calls[2].query, /avatar_media_id/);
-    assert.match(calls[2].query, /companion_id/);
-    assert.match(calls[2].query, /select snapshot.value, snapshot.step_checkpoints/);
-    assert.doesNotMatch(calls[2].query, /as final_sync_grace_seconds/);
+    assert.ok(calls[3].values.includes("Europe/Paris"));
+    assert.match(calls[3].query, /as grace_ends_at/);
+    assert.match(calls[3].query, /avatar_media_id/);
+    assert.match(calls[3].query, /companion_id/);
+    assert.match(calls[3].query, /select snapshot.value, snapshot.step_checkpoints/);
+    assert.doesNotMatch(calls[3].query, /as final_sync_grace_seconds/);
 });
 
 test("snapshot profiles without a photo come back with a null avatar", async () => {
@@ -146,6 +155,7 @@ test("snapshot profiles without a photo come back with a null avatar", async () 
         ],
         series: [],
         step_days: [],
+        hosted: null,
     };
     const database = {
         begin: async (
@@ -261,6 +271,7 @@ test("refresh answers after the caller's maintenance and delivers notifications 
         profiles: [],
         series: [],
         step_days: [],
+        hosted: null,
     };
     const database = {};
     const steps: string[] = [];

@@ -40,6 +40,7 @@ struct FightDetailView: View {
     @State private var adminAction: String? = nil
     @StateObject private var fightFeed = FeedStore()
     @State private var isRefreshingFeed = false
+    @AppStorage("fight.dismissedLastRounds") private var dismissedLastRounds = ""
 
     init(fight: Fight, pane: FightDetailPane = .stats) {
         initialFight = fight
@@ -102,6 +103,11 @@ struct FightDetailView: View {
                 )
                 .id(fightsRevision)
             } else {
+                if let lastRound = model.lastRound(before: fight), !dismissedLastRounds.contains(lastRound.id) {
+                    lastRoundNotice(lastRound)
+                        .contentShape(Rectangle())
+                        .onTapGesture { pane = .history }
+                }
                 FFSegmented(items: panes, selection: $pane) { item in
                     item.title
                 }
@@ -196,6 +202,9 @@ struct FightDetailView: View {
                     await fightFeed.load(session: session, fightID: fightID)
                 } else {
                     await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                    if model.hostedRounds.contains(where: { $0.id == fight.id }) {
+                        try? await model.refreshHostedRounds()
+                    }
                 }
             }
         )
@@ -266,6 +275,30 @@ struct FightDetailView: View {
         ForEach(model.seriesHistory(for: fight)) { window in
             historyWindowCard(window)
         }
+    }
+
+    private func lastRoundNotice(_ round: Fight) -> some View {
+        let tied = round.rank == 1 && round.isTiedForFirst
+        let text: String
+        if round.of == 2,
+           let you = model.youStanding(in: round),
+           let rival = round.standings.first(where: { !$0.person.isYou && !$0.invited && !$0.deferred }) {
+            let yours = Int(you.score).formatted(.number.locale(AppLocalization.locale))
+            let theirs = Int(rival.score).formatted(.number.locale(AppLocalization.locale))
+            text = tied
+                ? String(appLocalized: "fight.last-round-draw", defaultValue: "Last round: a draw, \(yours) to \(theirs). New round started. See more in History.")
+                : round.rank == 1
+                    ? String(appLocalized: "fight.last-round-won", defaultValue: "Last round: you won \(yours) to \(theirs). New round started. See more in History.")
+                    : String(appLocalized: "fight.last-round-lost", defaultValue: "Last round: you lost \(yours) to \(theirs). New round started. See more in History.")
+        } else {
+            text = tied
+                ? String(appLocalized: "fight.last-round-tied-place", defaultValue: "Last round: you tied for 1st of \(round.of). New round started. See more in History.")
+                : String(appLocalized: "fight.last-round-place", defaultValue: "Last round: you came \(AppModel.ordinal(round.rank)) of \(round.of). New round started. See more in History.")
+        }
+        // Stored on this phone only, keyed by the finished round's id.
+        return FFNotice(text: text, tone: tied ? .neutral : round.rank == 1 ? .moss : .ember, onDismiss: {
+            dismissedLastRounds += round.id + " "
+        })
     }
 
     @ViewBuilder

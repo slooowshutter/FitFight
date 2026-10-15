@@ -79,5 +79,10 @@
             "day": "2026-09-02",
             "steps": 8500
         }
-    ]
+    ],
+    "hosted": {
+        "name": "Fight Marc",
+        "rounds": 20,
+        "leading": 12
+    }
 }

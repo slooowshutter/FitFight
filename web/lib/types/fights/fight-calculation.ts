@@ -18,6 +18,7 @@ export const fightCalculationRowSchema = z.object({
     outcome_rule: z.enum(outcomeRuleValues),
     stake_minor: z.number().int().nullable(),
     default_goal_value: z.coerce.number().finite().nullable(),
+    host_id: z.string().uuid().nullable(),
 });
 
 export const fightCalculationMemberSchema = z.object({

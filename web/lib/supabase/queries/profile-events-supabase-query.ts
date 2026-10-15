@@ -42,7 +42,9 @@ export async function recordSharedFightParticipation(sql: TransactionSql, fightI
         )
         from public.fight_members mine
         join public.fight_members theirs on theirs.fight_id = mine.fight_id and theirs.user_id <> mine.user_id
+        join public.fights fight on fight.id = mine.fight_id
         where mine.fight_id = ${fightId} and mine.state = 'accepted' and theirs.state = 'accepted'
+            and fight.host_id is null
             and (${joiningUserId}::uuid is null or mine.user_id = ${joiningUserId} or theirs.user_id = ${joiningUserId})
             and not exists (
                 select 1 from (

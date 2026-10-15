@@ -169,6 +169,7 @@ test("snapshot preserves invited, declined, owner-only and day-specific RLS acce
         profiles: [],
         series: [],
         step_days: [],
+        hosted: null,
     });
 
     // max: 1 forces this assertion to inspect the same pooled connection used above.

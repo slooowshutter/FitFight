@@ -1,8 +1,232 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **14 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **15 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
+
+---
+
+## Last round result card, prepared 15 Oct 2026
+
+Repeating rounds restart the moment one ends, so Marc's brother did not notice
+his fight had finished. A repeating fight's screen now opens with a card above
+Stats/History/Feed/Details when the round that ended as the live one started is
+final and you raced in it: "Last round: you won 41,203 to 38,900. New round
+started." (lost, and a draw, the same way), or "you came 2nd of 4" with three or
+more people. Moss for first place, Ember otherwise, neutral for a tie for first.
+Tapping the card opens History ("See more in History."); ✕ hides it; the dismissal is stored on the phone only (`UserDefaults`
+`fight.dismissedLastRounds`, the finished round's id), so a reinstall or another
+phone shows it again. The card uses the rounds already in the Fights snapshot
+(the History cards); a round still settling, a round you only waited out, or a
+gap before the live round shows nothing. New 1.1.3 release note.
+
+**Contract:** native only, no API or database change.
+
+## Web app at /app, prepared 15 Oct 2026
+
+Marc asked (15 Oct 2026) to use everything in the app from a browser, mostly on
+desktop, as a shadcn dashboard.
+
+**Code:** `web/app/app/` is a signed-in web app at `fitfight.app/app` (and
+`staging.fitfight.app/app`). Sign in with Apple or Google (same Services ID, Google
+Web client and nonce flow as the referral page, now shared in
+`web/components/sign-in-buttons.tsx`); the Supabase session stays in the browser.
+Every screen calls the existing `/api/v1` with the bearer token, exactly like the
+iPhone app, and parses answers with the server's Zod schemas. Screens: Fights
+dashboard (live, lead and invitation counts, Current / Invited / Past), Fight detail
+(standings, daily steps chart, details, accept, decline, leave, delete, posts), New
+fight (create with the app's defaults, join by code, public and suggested fights),
+Feed (posts, reactions, comments, new post, edit, delete, report), Feedback (filters,
+vote, detail, comments, new request, admin archive and delete), Profile and other
+people's profiles (record, step statistics and chart, rivalries, history, friends,
+edit name). Signing out on the web ends only that browser's session (`scope:
+"local"`), so the iPhone app stays signed in. Sidebar navigation, Night/Day from the system setting, colours mapped
+from `tokens.json`. Tailwind v4 and shadcn load only under `/app`: the marketing
+pages moved into the `web/app/(site)/` route group with their own `globals.css`, so
+their URLs and styles are unchanged. The 30 Specials avatars were exported from
+`Assets.xcassets` to `web/public/landing/` as small webp files.
+
+**Local testing:** Apple and Google accept only fitfight.app and
+staging.fitfight.app, so on `next dev` the web app signs in by itself as
+`DEV_AUTOLOGIN_EMAIL` from `web/.env.local` (Blend's switch): `POST /api/v1/dev/sign-in`
+mints a one-time magic-link token for that existing account and the browser trades it
+for a session. It answers 404 unless NODE_ENV is development, the variable is set, the
+Host is localhost and the browser marks the call same-origin (so another site open in
+the same browser cannot use it), and it never creates an account. `npm run dev` now listens on
+127.0.0.1 only, so nobody else on the network can reach it or forge that Host. Remove
+the variable to stay signed out.
+
+**Admin (15 Oct):** `/app/admin`, in the sidebar for the app's admin usernames
+(marc, rad), draws the iPhone admin dashboard from `GET /admin/dashboard`: every
+section, period and bucket, cards with their change, line, bar and heatmap charts, and
+a Production / Staging switch (Production by default, like the app; a production
+server shows Production only). Production comes through the server's read-only
+`PRODUCTION_ANALYTICS_DATABASE_URL`. Vercel marks that and every production secret
+Sensitive, so `vercel env pull` returns them empty and `next dev` cannot reach
+production; on `next dev` the page reads through the `preview` server instead
+(`GET /api/v1/dev/admin-dashboard`, localhost only), exactly as the iPhone app does.
+
+**Not on the web:** Apple Health sync, purchases (Specials, custom characters),
+companion and photo changes, photo and video upload in posts and feedback,
+notifications, fight editing and admin tools, account deletion, French.
+
+**Contract:** none changed. No API, database or iPhone app change.
+
+**Verification (local, 15 Oct):** web typecheck, all 451 unit tests (one new:
+`web-fight-view.test.ts`) and `next build` passed. Against `next dev` and a local
+Supabase stack with four test users, every screen loaded real data in Chrome and
+every call it makes was exercised (create, join, accept, decline, leave, delete,
+post, react, comment, vote, feedback, friends, edit name). The home, privacy,
+support, French and referral pages rendered from the production build, and the
+referral page still shows both sign-in buttons. Not run: a real Apple or Google
+sign-in (works only on `fitfight.app` and `staging.fitfight.app`) and GitHub CI.
+
+**Live:** nothing deployed.
+
+## Open on saved data, 10-second refresh limit, prepared 15 Oct 2026
+
+Several App Store users reported the app spinning forever on open. Production
+data (read-only, 14 Oct) on 1.1.2 (210), which has no refresh limit: a Fights
+refresh request sometimes stalls on the phone and fails with URL error -1001
+only after 7 to 12 minutes, while a parallel request a few seconds later
+succeeds in about 1.5 seconds. The server never answers the stalled request, so
+nothing reaches `private.server_error_logs`; the evidence is in
+`private.healthkit_sync_attempts`. In the last 7 days, 33 of 60 active users on
+210 had a foreground refresh over 30 seconds, and 153 refreshes lasted over 2
+minutes (some of those are suspensions, not someone watching). TestFlight 224
+(staging) shows the 12 Oct limit working: a stalled request cancelled at 30.2
+seconds.
+
+Marc asked for a shorter limit than 30 seconds. Over 14 days of successful
+production foreground refreshes (9,967), the network part took 1.1 s at the
+median, 3.3 s at p95 and 6.7 s at p99; 53 (0.5%) took over 10 seconds. The
+foreground/manual limit is now **10 seconds**. Nothing else changed: same
+"Refreshing took too long" message and Try again, same start after the
+HealthKit read. New 1.1.3 release note.
+
+**Contract:** native only, no API or database change.
+
+**Reaching App Store users:** the limit (12 Oct) and this change are on
+`develop`/`preview` paths only. App Store builds come only from `main`, so 210
+users keep spinning until 1.1.3 ships. Force-quitting and reopening clears a
+stuck refresh on 210.
+
+**Open on saved data (15 Oct):** the app already restored cached Fights, the
+profile and today's Steps at launch, but the full-screen spinner waited for
+Supabase Auth's initial session. With default options supabase-swift 2.55
+refreshes an expired access token (1 hour) over the network before emitting it,
+so most opens needed the internet before anything showed: a stalled connection
+kept the spinner up for its timeouts and retries, and offline the failed refresh
+emitted no session, which showed Welcome as if signed out. The client now sets
+`emitLocalSessionAsInitialSession: true`: the saved session is emitted at once
+and an expired token refreshes in the background. API calls still go through
+`freshAccessToken()`, which refreshes first; Realtime and Functions get the new
+token on `tokenRefreshed`. A network failure keeps the saved session; a revoked
+refresh token still signs out. A Fights refresh that fails (offline, server
+error) keeps the saved fights and now shows "Not up to date. Check your internet
+connection." with Try again on Fights, a Fight and Profile; before, only the
+time limit showed a notice. A later successful refresh clears it. New 1.1.3
+release note.
+
+**Not covered:** a hung Supabase Auth token refresh ignores the 10-second
+cancel (the library runs it in its own task with retries). Not seen in the data.
+
+## Fight Marc (founder fight): prepared 14 Oct 2026
+
+Marc asked (11 and 14 Oct) that every new user can fight him 1v1 on Steps, repeating, most
+steps wins, no prize. Each user sees only their own fight against him. He sees every
+challenger on one admin page. Decisions: 30-day rounds from the day the user joins, new
+users only (offered in onboarding), one tap records consent, and no wait for the Steps sync
+rework. That rework (#376) landed first: the activity sync still uploads daily Steps, which
+is what scores Marc, so nothing here changed for it.
+
+**Why Marc is not an ordinary member of hundreds of 1v1s:** his phone would run about 31
+Apple Health queries per fight on every sync, `POST /api/v1/healthkit/steps` takes at most
+100 fight totals and rejects an upload that leaves out a live fight, and his snapshot,
+pushes, Feed, profile access and rivalry would fill with every challenger.
+
+**Design: a virtual opponent.** Migration `20261014140000_founder_fights.sql` adds
+`fight_series.host_id` and `fights.host_id` (copied to every round), with one series per
+user and host. Marc is an accepted member of every round, so older builds show a normal 1v1.
+The backend scores him from his stored daily Steps (`private.activity_metrics`, scope `day`):
+the sum of the round's dates, published through the same snapshot path as a phone upload.
+That runs for all his founder rounds whenever his phone's activity sync stores daily Steps,
+and once when a round is created. His score is complete once the round's last date is.
+Rounds run on GMT days (his phone stores GMT days; no daylight saving, so repeating rounds
+keep midnight bounds) and last 30 days. Matching dates rather than instants keeps every day
+counted while his phone is in another zone. The challenger owns the series and can rename
+it, but its schedule, visibility and repetition stay fixed; older Edit screens still send
+those fields, so the server ignores them instead of rejecting the save.
+
+- `POST /api/v1/founder-fight`: idempotent, one series per user, returns `{ id, state }`.
+  The founder id per environment is in `web/lib/types/fights/founder-fight.ts`, resolved with
+  `readEnvironment`.
+- `GET /api/v1/admin/founder-fights`: admin only. Each challenger's current round (day,
+  their Steps, Marc's Steps, or `left`) and Marc's wins, losses and draws over finished
+  rounds.
+- Founder rounds are left out of Marc's upload context, Steps sync check, snapshot, due-fight
+  closing, live-update pings, reminders, daily status and pushes. They create no Main Feed
+  visibility, Feed activity, tag or mention eligibility, current-opponent profile access,
+  record, rivalry or share event, in either direction, and no admin social metric counts
+  them.
+- Nobody can invite or join into a founder fight. Leaving it, or removing anyone from it,
+  pauses the series; the owner does not need a successor there.
+- App: a "Fight Marc" page in onboarding ("Fight Marc" or "Not now") after Apple Health and
+  the companion, right before the Everybody page; both share step 5. Admin tab: "Founder fights" lists every challenger. Release note
+  1.1.3, 14 Oct, English and French.
+
+**Host view (14 Oct, Marc):** every round Marc hosts is one card at the top of his Fights
+tab, with the challenge name and "Leading 12 of 20". Tapping it shows the same summary and
+each 1v1 as a normal Fights card under the challenger's handle; tapping one opens the
+normal fight screen. It is keyed on `host_id`, not on Marc, so a future host of any
+challenge gets the same card. `POST /api/v1/fights/snapshot` and `/refresh` return an
+additive `hosted` summary (null for everyone else) and accept an optional `hosted: true`
+that returns only the caller's current hosted rounds where both racers are still in, in the
+same shape. Older builds never send the flag and ignore the field. The admin menu cannot make
+a founder round public, and so cannot suggest it. In a round, Leave is still shown to the
+host: it ends that challenger's series. No release note: only hosts see this.
+
+**Known limits:** Marc forfeits a round if his phone does not sync within the 24-hour final
+sync grace after it ends. While his phone is in another zone, his days are that zone's
+local days. A new round shows Marc at 0 until his phone's next sync. A result appears at
+the challenger's next refresh, or when the grace ends.
+
+**Everybody fight on production is full:** read-only on 14 Oct, `PGG7` had 50 of 50
+accepted or deferred members (the cap), 11 more invited who cannot accept, and 81 profiles.
+New users already see "Couldn't accept." on that onboarding page. The cap is unchanged here.
+
+**Contract:** `/api/v1` unchanged for every installed build. Two new endpoints; no request or
+response field changed. Read-only `/api/app-release` on 14 Oct: production latest 1.1.2
+(210); staging latest 1.1.1 (201), review and internal 1.1.3 (224); enforcement off. Those
+builds never call the new endpoints. For them a founder round is an ordinary 1v1. Marc's
+own builds get fewer fight windows and fights, which they already handle. An owner leaving
+from an older build still sends a successor, which the server ignores for founder series.
+
+**Deployment order:** migration (additive columns, three replaced trigger and policy
+functions), then backend, then the app. The new backend reads `host_id` in the snapshot,
+upload context, Steps sync, closer and outbox, so confirm the migration has applied before
+the backend promotes; both run from the same merge. No founder round exists until the new
+backend creates one, so an older backend instance never sees a `host_id`. Do not roll the
+backend back once founder rounds exist: older code expects Marc's phone to upload a total
+for each of them and would reject his Steps sync.
+
+**Verification (local):** web typecheck and all 449 unit tests passed. On a disposable
+local Supabase rebuilt from every migration, in CI's order: schema lint clean, build 113
+compatibility 1 of 1, pgTAP 316 of 316 (including `supabase/tests/founder_fights.sql`: no
+fight or Feed ping to the host, no Main post visibility through a founder round),
+`test:database` 109 of 110, then with direct access closed pgTAP 18 of 18 and
+`test:database` 108 of 110 with 1 skipped (after merging develop at 21f52d57). The one failure in both runs, "every admin
+dashboard card and chart runs on the migrated schema", fails the same way with develop's code
+on that database (local clock skew), so CI decides it. The skipped case renames a founder
+fight; with direct access closed every service-role fight update already fails on
+`allow_score_correction`, which predates this change. The founder-fight integration tests
+cover scoring from daily rows, rescoring on his activity sync, completion with his phone in
+another zone, no push queued for him at the end of a round, idempotency, his Steps sync with
+no founder totals, his source left untouched by signups, the upload context, invite, join and
+edit guards, the admin list, leaving pausing the series and the next round keeping its host.
+The Feed, mention, push, profile and admin cases cover the exclusions. iOS simulator build of
+the FitFight scheme succeeded, and every iOS CI script, localization and API contract check
+passed. Not deployed; no staging or production check of the new code.
 
 ---
 
@@ -212,7 +436,7 @@ in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
 Feedback and Profile screens; text left and phone right on computers, stacked
 on phones; on computers the hero fills the first screen), steps recorded, what it is, the goal, how it
 works (the five New fight steps, nothing is saved), companions (pick one of the
-12 animals and see its five poses), fight options, pricing, FAQ with search,
+30 Specials and see its five poses; people in the mockups wear Specials too), fight options, pricing, FAQ with search,
 and a closing card. All people, fights and posts are fictional. The download
 buttons keep the App Store link in production and the TestFlight dialog on
 staging. The pricing card shows Specials (EUR 0.99, buy any and keep it) and
@@ -345,6 +569,10 @@ Apple's own review is the gate: unapproved products never load in StoreKit, so
 the app shows "Purchases unavailable" until approval. `purchases_enabled` stays in
 the API (always `true`) for older builds.
 ## TestFlight syncs card for the admin, prepared 12 Oct 2026
+
+**Removed from the app 14 Oct 2026** at Marc's request: the card, its sheet and
+the native client for the route are gone. The `GET /api/v1/admin/recent-syncs`
+route stays, because installed staging builds still call it.
 
 On TestFlight, Marc saw a person in the app-wide Fight who synced 45 minutes
 before. That person should use the App Store version, which uses production.

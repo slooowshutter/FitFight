@@ -26,7 +26,7 @@ export function storedFightIdentity(
 const IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000;
 const JOIN_CODE_ATTEMPTS = 8;
 
-async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
+export async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
     for (let attempt = 0; attempt < JOIN_CODE_ATTEMPTS; attempt += 1) {
         const code = randomJoinCode();
         const { data, error } = await admin

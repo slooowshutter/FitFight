@@ -13,11 +13,13 @@ import {
     activityMeasurementSchema,
     activityRawIdSchema,
     claimedActivityRawSchema,
+    fightScoreTotalSchema,
     fightTotalPayloadSchema,
     selectedActivityRawSchema,
     type ActivityMeasurement,
     type ActivityRawRecord,
     type ClaimedActivityRaw,
+    type FightScoreTotal,
     type JsonValue,
     type SelectedActivityRaw,
 } from "@/lib/types/activity/activity-pipeline";
@@ -466,7 +468,16 @@ async function resolveActivity(
         raw.record_key.startsWith("fight:"),
     );
     if (fightReadings.length > 0) {
-        await publishFightScores(sql, userId, sourceId, fightReadings);
+        await publishFightScores(sql, userId, sourceId, fightReadings.map((raw) => ({
+            ...fightTotalPayloadSchema.parse(raw.payload),
+            // A later re-read that returns to an earlier total becomes the newest revision again.
+            input_hash: createHash("sha256")
+                .update(`${raw.payload_hash}:${raw.collected_at}`)
+                .digest("hex"),
+        })));
+    }
+    if (measurements.some((measurement) => measurement.scope === "day" && measurement.metric === "steps")) {
+        await publishHostScores(sql, userId, sourceId);
     }
     await mirrorLegacyStepDays(sql, userId, sourceId, selected);
 
@@ -533,19 +544,68 @@ async function saveMeasurements(
 }
 
 /**
- * Publish the selected exact-window reading as the member's newest score revision, then rescore.
+ * A founder fight's host never uploads its total. His score is the sum of his stored daily Steps
+ * for the round's dates, published through the same path as a phone upload. Dates, not instants,
+ * so a day still counts while his phone is in another zone; the round is complete once its last
+ * date is.
+ */
+export async function publishHostScores(
+    sql: TransactionSql,
+    hostId: string,
+    sourceId: string,
+    fightId: string | null = null,
+): Promise<void> {
+    const totals = fightScoreTotalSchema.array().parse(await sql`
+        with days as (
+            select fight.id as fight_id, day.day, day.value, day.observed_through, day.updated_at,
+                least(day.ends_at, day.observed_through, fight.ends_at) as cutoff_at,
+                day.day = (fight.ends_at at time zone fight.time_zone)::date - 1
+                    and day.observed_through >= day.ends_at as completes_round,
+                sum(day.value) over (partition by fight.id order by day.day)::bigint as steps
+            from public.fights as fight
+            join public.fight_members as member
+                on member.fight_id = fight.id and member.user_id = fight.host_id
+            join private.activity_metrics as day
+                on day.source_id = member.selected_source_id and day.scope = 'day'
+                and day.metric = 'steps'
+                and day.day >= (fight.starts_at at time zone fight.time_zone)::date
+                and day.day < (fight.ends_at at time zone fight.time_zone)::date
+            where fight.host_id = ${hostId}
+                and fight.state in ('live', 'awaiting_final_sync')
+                and member.state = 'accepted'
+                and member.finalized_at is null
+                and member.selected_source_id = ${sourceId}
+                and (${fightId}::uuid is null or fight.id = ${fightId}::uuid)
+        )
+        select fight.id as fight_id, fight.starts_at::text as starts_at, fight.ends_at::text as ends_at,
+            (case when bool_or(days.completes_round) then fight.ends_at
+                else least(fight.ends_at, max(days.observed_through)) end)::text as cutoff_at,
+            max(days.steps)::integer as steps,
+            jsonb_agg(jsonb_build_object(
+                'day', days.day::text, 'cutoff_at', days.cutoff_at, 'steps', days.steps
+            ) order by days.day) as step_checkpoints,
+            encode(sha256(convert_to(string_agg(
+                concat_ws(':', days.day, days.value, days.observed_through, days.updated_at),
+                ',' order by days.day), 'UTF8')), 'hex') as input_hash
+        from days
+        join public.fights as fight on fight.id = days.fight_id
+        group by fight.id
+    `);
+    if (totals.length > 0) {
+        await publishFightScores(sql, hostId, sourceId, totals);
+    }
+}
+
+/**
+ * Publish exact-window totals as the member's newest score revisions, then rescore.
  * Final or changed Fights are skipped: their frozen result follows the finalization policy.
  */
 async function publishFightScores(
     sql: TransactionSql,
     userId: string,
     sourceId: string,
-    readings: SelectedActivityRaw[],
+    totals: FightScoreTotal[],
 ): Promise<void> {
-    const totals = readings.map((raw) => ({
-        raw,
-        total: fightTotalPayloadSchema.parse(raw.payload),
-    }));
     const fights = healthKitAggregateFightSchema.array().parse(
         await sql`
             select fight.id as fight_id, fight.starts_at::text as starts_at,
@@ -559,12 +619,12 @@ async function publishFightScores(
                 and member.state = 'accepted'
                 and member.finalized_at is null
                 and fight.state in ('live', 'awaiting_final_sync')
-                and fight.id = any(${sql.array(totals.map(({ total }) => total.fight_id))}::uuid[])
+                and fight.id = any(${sql.array(totals.map((total) => total.fight_id))}::uuid[])
             order by fight.id
             for update of fight, member
         `,
     );
-    const snapshots = totals.flatMap(({ raw, total }) => {
+    const snapshots = totals.flatMap((total) => {
         const fight = fights.find((row) => row.fight_id === total.fight_id);
         if (
             !fight ||
@@ -579,10 +639,7 @@ async function publishFightScores(
                 cutoff_at: total.cutoff_at,
                 value: total.steps,
                 step_checkpoints: total.step_checkpoints,
-                // A later re-read that returns to an earlier total becomes the newest revision again.
-                input_hash: createHash("sha256")
-                    .update(`${raw.payload_hash}:${raw.collected_at}`)
-                    .digest("hex"),
+                input_hash: total.input_hash,
                 final_steps_complete:
                     Date.parse(total.cutoff_at) >= Date.parse(fight.ends_at),
             },

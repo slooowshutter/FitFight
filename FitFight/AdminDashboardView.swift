@@ -27,6 +27,7 @@ struct AdminDashboardView: View {
     @State private var failure: String?
     /// Refresh and Retry bump this to rerun the load task.
     @State private var reloads = 0
+    @State private var showingFounderFights = false
 
     enum Server: String, CaseIterable {
         case production, staging
@@ -74,6 +75,15 @@ struct AdminDashboardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
             FreeCharactersRow()
+            FFGroupedRows {
+                FFGroupedRow(
+                    title: "Founder fights",
+                    subtitle: "Everyone fighting Marc, and his record.",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingFounderFights = true }
+                )
+            }
             controls
             statusLine
             if let failure {
@@ -123,6 +133,7 @@ struct AdminDashboardView: View {
                 }
             }
         }
+        .navigationDestination(isPresented: $showingFounderFights) { FounderFightsView() }
     }
 
     @ViewBuilder
@@ -551,93 +562,79 @@ struct FreeCharacterGiftCard: View {
     }
 }
 
-/// Fights on the staging build, admin only: how many people synced to staging in the last 7 days.
-/// They should be on the App Store version, so the admin can ask them to switch. Like the Admin
-/// tab, it reads the preview server, which always runs the newest `preview` backend on staging data.
-struct RecentSyncsCard: View {
+/// Everyone fighting Marc on this build's own data, like the free character gifts, newest first.
+/// The record is Marc's over finished rounds; the steps are the current round's.
+private struct FounderFightsView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
-    @State private var people: [FitFightRecentSyncs.Person]?
+    @State private var challengers: [FitFightFounderFights.Challenger]?
+    @State private var loading = false
     @State private var failure: String?
-    @State private var showing = false
 
     var body: some View {
-        Button { showing = true } label: {
-            FFCard {
-                HStack(spacing: 13) {
-                    Text(verbatim: people.map { "\($0.count)" } ?? "-")
-                        .font(.ff(22, 800))
-                        .foregroundStyle(theme.text)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: "Synced on TestFlight").ffType(.heading).foregroundStyle(theme.text)
-                        Text(verbatim: failure ?? "Last 7 days. Tap for the names.")
-                            .ffType(.caption)
-                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+        FFScreen(refresh: FFRefreshConfig(isRefreshing: loading, message: "Loading", error: failure, action: { await load() })) {
+            if let challengers {
+                FFCard {
+                    HStack {
+                        total(challengers.reduce(0) { $0 + $1.wins }, "Won", theme.mossText)
+                        total(challengers.reduce(0) { $0 + $1.draws }, "Drew", theme.textSecondary)
+                        total(challengers.reduce(0) { $0 + $1.losses }, "Lost", theme.emberText)
                     }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
                 }
+                if challengers.isEmpty {
+                    Text(verbatim: "No one is fighting Marc yet.").ffType(.body).foregroundStyle(theme.textSecondary)
+                } else {
+                    FFGroupedRows {
+                        ForEach(challengers) { row in
+                            if row.id != challengers.first?.id { FFDivider() }
+                            FFGroupedRow(
+                                title: row.displayName,
+                                subtitle: "@\(row.handle) · Day \(row.day) of \(row.days)" + (row.state == "live" ? "" : " · \(row.state)"),
+                                subtitleTone: .neutral,
+                                trailing: AnyView(
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text(verbatim: adminValue(row.steps, unit: "steps", exact: true) + " vs "
+                                            + adminValue(row.founderSteps, unit: "steps", exact: true))
+                                            .ffType(.label).monospacedDigit().foregroundStyle(theme.text)
+                                        Text(verbatim: "Marc \(row.wins)-\(row.losses)" + (row.draws > 0 ? "-\(row.draws)" : ""))
+                                            .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    }
+                                )
+                            )
+                        }
+                    }
+                }
+            } else if loading {
+                FFLoadingBlock()
             }
         }
-        .buttonStyle(FFHapticPlainStyle())
-        .disabled(people?.isEmpty ?? true)
+        .navigationTitle(Text(verbatim: "Founder fights"))
+        .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .sheet(isPresented: $showing) {
-            RecentSyncsSheet(people: people ?? [])
-                .fitFightTheme(theme)
-                .presentationBackground(theme.overlay)
-                .presentationCornerRadius(theme.radius.shell)
-                .presentationDragIndicator(.visible)
-                .presentationDetents([.medium, .large])
+    }
+
+    private func total(_ value: Int, _ label: String, _ color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(verbatim: "\(value)").font(.ff(44, 800)).monospacedDigit().foregroundStyle(color)
+            Text(verbatim: label).ffType(.caption).foregroundStyle(theme.textSecondary)
         }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     private func load() async {
+        loading = true
+        defer { loading = false }
         do {
-            let token = try await session.freshAccessToken()
-            people = try await FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
-                .recentSyncs(accessToken: token).people
+            let api = AppVersion.backend == "prod" ? FitFightAPI() : FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+            challengers = try await api.founderFights(accessToken: try await session.freshAccessToken()).challengers
             failure = nil
+        } catch FitFightAPIError.http(let status, _, _) where status == 403 {
+            failure = "This account isn't the FitFight admin."
         } catch {
             guard !Task.isCancelled else { return }
             failure = error.localizedDescription
         }
-    }
-}
-
-private struct RecentSyncsSheet: View {
-    let people: [FitFightRecentSyncs.Person]
-    @EnvironmentObject private var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            FFSheetHeader(title: "Synced on TestFlight") { dismiss() }
-            Text(verbatim: "Last 7 days, newest first. They should use the App Store version.")
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
-            ScrollView {
-                FFGroupedRows {
-                    ForEach(people) { person in
-                        if person.id != people.first?.id { FFDivider() }
-                        FFGroupedRow(
-                            title: person.displayName,
-                            subtitle: "@\(person.handle)",
-                            subtitleTone: .neutral,
-                            trailing: AnyView(
-                                Text(verbatim: model.formatLastSync(person.lastSyncedAt))
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                            )
-                        )
-                    }
-                }
-            }
-        }
-        .foregroundStyle(theme.text)
-        .padding(.horizontal, theme.space.screenPadding)
-        .padding(.top, 16)
     }
 }
 

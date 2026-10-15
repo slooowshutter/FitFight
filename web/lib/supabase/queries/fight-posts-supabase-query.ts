@@ -151,10 +151,13 @@ export async function loadVisiblePost(
                 from public.fight_members as me
                 join public.fight_members as them
                     on them.fight_id = me.fight_id
+                join public.fights as shared
+                    on shared.id = me.fight_id
                 where me.user_id = ${userId}
                     and them.user_id = ${post.author_id}
                     and me.state in ('accepted', 'deferred')
                     and them.state in ('accepted', 'deferred')
+                    and shared.host_id is null
             ) as ok
         `;
         if (!shared?.ok) {
@@ -461,10 +464,13 @@ export async function listFightPosts(
                                     from public.fight_members as me
                                     join public.fight_members as them
                                         on them.fight_id = me.fight_id
+                                    join public.fights as shared
+                                        on shared.id = me.fight_id
                                     where me.user_id = ${userId}
                                         and them.user_id = post.author_id
                                         and me.state in ('accepted', 'deferred')
                                         and them.state in ('accepted', 'deferred')
+                                        and shared.host_id is null
                                 )
                             )
                         )
@@ -474,8 +480,11 @@ export async function listFightPosts(
                             and exists (
                                 select 1
                                 from public.fight_members as membership
+                                join public.fights as joined
+                                    on joined.id = membership.fight_id
                                 where membership.user_id = ${userId}
                                     and membership.state in ('accepted', 'deferred')
+                                    and joined.host_id is distinct from ${userId}::uuid
                                     and (
                                         (
                                             post.audience = 'fight'
@@ -589,10 +598,13 @@ export async function listFightPosts(
                                     from public.fight_members as me
                                     join public.fight_members as them
                                         on them.fight_id = me.fight_id
+                                    join public.fights as shared
+                                        on shared.id = me.fight_id
                                     where me.user_id = ${userId}
                                         and them.user_id = post.author_id
                                         and me.state in ('accepted', 'deferred')
                                         and them.state in ('accepted', 'deferred')
+                                        and shared.host_id is null
                                 )
                             )
                         )
@@ -602,8 +614,11 @@ export async function listFightPosts(
                             and exists (
                                 select 1
                                 from public.fight_members as membership
+                                join public.fights as joined
+                                    on joined.id = membership.fight_id
                                 where membership.user_id = ${userId}
                                     and membership.state in ('accepted', 'deferred')
+                                    and joined.host_id is distinct from ${userId}::uuid
                                     and (
                                         (
                                             post.audience = 'fight'
@@ -949,9 +964,11 @@ export async function createFeedPosts(
     if (includeMain) {
         const [circle] = await database<{ n: number }[]>`
             select count(*)::int as n
-            from public.fight_members
-            where user_id = ${userId}
-                and state in ('accepted', 'deferred')
+            from public.fight_members as member
+            join public.fights as fight on fight.id = member.fight_id
+            where member.user_id = ${userId}
+                and member.state in ('accepted', 'deferred')
+                and fight.host_id is null
         `;
         if ((circle?.n ?? 0) === 0) {
             throw new ApiError(
@@ -1122,6 +1139,7 @@ export async function listFeedPeople(
                     and done_me.state = 'accepted'
                     and done_them.state = 'accepted'
                     and done_fight.state = 'final'
+                    and done_fight.host_id is null
             )
             and (
                 (

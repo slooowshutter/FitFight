@@ -196,6 +196,7 @@ final class AppModel: ObservableObject {
         didSet {
             if oldValue != tab {
                 openFightID = nil
+                showingHosted = false
                 openPost = nil
                 showingActivity = false
             }
@@ -242,6 +243,11 @@ final class AppModel: ObservableObject {
 
     @Published var you: Person
     @Published var fights: [Fight]
+    /// What you host, such as Fight Marc. Its rounds stay out of `fights` and its cache.
+    @Published private(set) var hosted: FitFightSnapshot.Hosted?
+    @Published private(set) var hostedRounds: [Fight] = []
+    /// The hosted screen, under any open fight in the Fights stack.
+    @Published var showingHosted = false
     @Published private(set) var joinableFights: [FitFightJoinableFight] = []
     @Published private(set) var suggestedFights: [FitFightJoinableFight] = []
     @Published private(set) var isLoadingDiscovery = false
@@ -339,6 +345,7 @@ final class AppModel: ObservableObject {
     func fight(id: String) -> Fight? {
         fights.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
             ?? pendingJoinable.flatMap { $0.id.caseInsensitiveCompare(id) == .orderedSame ? $0 : nil }
+            ?? hostedRounds.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
     }
 
     func canonicalFight(for id: String) -> Fight? {
@@ -381,6 +388,17 @@ final class AppModel: ObservableObject {
             count += 1
         }
         return holder.map { ($0, count) }
+    }
+
+    /// The round that ended as this live round started, once it is final and you raced in it.
+    func lastRound(before fight: Fight) -> Fight? {
+        guard fight.recurring, fight.status == .live,
+              let previous = seriesHistory(for: fight).first(where: { $0.windowStart < fight.windowStart }),
+              abs(previous.windowEnd.timeIntervalSince(fight.windowStart)) < 1,
+              previous.serverState == "final",
+              let you = previous.standings.first(where: { $0.person.isYou }), !you.invited, !you.deferred
+        else { return nil }
+        return previous
     }
 
     func fightResult(for fight: Fight) -> FFResult {
@@ -510,11 +528,15 @@ final class AppModel: ObservableObject {
             snapshotGeneration += 1
             cachedUserID = nil
             fights = []
+            hosted = nil
+            hostedRounds = []
             return
         }
         guard cachedUserID != userID else { return }
         snapshotGeneration += 1
         cachedUserID = userID
+        hosted = nil
+        hostedRounds = []
         guard
             let data = UserDefaults.standard.data(forKey: Self.fightsCachePrefix + userID.uuidString),
             let cached = try? JSONDecoder().decode([Fight].self, from: data)
@@ -607,11 +629,12 @@ final class AppModel: ObservableObject {
             steps.completeAttempt(trace, session: session, userID: userID)
             return
         }
-        // The network part stops after 30 seconds, so a stalled connection cannot keep the spinner turning.
+        // The network part stops after 10 seconds, so a stalled connection cannot keep the spinner turning.
+        // 99% of successful production refreshes finish in under 7 seconds (14 Oct 2026).
         // The limit starts after the Health read, because the Health permission sheet waits for the user.
         let refresh = refreshTask
         let limit = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            do { try await Task.sleep(for: .seconds(10)) } catch { return }
             self.refreshError = String(appLocalized: "Refreshing took too long. Check your internet connection.")
             refresh?.cancel()
         }
@@ -714,26 +737,12 @@ final class AppModel: ObservableObject {
             }
             // A newer read owns publication; superseding this response is not a sync failure.
             guard generation == snapshotGeneration else { return }
-            let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
-            let members = Dictionary(grouping: snapshot.members, by: \.fightId)
-            let mine = Dictionary(
-                snapshot.members.filter { $0.userId == userId }.map { ($0.fightId, $0) },
-                uniquingKeysWith: { _, last in last }
-            )
-            let series = Dictionary(snapshot.series.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
-            let loaded = snapshot.fights.compactMap { row -> Fight? in
-                guard var fight = Self.mapFight(
-                    row, members: members[row.id] ?? [], mine: mine[row.id], profiles: profiles,
-                    series: row.seriesId.flatMap { series[$0] }, userId: userId, formatScore: formatScore
-                ) else { return nil }
-                fight.days = Self.dayCards(
-                    from: members[row.id] ?? [], standings: fight.standings
-                )
-                return fight
-            }
+            let loaded = mapSnapshot(snapshot, userId: userId)
             guard session.authSession?.user.id == userId else { throw CancellationError() }
             fights = loaded
+            hosted = snapshot.hosted
             cachedUserID = userId
+            refreshError = nil
             if let data = try? JSONEncoder().encode(loaded) {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
             }
@@ -744,7 +753,31 @@ final class AppModel: ObservableObject {
             )
         } catch {
             attempt.fail(HealthKitStepsStore.errorCode(for: error))
-            // Keep the last successful result visible while the phone is offline.
+            // Keep the last successful result visible while the phone is offline, and say it is not current.
+            // A cancel (sign-out, or the time limit, which sets its own message) is not a failure to show.
+            if !(error is CancellationError), !Task.isCancelled {
+                refreshError = String(appLocalized: "Not up to date. Check your internet connection.")
+            }
+        }
+    }
+
+    private func mapSnapshot(_ snapshot: FitFightSnapshot, userId: UUID) -> [Fight] {
+        let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
+        let members = Dictionary(grouping: snapshot.members, by: \.fightId)
+        let mine = Dictionary(
+            snapshot.members.filter { $0.userId == userId }.map { ($0.fightId, $0) },
+            uniquingKeysWith: { _, last in last }
+        )
+        let series = Dictionary(snapshot.series.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+        return snapshot.fights.compactMap { row -> Fight? in
+            guard var fight = Self.mapFight(
+                row, members: members[row.id] ?? [], mine: mine[row.id], profiles: profiles,
+                series: row.seriesId.flatMap { series[$0] }, userId: userId, formatScore: formatScore
+            ) else { return nil }
+            fight.days = Self.dayCards(
+                from: members[row.id] ?? [], standings: fight.standings
+            )
+            return fight
         }
     }
 
@@ -755,6 +788,17 @@ final class AppModel: ObservableObject {
         isCreatingFight = true
         createError = nil
         return true
+    }
+
+    /// Reads the rounds behind `hosted` through their own snapshot, mapped like the Fights list.
+    func refreshHostedRounds() async throws {
+        guard let session, let userId = session.authSession?.user.id else { return }
+        let snapshot = try await api.fightsSnapshot(
+            accessToken: try await session.freshAccessToken(), trace: nil, performMaintenance: false, hosted: true
+        )
+        guard session.authSession?.user.id == userId else { return }
+        hosted = snapshot.hosted
+        hostedRounds = mapSnapshot(snapshot, userId: userId)
     }
 
     func createAndStartFight(

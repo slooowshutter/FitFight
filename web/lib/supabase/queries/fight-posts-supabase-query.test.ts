@@ -456,6 +456,59 @@ test("feed people listing only includes opponents from finished fights", async (
     assert.ok(queries.some((sql) => /profile.companion_id/.test(sql)));
 });
 
+test("founder fights share no Main posts, host Feed posts or tag candidates", async () => {
+    const queries: string[] = [];
+    const query = ((first: TemplateStringsArray) => {
+        const sql = first.join("?").replace(/\s+/g, " ").trim();
+        queries.push(sql);
+        if (sql.startsWith("select id, audience::text")) {
+            return Promise.resolve([
+                {
+                    id: postId,
+                    audience: "main",
+                    fight_id: null,
+                    author_id: "99999999-9999-4999-8999-999999999999",
+                    app_wide: false,
+                },
+            ]);
+        }
+        return Promise.resolve(sql.includes("as ok") ? [{ ok: true }] : []);
+    }) as unknown as Sql;
+    await loadVisiblePost(userId, postId, query);
+    const visibility = queries.at(-1) ?? "";
+    await listFightPosts(userId, undefined, { limit: 30, scope: "all" }, query);
+    const listing = queries.at(-1) ?? "";
+    await listFeedPeople(userId, { main: "true" }, query);
+    const people = queries.at(-1) ?? "";
+    assert.match(visibility, /shared\.host_id is null/);
+    assert.match(listing, /shared\.host_id is null/);
+    assert.match(listing, /joined\.host_id is distinct from \?::uuid/);
+    assert.match(people, /done_fight\.host_id is null/);
+});
+
+test("a founder fight alone does not open Main posting", async () => {
+    const queries: string[] = [];
+    const query = ((first: TemplateStringsArray) => {
+        const sql = first.join("?").replace(/\s+/g, " ").trim();
+        queries.push(sql);
+        return Promise.resolve([{ n: 0 }]);
+    }) as unknown as Sql;
+    await assert.rejects(
+        writeFeedPosts(
+            userId,
+            createFeedPostsRequestSchema.parse({
+                body: "Hello.",
+                destinations: [{ type: "main" }],
+            }),
+            query,
+        ),
+        (error: unknown) =>
+            error instanceof Error &&
+            error.message === "Join a fight before posting to Main",
+    );
+    assert.match(queries[0] ?? "", /fight\.host_id is null/);
+});
+
 test("feed and fight post routes authenticate before reading or writing", async () => {
     const context = {
         params: Promise.resolve({ fightID: fightId, postID: postId }),

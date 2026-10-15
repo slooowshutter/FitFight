@@ -201,6 +201,7 @@ struct FitFightApp: App {
                     feed.activate(userID: session.authSession?.user.id)
                     guard let userId = session.authSession?.user.id else {
                         model.openPost = nil
+                        model.showingHosted = false
                         model.showingActivity = false
                         model.showingPreferences = false
                         return

@@ -19,6 +19,7 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
             '/fights/' || fight.id, reminder.kind
         from public.fights fight
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+            and member.user_id is distinct from fight.host_id
         left join private.notification_preferences prefs on prefs.user_id = member.user_id
         cross join (values
             ('ending_24h', 'before_24h', interval '24 hours'),
@@ -49,6 +50,7 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
             '/fights/' || fight.id, 'final_sync'
         from public.fights fight
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+            and member.user_id is distinct from fight.host_id
         left join private.notification_preferences prefs on prefs.user_id = member.user_id
         where fight.state = 'awaiting_final_sync' and not member.final_steps_complete
             and coalesce(prefs.enabled, true) and coalesce(prefs.final_sync, true)

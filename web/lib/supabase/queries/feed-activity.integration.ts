@@ -5,9 +5,10 @@ import postgres from "postgres";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { listFeedActivityQuerySchema } from "@/lib/types/feed/feed-activity";
-import { fightPostResponseSchema } from "@/lib/types/feed/fight-post";
+import { createFeedPostsRequestSchema, fightPostResponseSchema } from "@/lib/types/feed/fight-post";
 import { listFeedActivity } from "./feed-activity-supabase-query";
-import { getFightPost, listFightPosts } from "./fight-posts-supabase-query";
+import { eligibleMentionUserIds } from "./feed-social-notifications-supabase-query";
+import { createFeedPosts, getFightPost, listFeedPeople, listFightPosts } from "./fight-posts-supabase-query";
 import { listFightPostComments } from "./fight-post-engagement-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
@@ -132,4 +133,47 @@ test("activity retains membership history, links older posts, and enforces curre
     await database`delete from public.fight_posts where id = ${postId}`;
     assert.ok((await listFeedActivity(owner, { limit: 80 }, database)).events.every((e) => e.post_id !== postId));
     await assert.rejects(getFightPost(owner, postId, database), { status: 404 });
+});
+
+test("a founder fight shares no Main posts, activity, host Feed posts, tags or Main posting", async (t) => {
+    const users = [randomUUID(), randomUUID()];
+    const [founder, challenger] = users;
+    const fightId = randomUUID(), seriesId = randomUUID();
+    const fightPostId = randomUUID(), mainPostId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from public.fight_series where id = ${seriesId}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const user of users) await database`insert into auth.users (id) values (${user})`;
+    await database`
+        insert into public.fight_series (id, owner_id, host_id, name, visibility, recurring, duration_seconds, time_zone, join_code)
+        values (${seriesId}, ${challenger}, ${founder}, 'Fight Marc', 'invite_only', true, 2592000, 'UTC', ${randomJoinCode()})
+    `;
+    await database`
+        insert into public.fights (id, owner_id, host_id, name, series_id, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${challenger}, ${founder}, 'Fight Marc', ${seriesId}, 'live', now(), now() + interval '30 days', 'UTC', 'highest_total', 'shared')
+    `;
+    await database`insert into public.fight_members (fight_id, user_id, state, accepted_at) values
+        (${fightId}, ${challenger}, 'accepted', now()), (${fightId}, ${founder}, 'accepted', now())`;
+    await database`insert into public.fight_posts (id, fight_id, audience, author_id, body) values
+        (${fightPostId}, ${fightId}, 'fight', ${challenger}, 'Round one'),
+        (${mainPostId}, null, 'main', ${challenger}, 'Hello Main')`;
+    await database`insert into public.fight_post_comments (post_id, author_id, body) values (${fightPostId}, ${founder}, 'Go')`;
+
+    for (const viewer of users) {
+        assert.ok((await listFeedActivity(viewer, { limit: 80 }, database)).events.every((e) => e.fight_id !== fightId));
+    }
+    assert.ok((await listFightPosts(challenger, undefined, { limit: 50 }, database)).posts.some((p) => p.id === fightPostId));
+    const hostFeed = await listFightPosts(founder, undefined, { limit: 50, scope: "all" }, database);
+    assert.ok(hostFeed.posts.every((p) => p.id !== fightPostId && p.id !== mainPostId));
+    assert.deepEqual((await listFightPosts(founder, fightId, { limit: 50 }, database)).posts.map((p) => p.id), [fightPostId]);
+    await assert.rejects(getFightPost(founder, mainPostId, database), { status: 403 });
+    await assert.rejects(createFeedPosts(challenger, createFeedPostsRequestSchema.parse({
+        body: "Hello", destinations: [{ type: "main" }],
+    }), database), { status: 403 });
+
+    await database`update public.fights set state = 'final' where id = ${fightId}`;
+    assert.deepEqual((await listFeedPeople(challenger, { main: "true", fight_ids: fightId }, database)).people, []);
+    assert.deepEqual(await eligibleMentionUserIds(database, challenger, [founder], [], []), []);
 });

@@ -59,6 +59,7 @@ function createSql(options: {
     }>;
     post?: { fight_id: string | null; author_id: string };
     parent?: { author_id: string };
+    hosted?: boolean;
 }) {
     const queries: string[] = [];
     const inserted: unknown[] = [];
@@ -97,6 +98,9 @@ function createSql(options: {
         }
         if (sql.includes("from public.profiles")) {
             return Promise.resolve(options.actor ? [options.actor] : []);
+        }
+        if (sql.includes("from public.fights where")) {
+            return Promise.resolve(options.hosted ? [{ hosted: 1 }] : []);
         }
         return Promise.resolve([]);
     }) as unknown as Sql;
@@ -382,6 +386,29 @@ test("a reaction notifies the post author once", async () => {
     assert.equal(row.alert_body, "@alex a réagi à ta publication.");
 });
 
+test("the host of a founder fight gets no feed post or reaction alerts from it", async () => {
+    const recipient = {
+        user_id: otherId,
+        locale: "en",
+        feed_post: true,
+        post_comment: true,
+        comment_reply: true,
+        post_reaction: true,
+    };
+    const { database, inserted, queries } = createSql({
+        post: { fight_id: fightId, author_id: otherId },
+        members: [{ user_id: otherId, fight_id: fightId }],
+        actor: { handle: "alex", display_name: "Alex" },
+        recipients: [recipient],
+        hosted: true,
+    });
+    await enqueueFightFeedReactionNotifications(database, { postId, actorId });
+    assert.equal(inserted.length, 0);
+    await enqueueFightFeedPostNotifications(database, { fightId, postId, actorId });
+    const members = queries.find((sql) => sql.includes("member.user_id <> ?"));
+    assert.match(members ?? "", /fight\.host_id is distinct from member\.user_id/);
+});
+
 test("reacting to your own post does not enqueue", async () => {
     const { database, inserted } = createSql({
         post: { fight_id: fightId, author_id: actorId },
@@ -533,6 +560,26 @@ test("a tagged fight member is not also sent the generic post alert", async () =
         skipUserIds: [otherId],
     });
     assert.equal(inserted.length, 0);
+});
+
+test("a founder fight does not make its members mentionable", async () => {
+    const { database, queries } = createSql({});
+    await eligibleMentionUserIds(database, actorId, [otherId], [], []);
+    await eligibleMentionUserIds(database, actorId, [otherId], [], [fightId]);
+    assert.match(queries[0] ?? "", /fight\.host_id is null/);
+    assert.match(queries[1] ?? "", /done_fight\.host_id is null/);
+});
+
+test("a mention outside any shared fight is not routed to a founder fight the recipient hosts", async () => {
+    const { database, queries } = createSql({ actor: { handle: "alex", display_name: "Alex" } });
+    await enqueueMentionNotifications(database, {
+        actorId,
+        postId,
+        userIds: [otherId],
+        preferredFightId: null,
+    });
+    const fallback = queries.filter((sql) => sql.includes("from public.fight_members"))[1];
+    assert.match(fallback ?? "", /fight\.host_id is distinct from member\.user_id/);
 });
 
 test("mention resolution is skipped when nobody is tagged", async () => {

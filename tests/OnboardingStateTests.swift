@@ -49,7 +49,8 @@ struct TestPublisher { func send() {} }
         precondition(restored.firstFightOnboarding == progress)
         precondition(progress.page.step == 3 && FirstFightOnboarding.Page.health.step == 3)
         precondition(FirstFightOnboarding.Page.companion.step == 4 && FirstFightOnboarding.Page.companion.previous == .healthResult)
-        precondition(FirstFightOnboarding.Page.firstFight.previous == .companion)
+        precondition(FirstFightOnboarding.Page.founderFight.previous == .companion)
+        precondition(FirstFightOnboarding.Page.firstFight.previous == .founderFight)
         print("PASS: relaunch restores the same Health step for the same account")
 
         defaults.set(Data(#"{"page":"companion"}"#.utf8), forKey: "ff.onboarding.firstFight." + first.uuidString)
@@ -84,6 +85,12 @@ struct TestPublisher { func send() {} }
         let decoded = try JSONDecoder().decode(FirstFightOnboarding.self, from: encoded)
         precondition(decoded == joined)
         print("PASS: Explore ends after reminders; confirmed membership survives Back and celebrates after reminders")
+
+        var founder = FirstFightOnboarding(page: .reminders)
+        founder.founderFightID = UUID()
+        precondition(founder.pageAfterReminders == .celebration)
+        precondition(FirstFightOnboarding.Page.founderFight.step == 5)
+        print("PASS: fighting the founder also celebrates after reminders")
 
         session.saveFirstFightOnboarding(joined, userID: second)
         session.finishFirstFightOnboarding(userID: second)

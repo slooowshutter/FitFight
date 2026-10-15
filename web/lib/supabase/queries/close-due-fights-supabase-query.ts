@@ -113,6 +113,7 @@ export async function closeDueFightsForUser(
             join public.fight_members member on member.fight_id = fight.id
             where member.user_id = ${userId} and member.state = 'accepted'
                 and fight.state in ('live', 'scheduled', 'awaiting_final_sync')
+                and fight.host_id is distinct from ${userId}
         ), '[]'::jsonb) as candidates,
         coalesce((
             select jsonb_agg(series.current_fight_id order by current_fight.ends_at, series.id)
@@ -120,6 +121,7 @@ export async function closeDueFightsForUser(
             join public.fights current_fight on current_fight.id = series.current_fight_id
             where series.recurring and series.paused_at is null
                 and current_fight.ends_at <= ${now.toISOString()}
+                and series.host_id is distinct from ${userId}
                 and (series.owner_id = ${userId} or exists (
                     select 1 from public.fight_series_members member
                     where member.series_id = series.id and member.user_id = ${userId}

@@ -15,6 +15,8 @@ struct Fight {
     // MODEL_STATE
     var fights: [Fight] = []
     var pendingJoinable: Fight?
+    var hostedRounds: [Fight] = []
+    var showingHosted = false
     var profileChallenge: ProfileChallengeDraft?
     // MODEL_METHODS
 }

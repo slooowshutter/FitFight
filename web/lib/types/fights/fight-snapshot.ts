@@ -24,6 +24,8 @@ export const fightSnapshotRequestSchema = z
                     return false;
                 }
             }, "invalid time zone"),
+        /** Only the caller's current hosted rounds, such as a founder's challengers. */
+        hosted: z.boolean().optional(),
     })
     .strict();
 
@@ -84,6 +86,14 @@ export const fightSnapshotSchema = z.object({
             steps: z.number().int().nonnegative(),
         }),
     ),
+    /** One card for everything the caller hosts: its current rounds and how many the host leads. */
+    hosted: z
+        .object({
+            name: z.string(),
+            rounds: z.number().int().positive(),
+            leading: z.number().int().nonnegative(),
+        })
+        .nullable(),
 });
 
 export const fightMaintenanceCandidateSchema = z.object({

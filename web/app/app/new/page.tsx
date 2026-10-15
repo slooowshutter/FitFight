@@ -53,6 +53,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PersonAvatar } from "@/components/web-app/person-avatar";
+import { isJoinCode } from "@/lib/domain/fights/join-code";
 import { useMe } from "@/components/web-app/web-app-shell";
 import {
     FitFightApiError,
@@ -674,16 +675,13 @@ function JoinFightColumn() {
                                     setCode(
                                         event.target.value
                                             .toUpperCase()
-                                            .replace(
-                                                /[^23456789ABCDEFGHJKMNPQRSTVWXYZ]/g,
-                                                "",
-                                            )
-                                            .slice(0, 4),
+                                            .replace(/[^0-9A-Z]/g, "")
+                                            .slice(0, 12),
                                     )
                                 }
                                 onKeyDown={(event) =>
                                     event.key === "Enter" &&
-                                    code.length === 4 &&
+                                    isJoinCode(code) &&
                                     !lookingUp &&
                                     lookupCode()
                                 }
@@ -691,7 +689,7 @@ function JoinFightColumn() {
                             <InputGroupAddon align="inline-end">
                                 <InputGroupButton
                                     variant="default"
-                                    disabled={code.length !== 4 || lookingUp}
+                                    disabled={!isJoinCode(code) || lookingUp}
                                     onClick={lookupCode}
                                 >
                                     {lookingUp ? (

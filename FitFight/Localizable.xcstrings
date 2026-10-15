@@ -15475,12 +15475,42 @@
                 }
             }
         },
+        "Not up to date. Check your internet connection.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas à jour. Vérifie ta connexion internet."
+                    }
+                }
+            }
+        },
         "Refreshing took too long. Check your internet connection.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
                         "value": "L’actualisation a pris trop de temps. Vérifie ta connexion internet."
+                    }
+                }
+            }
+        },
+        "FitFight opens straight to the fights you saw last time, even without internet, and updates them in the background. If it can’t update, it says so.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight s’ouvre directement sur les combats que tu as vus la dernière fois, même sans internet, et les met à jour en arrière-plan. S’il ne peut pas les mettre à jour, il le dit."
+                    }
+                }
+            }
+        },
+        "On a slow connection, refreshing now gives up after 10 seconds instead of 30, so Try again shows sooner.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Avec une connexion lente, l’actualisation abandonne maintenant après 10 secondes au lieu de 30, donc Réessayer apparaît plus tôt."
                     }
                 }
             }

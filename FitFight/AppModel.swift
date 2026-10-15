@@ -618,11 +618,12 @@ final class AppModel: ObservableObject {
             steps.completeAttempt(trace, session: session, userID: userID)
             return
         }
-        // The network part stops after 30 seconds, so a stalled connection cannot keep the spinner turning.
+        // The network part stops after 10 seconds, so a stalled connection cannot keep the spinner turning.
+        // 99% of successful production refreshes finish in under 7 seconds (14 Oct 2026).
         // The limit starts after the Health read, because the Health permission sheet waits for the user.
         let refresh = refreshTask
         let limit = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            do { try await Task.sleep(for: .seconds(10)) } catch { return }
             self.refreshError = String(appLocalized: "Refreshing took too long. Check your internet connection.")
             refresh?.cancel()
         }
@@ -730,6 +731,7 @@ final class AppModel: ObservableObject {
             fights = loaded
             hosted = snapshot.hosted
             cachedUserID = userId
+            refreshError = nil
             if let data = try? JSONEncoder().encode(loaded) {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
             }
@@ -740,7 +742,11 @@ final class AppModel: ObservableObject {
             )
         } catch {
             attempt.fail(HealthKitStepsStore.errorCode(for: error))
-            // Keep the last successful result visible while the phone is offline.
+            // Keep the last successful result visible while the phone is offline, and say it is not current.
+            // A cancel (sign-out, or the time limit, which sets its own message) is not a failure to show.
+            if !(error is CancellationError), !Task.isCancelled {
+                refreshError = String(appLocalized: "Not up to date. Check your internet connection.")
+            }
         }
     }
 

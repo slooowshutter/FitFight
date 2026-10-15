@@ -28,6 +28,20 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 15,
+            notes: "FitFight opens straight to the fights you saw last time, even without internet, and updates them in the background. If it can’t update, it says so."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 14,
+            notes: "On a slow connection, refreshing now gives up after 10 seconds instead of 30, so Try again shows sooner."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 14,
             notes: "Fight Marc: when you sign up, you can start a 30-day Steps fight against Marc, FitFight's founder. It starts again every 30 days."
         ),

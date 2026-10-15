@@ -6,6 +6,54 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Open on saved data, 10-second refresh limit, prepared 15 Oct 2026
+
+Several App Store users reported the app spinning forever on open. Production
+data (read-only, 14 Oct) on 1.1.2 (210), which has no refresh limit: a Fights
+refresh request sometimes stalls on the phone and fails with URL error -1001
+only after 7 to 12 minutes, while a parallel request a few seconds later
+succeeds in about 1.5 seconds. The server never answers the stalled request, so
+nothing reaches `private.server_error_logs`; the evidence is in
+`private.healthkit_sync_attempts`. In the last 7 days, 33 of 60 active users on
+210 had a foreground refresh over 30 seconds, and 153 refreshes lasted over 2
+minutes (some of those are suspensions, not someone watching). TestFlight 224
+(staging) shows the 12 Oct limit working: a stalled request cancelled at 30.2
+seconds.
+
+Marc asked for a shorter limit than 30 seconds. Over 14 days of successful
+production foreground refreshes (9,967), the network part took 1.1 s at the
+median, 3.3 s at p95 and 6.7 s at p99; 53 (0.5%) took over 10 seconds. The
+foreground/manual limit is now **10 seconds**. Nothing else changed: same
+"Refreshing took too long" message and Try again, same start after the
+HealthKit read. New 1.1.3 release note.
+
+**Contract:** native only, no API or database change.
+
+**Reaching App Store users:** the limit (12 Oct) and this change are on
+`develop`/`preview` paths only. App Store builds come only from `main`, so 210
+users keep spinning until 1.1.3 ships. Force-quitting and reopening clears a
+stuck refresh on 210.
+
+**Open on saved data (15 Oct):** the app already restored cached Fights, the
+profile and today's Steps at launch, but the full-screen spinner waited for
+Supabase Auth's initial session. With default options supabase-swift 2.55
+refreshes an expired access token (1 hour) over the network before emitting it,
+so most opens needed the internet before anything showed: a stalled connection
+kept the spinner up for its timeouts and retries, and offline the failed refresh
+emitted no session, which showed Welcome as if signed out. The client now sets
+`emitLocalSessionAsInitialSession: true`: the saved session is emitted at once
+and an expired token refreshes in the background. API calls still go through
+`freshAccessToken()`, which refreshes first; Realtime and Functions get the new
+token on `tokenRefreshed`. A network failure keeps the saved session; a revoked
+refresh token still signs out. A Fights refresh that fails (offline, server
+error) keeps the saved fights and now shows "Not up to date. Check your internet
+connection." with Try again on Fights, a Fight and Profile; before, only the
+time limit showed a notice. A later successful refresh clears it. New 1.1.3
+release note.
+
+**Not covered:** a hung Supabase Auth token refresh ignores the 10-second
+cancel (the library runs it in its own task with retries). Not seen in the data.
+
 ## Fight Marc (founder fight): prepared 14 Oct 2026
 
 Marc asked (11 and 14 Oct) that every new user can fight him 1v1 on Steps, repeating, most

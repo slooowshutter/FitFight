@@ -37,6 +37,7 @@ struct FightDetailView: View {
     @State private var canAdminister = false
     @State private var adminBusy = false
     @State private var confirmOwnerLeave = false
+    @State private var confirmFriendLeave = false
     @State private var adminAction: String? = nil
     @StateObject private var fightFeed = FeedStore()
     @State private var isRefreshingFeed = false
@@ -186,6 +187,14 @@ struct FightDetailView: View {
                 ? String(appLocalized: "You are the only one in this fight. Deleting it can’t be undone.")
                 : String(appLocalized: "You own this fight. Pick who takes over, then you leave."))
         }
+        .confirmationDialog(String(appLocalized: "Leave this fight?"), isPresented: $confirmFriendLeave, titleVisibility: .visible) {
+            Button(String(appLocalized: "Leave fight"), role: .destructive) {
+                Task { await model.leaveFight(id: fight.id) }
+            }
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(appLocalized: "fight.friend-leave", defaultValue: "This pauses your monthly fight with \(fight.listTitle)."))
+        }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -234,11 +243,15 @@ struct FightDetailView: View {
 
         if canLeave {
             FFButton(
-                title: isOwner && otherMembers.isEmpty ? String(appLocalized: "Delete fight") : String(appLocalized: "Leave fight"),
+                title: isOwner && otherMembers.isEmpty && fight.friends != true
+                    ? String(appLocalized: "Delete fight") : String(appLocalized: "Leave fight"),
                 kind: .ghost,
                 fullWidth: true
             ) {
-                if isOwner {
+                // A friend round has no owner to hand over: either friend can leave, which pauses it.
+                if fight.friends == true {
+                    confirmFriendLeave = true
+                } else if isOwner {
                     confirmOwnerLeave = true
                 } else {
                     Task { await model.leaveFight(id: fight.id) }
@@ -459,7 +472,7 @@ struct FightDetailView: View {
                         Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44).foregroundStyle(theme.mossText)
                     }.disabled(adminBusy).accessibilityLabel(String(appLocalized: "Manage Fight"))
                 }
-                if fight.canOwnerEdit, !pendingJoin {
+                if fight.canOwnerEdit || (fight.friends == true && fight.status == .live), !pendingJoin {
                     Button {
                         model.createError = nil
                         showingEdit = true
@@ -606,7 +619,7 @@ struct FightDetailView: View {
                     subtitleTone: .neutral
                 )
             }
-            if fight.joinCode != nil {
+            if fight.joinCode != nil, fight.friends != true {
                 FFSection(title: String(appLocalized: "Share")) {
                     shareCard
                 }

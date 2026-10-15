@@ -10,6 +10,7 @@ export const adminDashboardSectionValues = [
     "steps",
     "fights",
     "social",
+    "friends",
     "app",
 ] as const;
 export const adminDashboardUnitValues = [

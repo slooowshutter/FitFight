@@ -16132,6 +16132,178 @@
                 }
             }
         },
+        "Add friends": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajouter des amis"
+                    }
+                }
+            }
+        },
+        "People you’ve fought with": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Personnes que tu as affrontées"
+                    }
+                }
+            }
+        },
+        "Add friends to fight them every month": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajoute des amis pour les affronter chaque mois"
+                    }
+                }
+            }
+        },
+        "Requested": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demande envoyée"
+                    }
+                }
+            }
+        },
+        "fights.friend-requests": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld request"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld requests"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld demande"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld demandes"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "Friends: you now have a Steps fight with each friend that runs the whole calendar month and starts again on the 1st. Tap Friends at the top of Fights to see them, answer requests, and add friends.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis : tu as maintenant un défi de pas avec chaque ami, qui dure tout le mois et recommence le 1er. Touche Amis en haut de Défis pour les voir, répondre aux demandes et ajouter des amis."
+                    }
+                }
+            }
+        },
+        "This month": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce mois-ci"
+                    }
+                }
+            }
+        },
+        "Last month": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le mois dernier"
+                    }
+                }
+            }
+        },
+        "Leave this fight?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quitter ce défi ?"
+                    }
+                }
+            }
+        },
+        "fight.friend-leave": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This pauses your monthly fight with %@."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cela met en pause ton défi mensuel avec %@."
+                    }
+                }
+            }
+        },
+        "friends.accept": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Accept %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Accepter %@"
+                    }
+                }
+            }
+        },
+        "friends.decline": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Decline %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Refuser %@"
+                    }
+                }
+            }
+        },
         "Everyone": {
             "localizations": {
                 "fr": {

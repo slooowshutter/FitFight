@@ -6,6 +6,86 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Monthly friend fights, prepared 15 Oct 2026
+
+Marc asked (14 and 15 Oct) that every pair of friends fights automatically: one 1v1 Steps
+round per calendar month, all ending together, grouped in a Friends card at the top of
+Fights for everyone, with one sync reminder and one results push instead of one per friend.
+Product rules: [product](product.md). Plan: `.context/friend-fights-plan.md` in the
+`winnipeg` workspace (not committed).
+
+**Design.** Migration `20261015210000_friend_fights.sql` adds `fight_series.friend_low` /
+`friend_high` (one series per pair forever, no cascade) and `fights.friends` (the marker
+every filter reads; `host_id` stays null, so friend rounds keep Feed, rivalry and profile
+behavior). `ensureFriendFights` creates this month's round when a request is accepted and,
+on `/fights/refresh`, for friendships that existed before deploy. Rounds run from the 1st
+00:00 to the next 1st 00:00 in `FRIEND_FIGHT_TIME_ZONE` (`UTC`, one constant in
+`web/lib/types/fights/friend-fight.ts`); the mint adds one calendar month. Every member is
+scored from their stored daily Steps by their own local dates (`publishCivilDayScores`, the
+founder scorer generalized), and is complete only once their own last day is fully
+observed, so people west of UTC keep their evening. Window uploads skip friend rounds.
+Members only use an Apple Health source they already have; none is created. Only the loser
+action can be edited, by either friend; invites, join by code and cancel are refused (409).
+Removing, declining, any of the three blocks, or deleting an account cancels the live round
+and pauses the series; leaving pauses it; becoming friends again resumes the same series.
+Account deletion keeps the surviving friend's series and history. A user's own refresh also
+closes their due friend rounds, and the closer now runs batches of 25 for up to 30 s.
+
+- Snapshot and refresh: optional request flag `friends: true` returns only the caller's
+  friend rounds (this month's live rounds plus each pair's last ended round for 7 days, only
+  for current friends). Default snapshots exclude friend rounds for everyone. New response
+  field `friends: { rounds, leading, requests }` (current rounds only) and a boolean
+  `friends` on each fight row.
+- `GET /api/v1/friends/suggestions`: up to 10 people who shared a fight with you, most
+  shared first; excludes friends, pending requests, blocked and deleted people, friend
+  rounds, founder rounds, the app-wide and suggested Fights.
+- Notifications (`20261015210100_friend_fight_notifications.sql`): friend rounds get no
+  ending, final-sync, fight-ended, finalized or daily-status pushes. New `friends_sync`
+  (once per month to people still missing steps, at the later of the end and 09:00 on the
+  1st in their own zone; skipped if their phone already synced) and `friends_results`
+  ("October: you won 7 of 12 friend fights", after their last friend round of the month is
+  final). Gated by the existing final-sync and finalized preferences. Route
+  `/fights/<round id>?friends=1`.
+- Admin: friend rounds are left out of every fight metric (like founder rounds). New
+  **Friends** section: friendships, new friendships, average and median friends, share with
+  a friend, requests, acceptance rate, time to accept, pending, live friend fights, sync
+  completion, and four charts. Declined or removed requests delete their row (existing
+  behavior), so request counts only see rows still present.
+- App: Friends card on Current for everyone ("Leading X of Y", "Add friends to fight them
+  every month", requests badge). Friends screen: Requests, This month, Last month (result or
+  waiting for final steps), Add friends (username search and "People you've fought with").
+  Friend rounds are titled with the friend's name; Edit shows only the loser action; Leave
+  asks first. Profile keeps its Friends section. Release note 1.1.3, English and French.
+- Feed is untouched (another workspace reworks posting).
+
+**Contract:** `/api/v1` unchanged for installed builds. Additive only: one optional request
+flag, two response fields, one endpoint, two notification kinds. Old builds never send the
+flag and never receive friend rounds through the API. Known gaps: public build 113 reads
+`public.fights` directly and RLS lets it see friend rounds; installations record no build,
+so `friends_sync` / `friends_results` also reach older builds, which open the named round
+and show "That fight isn't on your list". Old fixtures unchanged; new fixtures
+`fight-snapshot-friends.json`, `fight-snapshot-friends-month-turn.json`,
+`friend-suggestions.json`.
+
+**Deployment order:** both migrations (additive), then backend, then the app. The new
+backend reads `fights.friends` in the snapshot, closer, scorer and outbox, so the migration
+must be live first. Friend rounds appear once the new backend runs: on the next accept, or
+on either friend's next refresh from any build.
+
+**Verification (local, 15 Oct, after merging develop at 4ddc72d9):** web typecheck clean,
+507 of 507 unit tests, Next.js production build (before the merge). On a private
+disposable Supabase rebuilt from every migration, in CI's order: schema lint clean,
+destructive-SQL check ok, build 113 compatibility 1 of 1, pgTAP passed, `test:database` 129
+of 130; with direct access closed pgTAP passed and `test:database` 127 of 130 with 2
+skipped. `feed-friends.integration.ts` (#388) now sets the Supabase URL and removes the
+friend round its accept creates. The one failure is the admin "fixed spans" check,
+which fails only from a 30 ms clock skew between this Mac and its Docker database (a fight
+created 30 ms "in the future"), as recorded for the founder fight. iOS simulator build of the
+FitFight scheme succeeded; API contract, localization, native boundary and 17 other iOS
+scripts passed. Three review passes (backend, API and notifications, iOS) found 27 issues;
+all confirmed ones are fixed and covered by tests. Not deployed; no staging or production
+check.
+
 ## Marc's TestFlight Steps copied to production, prepared 15 Oct 2026
 
 Marc syncs from TestFlight, so production never got his Steps: people saw no

@@ -12,6 +12,8 @@ import { createFightPostComment } from "./fight-post-engagement-supabase-query";
 import { changeFriendship } from "./profile-friends-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
+process.env.NEXT_PUBLIC_SUPABASE_URL = env.SUPABASE_TEST_URL;
+process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_TEST_SERVICE_KEY;
 const database = postgres(env.DATABASE_URL, { max: 1 });
 after(() => database.end());
 
@@ -21,6 +23,9 @@ test("friends posts reach friends on Feed and stay out of fights and other peopl
     const fightId = randomUUID();
     t.after(async () => {
         await database`delete from public.fights where id = ${fightId}`;
+        // Accepting a friend starts a friend round, whose fights and series hold both accounts.
+        await database`delete from public.fights where friends and owner_id in ${database(users)}`;
+        await database`delete from public.fight_series where friend_low is not null and owner_id in ${database(users)}`;
         await database`delete from auth.users where id in ${database(users)}`;
     });
     for (const user of users) await database`insert into auth.users (id) values (${user})`;

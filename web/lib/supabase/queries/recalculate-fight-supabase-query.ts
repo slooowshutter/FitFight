@@ -10,6 +10,8 @@ import {
 import {
     enqueueAwaitingFinalSyncNotifications,
     enqueueFightFinalizedNotifications,
+    enqueueFriendsResultsNotifications,
+    enqueueFriendsSyncNotifications,
     supersedeGraceNotifications,
 } from "./notification-intents-supabase-query";
 
@@ -22,7 +24,7 @@ export async function recalculateFight(
     await database.begin("read write", async (sql) => {
         const fights = await sql`
             select state::text, starts_at::text, ends_at::text,
-                final_sync_grace_seconds, outcome_rule::text, stake_minor, default_goal_value::text, host_id
+                final_sync_grace_seconds, outcome_rule::text, stake_minor, default_goal_value::text, host_id, friends
             from public.fights where id = ${fightId}
             for update
         `;
@@ -140,20 +142,28 @@ export async function recalculateFight(
                     final_steps_complete: member.final_steps_complete,
                 }));
             if (nextState === "awaiting_final_sync") {
-                await enqueueAwaitingFinalSyncNotifications(
-                    sql,
-                    fightId,
-                    fight.ends_at,
-                    notificationMembers,
-                );
+                if (fight.friends) {
+                    await enqueueFriendsSyncNotifications(sql, fightId);
+                } else {
+                    await enqueueAwaitingFinalSyncNotifications(
+                        sql,
+                        fightId,
+                        fight.ends_at,
+                        notificationMembers,
+                    );
+                }
             } else if (nextState === "final") {
                 await supersedeGraceNotifications(sql, fightId);
-                await enqueueFightFinalizedNotifications(
-                    sql,
-                    fightId,
-                    now,
-                    notificationMembers,
-                );
+                if (fight.friends) {
+                    await enqueueFriendsResultsNotifications(sql, fightId, now);
+                } else {
+                    await enqueueFightFinalizedNotifications(
+                        sql,
+                        fightId,
+                        now,
+                        notificationMembers,
+                    );
+                }
             }
         }
     });

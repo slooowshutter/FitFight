@@ -701,16 +701,20 @@ struct FitFightAPI {
         )
     }
 
-    /// `hosted` returns only the caller's current hosted rounds instead of their own Fights.
+    /// `hosted` returns only the caller's current hosted rounds, and `friends` only their current
+    /// friend rounds, instead of their own Fights.
     func fightsSnapshot(
-        accessToken: String, trace: HealthKitSyncTrace?, performMaintenance: Bool = true, hosted: Bool = false
+        accessToken: String, trace: HealthKitSyncTrace?, performMaintenance: Bool = true, hosted: Bool = false,
+        friends: Bool = false
     ) async throws -> FitFightSnapshot {
         try await request(
             path: performMaintenance ? "fights/refresh" : "fights/snapshot",
             method: "POST",
             accessToken: accessToken,
             body: Self.encoder.encode(
-                FightSnapshotRequest(timeZone: Calendar.current.timeZone.identifier, hosted: hosted ? true : nil)
+                FightSnapshotRequest(
+                    timeZone: Calendar.current.timeZone.identifier, hosted: hosted ? true : nil, friends: friends ? true : nil
+                )
             ),
             trace: trace,
             traceStage: .fightsRefresh
@@ -848,6 +852,11 @@ struct FitFightAPI {
     func profileFriends(kind: String, cursor: UUID? = nil, accessToken: String) async throws -> ProfileFriendsPage {
         let suffix = cursor.map { "&cursor=\($0.uuidString.lowercased())" } ?? ""
         return try await get(path: "friends?kind=\(kind)\(suffix)", accessToken: accessToken)
+    }
+
+    /// People who shared a fight with you and are not friends or requested yet, at most 10.
+    func friendSuggestions(accessToken: String) async throws -> FriendSuggestionList {
+        try await get(path: "friends/suggestions", accessToken: accessToken)
     }
 
     func lookupProfile(handle: String, accessToken: String) async throws -> SharedProfileIdentity {
@@ -1722,14 +1731,16 @@ struct FitFightAPI {
 
 private struct EmptyJSON: Encodable {}
 
-/// `hosted` is left out unless set: older servers reject unknown snapshot fields.
+/// `hosted` and `friends` are left out unless set: older servers reject unknown snapshot fields.
 private struct FightSnapshotRequest: Encodable {
     let timeZone: String
     let hosted: Bool?
+    let friends: Bool?
 
     enum CodingKeys: String, CodingKey {
         case timeZone = "time_zone"
         case hosted
+        case friends
     }
 }
 

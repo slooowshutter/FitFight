@@ -202,6 +202,7 @@ struct FitFightApp: App {
                     guard let userId = session.authSession?.user.id else {
                         model.openPost = nil
                         model.showingHosted = false
+                        model.showingFriends = false
                         model.showingActivity = false
                         model.showingPreferences = false
                         return

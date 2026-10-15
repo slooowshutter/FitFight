@@ -1,0 +1,84 @@
+{
+    "fights": [
+        {
+            "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "owner_id": "11111111-1111-4111-8111-111111111111",
+            "name": "Friends",
+            "state": "live",
+            "starts_at": "2026-10-01T00:00:00Z",
+            "ends_at": "2026-11-01T00:00:00Z",
+            "time_zone": "UTC",
+            "grace_ends_at": "2026-11-02T00:00:00Z",
+            "action_text": "Loser buys coffee",
+            "series_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            "friends": true
+        }
+    ],
+    "members": [
+        {
+            "fight_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "user_id": "11111111-1111-4111-8111-111111111111",
+            "state": "accepted",
+            "current_value": 120400,
+            "rank": 1,
+            "final_value": null,
+            "last_synced_at": "2026-10-15T08:00:00Z",
+            "final_steps_complete": false,
+            "step_checkpoints": null
+        },
+        {
+            "fight_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            "user_id": "33333333-3333-4333-8333-333333333333",
+            "state": "accepted",
+            "current_value": 98250,
+            "rank": 2,
+            "final_value": null,
+            "last_synced_at": "2026-10-14T21:10:00Z",
+            "final_steps_complete": false,
+            "step_checkpoints": null
+        }
+    ],
+    "profiles": [
+        {
+            "user_id": "11111111-1111-4111-8111-111111111111",
+            "handle": "marc",
+            "display_name": "Marc Lamy",
+            "avatar": null,
+            "companion_id": "fox"
+        },
+        {
+            "user_id": "33333333-3333-4333-8333-333333333333",
+            "handle": "maya",
+            "display_name": "Maya",
+            "avatar": null,
+            "companion_id": null
+        }
+    ],
+    "series": [
+        {
+            "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            "join_code": "WXYZ",
+            "visibility": "invite_only",
+            "recurring": true,
+            "suggested": false
+        }
+    ],
+    "step_days": [
+        {
+            "user_id": "11111111-1111-4111-8111-111111111111",
+            "day": "2026-10-14",
+            "steps": 9100
+        },
+        {
+            "user_id": "33333333-3333-4333-8333-333333333333",
+            "day": "2026-10-14",
+            "steps": 7400
+        }
+    ],
+    "hosted": null,
+    "friends": {
+        "rounds": 1,
+        "leading": 1,
+        "requests": 2
+    }
+}

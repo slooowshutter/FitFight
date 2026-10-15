@@ -97,3 +97,24 @@ test("the worker finalizes at the 24-hour grace deadline", async (t) => {
     const [fight] = await database`select state from public.fights where id = ${dueFight}`;
     assert.equal(fight.state, "final");
 });
+
+test("rounds that all end at one moment close in one run, not 25 per tick", async (t) => {
+    const owner = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where owner_id = ${owner}`;
+        await database`delete from auth.users where id = ${owner}`;
+    });
+    await database`insert into auth.users (id) values (${owner})`;
+    const due = await database<{ id: string }[]>`
+        insert into public.fights (owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        select ${owner}, 'Friends', 'live', '2026-09-22T12:00:00Z', ${end.toISOString()}, 'UTC', 'highest_total', 'shared'
+        from generate_series(1, 60)
+        returning id
+    `;
+    const result = await closeDueFights(admin, end, database);
+    assert.ok(due.every((fight) => result.fightIds.includes(fight.id)));
+    const [open] = await database<{ n: number }[]>`
+        select count(*)::int as n from public.fights where owner_id = ${owner} and state = 'live'
+    `;
+    assert.equal(open.n, 0);
+});

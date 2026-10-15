@@ -476,6 +476,44 @@ paths:
             }
         }
     }
+    "/friends/suggestions": {
+        "get": {
+            "operationId": "listFriendSuggestions",
+            "summary": "Up to 10 people the caller shared a Fight with who are not friends, requested in either direction, blocked, or deleted.",
+            "description": "Shared means both accepted or sat out (deferred) in the same Fight and, for a repeating Fight, both are still in its series. The app-wide, suggested, founder and friend Fights do not count. Ordered by shared Fight count, then the most recent shared Fight.",
+            "security": [
+                {
+                    "bearerAuth": []
+                }
+            ],
+            "parameters": [
+                {
+                    "$ref": "#/components/parameters/AppVersion"
+                },
+                {
+                    "$ref": "#/components/parameters/AppBuild"
+                }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Authorized current state. Cache-Control no-store.",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FriendSuggestions"
+                            }
+                        }
+                    }
+                },
+                "401": {
+                    "description": "Missing or invalid session"
+                },
+                "429": {
+                    "description": "Rate limit"
+                }
+            }
+        }
+    }
     "/friends/{userID}/request": {
         "post": {
             "operationId": "requestProfileFriendship",
@@ -910,7 +948,7 @@ paths:
                     "required": true,
                     "schema": {
                         "type": "string",
-                        "enum": ["overview", "retention", "churn", "users", "engagement", "steps", "fights", "social", "app"]
+                        "enum": ["overview", "retention", "churn", "users", "engagement", "steps", "fights", "social", "friends", "app"]
                     }
                 },
                 {
@@ -1548,6 +1586,9 @@ paths:
                                 hosted:
                                     type: boolean
                                     description: Return only the caller's current hosted rounds, such as a founder's challengers, in the same shape. Without it, hosted rounds are left out.
+                                friends:
+                                    type: boolean
+                                    description: Return only the caller's friend rounds, in the same shape. That is this month's live rounds (ends_at after now) plus, for 7 days after it ends, each pair's most recent ended round that was not cancelled (ends_at at or before now), so on the 1st a friend appears in both. Only pairs that are still accepted friends and where both members are still accepted. Without it, friend rounds are left out for everyone, so older builds never see them. /fights/refresh accepts the same flag.
             responses:
                 "200":
                     description: One confirmed snapshot under the authenticated User's current access.
@@ -2949,6 +2990,38 @@ components:
                 }
             }
         }
+        FriendSuggestions: {
+            "type": "object",
+            "required": [
+                "people"
+            ],
+            "properties": {
+                "people": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SharedProfileIdentity"
+                            },
+                            {
+                                "type": "object",
+                                "required": [
+                                    "shared_fights"
+                                ],
+                                "properties": {
+                                    "shared_fights": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "description": "Fights both people accepted or sat out, automatic Fights excluded."
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
         ProfileFriendshipResponse: {"type": "object", "required": ["friendship"], "properties": {"friendship": {"type": "string", "enum": ["none", "outgoing", "incoming", "friends", "self"]}}}
         ProfileRespondRequest: {"type": "object", "required": ["action"], "properties": {"action": {"type": "string", "enum": ["accept", "decline"]}}, "additionalProperties": false}
         ProfileViewRequest: {
@@ -3304,6 +3377,9 @@ components:
                             grace_ends_at: { type: string, format: date-time }
                             action_text: { type: [string, "null"] }
                             series_id: { type: [string, "null"], format: uuid }
+                            friends:
+                                type: boolean
+                                description: True for a monthly friend round. Always sent by current servers; absent from older responses.
                 members:
                     type: array
                     items:
@@ -3401,6 +3477,19 @@ components:
                         name: { type: string }
                         rounds: { type: integer, minimum: 1 }
                         leading: { type: integer, minimum: 0 }
+                friends:
+                    description: >
+                        The caller's Friends card. Always sent by current servers, whatever the flags,
+                        even with no friends; absent from older responses. rounds counts the caller's
+                        current friend rounds (live, ends_at after now, both members accepted, still friends),
+                        leading those where the caller's current_value is strictly ahead, and requests the
+                        incoming pending friend requests (the same count as GET /friends incoming_count).
+                    type: object
+                    required: [rounds, leading, requests]
+                    properties:
+                        rounds: { type: integer, minimum: 0 }
+                        leading: { type: integer, minimum: 0 }
+                        requests: { type: integer, minimum: 0 }
         Profile:
             type: object
             required:

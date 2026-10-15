@@ -37,6 +37,7 @@ export type FightRow = {
     created_at: string;
     series_id: string | null;
     host_id: string | null;
+    friends: boolean;
 };
 
 export type FightMemberRow = {
@@ -95,6 +96,8 @@ export type FightSeriesRow = {
     suggested: boolean;
     suggested_at: string | null;
     host_id: string | null;
+    friend_low: string | null;
+    friend_high: string | null;
 };
 
 export function asNumber(

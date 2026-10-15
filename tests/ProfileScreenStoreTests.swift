@@ -60,6 +60,8 @@ struct TestSession { let user: TestUser }
         precondition(cachedNamed == named, "The cached own Profile keeps the companion name and line")
         precondition(privateProfile.record == nil && privateProfile.activity == nil)
         precondition(history.results[0].fightId == nil && history.results[0].name == nil)
+        let suggestions = try decoder.decode(FriendSuggestionList.self, from: Data(contentsOf: fixtures.appendingPathComponent("friend-suggestions.json")))
+        precondition(suggestions.people.map(\.handle) == ["maya", "leo"] && suggestions.people[1].avatarUrl == nil)
         let session = SessionStore()
         let store = ProfileScreenStore()
 

@@ -28,6 +28,7 @@ import {
     enqueueMentionNotifications,
     mentionHandlesFromBody,
 } from "./feed-social-notifications-supabase-query";
+import { endFriendFight } from "./friend-fights-supabase-query";
 import {
     isoUtc,
     loadReadyMedia,
@@ -1403,11 +1404,14 @@ export async function blockFeedAuthor(
             "That person is not on FitFight",
         );
     }
-    await database`
-        insert into private.feed_blocks (blocker_id, blocked_id)
-        values (${userId}, ${blockedId})
-        on conflict (blocker_id, blocked_id) do nothing
-    `;
+    await database.begin("read write", async (sql) => {
+        await sql`
+            insert into private.feed_blocks (blocker_id, blocked_id)
+            values (${userId}, ${blockedId})
+            on conflict (blocker_id, blocked_id) do nothing
+        `;
+        await endFriendFight(sql, userId, blockedId);
+    });
     return { blocked: true };
 }
 

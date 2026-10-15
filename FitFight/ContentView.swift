@@ -294,6 +294,7 @@ struct ContentView: View {
                     }
                     model.openFightID = nil
                     model.showingHosted = false
+                    model.showingFriends = false
                 })
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
             }
@@ -361,15 +362,20 @@ struct ContentView: View {
         }
     }
 
-    /// Fight ids, after the hosted screen when it is open. No fight id equals this.
+    /// Fight ids, after the Friends or hosted screen when one is open. No fight id equals these.
     private static let hostedRoute = "hosted"
+    private static let friendsRoute = "friends"
 
     private var fightsPath: Binding<[String]> {
         Binding(
-            get: { (model.showingHosted ? [Self.hostedRoute] : []) + (model.openFightID.map { [$0] } ?? []) },
+            get: {
+                (model.showingFriends ? [Self.friendsRoute] : []) + (model.showingHosted ? [Self.hostedRoute] : [])
+                    + (model.openFightID.map { [$0] } ?? [])
+            },
             set: { path in
+                model.showingFriends = path.first == Self.friendsRoute
                 model.showingHosted = path.first == Self.hostedRoute
-                model.openFightID = path.last == Self.hostedRoute ? nil : path.last
+                model.openFightID = path.last == Self.hostedRoute || path.last == Self.friendsRoute ? nil : path.last
             }
         )
     }
@@ -382,25 +388,50 @@ struct ContentView: View {
                     Group {
                         if id == Self.hostedRoute {
                             HostedFightsView()
+                        } else if id == Self.friendsRoute {
+                            FriendsGroupView()
                         } else if let fight = model.detailFight(for: id) {
                             FightDetailView(fight: fight)
                                 .postHogScreenView("Fight detail")
                         } else {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(String(appLocalized: "That fight isn’t on your list."))
-                                    .ffType(.heading)
-                                    .foregroundStyle(theme.text)
-                                FFButton(title: String(appLocalized: "Close"), kind: .secondary) {
-                                    model.openFightID = nil
-                                }
-                            }
-                            .padding(.horizontal, theme.space.screenPadding)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                            MissingFightView()
                         }
                     }
                     .background(InteractivePopGestureEnabler(canPop: true, ownsDelegate: false))
                 }
-                .background(InteractivePopGestureEnabler(canPop: model.openFightID != nil || model.showingHosted, ownsDelegate: true))
+                .background(InteractivePopGestureEnabler(canPop: model.openFightID != nil || model.showingHosted || model.showingFriends, ownsDelegate: true))
+        }
+    }
+}
+
+/// A fight id on no loaded list. Friend rounds load with the Friends screen, so a link from Feed,
+/// a post or Profile history reads them once before saying the fight is missing.
+private struct MissingFightView: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.ffTheme) private var theme
+    @State private var checked = false
+
+    var body: some View {
+        Group {
+            if checked {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(String(appLocalized: "That fight isn’t on your list."))
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                    FFButton(title: String(appLocalized: "Close"), kind: .secondary) {
+                        model.openFightID = nil
+                    }
+                }
+                .padding(.horizontal, theme.space.screenPadding)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            } else {
+                FFLoadingBlock()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            try? await model.refreshFriendRounds()
+            checked = true
         }
     }
 }

@@ -132,6 +132,41 @@ test("the owner picks a new code that no other fight uses", async () => {
     );
 });
 
+test("either friend changes only the action of a friend round; the app's other fields are ignored", async () => {
+    const fight = {
+        id: fightId, owner_id: owner, name: "Friends", state: "live", starts_at: startsAt, ends_at: endsAt,
+        action_text: null, series_id: seriesId, time_zone: "UTC", host_id: null, friends: true,
+    };
+    let member: { user_id: string } | null = { user_id: other };
+    const patches: Array<[string, unknown]> = [];
+    const admin = createClient("https://update-fight.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: async (input, init) => {
+            const request = new Request(input, init);
+            const url = new URL(request.url);
+            if (request.method === "GET" && url.pathname === "/rest/v1/fight_members") return Response.json(member ? [member] : []);
+            if (request.method === "GET") return Response.json([fight]);
+            patches.push([url.pathname, await request.json()]);
+            return new Response(null, { status: 204 });
+        } },
+    });
+    const { updateFight } = await import("./update-fight-supabase-query");
+    await updateFight(other, fightId, updateFightRequestSchema.parse({
+        name: "Renamed", actionText: "Buy the coffee", visibility: "joinable", recurring: false,
+        endsAt: "2026-09-28T12:00:00.000Z", inviteHandles: ["leo_runs"], removeUserIds: [owner],
+    }), admin, new Date("2026-09-15T12:00:00Z"));
+    assert.deepEqual(patches, [
+        ["/rest/v1/fights", { name: "Friends", action_text: "Buy the coffee" }],
+        ["/rest/v1/fight_series", { name: "Friends", action_text: "Buy the coffee" }],
+    ]);
+
+    member = null;
+    await assert.rejects(
+        updateFight(other, fightId, { actionText: "Nope" }, admin, new Date("2026-09-15T12:00:00Z")),
+        (error: unknown) => error instanceof ApiError && error.status === 403,
+    );
+});
+
 test("owner can rename a live fight without touching membership", async (t) => {
     const savedURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const savedKey = process.env.SUPABASE_SECRET_KEY;

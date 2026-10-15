@@ -225,6 +225,9 @@ for a photo or short video; `POST /api/v1/media/{id}/commit` verifies size and c
 is the older one Feed (Main and fight posts). `GET /api/v1/feed?scope=main`
 is Main-only. `POST /api/v1/feed/posts` creates one copy per selected destination
 (Main still accepted for old clients; current compose sends fights only) and applies tags only where that person can already see the copy.
+`{ "type": "friends" }` sets `fight_posts.to_friends`: the author's accepted friends see the post on `GET /api/v1/feed`
+(never in a fight's own list), next to any fight destinations. A friends-only post keeps the Main shape (no fight)
+and skips the old shared-fight Main rule. Posts return `to_friends`.
 `GET /api/v1/feed/people` lists tag candidates. `GET/POST /api/v1/fights/{id}/posts`
 remain the single-fight list and the old one-fight compose. Comments, reactions,
 delete, and report for any post use `/api/v1/posts/{id}/...`.

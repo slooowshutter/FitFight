@@ -6163,16 +6163,6 @@
                 }
             }
         },
-        "Join a fight first, then post from here.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Rejoins d’abord un défi, puis publie d’ici."
-                    }
-                }
-            }
-        },
         "That video could not be read.": {
             "localizations": {
                 "fr": {
@@ -16049,6 +16039,168 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "En tête dans %1$lld sur %2$lld"
+                    }
+                }
+            }
+        },
+        "Everyone": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout le monde"
+                    }
+                }
+            }
+        },
+        "Who sees this": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Qui voit ça"
+                    }
+                }
+            }
+        },
+        "My friends": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mes amis"
+                    }
+                }
+            }
+        },
+        "My friends and everyone in my fights": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mes amis et tout le monde dans mes défis"
+                    }
+                }
+            }
+        },
+        "Photo or video": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Photo ou vidéo"
+                    }
+                }
+            }
+        },
+        "Pick who sees this": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis qui voit ça"
+                    }
+                }
+            }
+        },
+        "Add a friend or join a fight first, then post from here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajoute un ami ou rejoins un défi d’abord, puis publie ici."
+                    }
+                }
+            }
+        },
+        "feed.seen-by": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Seen by %lld person"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Seen by %lld people"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Vu par %lld personne"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Vu par %lld personnes"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "feed.audience-people": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld person"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld people"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld personne"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld personnes"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "New post has Everyone or Choose. Everyone sends it to your friends and every fight you’re in. Choose lets you pick My friends and fights, so you can leave your work fight out. Friends see these posts on Feed, marked Friends.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouvelle publication propose Tout le monde ou Choix. Tout le monde l’envoie à tes amis et à tous tes défis. Choix te laisse cocher Mes amis et des défis, pour laisser ton défi du travail de côté. Tes amis voient ces publications dans le fil, marquées Amis."
                     }
                 }
             }

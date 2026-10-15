@@ -564,6 +564,15 @@ struct CompanionAvatar: View {
             .contentShape(Rectangle())
             .opacity(pending ? 0.55 : 1)
             .accessibilityHidden(true)
+        } else if let photoURL, (isYou && companions.hasChosen) ? companions.isCustom : companionID == CompanionStore.customId {
+            // A custom character is transparent art like the stock animals, so it stands free in the same square, never in a photo circle.
+            RemotePhoto(url: photoURL, kind: .avatar, contentMode: .fit) { Color.clear }
+                .frame(width: halfBody ? size / 0.55 : size, height: halfBody ? size / 0.55 : size)
+                .frame(width: size, height: size, alignment: .top)
+                .clipped()
+                .contentShape(Rectangle())
+                .opacity(pending ? 0.55 : 1)
+                .accessibilityHidden(true)
         } else {
             FFAvatar(monogram: monogram, size: size, photoURL: photoURL, dimmed: pending)
                 .overlay {

@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 15,
+            notes: "Custom characters now stand on their own like every other character, at the same size, without a circle around them."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 15,
             notes: "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it."
         ),
         ReleaseNote(

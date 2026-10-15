@@ -101,12 +101,12 @@ if ["configure", "prepare", "draft", "submit"].include?(mode)
         abort "Expected both In-App Purchases ready for review" unless iap_versions.length == 2
         submission = read.call("apps/6804230516/reviewSubmissions?filter[platform]=IOS&filter[state]=READY_FOR_REVIEW").first ||
             read.call("reviewSubmissions", { data: { type: "reviewSubmissions", attributes: { platform: "IOS" }, relationships: { app: { data: { type: "apps", id: "6804230516" } } } } }, Net::HTTP::Post)
-        abort "The open review submission already has items" unless read.call("reviewSubmissions/#{submission.fetch('id')}/items").empty?
+        # A rerun after a failed submit finds this submission with its items already added.
         [["appStoreVersion", "appStoreVersions", version.fetch("id")], *iap_versions.map { |item| ["inAppPurchaseVersion", "inAppPurchaseVersions", item.fetch("id")] }].each do |name, type, id|
             read.call("reviewSubmissionItems", {
                 data: { type: "reviewSubmissionItems", relationships: { reviewSubmission: { data: { type: "reviewSubmissions", id: submission.fetch("id") } }, name => { data: { type: type, id: id } } } }
             }, Net::HTTP::Post)
-        end
+        end if read.call("reviewSubmissions/#{submission.fetch('id')}/items").empty?
         read.call("reviewSubmissions/#{submission.fetch('id')}", { data: { type: "reviewSubmissions", id: submission.fetch("id"), attributes: { submitted: true } } })
         submitted = read.call("appStoreVersions/#{version.fetch('id')}")
         puts JSON.generate({ submitted_version: submitted.fetch("attributes").slice("versionString", "appStoreState", "appVersionState", "releaseType") })

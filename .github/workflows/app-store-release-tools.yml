@@ -23,9 +23,15 @@ jobs:
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Admit selected build 226 as the production review build
+            - name: Submit 1.1.3 build 226 with both In-App Purchases for review
               env:
                   FITFIGHT_RELEASE_VERSION: "1.1.3"
+                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+              run: bundle exec ruby scripts/app-store-release-audit.rb submit 226
+            - name: Refresh available releases after submission
+              env:
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}

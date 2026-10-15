@@ -436,7 +436,7 @@ in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
 Feedback and Profile screens; text left and phone right on computers, stacked
 on phones; on computers the hero fills the first screen), steps recorded, what it is, the goal, how it
 works (the five New fight steps, nothing is saved), companions (pick one of the
-12 animals and see its five poses), fight options, pricing, FAQ with search,
+30 Specials and see its five poses; people in the mockups wear Specials too), fight options, pricing, FAQ with search,
 and a closing card. All people, fights and posts are fictional. The download
 buttons keep the App Store link in production and the TestFlight dialog on
 staging. The pricing card shows Specials (EUR 0.99, buy any and keep it) and

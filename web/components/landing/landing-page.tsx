@@ -140,7 +140,7 @@ export function LandingPage({
                                 {statement[0]}
                                 <span className="lp-chip">
                                     <img
-                                        src="/landing/companion-fox-avatar.webp"
+                                        src="/landing/companion-tiger-avatar.webp"
                                         alt=""
                                         width={24}
                                         height={24}
@@ -150,7 +150,7 @@ export function LandingPage({
                                 {statement[2]}
                                 <span className="lp-chip">
                                     <img
-                                        src="/landing/companion-badger-avatar.webp"
+                                        src="/landing/companion-silverback-avatar.webp"
                                         alt=""
                                         width={24}
                                         height={24}

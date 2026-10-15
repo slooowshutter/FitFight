@@ -15,7 +15,7 @@ const en = {
         eyebrow: "Step challenges with friends",
         title: "Let friendly competition",
         titleAccent: "move you.",
-        lede: "Start a private fight, let Apple Health keep the score, and find out who really walks the most.",
+        lede: "Join or start a challenge, let Apple Health keep score, and find out who really walks the most.",
         tryIt: "Try it",
         meta: ["Free", "iPhone", "Apple Health"],
         betaMeta: ["iPhone", "Tap the TestFlight link twice", "Apple Health"],
@@ -32,9 +32,7 @@ const en = {
             "you",
             " and ",
             "your friends",
-            ". Pick a length, agree on what the loser does, then just walk. ",
-            "Apple Health",
-            " keeps the score.",
+            ". Decide on challenge length, agree on what the winner gets or the loser does, then get some steps.",
         ],
         facts: ["Steps only", "Private by default", "Free, no ads"],
         frags: [
@@ -48,21 +46,21 @@ const en = {
     },
     fights: [
         {
-            name: "Weekend wanderers",
+            name: "Walk Wars",
             left: "1 day and 7 hours left",
             gap: "+860",
             ahead: true,
             rival: "capybara",
         },
         {
-            name: "No lift, no mercy",
+            name: "Eat it",
             left: "5 days left",
             gap: "−1,260",
             ahead: false,
             rival: "panda",
         },
         {
-            name: "The croissant run",
+            name: "Step it Up",
             left: "2 days left",
             gap: "+2,840",
             ahead: true,
@@ -89,7 +87,7 @@ const en = {
             who: "Leo",
             animal: "silverback",
             ago: "12m",
-            fight: "The croissant run",
+            fight: "Step it Up",
             text: "Nine floors of stairs at lunch. Enjoy the lead while it lasts.",
             reacts: ["🔥 4", "😂 2"],
             comments: "3 comments",
@@ -98,7 +96,7 @@ const en = {
             who: "Nina",
             animal: "capybara",
             ago: "1h",
-            fight: "Weekend wanderers",
+            fight: "Walk Wars",
             text: "Sunday loop done. 14,210 steps and zero regrets.",
             reacts: ["👏 5"],
             comments: "1 comment",
@@ -116,20 +114,14 @@ const en = {
     goal: {
         eyebrow: "The goal",
         lines: [
-            "Walk to the bakery.",
+            "Walk the long way.",
             "Take the stairs.",
             "Get off one stop early.",
-            "Say yes to the long way home.",
         ],
-        win: "Beat Leo by 2,840.",
+        win: "Win the challenge.",
         gaps: [
-            ["The croissant run", "+2,840", "steps ahead", "Relax. Or don’t."],
-            [
-                "No lift, no mercy",
-                "−1,260",
-                "steps behind",
-                "Time for the long way home.",
-            ],
+            ["Step it Up", "+2,840", "steps ahead", "Relax. Or don’t."],
+            ["Eat it", "−1,260", "steps behind", "Time for the long way home."],
         ],
         nextPose: "Next pose:",
         nextPoseName: "Pushing",
@@ -145,8 +137,8 @@ const en = {
         titleEnd: "to finish.",
         steps: [
             [
-                "Start a fight",
-                "Pick how long it lasts, type what the loser has to do, and share the link with your friends.",
+                "Start or join a fight",
+                "Pick how long it lasts, type what the loser has to do or what the champion receives, and share the link with others.",
             ],
             [
                 "Move to win",
@@ -157,7 +149,6 @@ const en = {
                 "When time is up, the highest total wins. The loser does what you agreed.",
             ],
         ],
-        tryIt: "Try it: the same five steps as the app.",
     },
     composer: {
         back: "Back",
@@ -195,7 +186,7 @@ const en = {
         titlePlaceholder: "Weekend walk-off",
         action: "Loser action",
         actionPlaceholder: "Cook dinner",
-        defaultTitle: "The croissant run",
+        defaultTitle: "Step it Up",
         defaultAction: "Buy the croissants",
         reviewTitle: "Ready to fight?",
         reviewText: "Check the agreement before you start.",
@@ -221,7 +212,7 @@ const en = {
     companions: {
         eyebrow: "Companions",
         title: "Pick a companion.",
-        titleAccent: "Watch it get moving.",
+        titleAccent: "Watch it grow.",
         lede: "Your companion stands in for you in fights, standings and the Feed. It changes pose as your steps add up during the day. Change it any time, unlock a Special, or describe any animal and get your own.",
         pick: "Pick your animal",
         walk: "Walk. It changes pose with your steps today.",
@@ -413,14 +404,14 @@ const en = {
         later: "Coming later, optional",
         extras: [
             [
-                "Specials",
+                "Special",
                 "€0.99",
-                "Buy any Special once and keep it forever. Collect as many as you like.",
+                "Buy any special companion once and keep it forever. Collect as many as you like.",
             ],
             [
                 "Make it yours",
                 "€2.99",
-                "Describe any animal and get your own companion in five poses. Invite a friend and you each get one free.",
+                "Describe any animal and get a custom companion in five poses. Invite a friend to FitFight, and you each get one free.",
             ],
         ],
     },
@@ -543,7 +534,7 @@ const fr: typeof en = {
         eyebrow: "Défis de pas entre amis",
         title: "Bougez plus grâce aux défis",
         titleAccent: "entre amis.",
-        lede: "Lancez un défi privé, laissez Santé d’Apple compter les pas et découvrez qui marche vraiment le plus.",
+        lede: "Rejoignez ou lancez un défi, laissez Santé d’Apple compter les pas et découvrez qui marche vraiment le plus.",
         tryIt: "Essayer",
         meta: ["Gratuit", "iPhone", "Santé d’Apple"],
         betaMeta: [
@@ -564,9 +555,7 @@ const fr: typeof en = {
             "vous",
             " et ",
             "vos amis",
-            ". Choisissez une durée, mettez-vous d’accord sur le gage du perdant, puis marchez. ",
-            "Santé d’Apple",
-            " compte les pas.",
+            ". Choisissez la durée du défi, mettez-vous d’accord sur ce que gagne le vainqueur ou sur le gage du perdant, puis cumulez les pas.",
         ],
         facts: ["Seulement les pas", "Privé par défaut", "Gratuit, sans pub"],
         frags: [
@@ -586,21 +575,21 @@ const fr: typeof en = {
     },
     fights: [
         {
-            name: "Les flâneurs du week-end",
+            name: "La guerre des pas",
             left: "Encore 1 jour et 7 heures",
             gap: "+860",
             ahead: true,
             rival: "capybara",
         },
         {
-            name: "Pas d’ascenseur, pas de pitié",
+            name: "Prends ça",
             left: "Encore 5 jours",
             gap: "−1 260",
             ahead: false,
             rival: "panda",
         },
         {
-            name: "La course aux croissants",
+            name: "Accélère le pas",
             left: "Encore 2 jours",
             gap: "+2 840",
             ahead: true,
@@ -632,7 +621,7 @@ const fr: typeof en = {
             who: "Leo",
             animal: "silverback",
             ago: "12 min",
-            fight: "La course aux croissants",
+            fight: "Accélère le pas",
             text: "Neuf étages d’escaliers à midi. Profitez de votre avance tant qu’elle dure.",
             reacts: ["🔥 4", "😂 2"],
             comments: "3 commentaires",
@@ -641,7 +630,7 @@ const fr: typeof en = {
             who: "Nina",
             animal: "capybara",
             ago: "1 h",
-            fight: "Les flâneurs du week-end",
+            fight: "La guerre des pas",
             text: "Boucle du dimanche bouclée. 14 210 pas et zéro regret.",
             reacts: ["👏 5"],
             comments: "1 commentaire",
@@ -659,21 +648,20 @@ const fr: typeof en = {
     goal: {
         eyebrow: "L’objectif",
         lines: [
-            "Marchez jusqu’à la boulangerie.",
+            "Rallongez le trajet.",
             "Prenez l’escalier.",
             "Descendez un arrêt plus tôt.",
-            "Rentrez par le chemin le plus long.",
         ],
-        win: "Battez Leo de 2 840 pas.",
+        win: "Gagnez le défi.",
         gaps: [
             [
-                "La course aux croissants",
+                "Accélère le pas",
                 "+2 840",
                 "pas d’avance",
                 "Détendez-vous. Ou pas.",
             ],
             [
-                "Pas d’ascenseur, pas de pitié",
+                "Prends ça",
                 "−1 260",
                 "pas de retard",
                 "C’est l’heure du chemin le plus long.",
@@ -693,8 +681,8 @@ const fr: typeof en = {
         titleEnd: "à l’arrivée.",
         steps: [
             [
-                "Lancez un défi",
-                "Choisissez sa durée, écrivez le gage du perdant et partagez le lien avec vos amis.",
+                "Lancez ou rejoignez un défi",
+                "Choisissez sa durée, écrivez le gage du perdant ou ce que remporte le champion, et partagez le lien avec les autres.",
             ],
             [
                 "Bougez pour gagner",
@@ -705,7 +693,6 @@ const fr: typeof en = {
                 "À la fin, le total le plus élevé gagne. Le perdant fait le gage convenu.",
             ],
         ],
-        tryIt: "Essayez : les cinq mêmes étapes que dans l’app.",
     },
     composer: {
         back: "Retour",
@@ -743,7 +730,7 @@ const fr: typeof en = {
         titlePlaceholder: "Défi du week-end",
         action: "Gage du perdant",
         actionPlaceholder: "Préparer le dîner",
-        defaultTitle: "La course aux croissants",
+        defaultTitle: "Accélère le pas",
         defaultAction: "Acheter les croissants",
         reviewTitle: "Prêt pour le défi ?",
         reviewText: "Vérifiez l’accord avant de lancer.",
@@ -770,7 +757,7 @@ const fr: typeof en = {
     companions: {
         eyebrow: "Compagnons",
         title: "Choisissez un compagnon.",
-        titleAccent: "Regardez-le bouger.",
+        titleAccent: "Regardez-le grandir.",
         lede: "Votre compagnon vous représente dans les défis, le classement et le fil. Il change de pose à mesure que vos pas s’accumulent dans la journée. Changez-en quand vous voulez, débloquez un Spécial ou décrivez n’importe quel animal pour avoir le vôtre.",
         pick: "Choisissez votre animal",
         walk: "Marchez. Il change de pose avec vos pas du jour.",
@@ -984,14 +971,14 @@ const fr: typeof en = {
         later: "Plus tard, en option",
         extras: [
             [
-                "Spéciaux",
+                "Spécial",
                 "0,99 €",
-                "Achetez un Spécial une fois et gardez-le pour toujours. Collectionnez-en autant que vous voulez.",
+                "Achetez un compagnon spécial une fois et gardez-le pour toujours. Collectionnez-en autant que vous voulez.",
             ],
             [
                 "À ton image",
                 "2,99 €",
-                "Décrivez n’importe quel animal et obtenez votre propre compagnon en cinq poses. Invitez un ami et vous en recevez chacun un gratuit.",
+                "Décrivez n’importe quel animal et obtenez un compagnon personnalisé en cinq poses. Invitez un ami sur FitFight, et vous en recevez chacun un gratuit.",
             ],
         ],
     },

@@ -6,6 +6,38 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Marc's TestFlight Steps copied to production, prepared 15 Oct 2026
+
+Marc syncs from TestFlight, so production never got his Steps: people saw no
+stats for him, and production founder rounds score him from his daily Steps
+stored there, so he would show 0 and forfeit every round. Marc asked (15 Oct)
+for his syncs to reach production too, only for him.
+
+**Code:** after staging stores an activity sync from Marc's staging account
+(`founderUserIds.beta`), `POST /api/v1/healthkit/activity` sends the same
+batch, after responding, to production's new
+`POST /api/internal/founder-activity` with `Authorization: Bearer CRON_SECRET`.
+That route stores it under the environment's founder (`readFounderId`) through
+`receiveHealthKitActivity`, the same path as a phone sync, so his profile Steps
+and founder rounds update there. A failed copy is logged on staging and never
+fails the phone's sync; the next sync sends the days again. Nobody else's sync
+is copied. Fight-window totals (`/healthkit/steps`) are not copied: they name
+staging Fight ids. The staging read-only production database user is unchanged.
+
+**Contract:** no `/api/v1` request or response changed and there is no
+migration or app change, so every installed build is unaffected.
+
+**Deployment:** both backends must run it. Production needs the new route
+(merge to `main`) before copies succeed; until then staging logs a 404 per
+Marc sync and nothing else changes. It relies on `CRON_SECRET` having the same
+value on Production and Preview, as recorded on 11 Oct; not checked live.
+
+**Verification (local):** web typecheck and all 458 unit tests passed,
+including `founder-activity.test.ts`: Marc's staging sync is copied with the
+exact body and secret after responding, another user's is not, and production
+rejects a wrong secret. The test failed when the founder check was removed.
+Not merged or deployed.
+
 ## Companion names and lines, prepared 15 Oct 2026
 
 A custom character gets a name and a line, shown on the owner's Profile, a

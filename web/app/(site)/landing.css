@@ -474,14 +474,9 @@ body:has(.lp) {
     border-radius: 50%;
 }
 
-.lp-chip-icon {
-    padding-left: 0.45em;
-    color: var(--moss-text);
-}
-
-.lp-chip-icon .lp-icon {
-    width: 0.9em;
-    height: 0.9em;
+.lp-chip-group img + img {
+    margin-left: -0.62em;
+    outline: 0.08em solid var(--control);
 }
 
 .lp-facts {

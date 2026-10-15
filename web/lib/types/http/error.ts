@@ -16,6 +16,7 @@ export const ERROR_CODES = {
     invite_wrong_user: "invite_wrong_user",
     handle_not_found: "handle_not_found",
     handle_taken: "handle_taken",
+    join_code_taken: "join_code_taken",
     companion_taken: "companion_taken",
     special_purchase_required: "special_purchase_required",
     special_limit: "special_limit",

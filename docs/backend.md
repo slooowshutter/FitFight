@@ -592,7 +592,12 @@ invitations in one transaction. Repeating a successful decline is harmless.
 private/public, whether the series repeats, the end time (and the start only while the
 fight is still `scheduled`), extra usernames, and kicking anyone except the owner.
 `draft`, `inviting`, `scheduled`, and `live` fights can be edited; `awaiting_final_sync`,
-`final`, and `cancelled` stay frozen. Old apps never call this route.
+`final`, and `cancelled` stay frozen. Old apps never call this route. An optional
+`joinCode` (15 Oct 2026) renames the series code: 4 to 12 letters or digits, normalized
+like a typed code (uppercase, spaces and dashes dropped), written before anything else.
+Random codes stay 4 characters without lookalikes. A code another series holds returns
+`409 join_code_taken` with nothing changed. `PGG7` keeps its code (`403`) and no other
+fight can take it, since signup and the admin dashboard find the app-wide fight by it. The old code is freed and its links stop working.
 
 `POST /api/v1/fights/{fightID}/cancel` is owner-only. The app’s Edit summary Delete
 uses it. It pauses the series first, then marks the fight `cancelled`, so a repeating

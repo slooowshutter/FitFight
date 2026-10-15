@@ -46,6 +46,46 @@ batch is first read 30 seconds after it starts, then every 10 seconds, so a
 Not yet verified: staging deploy, the `/api/app-release` check, and a run of
 `test:database` on a real Supabase stack.
 
+## Editable fight codes, prepared 15 Oct 2026
+
+Marc asked that people can change a fight's code instead of keeping the random one, and
+that a custom code can be longer than 4. The owner edits it in Edit fight (below the
+summary, before Save): 4 to 12 letters or digits, any letter, stored uppercase. Random
+codes are unchanged (4 characters from `23456789ABCDEFGHJKMNPQRSTVWXYZ`). The unique index
+on `fight_series.join_code` decides "taken"; the app says "That code is taken. Try
+another." The code belongs to the series, so later rounds keep it. The old code is freed:
+an old link opens whichever fight takes that code next. `PGG7` cannot change and no other
+fight can take it. Join, `/j/<code>` links (app and web page), the web app's Join box and the
+join lookup accept the wider format. New 1.1.3 release note, English and French.
+
+**Older builds (every installed build today, including App Store 1.1.2):** their Join
+field keeps only 4 characters from the random alphabet, and their link parser ignores
+other codes. So a custom code that is longer than 4, or uses I, L, O, U, 0 or 1, cannot be
+typed or opened by link on them until they update. They still join by username invite,
+and from the Join list for a public fight (they send the server's code back unchanged).
+Random codes keep working everywhere.
+
+**Contract:** `PATCH /api/v1/fights/{fightID}` gains an optional `joinCode` and a new error
+code `join_code_taken`, returned only when `joinCode` is sent. Older builds never send it.
+`joinCode` in responses is still a string; older builds decode any length. Migration
+`20261015180000_custom_join_codes.sql` replaces the `fight_series_join_code_format` check
+with `^[0-9A-Z]{4,12}$` (relaxing; every existing code passes).
+
+**Deployment order:** migration, then backend, then the app. The new backend writes codes
+the old check rejects, so confirm the migration applied before it promotes. An older
+backend drops the unknown field, so a code-only save there returns "Nothing to update".
+
+**Verification (local, rebased on develop 5b777ed):** web typecheck and all 456 unit tests passed (new: 4 to 12
+characters, normalized, lookalikes allowed for custom codes; code written before other
+fields; a taken code changes nothing; `PGG7` refused both ways). On a disposable local
+Supabase rebuilt from every migration (CLI 2.115.0), in CI's order: schema lint clean,
+build 113 compatibility 1 of 1, pgTAP 329 of 329, `test:database` 112 of 112, then with
+direct access closed pgTAP 18 of 18 and `test:database` 111 of 112 with the existing
+founder-rename skip. The new case renames to a 12-character custom code through the real
+check and unique index, gets `join_code_taken` for a held code with the name untouched,
+finds the fight by the new code typed lowercase and 404s on the old one. Localization
+check passed. Not run here: iOS simulator build (CI only).
+
 ## Post to friends, Everyone or Choose, prepared 15 Oct 2026
 
 Marc picked composer design H (15 Oct 2026): one composer from Feed and from inside

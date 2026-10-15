@@ -29,6 +29,20 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 15,
+            notes: "Custom characters now stand on their own like every other character, at the same size, without a circle around them."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 15,
+            notes: "Name your own companion: pick one of four name and line ideas written for your character, change it, or write your own, and ask for four more. Your companion’s name and line now show on your profile, and your friends’ companions show theirs on their profiles."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 15,
             notes: "You can now change your fight’s code in Edit. Pick 4 to 12 letters or numbers that no other fight uses."
         ),
         ReleaseNote(

@@ -17,10 +17,18 @@ export const profileSchema = z.object({
     companion_id: companionIdSchema.nullable().default(null),
     companion_prompt: z.string().nullable().default(null),
     companion_image_url: z.string().url().nullish(),
+    /** An equipped custom character's name and line. Stock companions and Specials send none. */
+    companion_name: z.string().optional(),
+    companion_line: z.string().optional(),
     time_zone: timeZoneSchema.optional(),
 });
 
-export const profileDatabaseRowSchema = profileSchema.omit({ avatar: true, user_id: true }).extend({
+export const profileDatabaseRowSchema = profileSchema.omit({
+    avatar: true,
+    user_id: true,
+    companion_name: true,
+    companion_line: true,
+}).extend({
     id: z.string().uuid(),
     avatar_media_id: z.string().uuid().nullable(),
     time_zone: timeZoneSchema.nullable(),

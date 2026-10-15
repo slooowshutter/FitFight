@@ -38,6 +38,46 @@ exact body and secret after responding, another user's is not, and production
 rejects a wrong secret. The test failed when the founder check was removed.
 Not merged or deployed.
 
+## Companion names and lines, prepared 15 Oct 2026
+
+A custom character gets a name and a line, shown on the owner's Profile, a
+friend's view of the profile, and the Yours tile (the Fights card has no name slot). Blend's FitFight Companion Lines
+workflow suggests four pairs per batch in the app's language; the owner picks
+one, edits it, or types their own. "Four more" gives up to three extra batches
+per character; a failed batch, or any batch before the first completed one, is
+free, but no character gets more than six batches of any status, so a
+description that makes every run fail cannot buy unlimited Blend runs. Details: [backend](backend.md#companion-names-and-lines-prepared-15-oct-2026).
+
+**Contract:** additive. `GET /api/v1/me/custom-characters` characters add
+`suggestions`, `suggestions_pending`, `more_suggestions_left`, `name` and `line`.
+New `POST /api/v1/me/custom-characters/{purchase_id}/label` and
+`POST /api/v1/me/custom-characters/{purchase_id}/suggestions`. `GET /api/v1/me`
+and `GET /api/v1/profiles/{user_id}` add optional `companion_name` and
+`companion_line` (another viewer only when the profile is shared with them).
+`private.ai_requests.provider_response` keeps Blend's raw response for failed,
+cancelled and unreadable runs; it never reaches the app or the server error log.
+
+**Supported builds checked:** code only. Older builds ignore the new store and
+profile fields and never call the two routes; every existing fixture passes
+untouched, and the native contract tests decode a profile with the pair through
+the build 201 decoder.
+
+**Deploy order:** migration `20261015120000_companion_labels.sql` (additive
+columns, widened `ai_paid_character_no_credits`), then the backend, then the app.
+**Rollback hazard:** once a `companion_lines` row exists, an older backend fails
+to parse it: its store and `/advance` return 400 for that user and the old
+reconciler throws. Do not roll the backend back past this change.
+
+**Cost:** after deploy, the reconciler starts a first batch for every existing
+character with a chosen portrait, one per run and only while fewer than 10 AI
+runs are unresolved. About $0.02 and one of the 500 daily Blend starts each. A
+batch is first read 30 seconds after it starts, then every 10 seconds, so a
+40 to 55 second run costs 3 or 4 reads of the shared 60 per minute.
+
+**Verification (local):** web typecheck and 482 of 482 unit tests passed.
+Not yet verified: staging deploy, the `/api/app-release` check, and a run of
+`test:database` on a real Supabase stack.
+
 ## Editable fight codes, prepared 15 Oct 2026
 
 Marc asked that people can change a fight's code instead of keeping the random one, and

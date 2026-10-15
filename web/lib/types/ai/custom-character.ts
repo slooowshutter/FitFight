@@ -2,6 +2,7 @@ import { z } from "zod";
 import { applePurchaseEnvironmentSchema } from "@/lib/types/apple/special-purchase";
 import { customCharacterProductId } from "@/lib/types/apple/custom-character-purchase";
 import { aiRequestStateValues } from "@/lib/types/ai/request";
+import { companionLabelSchema, storedCompanionLabelSchema, type CompanionLabel } from "@/lib/types/ai/workflow";
 
 export const customCharacterPurchaseRowSchema = z.object({
     id: z.string().uuid(),
@@ -18,6 +19,9 @@ export const customCharacterPurchaseRowSchema = z.object({
     free_claim_key: z.string().uuid().nullable(),
     portraits_notified_at: z.coerce.date().nullable(),
     poses_notified_at: z.coerce.date().nullable(),
+    name: z.string().nullable(),
+    line: z.string().nullable(),
+    lines_action_key: z.string().uuid().nullable(),
 });
 
 export const customCharacterPortraitRowSchema = z.object({
@@ -51,6 +55,12 @@ export const customCharacterProgressSchema = z.object({
     phase: z.enum(customCharacterPhaseValues),
     portrait_url: z.string().url().nullable(),
     candidates: z.array(customCharacterCandidateSchema),
+    /** Every completed batch of four, first batch first. */
+    suggestions: z.array(storedCompanionLabelSchema),
+    suggestions_pending: z.boolean(),
+    more_suggestions_left: z.number().int().min(0).max(3),
+    name: z.string().nullable(),
+    line: z.string().nullable(),
 });
 
 export const customCharacterStoreSchema = z.object({
@@ -115,6 +125,27 @@ export const customCharacterChooseRequestSchema = z.object({
 
 export const customCharacterPurchaseIdSchema = z.string().uuid();
 
+export const customCharacterLabelRequestSchema = companionLabelSchema.strict();
+
+/** attempt_id is the idempotency key of one "Four more" batch. */
+export const customCharacterSuggestionsRequestSchema = z.object({
+    attempt_id: z.string().uuid(),
+}).strict();
+
+export const companionLinesBatchSchema = z.object({
+    id: z.string().uuid(),
+    resource_id: z.string().uuid(),
+    idempotency_key: z.string().uuid(),
+    status: z.enum(aiRequestStateValues),
+    result: z.object({ options: z.array(storedCompanionLabelSchema) }).nullable(),
+});
+
+/** The name and line a profile shows for an equipped custom character. */
+export const companionLabelRowSchema = z.object({
+    companion_name: z.string(),
+    companion_line: z.string(),
+});
+
 export const customCharacterAttemptSchema = z.object({
     resource_id: z.string().uuid(),
     request_id: z.string().uuid(),
@@ -136,6 +167,14 @@ export type CustomCharacterStore = z.infer<typeof customCharacterStoreSchema>;
 export type CustomCharacterAdvanceRequest = z.infer<typeof customCharacterAdvanceRequestSchema>;
 export type FreeCharacterGiftRequest = z.infer<typeof freeCharacterGiftRequestSchema>;
 export type CustomCharacterAttempt = z.infer<typeof customCharacterAttemptSchema>;
+export type CustomCharacterLabelRequest = z.infer<typeof customCharacterLabelRequestSchema>;
+export type CompanionLinesBatch = z.infer<typeof companionLinesBatchSchema>;
+export type CompanionLabelRow = z.infer<typeof companionLabelRowSchema>;
+/** `locale` is the owner's newest installation locale, the same one pushes use. */
+export type CompanionLinesStep =
+    | { kind: "none" }
+    | { kind: "pending"; requestId: string }
+    | { kind: "start"; key: string; description: string; avatarRequestId: string; locale: string | null; avoid: CompanionLabel[] };
 export type CustomCharacterStage =
     | { kind: "existing"; requestId: string }
     | { kind: "portraits"; description: string; starts: string[]; pending: string[] }

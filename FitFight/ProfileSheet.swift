@@ -119,11 +119,19 @@ struct ProfileSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: profile.identity.displayName).ffType(.title)
                 Text(verbatim: "@\(profile.identity.handle)").ffType(.caption).foregroundStyle(theme.textSecondary)
-                if let id = profile.identity.companionId, let animal = StockCompanion(rawValue: id), animal.isLimited {
-                    Text(animal.caption).ffType(.caption).foregroundStyle(theme.textSecondary)
+            }
+        }
+        // A stock or Special companion's words ship in the app; a custom one's come with the profile.
+        let animal = companions.animal(for: userID.uuidString, companionID: profile.identity.companionId)
+        if let name = animal?.name ?? profile.companionName {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: name).ffType(.label).foregroundStyle(theme.text)
+                if let line = animal?.caption ?? profile.companionLine {
+                    Text(verbatim: line).ffType(.caption).foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .accessibilityElement(children: .combine)
         }
         if preview == nil && profile.friendship != "self" {
             friendshipActions(profile)

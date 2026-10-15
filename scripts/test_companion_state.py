@@ -10,6 +10,9 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 views = (root / "FitFight/CompanionViews.swift").read_text()
 source = views[:views.index("struct CompanionCharacter: View {")]
+# The character store's response models; the store class below them needs StoreKit and PostHog.
+characters = (root / "FitFight/CustomCharacterPurchases.swift").read_text()
+source += characters[characters.index("struct CustomCharacterStoreSnapshot"):characters.index("@MainActor\nfinal class CustomCharacterPurchases")]
 source += (root / "tests/CompanionStateTests.swift").read_text()
 
 with tempfile.TemporaryDirectory(prefix="fitfight-companion-tests-") as directory:
@@ -23,4 +26,4 @@ with tempfile.TemporaryDirectory(prefix="fitfight-companion-tests-") as director
         str(root / "FitFight/Media.swift"), str(root / "FitFight/Profile.swift"),
         str(generated), "-o", str(executable),
     ], check=True)
-    subprocess.run([str(executable)], check=True, timeout=15)
+    subprocess.run([str(executable), str(root / "contracts/fixtures/custom-character-store.json")], check=True, timeout=15)

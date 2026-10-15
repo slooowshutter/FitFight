@@ -7,8 +7,9 @@ export function normalizeJoinCode(raw: string): string {
     return raw.replace(/[\s-]/g, "").toUpperCase();
 }
 
+/** Random codes use JOIN_CODE_ALPHABET; an owner may pick any 4 to 12 letters or digits. */
 export function isJoinCode(value: string): boolean {
-    return /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{4}$/.test(value);
+    return /^[0-9A-Z]{4,12}$/.test(value);
 }
 
 export function randomJoinCode(random: () => number = Math.random): string {

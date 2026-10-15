@@ -3561,6 +3561,36 @@
                 }
             }
         },
+        "4 to 12 letters or numbers, not used by another fight. The old code and link stop working.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "4 à 12 lettres ou chiffres, pas déjà pris par un autre défi. L’ancien code et l’ancien lien ne marcheront plus."
+                    }
+                }
+            }
+        },
+        "That code is taken. Try another.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce code est déjà pris. Essaie-en un autre."
+                    }
+                }
+            }
+        },
+        "You can now change your fight’s code in Edit. Pick 4 to 12 letters or numbers that no other fight uses.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux maintenant changer le code de ton défi dans Modifier. Choisis 4 à 12 lettres ou chiffres qu’aucun autre défi n’utilise."
+                    }
+                }
+            }
+        },
         "3-day Steps fight": {
             "localizations": {
                 "fr": {
@@ -7323,12 +7353,12 @@
                 }
             }
         },
-        "Enter the 4-character code.": {
+        "Enter a code of 4 to 12 letters or numbers.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Saisissez le code de 4 caractères."
+                        "value": "Saisis un code de 4 à 12 lettres ou chiffres."
                     }
                 }
             }

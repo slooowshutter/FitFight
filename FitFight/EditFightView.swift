@@ -6,6 +6,7 @@ struct EditFightView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
 
     @State private var step = FightComposerStep.review
@@ -18,6 +19,7 @@ struct EditFightView: View {
     @State private var customStart: Date
     @State private var customEnd: Date
     @State private var timeZone: TimeZone
+    @State private var joinCode: String
     @State private var people: [FightComposerPerson]
     @State private var username = ""
     @State private var usernameError: String?
@@ -32,6 +34,7 @@ struct EditFightView: View {
         let stored = fight.name.trimmingCharacters(in: .whitespacesAndNewlines)
         _fightTitle = State(initialValue: stored == "Steps Fight" || stored == "Défi de pas" ? "" : stored)
         _actionText = State(initialValue: fight.actionText)
+        _joinCode = State(initialValue: fight.joinCode ?? "")
         _visibilityJoinable = State(initialValue: fight.visibility == "joinable")
         _recurring = State(initialValue: fight.recurring)
         let days = max(1, Int((fight.windowEnd.timeIntervalSince(fight.windowStart) / 86_400).rounded()))
@@ -79,6 +82,7 @@ struct EditFightView: View {
         fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
             && actionText.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
             && scheduleError == nil
+            && (fight.joinCode == nil || AppModel.joinCodeLength.contains(joinCode.count))
             && !model.isUpdatingFight
             && !model.isDeletingFight
     }
@@ -183,6 +187,41 @@ struct EditFightView: View {
                 onChange: { step = $0 },
                 onConnectHealth: connectAppleHealth
             )
+            if fight.joinCode != nil {
+                codeField
+            }
+        }
+    }
+
+    private var codeField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(String(appLocalized: "Fight code"))
+                .ffType(.rowTitle)
+                .foregroundStyle(theme.text)
+            Group {
+                if staticRender {
+                    Text(verbatim: joinCode)
+                        .foregroundStyle(theme.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    TextField("K7M2", text: $joinCode)
+                        .foregroundStyle(theme.text)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .onChange(of: joinCode) { _, value in
+                            joinCode = AppModel.typedJoinCode(value)
+                        }
+                }
+            }
+            .font(.ff(15, 700))
+            .padding(.horizontal, 15)
+            .padding(.vertical, 13)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            .ffBorder(theme.line, radius: theme.radius.field)
+            Text(String(appLocalized: "4 to 12 letters or numbers, not used by another fight. The old code and link stop working."))
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -293,6 +332,7 @@ struct EditFightView: View {
                 startsAt: canEditStart ? startsAt : nil,
                 endsAt: endsAt,
                 timeZone: canEditStart && timeZone.identifier != fight.timeZone ? timeZone.identifier : nil,
+                joinCode: fight.joinCode != nil && joinCode != fight.joinCode ? joinCode : nil,
                 inviteHandles: inviteHandles,
                 removeUserIds: Array(removeUserIds)
             )

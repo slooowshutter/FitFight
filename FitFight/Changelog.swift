@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 15,
+            notes: "New post has Everyone or Choose. Everyone sends it to your friends and every fight you’re in. Choose lets you pick My friends and fights, so you can leave your work fight out. Friends see these posts on Feed, marked Friends."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 15,
             notes: "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it."
         ),
         ReleaseNote(

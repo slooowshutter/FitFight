@@ -14,7 +14,7 @@ Fights for everyone, with one sync reminder and one results push instead of one 
 Product rules: [product](product.md). Plan: `.context/friend-fights-plan.md` in the
 `winnipeg` workspace (not committed).
 
-**Design.** Migration `20261015120000_friend_fights.sql` adds `fight_series.friend_low` /
+**Design.** Migration `20261015210000_friend_fights.sql` adds `fight_series.friend_low` /
 `friend_high` (one series per pair forever, no cascade) and `fights.friends` (the marker
 every filter reads; `host_id` stays null, so friend rounds keep Feed, rivalry and profile
 behavior). `ensureFriendFights` creates this month's round when a request is accepted and,
@@ -39,7 +39,7 @@ closes their due friend rounds, and the closer now runs batches of 25 for up to 
 - `GET /api/v1/friends/suggestions`: up to 10 people who shared a fight with you, most
   shared first; excludes friends, pending requests, blocked and deleted people, friend
   rounds, founder rounds, the app-wide and suggested Fights.
-- Notifications (`20261015120100_friend_fight_notifications.sql`): friend rounds get no
+- Notifications (`20261015210100_friend_fight_notifications.sql`): friend rounds get no
   ending, final-sync, fight-ended, finalized or daily-status pushes. New `friends_sync`
   (once per month to people still missing steps, at the later of the end and 09:00 on the
   1st in their own zone; skipped if their phone already synced) and `friends_results`
@@ -72,17 +72,174 @@ backend reads `fights.friends` in the snapshot, closer, scorer and outbox, so th
 must be live first. Friend rounds appear once the new backend runs: on the next accept, or
 on either friend's next refresh from any build.
 
-**Verification (local, 15 Oct):** web typecheck clean, 466 of 466 unit tests, Next.js
-production build. On a private disposable Supabase rebuilt from every migration, in CI's
-order: schema lint clean, destructive-SQL check ok, build 113 compatibility 1 of 1, pgTAP
-316 of 316, `test:database` 127 of 127; with direct access closed pgTAP passed and
-`test:database` 124 of 127 with 2 skipped. The one failure is the admin "fixed spans" check,
+**Verification (local, 15 Oct, after merging develop at 4ddc72d9):** web typecheck clean,
+507 of 507 unit tests, Next.js production build (before the merge). On a private
+disposable Supabase rebuilt from every migration, in CI's order: schema lint clean,
+destructive-SQL check ok, build 113 compatibility 1 of 1, pgTAP passed, `test:database` 129
+of 130; with direct access closed pgTAP passed and `test:database` 127 of 130 with 2
+skipped. `feed-friends.integration.ts` (#388) now sets the Supabase URL and removes the
+friend round its accept creates. The one failure is the admin "fixed spans" check,
 which fails only from a 30 ms clock skew between this Mac and its Docker database (a fight
 created 30 ms "in the future"), as recorded for the founder fight. iOS simulator build of the
 FitFight scheme succeeded; API contract, localization, native boundary and 17 other iOS
 scripts passed. Three review passes (backend, API and notifications, iOS) found 27 issues;
-all confirmed ones are fixed and covered by tests. Not committed, not deployed; no staging
-or production check.
+all confirmed ones are fixed and covered by tests. Not deployed; no staging or production
+check.
+
+## Marc's TestFlight Steps copied to production, prepared 15 Oct 2026
+
+Marc syncs from TestFlight, so production never got his Steps: people saw no
+stats for him, and production founder rounds score him from his daily Steps
+stored there, so he would show 0 and forfeit every round. Marc asked (15 Oct)
+for his syncs to reach production too, only for him.
+
+**Code:** after staging stores an activity sync from Marc's staging account
+(`founderUserIds.beta`), `POST /api/v1/healthkit/activity` sends the same
+batch, after responding, to production's new
+`POST /api/internal/founder-activity` with `Authorization: Bearer CRON_SECRET`.
+That route stores it under the environment's founder (`readFounderId`) through
+`receiveHealthKitActivity`, the same path as a phone sync, so his profile Steps
+and founder rounds update there. A failed copy is logged on staging and never
+fails the phone's sync; the next sync sends the days again. Nobody else's sync
+is copied. Fight-window totals (`/healthkit/steps`) are not copied: they name
+staging Fight ids. The staging read-only production database user is unchanged.
+
+**Contract:** no `/api/v1` request or response changed and there is no
+migration or app change, so every installed build is unaffected.
+
+**Deployment:** both backends must run it. Production needs the new route
+(merge to `main`) before copies succeed; until then staging logs a 404 per
+Marc sync and nothing else changes. It relies on `CRON_SECRET` having the same
+value on Production and Preview, as recorded on 11 Oct; not checked live.
+
+**Verification (local):** web typecheck and all 458 unit tests passed,
+including `founder-activity.test.ts`: Marc's staging sync is copied with the
+exact body and secret after responding, another user's is not, and production
+rejects a wrong secret. The test failed when the founder check was removed.
+Not merged or deployed.
+
+## Companion names and lines, prepared 15 Oct 2026
+
+A custom character gets a name and a line, shown on the owner's Profile, a
+friend's view of the profile, and the Yours tile (the Fights card has no name slot). Blend's FitFight Companion Lines
+workflow suggests four pairs per batch in the app's language; the owner picks
+one, edits it, or types their own. "Four more" gives up to three extra batches
+per character; a failed batch, or any batch before the first completed one, is
+free, but no character gets more than six batches of any status, so a
+description that makes every run fail cannot buy unlimited Blend runs. Details: [backend](backend.md#companion-names-and-lines-prepared-15-oct-2026).
+
+**Contract:** additive. `GET /api/v1/me/custom-characters` characters add
+`suggestions`, `suggestions_pending`, `more_suggestions_left`, `name` and `line`.
+New `POST /api/v1/me/custom-characters/{purchase_id}/label` and
+`POST /api/v1/me/custom-characters/{purchase_id}/suggestions`. `GET /api/v1/me`
+and `GET /api/v1/profiles/{user_id}` add optional `companion_name` and
+`companion_line` (another viewer only when the profile is shared with them).
+`private.ai_requests.provider_response` keeps Blend's raw response for failed,
+cancelled and unreadable runs; it never reaches the app or the server error log.
+
+**Supported builds checked:** code only. Older builds ignore the new store and
+profile fields and never call the two routes; every existing fixture passes
+untouched, and the native contract tests decode a profile with the pair through
+the build 201 decoder.
+
+**Deploy order:** migration `20261015120000_companion_labels.sql` (additive
+columns, widened `ai_paid_character_no_credits`), then the backend, then the app.
+**Rollback hazard:** once a `companion_lines` row exists, an older backend fails
+to parse it: its store and `/advance` return 400 for that user and the old
+reconciler throws. Do not roll the backend back past this change.
+
+**Cost:** after deploy, the reconciler starts a first batch for every existing
+character with a chosen portrait, one per run and only while fewer than 10 AI
+runs are unresolved. About $0.02 and one of the 500 daily Blend starts each. A
+batch is first read 30 seconds after it starts, then every 10 seconds, so a
+40 to 55 second run costs 3 or 4 reads of the shared 60 per minute.
+
+**Verification (local):** web typecheck and 482 of 482 unit tests passed.
+Not yet verified: staging deploy, the `/api/app-release` check, and a run of
+`test:database` on a real Supabase stack.
+
+## Editable fight codes, prepared 15 Oct 2026
+
+Marc asked that people can change a fight's code instead of keeping the random one, and
+that a custom code can be longer than 4. The owner edits it in Edit fight (below the
+summary, before Save): 4 to 12 letters or digits, any letter, stored uppercase. Random
+codes are unchanged (4 characters from `23456789ABCDEFGHJKMNPQRSTVWXYZ`). The unique index
+on `fight_series.join_code` decides "taken"; the app says "That code is taken. Try
+another." The code belongs to the series, so later rounds keep it. The old code is freed:
+an old link opens whichever fight takes that code next. `PGG7` cannot change and no other
+fight can take it. Join, `/j/<code>` links (app and web page), the web app's Join box and the
+join lookup accept the wider format. New 1.1.3 release note, English and French.
+
+**Older builds (every installed build today, including App Store 1.1.2):** their Join
+field keeps only 4 characters from the random alphabet, and their link parser ignores
+other codes. So a custom code that is longer than 4, or uses I, L, O, U, 0 or 1, cannot be
+typed or opened by link on them until they update. They still join by username invite,
+and from the Join list for a public fight (they send the server's code back unchanged).
+Random codes keep working everywhere.
+
+**Contract:** `PATCH /api/v1/fights/{fightID}` gains an optional `joinCode` and a new error
+code `join_code_taken`, returned only when `joinCode` is sent. Older builds never send it.
+`joinCode` in responses is still a string; older builds decode any length. Migration
+`20261015180000_custom_join_codes.sql` replaces the `fight_series_join_code_format` check
+with `^[0-9A-Z]{4,12}$` (relaxing; every existing code passes).
+
+**Deployment order:** migration, then backend, then the app. The new backend writes codes
+the old check rejects, so confirm the migration applied before it promotes. An older
+backend drops the unknown field, so a code-only save there returns "Nothing to update".
+
+**Verification (local, rebased on develop 5b777ed):** web typecheck and all 456 unit tests passed (new: 4 to 12
+characters, normalized, lookalikes allowed for custom codes; code written before other
+fields; a taken code changes nothing; `PGG7` refused both ways). On a disposable local
+Supabase rebuilt from every migration (CLI 2.115.0), in CI's order: schema lint clean,
+build 113 compatibility 1 of 1, pgTAP 329 of 329, `test:database` 112 of 112, then with
+direct access closed pgTAP 18 of 18 and `test:database` 111 of 112 with the existing
+founder-rename skip. The new case renames to a 12-character custom code through the real
+check and unique index, gets `join_code_taken` for a held code with the name untouched,
+finds the fight by the new code typed lowercase and 404s on the old one. Localization
+check passed. Not run here: iOS simulator build (CI only).
+
+## Post to friends, Everyone or Choose, prepared 15 Oct 2026
+
+Marc picked composer design H (15 Oct 2026): one composer from Feed and from inside
+a fight; only what starts ticked differs.
+
+**App:** New post shows the note card (with your animal), a "Photo or video" button,
+"Who sees this" with **Everyone | Choose**, and a full-width Post. Everyone = My
+friends + every postable fight, with the faces of who will see it. Choose lists My
+friends and each fight with a tick and a people count. "Seen by N people" counts
+friends (loaded from `GET /friends?kind=accepted`, all pages) plus fight rosters
+without pending invites. Feed opens on Everyone; a fight opens on Choose with that
+fight. A post that reached you only as a friend shows a **Friends** badge. The old
+Channels menu and "All fights" are gone. New 1.1.3 release note.
+
+**Backend:** `POST /api/v1/feed/posts` accepts `{ "type": "friends" }`. Migration
+`20261015170000_feed_friends_audience.sql` adds `fight_posts.to_friends` (default
+false) and updates `current_user_can_see_fight_post`, the fight-delete rehome (a
+friends post becomes friends-only instead of being deleted) and `feed_changed` pings
+(author and friends). Friends see these posts on Feed only, never in a fight's list;
+a friend outside the fight gets it as friends-only, with no fight id or name. Feed blocks hide them both
+ways; removing a friend hides them again. A friends-only post is Main-shaped (no
+fight) and never uses the old shared-fight Main rule.
+
+**Contract:** `/api/v1` only, additive. Old requests are unchanged. Responses gain
+`to_friends`; released Swift decoders ignore it and read `audience` as a string.
+Supported builds checked against the live manifests on 15 Oct: staging 201 and 225,
+production 210 and 226, enforcement off. Those builds show friends-only posts with a
+"Public" badge. Not built: pushes for friends posts (notification intents need a
+fight), Feed Activity for friends-only posts (its contract requires a fight), and
+@mentions of friends who share no finished fight.
+
+**Deploy order:** migration, then backend (the backend reads `to_friends`), then the
+app. Do not roll the backend back once friends posts exist: older backend code would
+show friends-only posts to shared-fight opponents through the old Main rule. Not yet
+deployed or run in GitHub CI.
+
+**Checked locally:** web typecheck and 455 unit tests; pgTAP (all files, new
+`feed_friends.sql`) and `npm run test:database` with the new
+`feed-friends.integration.ts` on a disposable local Supabase (the admin dashboard
+"fixed spans" test is flaky there, unrelated); iOS simulator build; Swift API
+contract test; native script checks. `test_fight_localization` and
+`test_fight_live_updates` also fail on `develop` since #384 (`refreshError`).
 
 ## Last round result card, prepared 15 Oct 2026
 
@@ -514,7 +671,7 @@ in English or French. Sections: hero with a tappable phone (Fights, New, Feed,
 Feedback and Profile screens; text left and phone right on computers, stacked
 on phones; on computers the hero fills the first screen), steps recorded, what it is, the goal, how it
 works (the five New fight steps, nothing is saved), companions (pick one of the
-12 animals and see its five poses), fight options, pricing, FAQ with search,
+30 Specials and see its five poses; people in the mockups wear Specials too), fight options, pricing, FAQ with search,
 and a closing card. All people, fights and posts are fictional. The download
 buttons keep the App Store link in production and the TestFlight dialog on
 staging. The pricing card shows Specials (EUR 0.99, buy any and keep it) and

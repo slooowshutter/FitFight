@@ -932,6 +932,7 @@ final class AppModel: ObservableObject {
         startsAt: Date?,
         endsAt: Date,
         timeZone: String?,
+        joinCode: String?,
         inviteHandles: [String],
         removeUserIds: [String]
     ) async -> Bool {
@@ -991,6 +992,7 @@ final class AppModel: ObservableObject {
                     startsAt: startsAt,
                     endsAt: endsAt,
                     timeZone: timeZone,
+                    joinCode: joinCode,
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals
                 ),
@@ -1243,8 +1245,8 @@ final class AppModel: ObservableObject {
         self.session = session
         createError = nil
         let code = raw.replacingOccurrences(of: "[\\s-]", with: "", options: .regularExpression).uppercased()
-        guard code.count == 4 else {
-            createError = String(appLocalized: "Enter the 4-character code.")
+        guard Self.joinCodeLength.contains(code.count) else {
+            createError = String(appLocalized: "Enter a code of 4 to 12 letters or numbers.")
             return
         }
         guard let userID = session.authSession?.user.id, api.isConfigured,
@@ -1405,6 +1407,16 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Random codes are 4 characters; an owner can pick up to 12.
+    static let joinCodeLength = 4...12
+
+    /// What a code field keeps of typed text: uppercase letters and digits, at most 12.
+    static func typedJoinCode(_ value: String) -> String {
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+        let cleaned = value.uppercased().unicodeScalars.filter { allowed.contains($0) }
+        return String(String.UnicodeScalarView(cleaned).prefix(joinCodeLength.upperBound))
+    }
+
     static func joinCode(from url: URL) -> String? {
         let parts = url.path.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "j" else {
@@ -1413,8 +1425,7 @@ final class AppModel: ObservableObject {
         let code = parts[1]
             .replacingOccurrences(of: "-", with: "")
             .uppercased()
-        let alphabet = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
-        guard code.count == 4, code.unicodeScalars.allSatisfy({ alphabet.contains($0) }) else {
+        guard joinCodeLength.contains(code.count), typedJoinCode(code) == code else {
             return nil
         }
         return code

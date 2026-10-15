@@ -225,6 +225,9 @@ for a photo or short video; `POST /api/v1/media/{id}/commit` verifies size and c
 is the older one Feed (Main and fight posts). `GET /api/v1/feed?scope=main`
 is Main-only. `POST /api/v1/feed/posts` creates one copy per selected destination
 (Main still accepted for old clients; current compose sends fights only) and applies tags only where that person can already see the copy.
+`{ "type": "friends" }` sets `fight_posts.to_friends`: the author's accepted friends see the post on `GET /api/v1/feed`
+(never in a fight's own list), next to any fight destinations. A friends-only post keeps the Main shape (no fight)
+and skips the old shared-fight Main rule. Posts return `to_friends`.
 `GET /api/v1/feed/people` lists tag candidates. `GET/POST /api/v1/fights/{id}/posts`
 remain the single-fight list and the old one-fight compose. Comments, reactions,
 delete, and report for any post use `/api/v1/posts/{id}/...`.
@@ -333,6 +336,41 @@ an app-facing RPC. The existing `GET/PATCH /api/v1/me` contract remains unchange
 including a null active prompt for stock animals. Reusing a description still uses
 the existing custom-companion PATCH. Libraries are isolated by user and cascade
 away when the account is deleted. This stores descriptions, not generated artwork.
+
+## Companion names and lines (prepared 15 Oct 2026)
+
+A custom character can have a name (1 to 24 characters) and a line (1 to 60),
+trimmed and on one line, saved together in `private.custom_character_purchases`
+(`name`, `line`). Typed text is not reviewed first, like usernames and Fight
+names. Blend's Companion Lines workflow suggests four pairs per batch from the
+chosen portrait and the description, in the owner's language (`fr` when the
+newest installation is French, else `en`). See
+[Blend workflows](blend-workflows.md#configuration-and-rollout).
+
+- `GET /api/v1/me/custom-characters`: each character adds `suggestions` (every
+  completed batch, first batch first), `suggestions_pending`,
+  `more_suggestions_left` (0 to 3), and `name` and `line` (null until saved).
+- `POST /api/v1/me/custom-characters/{purchase_id}/label`, `{ "name", "line" }`:
+  owner only, not refunded. Returns the character, 200.
+- `POST /api/v1/me/custom-characters/{purchase_id}/suggestions`,
+  `{ "attempt_id": uuid }`: starts one more batch that avoids every earlier
+  suggestion; the same `attempt_id` returns the same batch. 202 while it runs,
+  `409 suggestions_limit` after three extra batches or six batches of any status,
+  `409 ai_in_progress` while a
+  batch runs, `404 not_found` before a portrait is chosen. A batch is extra only
+  when an earlier batch had completed, so a failed first batch is retried free.
+- `GET /api/v1/me` and `GET /api/v1/profiles/{user_id}` add optional
+  `companion_name` and `companion_line` for an equipped custom character: the
+  saved pair, else the first suggestion. Another viewer gets them only when the
+  profile is shared with them. Stock companions and Specials send neither.
+- `private.ai_requests.provider_response` (jsonb) keeps Blend's raw run response
+  when a run fails, is cancelled, or returns unreadable output, for every
+  workflow. It never reaches the app or the server error log.
+
+The first batch starts once, when a portrait is chosen (`lines_action_key`); the
+reconciler backfills existing characters one per run. A batch is first read 30
+seconds after it starts, then every 10 seconds. Apply
+`20261015120000_companion_labels.sql` before deploying the backend.
 
 ## Fight chart consistency (prepared 15 Sep 2026)
 
@@ -554,7 +592,12 @@ invitations in one transaction. Repeating a successful decline is harmless.
 private/public, whether the series repeats, the end time (and the start only while the
 fight is still `scheduled`), extra usernames, and kicking anyone except the owner.
 `draft`, `inviting`, `scheduled`, and `live` fights can be edited; `awaiting_final_sync`,
-`final`, and `cancelled` stay frozen. Old apps never call this route.
+`final`, and `cancelled` stay frozen. Old apps never call this route. An optional
+`joinCode` (15 Oct 2026) renames the series code: 4 to 12 letters or digits, normalized
+like a typed code (uppercase, spaces and dashes dropped), written before anything else.
+Random codes stay 4 characters without lookalikes. A code another series holds returns
+`409 join_code_taken` with nothing changed. `PGG7` keeps its code (`403`) and no other
+fight can take it, since signup and the admin dashboard find the app-wide fight by it. The old code is freed and its links stop working.
 
 `POST /api/v1/fights/{fightID}/cancel` is owner-only. The app’s Edit summary Delete
 uses it. It pauses the series first, then marks the fight `cancelled`, so a repeating

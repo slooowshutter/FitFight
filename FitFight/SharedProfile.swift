@@ -144,10 +144,15 @@ struct SharedProfile: Codable, Equatable {
     let activity: ProfileActivity?
     let stepStatistics: ProfileStepStatistics?
     let viewMeasurementEnabled: Bool
+    /// A custom companion's name and line. Stock companions and older servers send none.
+    let companionName: String?
+    let companionLine: String?
     enum CodingKeys: String, CodingKey {
         case identity, access, competitive, friendship, record, rivalry, activity
         case viewMeasurementEnabled = "view_measurement_enabled"
         case stepStatistics = "step_statistics"
+        case companionName = "companion_name"
+        case companionLine = "companion_line"
     }
 }
 

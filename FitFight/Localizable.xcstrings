@@ -1,6 +1,133 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Name your companion": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nommez votre compagnon"
+                    }
+                }
+            }
+        },
+        "Pick an idea, change it, or write your own.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisissez une idée, modifiez-la ou écrivez la vôtre."
+                    }
+                }
+            }
+        },
+        "Writing four ideas. This takes about a minute.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous écrivons quatre idées. Cela prend environ une minute."
+                    }
+                }
+            }
+        },
+        "Your companion’s name": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le nom de votre compagnon"
+                    }
+                }
+            }
+        },
+        "A short, funny line": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une phrase courte et drôle"
+                    }
+                }
+            }
+        },
+        "Four more": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quatre autres"
+                    }
+                }
+            }
+        },
+        "No ideas yet.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas encore d’idées."
+                    }
+                }
+            }
+        },
+        "Get four ideas": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Obtenir quatre idées"
+                    }
+                }
+            }
+        },
+        "No more ideas for this companion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Il n’y a plus d’idées pour ce compagnon."
+                    }
+                }
+            }
+        },
+        "Check the name and line, then try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vérifiez le nom et la phrase, puis réessayez."
+                    }
+                }
+            }
+        },
+        "Name your own companion: pick one of four name and line ideas written for your character, change it, or write your own, and ask for four more. Your companion’s name and line now show on your profile, and your friends’ companions show theirs on their profiles.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nommez votre propre compagnon : choisissez l’une des quatre idées de nom et de phrase écrites pour votre personnage, modifiez-la ou écrivez la vôtre, et demandez-en quatre autres. Le nom et la phrase de votre compagnon s’affichent maintenant sur votre profil, et ceux des compagnons de vos amis sur leur profil."
+                    }
+                }
+            }
+        },
+        "companion.line": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Line"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Phrase"
+                    }
+                }
+            }
+        },
         "Pick one": {
             "localizations": {
                 "fr": {
@@ -3561,6 +3688,36 @@
                 }
             }
         },
+        "4 to 12 letters or numbers, not used by another fight. The old code and link stop working.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "4 à 12 lettres ou chiffres, pas déjà pris par un autre défi. L’ancien code et l’ancien lien ne marcheront plus."
+                    }
+                }
+            }
+        },
+        "That code is taken. Try another.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce code est déjà pris. Essaie-en un autre."
+                    }
+                }
+            }
+        },
+        "You can now change your fight’s code in Edit. Pick 4 to 12 letters or numbers that no other fight uses.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux maintenant changer le code de ton défi dans Modifier. Choisis 4 à 12 lettres ou chiffres qu’aucun autre défi n’utilise."
+                    }
+                }
+            }
+        },
         "3-day Steps fight": {
             "localizations": {
                 "fr": {
@@ -6163,16 +6320,6 @@
                 }
             }
         },
-        "Join a fight first, then post from here.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Rejoins d’abord un défi, puis publie d’ici."
-                    }
-                }
-            }
-        },
         "That video could not be read.": {
             "localizations": {
                 "fr": {
@@ -7333,12 +7480,12 @@
                 }
             }
         },
-        "Enter the 4-character code.": {
+        "Enter a code of 4 to 12 letters or numbers.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Saisissez le code de 4 caractères."
+                        "value": "Saisis un code de 4 à 12 lettres ou chiffres."
                     }
                 }
             }
@@ -15741,74 +15888,6 @@
                 }
             }
         },
-        "character.idea.pigeon": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A plump grey city pigeon with an iridescent green-purple neck and orange eyes, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small fanny pack worn across the chest. Strutting, nosy, weirdly confident."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un pigeon des villes gris et dodu, au cou vert-violet irisé et aux yeux orange, les ailes servent de bras. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : une petite banane portée en travers de la poitrine. Il se pavane, curieux, étrangement sûr de lui."
-                    }
-                }
-            }
-        },
-        "character.idea.opossum": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A small scruffy grey opossum with a white face, pink nose and a bare pink tail. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny propeller beanie hat. Wide-eyed, slightly panicked, trying his best."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un petit opossum gris ébouriffé, au visage blanc, au nez rose et à la queue rose sans poils. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : un minuscule bonnet à hélice. Les yeux écarquillés, un peu paniqué, il fait de son mieux."
-                    }
-                }
-            }
-        },
-        "character.idea.seagull": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A scrappy white and grey seagull with a yellow beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: small dark sunglasses. Shifty, opportunistic, totally guilty."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une mouette blanche et grise un peu voyou, au bec jaune, les ailes servent de bras. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : de petites lunettes de soleil noires. Louche, opportuniste, totalement coupable."
-                    }
-                }
-            }
-        },
-        "character.idea.mole": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A small velvety dark grey mole with a pink star-like nose and big pink digging paws. Nothing held in the hands or wings, no headband. One worn signature detail only: tiny thick round glasses. Squinting, determined, a bit lost."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une petite taupe gris foncé au poil de velours, au nez rose en étoile et aux grandes pattes roses de fouisseuse. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : de minuscules lunettes rondes et épaisses. Elle plisse les yeux, déterminée, un peu perdue."
-                    }
-                }
-            }
-        },
         "You have no free characters left.": {
             "localizations": {
                 "fr": {
@@ -16026,6 +16105,16 @@
                 }
             }
         },
+        "Custom characters now stand on their own like every other character, at the same size, without a circle around them.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les personnages personnalisés s’affichent maintenant comme tous les autres, à la même taille, sans cercle autour."
+                    }
+                }
+            }
+        },
         "fights.hosted-leading": {
             "extractionState": "manual",
             "localizations": {
@@ -16211,6 +16300,263 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Refuser %@"
+                    }
+                }
+            }
+        },
+        "Everyone": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout le monde"
+                    }
+                }
+            }
+        },
+        "Who sees this": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Qui voit ça"
+                    }
+                }
+            }
+        },
+        "My friends": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mes amis"
+                    }
+                }
+            }
+        },
+        "My friends and everyone in my fights": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mes amis et tout le monde dans mes défis"
+                    }
+                }
+            }
+        },
+        "Photo or video": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Photo ou vidéo"
+                    }
+                }
+            }
+        },
+        "Pick who sees this": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis qui voit ça"
+                    }
+                }
+            }
+        },
+        "Add a friend or join a fight first, then post from here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajoute un ami ou rejoins un défi d’abord, puis publie ici."
+                    }
+                }
+            }
+        },
+        "feed.seen-by": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Seen by %lld person"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Seen by %lld people"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Vu par %lld personne"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Vu par %lld personnes"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "feed.audience-people": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld person"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld people"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld personne"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld personnes"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "New post has Everyone or Choose. Everyone sends it to your friends and every fight you’re in. Choose lets you pick My friends and fights, so you can leave your work fight out. Friends see these posts on Feed, marked Friends.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouvelle publication propose Tout le monde ou Choix. Tout le monde l’envoie à tes amis et à tous tes défis. Choix te laisse cocher Mes amis et des défis, pour laisser ton défi du travail de côté. Tes amis voient ces publications dans le fil, marquées Amis."
+                    }
+                }
+            }
+        },
+        "character.idea.orangutan": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A 70s hippie orangutan with a tie-dye bandana, a peace sign necklace and round orange glasses."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un orang-outan hippie des années 70 avec un bandana tie-dye, un collier peace and love et des lunettes rondes orange."
+                    }
+                }
+            }
+        },
+        "character.idea.parrot": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A pirate parrot with an eye patch and a tricorn hat."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un perroquet pirate avec un bandeau sur l'œil et un tricorne."
+                    }
+                }
+            }
+        },
+        "character.idea.flamingo": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A diva flamingo with heart sunglasses and a pink feather boa."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un flamant rose diva avec des lunettes cœur et un boa de plumes rose."
+                    }
+                }
+            }
+        },
+        "character.idea.pig": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A cowboy pig with a big hat and a sheriff star."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un cochon cow-boy avec un grand chapeau et une étoile de shérif."
+                    }
+                }
+            }
+        },
+        "character.idea.chihuahua": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A tiny furious chihuahua wearing a huge gold chain."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un minuscule chihuahua furieux qui porte une énorme chaîne en or."
+                    }
+                }
+            }
+        },
+        "New ideas for your own companion, each in one short line: a 70s hippie orangutan, a pirate parrot, a diva flamingo, a cowboy pig and a furious chihuahua.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "De nouvelles idées pour créer votre compagnon, chacune en une courte phrase : un orang-outan hippie des années 70, un perroquet pirate, un flamant rose diva, un cochon cow-boy et un chihuahua furieux."
                     }
                 }
             }

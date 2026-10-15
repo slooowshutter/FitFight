@@ -564,6 +564,15 @@ struct CompanionAvatar: View {
             .contentShape(Rectangle())
             .opacity(pending ? 0.55 : 1)
             .accessibilityHidden(true)
+        } else if let photoURL, (isYou && companions.hasChosen) ? companions.isCustom : companionID == CompanionStore.customId {
+            // A custom character is transparent art like the stock animals, so it stands free in the same square, never in a photo circle.
+            RemotePhoto(url: photoURL, kind: .avatar, contentMode: .fit) { Color.clear }
+                .frame(width: halfBody ? size / 0.55 : size, height: halfBody ? size / 0.55 : size)
+                .frame(width: size, height: size, alignment: .top)
+                .clipped()
+                .contentShape(Rectangle())
+                .opacity(pending ? 0.55 : 1)
+                .accessibilityHidden(true)
         } else {
             FFAvatar(monogram: monogram, size: size, photoURL: photoURL, dimmed: pending)
                 .overlay {
@@ -737,10 +746,10 @@ struct CompanionIntroduction: View {
                     .foregroundStyle(theme.mossText)
             } else {
                 if companions.isCustom {
-                    Text("Custom")
+                    Text(session.profile?.companionName ?? String(appLocalized: "Custom"))
                         .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
                         .foregroundStyle(theme.text)
-                    Text("Your own animal.")
+                    Text(session.profile?.companionLine ?? String(appLocalized: "Your own animal."))
                         .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
                         .foregroundStyle(theme.textSecondary)
                 } else {
@@ -1392,7 +1401,8 @@ struct CompanionPicker: View {
                             }
                         } label: {
                             collectionTile(
-                                name: character.description ?? entry?.description ?? String(appLocalized: "Your character"),
+                                name: character.name ?? character.suggestions?.first?.name
+                                    ?? character.description ?? entry?.description ?? String(appLocalized: "Your character"),
                                 caption: character.phase == .complete ? (equipped ? String(appLocalized: "Equipped") : nil)
                                     : character.phase == .choosing ? String(appLocalized: "Pick one")
                                     : [.portraits, .poses].contains(character.phase) ? String(appLocalized: "Being drawn")

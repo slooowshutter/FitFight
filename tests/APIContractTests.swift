@@ -69,6 +69,18 @@ struct APIContractTests {
         let emptyReactions = try decoder.decode(FitFightFightPostReactionPeople.self, from: Data("{\"people\":[],\"next_cursor\":null}".utf8))
         precondition(emptyReactions.people.isEmpty && emptyReactions.nextCursor == nil)
 
+        let friendsPostJSON = """
+        {"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","audience":"main","fight_id":null,"fight_name":"","broadcast":false,\
+        "to_friends":true,"channels":[],"body":"Lunch walk","created_at":"2026-10-15T12:00:00.000000Z",\
+        "author":{"user_id":"11111111-1111-4111-8111-111111111111","handle":"marc","display_name":"Marc","avatar":null,"companion_id":null},\
+        "media":[],"tags":[],"reactions":[],"comment_count":0,"mine":false}
+        """
+        let friendsPost = try decoder.decode(FitFightFightPost.self, from: Data(friendsPostJSON.utf8))
+        precondition(friendsPost.toFriends && friendsPost.channelLabel == "Friends", "Friends-only posts say Friends, not Public")
+        let olderPost = try decoder.decode(FitFightFightPost.self,
+            from: Data(friendsPostJSON.replacingOccurrences(of: "\"to_friends\":true,", with: "").utf8))
+        precondition(!olderPost.toFriends && olderPost.channelLabel == "Public", "Posts from an older backend still decode")
+
         let profileData = try Data(contentsOf: fixtures.appendingPathComponent("profile.json"))
         let profile = try decoder.decode(FitFightProfile.self, from: profileData)
         precondition(profile.userId.uuidString.lowercased() == "11111111-1111-4111-8111-111111111111")
@@ -123,6 +135,17 @@ struct APIContractTests {
             from: JSONSerialization.data(withJSONObject: withCompanionJSON))
         precondition(customCompanion.companionId == "custom")
         precondition(customCompanion.companionPrompt == "a cream frenchie with gold sunglasses")
+        precondition(profile.companionName == nil && customCompanion.companionLine == nil,
+                     "Profiles from servers without companion names remain decodable")
+        withCompanionJSON["companion_name"] = "Sir Waddles"
+        withCompanionJSON["companion_line"] = "Slow start. Strong finish."
+        let namedData = try JSONSerialization.data(withJSONObject: withCompanionJSON)
+        let namedCompanion = try decoder.decode(FitFightProfile.self, from: namedData)
+        precondition(namedCompanion.companionName == "Sir Waddles" && namedCompanion.companionLine == "Slow start. Strong finish.")
+        let cachedNamedCompanion = try decoder.decode(FitFightProfile.self, from: JSONEncoder().encode(namedCompanion))
+        precondition(cachedNamedCompanion == namedCompanion, "The cached profile keeps the companion name and line")
+        let releasedNamedCompanion = try decoder.decode(Build201Profile.self, from: namedData)
+        precondition(releasedNamedCompanion.companionId == "custom", "Released builds ignore the additive companion name and line")
 
         guard var extendedProfile = try JSONSerialization.jsonObject(with: profileData) as? [String: Any] else {
             preconditionFailure("Profile fixture must be a JSON object")

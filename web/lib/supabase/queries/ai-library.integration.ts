@@ -74,7 +74,8 @@ test("completion saves Blend URLs atomically without media copies, preserves own
     };
     const version = { workflowId: "test", versionId: "test" };
     const ids: string[] = [];
-    for (const workflow of aiWorkflowValues) {
+    // Companion lines are text and never enter the library.
+    for (const workflow of aiWorkflowValues.filter((value) => value !== "companion_lines")) {
         const admitted = await reserveAiRequest(
             owner,
             {

@@ -3,9 +3,15 @@ import { readAiRun } from "@/lib/domain/ai/workflow-requests";
 import { dueAiRequests } from "@/lib/supabase/queries/ai-requests-supabase-query";
 import {
     deferCustomCharacterPurchase,
+    dueCompanionLines,
     dueCustomCharacterPurchases,
 } from "@/lib/supabase/queries/custom-characters-supabase-query";
-import { advancePaidCharacter, deferredCharacterStartCodes } from "@/lib/domain/ai/paid-character";
+import {
+    advanceCompanionLines,
+    advanceCompanionLinesBestEffort,
+    advancePaidCharacter,
+    deferredCharacterStartCodes,
+} from "@/lib/domain/ai/paid-character";
 import {
     correlateAiRequest,
     observeAiCall,
@@ -15,6 +21,7 @@ import type { AiReconciliationDependencies } from "@/lib/types/ai/service";
 /**
  * At most four status reads per invocation. Unknown starts are never resubmitted or timed out into refunds.
  * A paid character whose run just settled advances in the same invocation instead of waiting for the next one.
+ * Suggestion batches have their own pass after the characters, so they never take a character's place.
  */
 export async function reconcileAiRuns(
     deps: AiReconciliationDependencies = {
@@ -23,6 +30,8 @@ export async function reconcileAiRuns(
         paidDue: dueCustomCharacterPurchases,
         paidAdvance: advancePaidCharacter,
         paidDefer: deferCustomCharacterPurchase,
+        linesDue: dueCompanionLines,
+        linesAdvance: advanceCompanionLines,
     },
 ) {
     const requests = await deps.due();
@@ -49,7 +58,7 @@ export async function reconcileAiRuns(
             checked++;
             if (["completed", "failed", "cancelled"].includes(result.status)) {
                 settled++;
-                if (request.resource_id !== null && deps.paidAdvance) {
+                if (request.resource_id !== null && request.workflow !== "companion_lines" && deps.paidAdvance) {
                     try {
                         await deps.paidAdvance(request.user_id, request.resource_id, {});
                     } catch (error) {
@@ -100,6 +109,10 @@ export async function reconcileAiRuns(
                 if (!deferredCharacterStartCodes.includes(error.code)) await deps.paidDefer?.(purchase.id);
             }
         }
+    }
+    if (deps.linesDue && deps.linesAdvance && performance.now() < deadline) {
+        for (const purchase of await deps.linesDue())
+            await advanceCompanionLinesBestEffort(purchase.userId, purchase.id, deps.linesAdvance);
     }
     correlateAiRequest({
         user_id: null,

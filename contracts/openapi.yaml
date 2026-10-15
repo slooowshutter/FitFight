@@ -2820,6 +2820,14 @@ components:
                 },
                 "view_measurement_enabled": {
                     "type": "boolean"
+                },
+                "companion_name": {
+                    "type": "string",
+                    "description": "An equipped custom character's saved name, else its first suggestion. Omitted for stock companions and Specials."
+                },
+                "companion_line": {
+                    "type": "string",
+                    "description": "The line that goes with companion_name. Omitted with it."
                 }
             }
         }
@@ -3500,6 +3508,12 @@ components:
                     type: string
                     format: uri
                     description: Selected generated companion on Blend. Uploaded avatar fields remain unchanged.
+                companion_name:
+                    type: string
+                    description: An equipped custom character's saved name, else its first suggestion. Omitted for stock companions and Specials.
+                companion_line:
+                    type: string
+                    description: The line that goes with companion_name. Omitted with it.
                 time_zone:
                     type: string
                     description: Saved personal IANA time zone, or UTC for legacy unset accounts; optional for older responses.

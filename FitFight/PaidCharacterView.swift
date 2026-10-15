@@ -13,6 +13,8 @@ struct PaidCharacterView: View {
     @State private var picked: [UUID: UUID] = [:]
     @State private var choosingID: UUID?
     @State private var error = ""
+    /// Typed names and lines, kept here so a draft survives the character moving from poses to finished.
+    @State private var labelDrafts: [UUID: CompanionLabelEditor.Draft] = [:]
 
     /// The server keeps drawing without the app; polling only makes progress visible sooner while open.
     private var pollingID: UUID? {
@@ -41,6 +43,9 @@ struct PaidCharacterView: View {
                     Text(active.description ?? description).ffType(.body).foregroundStyle(theme.text)
                     steps(active)
                     progress(active)
+                    if active.phase == .poses {
+                        labelEditor(active)
+                    }
                 }
             }
             CharacterIdeas(description: $description, disabled: purchases.isBusy)
@@ -110,6 +115,7 @@ struct PaidCharacterView: View {
                                          enabled: !isSelecting, busy: isSelecting, fullWidth: true) {
                                     Task { await select(entry) }
                                 }
+                                labelEditor(character)
                             }
                         }
                     }
@@ -238,6 +244,17 @@ struct PaidCharacterView: View {
         }
     }
 
+    /// Nothing from a server that cannot name companions yet; it sends no suggestions.
+    @ViewBuilder
+    private func labelEditor(_ character: CustomCharacterProgress) -> some View {
+        if character.suggestions != nil {
+            CompanionLabelEditor(character: character, draft: Binding(
+                get: { labelDrafts[character.id] ?? .init(name: character.name ?? "", line: character.line ?? "") },
+                set: { labelDrafts[character.id] = $0 }
+            ))
+        }
+    }
+
     private var closeHint: some View {
         Text("You can close the app. We will send a notification when your character is ready.")
             .ffType(.caption).foregroundStyle(theme.textSecondary)
@@ -316,6 +333,124 @@ struct PaidCharacterView: View {
     }
 }
 
+/// "Name your companion": the written ideas as cards, then Name and Line fields to save either one or your own.
+struct CompanionLabelEditor: View {
+    struct Draft {
+        var name: String
+        var line: String
+        /// Filled from a card at least once, so a changed card counts as edited rather than typed.
+        var fromCard = false
+    }
+
+    let character: CustomCharacterProgress
+    @Binding var draft: Draft
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var purchases: CustomCharacterPurchases
+    @Environment(\.ffTheme) private var theme
+    @State private var saving = false
+    @State private var asking = false
+    @State private var error = ""
+
+    var body: some View {
+        let suggestions = character.suggestions ?? []
+        let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let line = draft.line.trimmingCharacters(in: .whitespacesAndNewlines)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(String(appLocalized: "Name your companion")).ffType(.heading).foregroundStyle(theme.text)
+            Text(suggestions.isEmpty && !character.suggestionsPending
+                 ? String(appLocalized: "No ideas yet.")
+                 : String(appLocalized: "Pick an idea, change it, or write your own."))
+                .ffType(.caption).foregroundStyle(theme.textSecondary)
+            ForEach(Array(suggestions.enumerated()), id: \.offset) { _, suggestion in
+                let picked = name == suggestion.name && line == suggestion.line
+                Button {
+                    draft = Draft(name: suggestion.name, line: suggestion.line, fromCard: true)
+                } label: {
+                    FFCard(fill: picked ? theme.mossWash : nil, stroke: picked ? theme.mossEdge : nil) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: suggestion.name).ffType(.heading).foregroundStyle(theme.text)
+                            Text(verbatim: suggestion.line).ffType(.caption).foregroundStyle(theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityAddTraits(picked ? .isSelected : [])
+            }
+            if character.suggestionsPending {
+                FFCard {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(theme.gold)
+                        Text(String(appLocalized: "Writing four ideas. This takes about a minute.")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                    }
+                }
+            }
+            // The server counts UTF-16 units, so an emoji uses two of the 24 and 60.
+            FFField(label: String(appLocalized: "Name"), counter: "\(draft.name.utf16.count)/24") {
+                TextField(String(appLocalized: "Your companion’s name"), text: $draft.name)
+                    .onChange(of: draft.name) { _, text in
+                        var text = text
+                        while text.utf16.count > 24 { text.removeLast() }
+                        draft.name = text
+                    }
+            }
+            FFField(label: String(appLocalized: "companion.line", defaultValue: "Line"), counter: "\(draft.line.utf16.count)/60") {
+                TextField(String(appLocalized: "A short, funny line"), text: $draft.line)
+                    .onChange(of: draft.line) { _, text in
+                        var text = text
+                        while text.utf16.count > 60 { text.removeLast() }
+                        draft.line = text
+                    }
+            }
+            FFButton(title: String(appLocalized: "Save"), kind: .primary,
+                     enabled: !name.isEmpty && !line.isEmpty && (name != character.name || line != character.line),
+                     busy: saving, fullWidth: true) {
+                Task { await save(name: name, line: line) }
+            }
+            if character.moreSuggestionsLeft > 0 && !character.suggestionsPending {
+                FFButton(title: suggestions.isEmpty ? String(appLocalized: "Get four ideas") : String(appLocalized: "Four more"), kind: .secondary,
+                         enabled: !asking, busy: asking, fullWidth: true) {
+                    Task { await askForMore() }
+                }
+            }
+            if !error.isEmpty {
+                Text(error).ffType(.caption).foregroundStyle(theme.emberText)
+            }
+        }
+        .task(id: character.suggestionsPending) {
+            // During poses the screen's own polling already advances this character.
+            guard character.suggestionsPending, character.phase == .complete else { return }
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(3))
+                    _ = try await purchases.advance(character.id, session: session)
+                } catch is CancellationError { return }
+                catch { self.error = error.localizedDescription }
+            }
+        }
+    }
+
+    private func save(name: String, line: String) async {
+        saving = true
+        defer { saving = false }
+        error = ""
+        let source = character.suggestions?.contains(.init(name: name, line: line)) == true
+            ? "suggestion" : draft.fromCard ? "edited" : "own"
+        do { try await purchases.saveLabel(character.id, name: name, line: line, source: source, session: session) }
+        catch is CancellationError {}
+        catch { self.error = error.localizedDescription }
+    }
+
+    private func askForMore() async {
+        asking = true
+        defer { asking = false }
+        error = ""
+        do { try await purchases.suggestLabels(character.id, attemptID: UUID(), session: session) }
+        catch is CancellationError {}
+        catch { self.error = error.localizedDescription }
+    }
+}
+
 /// "1 free": the characters this person can still create without paying.
 struct FreeCharacterBadge: View {
     let count: Int
@@ -332,7 +467,7 @@ struct FreeCharacterBadge: View {
 }
 
 /// Real descriptions next to the portrait the same drawing made from them, so people see what their words give.
-/// The four portraits are unused runs of the Specials work (11 Oct 2026) on the pinned Animal Avatars workflow.
+/// The five portraits are runs of the published Animal Avatars workflow from these exact words (15 Oct 2026).
 struct CharacterIdeas: View {
     @Binding var description: String
     var disabled = false
@@ -340,10 +475,11 @@ struct CharacterIdeas: View {
 
     private var ideas: [(image: String, text: String)] {
         [
-            ("CharacterIdea-pigeon", String(appLocalized: "character.idea.pigeon", defaultValue: "A plump grey city pigeon with an iridescent green-purple neck and orange eyes, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small fanny pack worn across the chest. Strutting, nosy, weirdly confident.")),
-            ("CharacterIdea-opossum", String(appLocalized: "character.idea.opossum", defaultValue: "A small scruffy grey opossum with a white face, pink nose and a bare pink tail. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny propeller beanie hat. Wide-eyed, slightly panicked, trying his best.")),
-            ("CharacterIdea-seagull", String(appLocalized: "character.idea.seagull", defaultValue: "A scrappy white and grey seagull with a yellow beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: small dark sunglasses. Shifty, opportunistic, totally guilty.")),
-            ("CharacterIdea-mole", String(appLocalized: "character.idea.mole", defaultValue: "A small velvety dark grey mole with a pink star-like nose and big pink digging paws. Nothing held in the hands or wings, no headband. One worn signature detail only: tiny thick round glasses. Squinting, determined, a bit lost.")),
+            ("CharacterIdea-orangutan", String(appLocalized: "character.idea.orangutan", defaultValue: "A 70s hippie orangutan with a tie-dye bandana, a peace sign necklace and round orange glasses.")),
+            ("CharacterIdea-parrot", String(appLocalized: "character.idea.parrot", defaultValue: "A pirate parrot with an eye patch and a tricorn hat.")),
+            ("CharacterIdea-flamingo", String(appLocalized: "character.idea.flamingo", defaultValue: "A diva flamingo with heart sunglasses and a pink feather boa.")),
+            ("CharacterIdea-pig", String(appLocalized: "character.idea.pig", defaultValue: "A cowboy pig with a big hat and a sheriff star.")),
+            ("CharacterIdea-chihuahua", String(appLocalized: "character.idea.chihuahua", defaultValue: "A tiny furious chihuahua wearing a huge gold chain.")),
         ]
     }
 
@@ -367,11 +503,11 @@ struct CharacterIdeas: View {
                                 Text(idea.text)
                                     .ffType(.caption)
                                     .foregroundStyle(theme.textSecondary)
-                                    .lineLimit(4)
                                     .multilineTextAlignment(.leading)
                             }
                             .padding(8)
                             .frame(width: 150, alignment: .top)
+                            .frame(maxHeight: .infinity, alignment: .top)
                             .background(picked ? theme.mossWash : theme.card,
                                         in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
                             .ffBorder(picked ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
@@ -381,6 +517,8 @@ struct CharacterIdeas: View {
                         .accessibilityAddTraits(picked ? .isSelected : [])
                     }
                 }
+                // Every card takes the tallest card's height.
+                .fixedSize(horizontal: false, vertical: true)
             }
             Text(String(appLocalized: "Real portraits drawn from these words. Tap one to start from it."))
                 .ffType(.caption).foregroundStyle(theme.textSecondary)

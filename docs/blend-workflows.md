@@ -141,12 +141,13 @@ reconciliation and the two pushes. Neither can be refunded. A free claim saves t
 description and portrait rows in one transaction; a replayed key returns the same
 character. Each free character costs the Blend runs of a paid one.
 
-The create screen and onboarding show four ideas: a real description and the
-portrait the Animal Avatars workflow (published `c405d12d`, version `56ebf8a4`, locked
-kit) drew from it. They are unused runs from the Specials work on 11 Oct 2026,
-recorded in `docs/design/source/companion/specials-v2.json` under `v7`: pigeon
-(`cb061446`), opossum (`c316650d`), seagull (`512f1929`) and mole (`ce30fb7b`). The
-app bundles them as `CharacterIdea-*` on the 352 by 400 companion canvas.
+The create screen and onboarding show five ideas: one short, funny line and the
+portrait the Animal Avatars workflow (published `c405d12d`, version `2b22887c`) drew
+from exactly those words on 15 Oct 2026. Marc asked for short lines that are easy to
+read, starting from his 70s hippie orangutan: orangutan (`00bc5ac3`), pirate parrot
+(`08d77108`), flamingo (`8f3c4bf8`), cowboy pig (`126dfd1c`) and chihuahua (`feb47d58`).
+The workflow always draws animals standing on both feet, so lines should not ask for a pose.
+The app bundles them as `CharacterIdea-*` on the 352 by 400 companion canvas.
 
 ## Credits and balance events
 
@@ -347,6 +348,7 @@ every environment. Changing one is a code change that ships with a deploy.
 | `workflows.avatar` | ID below, latest published version, price 1 |
 | `workflows.fitness` | ID below, latest published version, price unset |
 | `workflows.group_photo` | ID below, latest published version, price unset |
+| `workflows.companion_lines` | ID below, latest published version, price unset (free character work) |
 
 Omit `versionId` to run the latest published version. Omit `creditPrice` to keep
 credit-funded starts for that workflow closed; paid characters never use it.
@@ -380,6 +382,14 @@ StoreKit's unfinished transaction stream recovers undelivered purchases.
 | Avatar | `c405d12d-fa25-4e67-8d4d-8336e741cbbc` | `56ebf8a4-7a91-47d9-a041-438c6dec4118` | `describe_your_animal` | `avatar` |
 | Five Fitness Levels | `fa770c5b-25ba-46cc-a758-a08aeebc1c92` | `cf9177c3-9ba5-4a53-87df-e8e304490f43` | `character_portrait`, `identity_details` | `resting`, `soft`, `average`, `fit`, `strong` |
 | Group Photo | `f740d71e-06fe-41d4-a92d-a85c90abd3f9` | `2d6e0596-14c5-4ba2-948f-642bae407815` | `character_portraits`, `scene`, `cast_roster` | `group_photo` |
+| FitFight Companion Lines | `8df8fe50-aefb-4855-b421-7bfc89f7e825` | `2358f106-e3c6-47c6-9920-fccd5c6fd409` | `character_portrait`, `description`, `language`, `avoid` | `options` |
+
+Companion Lines (15 Oct 2026) is published from source workflow
+`009abf71-601e-444c-a8d0-1dc3fb601597` and runs
+`openrouter:anthropic/claude-opus-5.5` with low reasoning. One run costs about
+$0.02 and takes 40 to 55 seconds. `options` holds a JSON part, or text with
+that JSON, of exactly four `{ name, line }` pairs; anything else fails the run as
+`ai_invalid_result`. See [backend](backend.md#companion-names-and-lines-prepared-15-oct-2026).
 
 The older Avatar version `bbf425cb-1c8a-4dfa-9f0d-637f22e8f4e1` retains its original
 `variable:prompt:user_request` input mapping. Saved requests always use their own

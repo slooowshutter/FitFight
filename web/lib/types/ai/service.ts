@@ -24,4 +24,6 @@ export type AiReconciliationDependencies = {
     paidDue?: typeof import("@/lib/supabase/queries/custom-characters-supabase-query").dueCustomCharacterPurchases;
     paidAdvance?: typeof import("@/lib/domain/ai/paid-character").advancePaidCharacter;
     paidDefer?: typeof import("@/lib/supabase/queries/custom-characters-supabase-query").deferCustomCharacterPurchase;
+    linesDue?: typeof import("@/lib/supabase/queries/custom-characters-supabase-query").dueCompanionLines;
+    linesAdvance?: typeof import("@/lib/domain/ai/paid-character").advanceCompanionLines;
 };

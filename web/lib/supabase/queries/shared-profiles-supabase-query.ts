@@ -12,6 +12,7 @@ import {
     type ProfilePageQuery, type ProfilePreviewAudience, type ProfileSettings,
     type SharedIdentity, type SharedProfile, type UpdateProfileSettings, type ProfileRivalrySummary,
 } from "@/lib/types/profiles/shared-profile";
+import { readCompanionLabel } from "./custom-characters-supabase-query";
 import { signMediaUrl, signMediaUrls } from "./media-supabase-query";
 
 /** Profile locks serialize new sharing reads with settings, friendships, blocks, and deletion. */
@@ -192,6 +193,9 @@ export async function readSharedProfile(
             `) : values;
             statistics = profileStepStatistics(history, context, relationship.owner ? null : row.settings.activity_days);
         }
+        const label = (relationship.owner || access.shared) && row.companion_image_url
+            ? await readCompanionLabel(targetId, row.companion_image_url, sql)
+            : {};
         return sharedProfileSchema.parse({
             identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) },
             access: relationship.owner ? "owner" : access.shared ? "shared" : "private",
@@ -205,6 +209,7 @@ export async function readSharedProfile(
             view_measurement_enabled: !preview && access.shared && profileFeatureConfigSchema.parse({
                 measurement: process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED,
             }).measurement,
+            ...label,
         });
     });
 }

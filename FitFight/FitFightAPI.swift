@@ -1313,10 +1313,6 @@ struct FitFightAPI {
         )
     }
 
-    func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
-        try await get(path: "admin/recent-syncs", accessToken: accessToken)
-    }
-
     func founderFights(accessToken: String) async throws -> FitFightFounderFights {
         try await get(path: "admin/founder-fights", accessToken: accessToken)
     }

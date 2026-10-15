@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 15,
+            notes: "You can now change your fight’s code in Edit. Pick 4 to 12 letters or numbers that no other fight uses."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 15,
             notes: "New post has Everyone or Choose. Everyone sends it to your friends and every fight you’re in. Choose lets you pick My friends and fights, so you can leave your work fight out. Friends see these posts on Feed, marked Friends."
         ),
         ReleaseNote(

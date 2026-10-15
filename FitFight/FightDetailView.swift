@@ -636,6 +636,8 @@ struct FightDetailView: View {
                             Text(copiedCode ? String(appLocalized: "Copied") : code)
                                 .ffType(.heading)
                                 .foregroundStyle(theme.mossText)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
                                 .frame(minHeight: 44)
                         }
                         .buttonStyle(FFHapticPlainStyle())

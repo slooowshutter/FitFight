@@ -14,6 +14,8 @@ enum FitFightAPIError: LocalizedError {
             switch code {
             case "release_unavailable":
                 return String(appLocalized: "Couldn’t check for updates")
+            case "join_code_taken":
+                return String(appLocalized: "That code is taken. Try another.")
             case "handle_not_found":
                 return String(appLocalized: "That username does not have a FitFight account yet.")
             case "companion_taken":
@@ -290,6 +292,7 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var startsAt: Date?
     var endsAt: Date?
     var timeZone: String? = nil
+    var joinCode: String? = nil
     var inviteHandles: [String]?
     var removeUserIds: [UUID]?
 }

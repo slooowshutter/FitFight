@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
+import { APP_WIDE_JOIN_CODE } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightState } from "@/lib/types/database";
@@ -136,6 +137,46 @@ export async function updateFight(
     const windowChanged =
         nextStarts.getTime() !== Date.parse(fight.starts_at) ||
         nextEnds.getTime() !== Date.parse(fight.ends_at);
+
+    // Before every other write, so a taken code leaves the fight unchanged.
+    if (input.joinCode !== undefined && fight.series_id) {
+        // Signup and the admin dashboard find the app-wide fight by its code:
+        // it never moves, and nobody else takes it.
+        if (input.joinCode === APP_WIDE_JOIN_CODE) {
+            throw new ApiError(
+                409,
+                ERROR_CODES.join_code_taken,
+                "That code is taken",
+            );
+        }
+        const { data, error } = await admin
+            .from("fight_series")
+            .update({ join_code: input.joinCode })
+            .eq("id", fight.series_id)
+            .neq("join_code", APP_WIDE_JOIN_CODE)
+            .select("id");
+        if (error?.code === "23505") {
+            throw new ApiError(
+                409,
+                ERROR_CODES.join_code_taken,
+                "That code is taken",
+            );
+        }
+        if (error) {
+            throw new ApiError(
+                500,
+                ERROR_CODES.db_error,
+                "Could not update fight",
+            );
+        }
+        if (data.length === 0) {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "The Everybody fight keeps its code",
+            );
+        }
+    }
 
     const fightPatch: Record<string, unknown> = {};
     if (stored) {

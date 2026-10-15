@@ -9022,6 +9022,91 @@
                 }
             }
         },
+        "fight.last-round-won": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Last round: you won %1$@ to %2$@. New round started. See more in History."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière manche : vous avez gagné %1$@ à %2$@. Nouvelle manche lancée. Plus de détails dans Historique."
+                    }
+                }
+            }
+        },
+        "fight.last-round-lost": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Last round: you lost %1$@ to %2$@. New round started. See more in History."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière manche : vous avez perdu %1$@ à %2$@. Nouvelle manche lancée. Plus de détails dans Historique."
+                    }
+                }
+            }
+        },
+        "fight.last-round-draw": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Last round: a draw, %1$@ to %2$@. New round started. See more in History."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière manche : égalité, %1$@ à %2$@. Nouvelle manche lancée. Plus de détails dans Historique."
+                    }
+                }
+            }
+        },
+        "fight.last-round-place": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Last round: you came %1$@ of %2$lld. New round started. See more in History."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière manche : vous êtes %1$@ sur %2$lld. Nouvelle manche lancée. Plus de détails dans Historique."
+                    }
+                }
+            }
+        },
+        "fight.last-round-tied-place": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Last round: you tied for 1st of %lld. New round started. See more in History."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière manche : vous êtes à égalité pour la 1re place sur %lld. Nouvelle manche lancée. Plus de détails dans Historique."
+                    }
+                }
+            }
+        },
         "You won": {
             "localizations": {
                 "fr": {
@@ -15501,6 +15586,26 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "FitFight s’ouvre directement sur les combats que tu as vus la dernière fois, même sans internet, et les met à jour en arrière-plan. S’il ne peut pas les mettre à jour, il le dit."
+                    }
+                }
+            }
+        },
+        "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand un défi récurrent commence une nouvelle manche, le défi affiche en haut votre résultat de la manche précédente. Touchez-le pour ouvrir l’Historique, ou ✕ pour le masquer."
+                    }
+                }
+            }
+        },
+        "Dismiss": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fermer"
                     }
                 }
             }

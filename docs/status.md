@@ -6,6 +6,22 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Last round result card, prepared 15 Oct 2026
+
+Repeating rounds restart the moment one ends, so Marc's brother did not notice
+his fight had finished. A repeating fight's screen now opens with a card above
+Stats/History/Feed/Details when the round that ended as the live one started is
+final and you raced in it: "Last round: you won 41,203 to 38,900. New round
+started." (lost, and a draw, the same way), or "you came 2nd of 4" with three or
+more people. Moss for first place, Ember otherwise, neutral for a tie for first.
+Tapping the card opens History ("See more in History."); ✕ hides it; the dismissal is stored on the phone only (`UserDefaults`
+`fight.dismissedLastRounds`, the finished round's id), so a reinstall or another
+phone shows it again. The card uses the rounds already in the Fights snapshot
+(the History cards); a round still settling, a round you only waited out, or a
+gap before the live round shows nothing. New 1.1.3 release note.
+
+**Contract:** native only, no API or database change.
+
 ## Web app at /app, prepared 15 Oct 2026
 
 Marc asked (15 Oct 2026) to use everything in the app from a browser, mostly on

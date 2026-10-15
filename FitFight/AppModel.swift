@@ -390,6 +390,17 @@ final class AppModel: ObservableObject {
         return holder.map { ($0, count) }
     }
 
+    /// The round that ended as this live round started, once it is final and you raced in it.
+    func lastRound(before fight: Fight) -> Fight? {
+        guard fight.recurring, fight.status == .live,
+              let previous = seriesHistory(for: fight).first(where: { $0.windowStart < fight.windowStart }),
+              abs(previous.windowEnd.timeIntervalSince(fight.windowStart)) < 1,
+              previous.serverState == "final",
+              let you = previous.standings.first(where: { $0.person.isYou }), !you.invited, !you.deferred
+        else { return nil }
+        return previous
+    }
+
     func fightResult(for fight: Fight) -> FFResult {
         if fight.standings.contains(where: { $0.person.isYou && $0.deferred }) {
             return .draw

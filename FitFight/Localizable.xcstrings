@@ -1,6 +1,133 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Name your companion": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nommez votre compagnon"
+                    }
+                }
+            }
+        },
+        "Pick an idea, change it, or write your own.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisissez une idée, modifiez-la ou écrivez la vôtre."
+                    }
+                }
+            }
+        },
+        "Writing four ideas. This takes about a minute.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nous écrivons quatre idées. Cela prend environ une minute."
+                    }
+                }
+            }
+        },
+        "Your companion’s name": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le nom de votre compagnon"
+                    }
+                }
+            }
+        },
+        "A short, funny line": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une phrase courte et drôle"
+                    }
+                }
+            }
+        },
+        "Four more": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quatre autres"
+                    }
+                }
+            }
+        },
+        "No ideas yet.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas encore d’idées."
+                    }
+                }
+            }
+        },
+        "Get four ideas": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Obtenir quatre idées"
+                    }
+                }
+            }
+        },
+        "No more ideas for this companion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Il n’y a plus d’idées pour ce compagnon."
+                    }
+                }
+            }
+        },
+        "Check the name and line, then try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vérifiez le nom et la phrase, puis réessayez."
+                    }
+                }
+            }
+        },
+        "Name your own companion: pick one of four name and line ideas written for your character, change it, or write your own, and ask for four more. Your companion’s name and line now show on your profile, and your friends’ companions show theirs on their profiles.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nommez votre propre compagnon : choisissez l’une des quatre idées de nom et de phrase écrites pour votre personnage, modifiez-la ou écrivez la vôtre, et demandez-en quatre autres. Le nom et la phrase de votre compagnon s’affichent maintenant sur votre profil, et ceux des compagnons de vos amis sur leur profil."
+                    }
+                }
+            }
+        },
+        "companion.line": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Line"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Phrase"
+                    }
+                }
+            }
+        },
         "Pick one": {
             "localizations": {
                 "fr": {

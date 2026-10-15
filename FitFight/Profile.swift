@@ -10,6 +10,9 @@ struct FitFightProfile: Codable, Equatable {
     var companionId: String? = nil
     var companionPrompt: String? = nil
     var companionImageURL: URL? = nil
+    /// A custom companion's name and line. Stock companions and older servers send none.
+    var companionName: String? = nil
+    var companionLine: String? = nil
     var timeZone: String? = nil
 
     var photoURL: URL? { companionId == "custom" ? companionImageURL ?? avatar?.url : avatar?.url }
@@ -34,6 +37,8 @@ struct FitFightProfile: Codable, Equatable {
         case companionId = "companion_id"
         case companionPrompt = "companion_prompt"
         case companionImageURL = "companion_image_url"
+        case companionName = "companion_name"
+        case companionLine = "companion_line"
         case timeZone = "time_zone"
     }
 }

@@ -337,6 +337,41 @@ including a null active prompt for stock animals. Reusing a description still us
 the existing custom-companion PATCH. Libraries are isolated by user and cascade
 away when the account is deleted. This stores descriptions, not generated artwork.
 
+## Companion names and lines (prepared 15 Oct 2026)
+
+A custom character can have a name (1 to 24 characters) and a line (1 to 60),
+trimmed and on one line, saved together in `private.custom_character_purchases`
+(`name`, `line`). Typed text is not reviewed first, like usernames and Fight
+names. Blend's Companion Lines workflow suggests four pairs per batch from the
+chosen portrait and the description, in the owner's language (`fr` when the
+newest installation is French, else `en`). See
+[Blend workflows](blend-workflows.md#configuration-and-rollout).
+
+- `GET /api/v1/me/custom-characters`: each character adds `suggestions` (every
+  completed batch, first batch first), `suggestions_pending`,
+  `more_suggestions_left` (0 to 3), and `name` and `line` (null until saved).
+- `POST /api/v1/me/custom-characters/{purchase_id}/label`, `{ "name", "line" }`:
+  owner only, not refunded. Returns the character, 200.
+- `POST /api/v1/me/custom-characters/{purchase_id}/suggestions`,
+  `{ "attempt_id": uuid }`: starts one more batch that avoids every earlier
+  suggestion; the same `attempt_id` returns the same batch. 202 while it runs,
+  `409 suggestions_limit` after three extra batches or six batches of any status,
+  `409 ai_in_progress` while a
+  batch runs, `404 not_found` before a portrait is chosen. A batch is extra only
+  when an earlier batch had completed, so a failed first batch is retried free.
+- `GET /api/v1/me` and `GET /api/v1/profiles/{user_id}` add optional
+  `companion_name` and `companion_line` for an equipped custom character: the
+  saved pair, else the first suggestion. Another viewer gets them only when the
+  profile is shared with them. Stock companions and Specials send neither.
+- `private.ai_requests.provider_response` (jsonb) keeps Blend's raw run response
+  when a run fails, is cancelled, or returns unreadable output, for every
+  workflow. It never reaches the app or the server error log.
+
+The first batch starts once, when a portrait is chosen (`lines_action_key`); the
+reconciler backfills existing characters one per run. A batch is first read 30
+seconds after it starts, then every 10 seconds. Apply
+`20261015120000_companion_labels.sql` before deploying the backend.
+
 ## Fight chart consistency (prepared 15 Sep 2026)
 
 Apply `20260915200338_fight_step_checkpoints.sql` before deploying this backend.

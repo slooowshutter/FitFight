@@ -116,6 +116,31 @@ enum CompanionStateTests {
         for (steps, stage) in stages {
             precondition(CompanionEffortStage.matching(todaySteps: steps).fitnessImageStage == stage)
         }
-        print("Companion retention, reuse, relaunch, account isolation, and category filters passed")
+
+        // A store from a server that cannot name companions yet: the character screen hides the name block.
+        let character = #"{"id":"44444444-4444-4444-8444-444444444444","description":"a lazy panda in a hoodie","stage":"fitness","status":"complete","phase":"complete","request_id":"55555555-5555-4555-8555-555555555555","poll_after_seconds":null,"portrait_url":"https://example.com/portrait.png","candidates":[]"#
+        let storeHead = #"{"app_account_token":"33333333-3333-4333-8333-333333333333","environment":"staging","purchases_enabled":true,"product_id":"com.fitfight.mvp.custom_character","free_characters":0,"characters":["#
+        let older = try JSONDecoder().decode(CustomCharacterStoreSnapshot.self, from: Data((storeHead + character + "}]}").utf8))
+        let olderCharacter = older.characters[0]
+        precondition(olderCharacter.phase == .complete && olderCharacter.suggestions == nil)
+        precondition(!olderCharacter.suggestionsPending && olderCharacter.moreSuggestionsLeft == 0)
+        precondition(olderCharacter.name == nil && olderCharacter.line == nil)
+        let labels = #","suggestions":[{"name":"Couch Panda","line":"Hoodie up. Steps up."},{"name":"Bao","line":"Naps hard. Walks harder."},{"name":"Sir Snooze","line":"Late start. Strong finish."},{"name":"Bamboo Bolt","line":"Fuelled by leaves and spite."}],"suggestions_pending":true,"more_suggestions_left":2,"name":"Couch Panda","line":null"#
+        let current = try JSONDecoder().decode(CustomCharacterStoreSnapshot.self, from: Data((storeHead + character + labels + "}]}").utf8))
+        let named = current.characters[0]
+        precondition(named.suggestions?.count == 4 && named.suggestions?.first == .init(name: "Couch Panda", line: "Hoodie up. Steps up."))
+        precondition(named.suggestionsPending && named.moreSuggestionsLeft == 2)
+        precondition(named.name == "Couch Panda" && named.line == nil)
+
+        // The backend's contract fixture decodes with the app's model.
+        let fixture = try JSONDecoder().decode(CustomCharacterStoreSnapshot.self, from: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1])))
+        let finished = fixture.characters[0]
+        precondition(finished.suggestions?.count == 4 && finished.suggestions?.first == .init(name: "Street Strutter", line: "Struts like he owns the block. He does."))
+        precondition(finished.suggestionsPending && finished.moreSuggestionsLeft == 2)
+        precondition(finished.name == "Sir Waddles" && finished.line == "Slow start. Strong finish.")
+        let drawing = fixture.characters[1]
+        precondition(drawing.phase == .portraits && drawing.suggestions == [])
+        precondition(!drawing.suggestionsPending && drawing.moreSuggestionsLeft == 0 && drawing.name == nil && drawing.line == nil)
+        print("Companion retention, reuse, relaunch, account isolation, category filters, and character names passed")
     }
 }

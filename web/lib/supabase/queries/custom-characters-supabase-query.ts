@@ -1,18 +1,24 @@
 import { randomUUID } from "node:crypto";
 import type { Sql, TransactionSql } from "postgres";
 import { ApiError } from "@/lib/http";
+import { companionSuggestions } from "@/lib/domain/ai/companion-suggestions";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { readActiveDeviceInstallations } from "@/lib/supabase/queries/device-installations-supabase-query";
 import { readFreeCharacters, readReferralPending } from "@/lib/supabase/queries/free-characters-supabase-query";
 import { readSpecialStore } from "@/lib/supabase/queries/specials-supabase-query";
 import { customCharacterProductId, type AppleCustomCharacterTransaction } from "@/lib/types/apple/custom-character-purchase";
 import {
+    companionLabelRowSchema,
+    companionLinesBatchSchema,
     customCharacterAttemptSchema,
     customCharacterClaimResultSchema,
     customCharacterPortraitRowSchema,
     customCharacterPurchaseRowSchema,
     customCharacterStoreSchema,
     freeCharacterGiftResultSchema,
+    type CompanionLinesStep,
     type CustomCharacterAdvanceRequest,
+    type CustomCharacterLabelRequest,
     type FreeCharacterGiftRequest,
     type CustomCharacterAttempt,
     type CustomCharacterStage,
@@ -54,9 +60,15 @@ export async function readCustomCharacterStore(
     const attempts = customCharacterAttemptSchema.array().parse(
         await database`select resource_id, id as request_id, workflow, status, next_poll_at, idempotency_key,
                 result ->> 'image_url' as image_url
-            from private.ai_requests where resource_id in (
+            from private.ai_requests where workflow in ('avatar', 'fitness') and resource_id in (
                 select id from private.custom_character_purchases where account_id = ${account.app_account_token}
             ) order by created_at desc`,
+    );
+    const batches = companionLinesBatchSchema.array().parse(
+        await database`select id, resource_id, idempotency_key, status, result
+            from private.ai_requests where workflow = 'companion_lines' and resource_id in (
+                select id from private.custom_character_purchases where account_id = ${account.app_account_token}
+            ) order by created_at, id`,
     );
     const latest = new Map<string, CustomCharacterAttempt>();
     for (const attempt of attempts) {
@@ -124,6 +136,12 @@ export async function readCustomCharacterStore(
                 image_url: candidate.attempt?.image_url ?? null,
                 selected: candidate.portrait.selected_at !== null,
             })),
+            // Suggestions start once a portrait is chosen.
+            ...(!purchase.revoked_at && (fitness || chosen)
+                ? companionSuggestions(batches.filter((batch) => batch.resource_id === purchase.id))
+                : { suggestions: [], suggestions_pending: false, more_suggestions_left: 0 }),
+            name: purchase.name,
+            line: purchase.line,
         };
     });
     return customCharacterStoreSchema.parse({
@@ -273,7 +291,8 @@ export async function prepareCustomCharacterStage(
         const attempts = customCharacterAttemptSchema.array().parse(
             await sql`select resource_id, id as request_id, workflow, status, next_poll_at, idempotency_key,
                     result ->> 'image_url' as image_url
-                from private.ai_requests where resource_id = ${purchaseId} order by created_at desc`,
+                from private.ai_requests where resource_id = ${purchaseId} and workflow in ('avatar', 'fitness')
+                order by created_at desc`,
         );
         // NOTE: each free retry or new description after a failure is a new paid Blend run, so a purchase gets a bounded number of them.
         if ((input.retry || (input.description && input.description !== purchase.description)) && attempts.filter((item) => ["failed", "cancelled"].includes(item.status)).length >= 6)
@@ -362,8 +381,8 @@ export async function prepareCustomCharacterStage(
 
 /**
  * Background reconciliation starts saved portraits, the poses of a chosen portrait, and owed pushes.
- * Owners with an unresolved request outside the purchase are skipped because reserveAiRequest would return
- * ai_in_progress, so their purchases cannot fill every batch and starve newer ones.
+ * Owners with an unresolved request outside the purchase, other than a suggestion batch, are skipped because
+ * reserveAiRequest would return ai_in_progress, so their purchases cannot fill every batch and starve newer ones.
  */
 export async function dueCustomCharacterPurchases(database: Sql = createDatabaseClient()) {
     const rows = await database`select purchase.id, account.user_id from private.custom_character_purchases purchase
@@ -372,6 +391,7 @@ export async function dueCustomCharacterPurchases(database: Sql = createDatabase
             (
                 not exists (select 1 from private.ai_requests request
                     where request.user_id = account.user_id and request.resource_id is distinct from purchase.id
+                        and request.workflow <> 'companion_lines'
                         and request.status in ('starting', 'pending', 'running', 'start_unconfirmed'))
                 and not exists (select 1 from private.ai_requests request
                     where request.resource_id = purchase.id and request.workflow = 'fitness')
@@ -379,7 +399,7 @@ export async function dueCustomCharacterPurchases(database: Sql = createDatabase
                     (
                         not exists (select 1 from private.custom_character_portraits portrait where portrait.purchase_id = purchase.id)
                         and not exists (select 1 from private.ai_requests request
-                            where request.user_id = account.user_id
+                            where request.user_id = account.user_id and request.workflow <> 'companion_lines'
                                 and request.status in ('starting', 'pending', 'running', 'start_unconfirmed'))
                         and (not exists (select 1 from private.ai_requests request where request.resource_id = purchase.id)
                             or exists (select 1 from private.ai_requests request
@@ -421,6 +441,132 @@ export async function dueCustomCharacterPurchases(database: Sql = createDatabase
 /** Moves a purchase that keeps failing to the back of the reconcile queue, so it cannot starve the others. */
 export async function deferCustomCharacterPurchase(purchaseId: string, database: Sql = createDatabaseClient()) {
     await database`update private.custom_character_purchases set updated_at = now() where id = ${purchaseId}`;
+}
+
+/**
+ * The oldest character with a chosen portrait and no suggestion batch yet, including those finished before
+ * suggestions existed. One per run, and only while Blend is quiet, so the backfill never crowds out real work.
+ * A character whose start failed has its first-batch key and waits behind those never tried; updated_at, which
+ * orders the character work, stays untouched.
+ */
+export async function dueCompanionLines(database: Sql = createDatabaseClient()) {
+    const rows = await database`select purchase.id, account.user_id from private.custom_character_purchases purchase
+        join private.special_accounts account on account.id = purchase.account_id
+        where purchase.revoked_at is null and account.user_id is not null
+            and (select count(*) from private.ai_requests
+                where status in ('starting', 'pending', 'running', 'start_unconfirmed')) < 10
+            and not exists (select 1 from private.ai_requests request
+                where request.resource_id = purchase.id and request.workflow = 'companion_lines')
+            and exists (select 1 from private.ai_requests request
+                where request.resource_id = purchase.id and request.workflow = 'avatar' and request.status = 'completed'
+                    and (not exists (select 1 from private.custom_character_portraits portrait
+                            where portrait.purchase_id = purchase.id)
+                        or exists (select 1 from private.custom_character_portraits portrait
+                            where portrait.purchase_id = purchase.id and portrait.selected_at is not null
+                                and portrait.action_key = request.idempotency_key)))
+        order by purchase.lines_action_key is not null, purchase.created_at, purchase.id limit 1`;
+    return rows.map((row) => ({ id: String(row.id), userId: String(row.user_id) }));
+}
+
+/**
+ * Saves the first-batch key before any provider call, so the app and the reconciler start the same first batch.
+ * Without an attempt ID it returns a running batch to read, or the first batch while the character has none. With
+ * one it prepares that "Four more" batch, which is the first batch when none was prepared yet; reserveAiRequest
+ * checks the running batch and the limit under the admission lock.
+ */
+export async function prepareCompanionLines(
+    userId: string,
+    purchaseId: string,
+    attemptId: string | null,
+    database: Sql = createDatabaseClient(),
+): Promise<CompanionLinesStep> {
+    return database.begin(async (sql) => {
+        const [raw] = await sql`select purchase.* from private.custom_character_purchases purchase
+            join private.special_accounts account on account.id = purchase.account_id
+            where purchase.id = ${purchaseId} and account.user_id = ${userId}
+            for update of purchase`;
+        if (!raw) throw new ApiError(404, "not_found", "Character purchase not found");
+        const purchase = customCharacterPurchaseRowSchema.parse(raw);
+        if (purchase.revoked_at)
+            throw new ApiError(403, "character_refunded", "This purchase was refunded");
+        const batches = companionLinesBatchSchema.array().parse(
+            await sql`select id, resource_id, idempotency_key, status, result from private.ai_requests
+                where resource_id = ${purchaseId} and workflow = 'companion_lines' order by created_at, id`,
+        );
+        if (attemptId && batches.some((batch) => batch.idempotency_key === attemptId)) return { kind: "none" };
+        const running = batches.find((batch) => ["starting", "pending", "running"].includes(batch.status));
+        if (!attemptId && running) return { kind: "pending", requestId: running.id };
+        if (!attemptId && batches.length > 0) return { kind: "none" };
+        const [portrait] = await sql`select request.id from private.ai_requests request
+            where request.resource_id = ${purchaseId} and request.user_id = ${userId}
+                and request.workflow = 'avatar' and request.status = 'completed'
+                and (not exists (select 1 from private.custom_character_portraits portrait
+                        where portrait.purchase_id = ${purchaseId})
+                    or exists (select 1 from private.custom_character_portraits portrait
+                        where portrait.purchase_id = ${purchaseId} and portrait.selected_at is not null
+                            and portrait.action_key = request.idempotency_key))
+            order by request.created_at desc limit 1`;
+        if (!portrait) {
+            if (attemptId) throw new ApiError(404, "not_found", "Choose a portrait first");
+            return { kind: "none" };
+        }
+        if (purchase.description === null) throw new Error("Character description was not saved");
+        const key = attemptId ?? purchase.lines_action_key ?? randomUUID();
+        if (!purchase.lines_action_key)
+            await sql`update private.custom_character_purchases set lines_action_key = ${key} where id = ${purchaseId}`;
+        const [installation] = await readActiveDeviceInstallations(userId, sql);
+        return {
+            kind: "start",
+            key,
+            description: purchase.description,
+            avatarRequestId: String(portrait.id),
+            locale: installation?.locale ?? null,
+            avoid: companionSuggestions(batches).suggestions,
+        };
+    });
+}
+
+/** Saves a name and line the owner picked, edited or typed. Like usernames, the text is not reviewed first. */
+export async function saveCustomCharacterLabel(
+    userId: string,
+    purchaseId: string,
+    input: CustomCharacterLabelRequest,
+    database: Sql = createDatabaseClient(),
+) {
+    await database.begin(async (sql) => {
+        const [purchase] = await sql`select purchase.id, purchase.revoked_at from private.custom_character_purchases purchase
+            join private.special_accounts account on account.id = purchase.account_id
+            where purchase.id = ${purchaseId} and account.user_id = ${userId}
+            for update of purchase`;
+        if (!purchase) throw new ApiError(404, "not_found", "Character purchase not found");
+        if (purchase.revoked_at)
+            throw new ApiError(403, "character_refunded", "This purchase was refunded");
+        await sql`update private.custom_character_purchases set name = ${input.name}, line = ${input.line}
+            where id = ${purchaseId}`;
+    });
+}
+
+/**
+ * The pair a profile shows for an equipped custom character: its saved name and line, else its first suggestion.
+ * Empty for stock companions, Specials, refunded characters, and characters with neither.
+ */
+export async function readCompanionLabel(userId: string, imageUrl: string, database: Sql = createDatabaseClient()) {
+    const [row] = await database`select coalesce(purchase.name, suggestion.name) as companion_name,
+            coalesce(purchase.line, suggestion.line) as companion_line
+        from private.ai_library_images library
+        join private.ai_requests request on request.id = library.request_id
+        join private.custom_character_purchases purchase on purchase.id = request.resource_id and purchase.revoked_at is null
+        join private.special_accounts account on account.id = purchase.account_id and account.user_id = ${userId}
+        left join lateral (
+            select batch.result -> 'options' -> 0 ->> 'name' as name, batch.result -> 'options' -> 0 ->> 'line' as line
+            from private.ai_requests batch
+            where batch.resource_id = purchase.id and batch.workflow = 'companion_lines' and batch.status = 'completed'
+            order by batch.created_at, batch.id limit 1
+        ) suggestion on true
+        where library.user_id = ${userId} and library.image_url = ${imageUrl}
+            and coalesce(purchase.name, suggestion.name) is not null
+        limit 1`;
+    return row ? companionLabelRowSchema.parse(row) : {};
 }
 
 /** The owner picks one finished portrait; the other portraits are kept, unselected. */

@@ -183,6 +183,61 @@ test("a paid portrait that settles advances its character in the same run", asyn
     assert.deepEqual(result, { checked: 2, settled: 2 });
 });
 
+test("a settled suggestion batch advances no character, and a lines failure is logged without deferring the character", async (t) => {
+    const purchaseId = "33333333-3333-4333-8333-333333333333";
+    const calls: string[] = [];
+    const errors = t.mock.method(console, "error", () => {});
+    const outcomes = [
+        new ApiError(409, "ai_request_conflict", "Conflict"),
+        new ApiError(503, "ai_busy", "Busy"),
+        new ApiError(503, "ai_status_unavailable", "Unavailable"),
+    ];
+    for (const outcome of outcomes) {
+        const result = await reconcileAiRuns({
+            due: async () => [{ ...pendingRequest(), workflow: "companion_lines", resource_id: purchaseId }],
+            read: async (_owner, id) => ({
+                request_id: id,
+                workflow: "companion_lines",
+                status: "completed",
+                data: { options: [1, 2, 3, 4].map((index) => ({ name: `Max ${index}`, line: "Walks like rent is due." })) },
+            }),
+            paidDue: async () => [],
+            paidAdvance: async (_owner, id) => {
+                calls.push(`advance:${id}`);
+                return assert.fail("A suggestion batch does not advance its character");
+            },
+            paidDefer: async (id) => {
+                calls.push(`defer:${id}`);
+            },
+            linesDue: async () => [{ id: purchaseId, userId }],
+            linesAdvance: async (_owner, id, attemptId) => {
+                assert.equal(attemptId, null);
+                calls.push(`lines:${id}`);
+                throw outcome;
+            },
+        });
+        assert.deepEqual(result, { checked: 1, settled: 1 });
+    }
+    // The character's own queue order is untouched: no defer for a lines failure.
+    assert.deepEqual(calls, [`lines:${purchaseId}`, `lines:${purchaseId}`, `lines:${purchaseId}`]);
+    // ai_busy is a deferred start code and stays quiet; the others log their code and purchase only.
+    assert.deepEqual(errors.mock.calls.map((call) => call.arguments), [
+        ["fitfight_companion_lines_failed", JSON.stringify({ error_code: "ai_request_conflict", purchase_id: purchaseId })],
+        ["fitfight_companion_lines_failed", JSON.stringify({ error_code: "ai_status_unavailable", purchase_id: purchaseId })],
+    ]);
+    await assert.rejects(
+        reconcileAiRuns({
+            due: async () => [],
+            read: async () => assert.fail("Nothing to read"),
+            linesDue: async () => [{ id: purchaseId, userId }],
+            linesAdvance: async () => {
+                throw new TypeError("Unexpected");
+            },
+        }),
+        TypeError,
+    );
+});
+
 test("allowance and operator routes require authentication; cron cannot be called with a user token", async () => {
     setAiHttpLogWriter(async () => {});
     setServerErrorLogWriter(async () => {});

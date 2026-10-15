@@ -58,6 +58,12 @@ struct CustomCharacterProgress: Decodable, Identifiable {
         }
     }
 
+    /// A name and a line written for this character.
+    struct Suggestion: Decodable, Equatable {
+        let name: String
+        let line: String
+    }
+
     let id: UUID
     let description: String?
     let stage: Stage?
@@ -69,15 +75,26 @@ struct CustomCharacterProgress: Decodable, Identifiable {
     let portraitURL: URL?
     /// The three portrait choices. Characters bought before the choice existed have none.
     let candidates: [Candidate]
+    /// Every finished batch of four, first batch first. Nil from a server that cannot name companions.
+    let suggestions: [Suggestion]?
+    /// A batch is being written.
+    let suggestionsPending: Bool
+    /// "Four more" batches this character can still ask for.
+    let moreSuggestionsLeft: Int
+    /// The saved name and line, nil until the owner saves them.
+    let name: String?
+    let line: String?
 
     /// Finished portraits the owner can pick from.
     var candidateURLs: [URL] { candidates.compactMap { $0.status == .completed ? $0.imageURL : nil } }
 
     enum CodingKeys: String, CodingKey {
-        case id, description, stage, status, phase, candidates
+        case id, description, stage, status, phase, candidates, suggestions, name, line
         case requestID = "request_id"
         case pollAfterSeconds = "poll_after_seconds"
         case portraitURL = "portrait_url"
+        case suggestionsPending = "suggestions_pending"
+        case moreSuggestionsLeft = "more_suggestions_left"
     }
 
     init(from decoder: Decoder) throws {
@@ -90,6 +107,11 @@ struct CustomCharacterProgress: Decodable, Identifiable {
         pollAfterSeconds = try container.decodeIfPresent(Int.self, forKey: .pollAfterSeconds)
         portraitURL = try container.decodeIfPresent(URL.self, forKey: .portraitURL)
         candidates = try container.decodeIfPresent([Candidate].self, forKey: .candidates) ?? []
+        suggestions = try container.decodeIfPresent([Suggestion].self, forKey: .suggestions)
+        suggestionsPending = try container.decodeIfPresent(Bool.self, forKey: .suggestionsPending) ?? false
+        moreSuggestionsLeft = try container.decodeIfPresent(Int.self, forKey: .moreSuggestionsLeft) ?? 0
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        line = try container.decodeIfPresent(String.self, forKey: .line)
         // A server without the phase field still describes every legacy step through status and stage.
         if let phase = try? container.decodeIfPresent(Phase.self, forKey: .phase) {
             self.phase = phase
@@ -293,13 +315,15 @@ final class CustomCharacterPurchases: ObservableObject {
 
     func advance(_ id: UUID, description: String? = nil, retry: Bool = false, session: SessionStore) async throws -> CustomCharacterProgress {
         guard let userID = ownerID, userID == session.profile?.userId else { throw CancellationError() }
+        let phase = snapshot?.characters.first { $0.id == id }?.phase
         let result = try await api.advanceCustomCharacter(
             id: id, description: description, retry: retry,
             accessToken: try await session.freshAccessToken()
         )
         try Task.checkCancellation()
         guard ownerID == userID, session.profile?.userId == userID else { throw CancellationError() }
-        if result.status != .ready {
+        // Polling a chosen portrait for poses or name ideas must not drop the description of a purchase still with Apple.
+        if result.status != .ready, phase != .poses, phase != .complete {
             UserDefaults.standard.removeObject(forKey: draftKey(userID))
         }
         try await refresh(session: session)
@@ -315,6 +339,33 @@ final class CustomCharacterPurchases: ObservableObject {
         guard ownerID == userID, session.profile?.userId == userID else { throw CancellationError() }
         try await refresh(session: session)
         return result
+    }
+
+    /// `source` is `suggestion`, `edited` or `own`. Analytics never gets the text: it is user content.
+    func saveLabel(_ id: UUID, name: String, line: String, source: String, session: SessionStore) async throws {
+        guard let userID = ownerID, userID == session.profile?.userId else { throw CancellationError() }
+        let saved = try await api.labelCustomCharacter(
+            id: id, name: name, line: line, accessToken: try await session.freshAccessToken()
+        )
+        try Task.checkCancellation()
+        guard ownerID == userID, session.profile?.userId == userID else { throw CancellationError() }
+        // Every batch holds four.
+        PostHogSDK.shared.capture("companion_label_saved",
+                                  properties: ["source": source, "batches": (saved.suggestions?.count ?? 0) / 4])
+        try await refresh(session: session)
+        // The companion card on Fights and Profile reads the pair from the profile.
+        await session.loadProfile()
+    }
+
+    /// Starts "Four more". The server answers a repeated attempt id with the batch it already started.
+    func suggestLabels(_ id: UUID, attemptID: UUID, session: SessionStore) async throws {
+        guard let userID = ownerID, userID == session.profile?.userId else { throw CancellationError() }
+        _ = try await api.suggestCustomCharacterLabels(
+            id: id, attemptID: attemptID, accessToken: try await session.freshAccessToken()
+        )
+        try Task.checkCancellation()
+        guard ownerID == userID, session.profile?.userId == userID else { throw CancellationError() }
+        try await refresh(session: session)
     }
 
     func restore(session: SessionStore) async {

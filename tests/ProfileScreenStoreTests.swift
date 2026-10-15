@@ -51,6 +51,13 @@ struct TestSession { let user: TestUser }
                      "Backends deployed before draws and losses remain decodable")
         let cached = try decoder.decode(SharedProfile.self, from: JSONEncoder().encode(withStatistics))
         precondition(cached == withStatistics, "The cached own Profile reads back unchanged")
+        precondition(shared.companionName == nil && shared.companionLine == nil, "Profiles without companion names remain decodable")
+        older["companion_name"] = "Sir Waddles"
+        older["companion_line"] = "Slow start. Strong finish."
+        let named = try decoder.decode(SharedProfile.self, from: JSONSerialization.data(withJSONObject: older))
+        precondition(named.companionName == "Sir Waddles" && named.companionLine == "Slow start. Strong finish.")
+        let cachedNamed = try decoder.decode(SharedProfile.self, from: JSONEncoder().encode(named))
+        precondition(cachedNamed == named, "The cached own Profile keeps the companion name and line")
         precondition(privateProfile.record == nil && privateProfile.activity == nil)
         precondition(history.results[0].fightId == nil && history.results[0].name == nil)
         let session = SessionStore()

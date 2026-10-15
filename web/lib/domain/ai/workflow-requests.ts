@@ -16,6 +16,7 @@ import { aiErrorMessages, aiErrorCodeSchema } from "@/lib/types/ai/error";
 import {
     aiRunResponseSchema,
     blendAvatarOutputSchema,
+    blendCompanionLinesOutputSchema,
     blendFitnessOutputSchema,
     blendGroupPhotoOutputSchema,
     legacyAvatarVersionId,
@@ -94,11 +95,11 @@ export async function startAiRun(
         {
             workflow: input.workflow,
             description:
-                input.workflow === "avatar"
-                    ? input.parameters.description
-                    : input.workflow === "fitness"
-                      ? input.parameters.identity_details
-                      : input.parameters.scene,
+                input.workflow === "fitness"
+                    ? input.parameters.identity_details
+                    : input.workflow === "group_photo"
+                      ? input.parameters.scene
+                      : input.parameters.description,
             resourceId: paidCharacterId,
             idempotencyKey,
             requestHash: createHash("sha256")
@@ -109,11 +110,11 @@ export async function startAiRun(
             sourceRequestIds:
                 input.workflow === "avatar"
                     ? []
-                    : input.workflow === "fitness"
-                      ? [input.parameters.avatar_request_id]
-                      : input.parameters.characters.map(
+                    : input.workflow === "group_photo"
+                      ? input.parameters.characters.map(
                             (character) => character.avatar_request_id,
-                        ),
+                        )
+                      : [input.parameters.avatar_request_id],
         },
         config?.limits ?? null,
     );
@@ -163,7 +164,16 @@ export async function startAiRun(
                         character_portrait: portraits,
                         identity_details: input.parameters.identity_details,
                     }
-                  : {
+                  : input.workflow === "companion_lines"
+                    ? {
+                          character_portrait: portraits,
+                          description: input.parameters.description,
+                          language: input.parameters.language,
+                          avoid: input.parameters.avoid
+                              .map((option) => `${option.name}: ${option.line}`)
+                              .join("\n"),
+                      }
+                    : {
                         character_portraits: portraits,
                         scene: input.parameters.scene,
                         cast_roster: input.parameters.characters
@@ -316,6 +326,10 @@ export async function readAiRun(
                 providerCompletedAt: detail.success
                     ? detail.data.providerCompletedAt
                     : null,
+                providerResponse:
+                    invalidResult && detail.success
+                        ? detail.data.providerResponse
+                        : undefined,
             },
             detail.success && detail.data.rateLimit
                 ? detail.data.rateLimit
@@ -337,7 +351,8 @@ export async function readAiRun(
             error.message,
             {
                 ...diagnostic,
-                ...blendErrorDetailSchema.parse(error.detail ?? {}),
+                // The raw envelope belongs on the private request row only; this detail reaches the server error log.
+                ...blendErrorDetailSchema.omit({ providerResponse: true }).parse(error.detail ?? {}),
             },
             {
                 ...error.clientContext,
@@ -357,18 +372,22 @@ export async function readAiRun(
     if (run.status === "failed" || run.status === "cancelled") {
         update.errorCode =
             run.status === "failed" ? "ai_failed" : "ai_cancelled";
+        update.providerResponse = response.providerResponse;
     } else if (run.status === "completed") {
         const schema =
             request.workflow === "avatar"
                 ? blendAvatarOutputSchema
                 : request.workflow === "fitness"
                   ? blendFitnessOutputSchema
-                  : blendGroupPhotoOutputSchema;
+                  : request.workflow === "companion_lines"
+                    ? blendCompanionLinesOutputSchema
+                    : blendGroupPhotoOutputSchema;
         const output = schema.safeParse(run.output);
         if (output.success) {
             update.result = output.data;
         } else {
             update.status = "failed";
+            update.providerResponse = response.providerResponse;
             update.errorCode =
                 run.output != null &&
                 Object.values(run.output).some((items) =>

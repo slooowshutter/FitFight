@@ -13,6 +13,8 @@ struct PaidCharacterView: View {
     @State private var picked: [UUID: UUID] = [:]
     @State private var choosingID: UUID?
     @State private var error = ""
+    /// Typed names and lines, kept here so a draft survives the character moving from poses to finished.
+    @State private var labelDrafts: [UUID: CompanionLabelEditor.Draft] = [:]
 
     /// The server keeps drawing without the app; polling only makes progress visible sooner while open.
     private var pollingID: UUID? {
@@ -41,6 +43,9 @@ struct PaidCharacterView: View {
                     Text(active.description ?? description).ffType(.body).foregroundStyle(theme.text)
                     steps(active)
                     progress(active)
+                    if active.phase == .poses {
+                        labelEditor(active)
+                    }
                 }
             }
             CharacterIdeas(description: $description, disabled: purchases.isBusy)
@@ -110,6 +115,7 @@ struct PaidCharacterView: View {
                                          enabled: !isSelecting, busy: isSelecting, fullWidth: true) {
                                     Task { await select(entry) }
                                 }
+                                labelEditor(character)
                             }
                         }
                     }
@@ -238,6 +244,17 @@ struct PaidCharacterView: View {
         }
     }
 
+    /// Nothing from a server that cannot name companions yet; it sends no suggestions.
+    @ViewBuilder
+    private func labelEditor(_ character: CustomCharacterProgress) -> some View {
+        if character.suggestions != nil {
+            CompanionLabelEditor(character: character, draft: Binding(
+                get: { labelDrafts[character.id] ?? .init(name: character.name ?? "", line: character.line ?? "") },
+                set: { labelDrafts[character.id] = $0 }
+            ))
+        }
+    }
+
     private var closeHint: some View {
         Text("You can close the app. We will send a notification when your character is ready.")
             .ffType(.caption).foregroundStyle(theme.textSecondary)
@@ -313,6 +330,124 @@ struct PaidCharacterView: View {
             try await session.setCompanion(image: .init(requestID: entry.requestID, stage: "resting"))
             companions.apply(session.profile)
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+/// "Name your companion": the written ideas as cards, then Name and Line fields to save either one or your own.
+struct CompanionLabelEditor: View {
+    struct Draft {
+        var name: String
+        var line: String
+        /// Filled from a card at least once, so a changed card counts as edited rather than typed.
+        var fromCard = false
+    }
+
+    let character: CustomCharacterProgress
+    @Binding var draft: Draft
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var purchases: CustomCharacterPurchases
+    @Environment(\.ffTheme) private var theme
+    @State private var saving = false
+    @State private var asking = false
+    @State private var error = ""
+
+    var body: some View {
+        let suggestions = character.suggestions ?? []
+        let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let line = draft.line.trimmingCharacters(in: .whitespacesAndNewlines)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(String(appLocalized: "Name your companion")).ffType(.heading).foregroundStyle(theme.text)
+            Text(suggestions.isEmpty && !character.suggestionsPending
+                 ? String(appLocalized: "No ideas yet.")
+                 : String(appLocalized: "Pick an idea, change it, or write your own."))
+                .ffType(.caption).foregroundStyle(theme.textSecondary)
+            ForEach(Array(suggestions.enumerated()), id: \.offset) { _, suggestion in
+                let picked = name == suggestion.name && line == suggestion.line
+                Button {
+                    draft = Draft(name: suggestion.name, line: suggestion.line, fromCard: true)
+                } label: {
+                    FFCard(fill: picked ? theme.mossWash : nil, stroke: picked ? theme.mossEdge : nil) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: suggestion.name).ffType(.heading).foregroundStyle(theme.text)
+                            Text(verbatim: suggestion.line).ffType(.caption).foregroundStyle(theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .accessibilityAddTraits(picked ? .isSelected : [])
+            }
+            if character.suggestionsPending {
+                FFCard {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(theme.gold)
+                        Text(String(appLocalized: "Writing four ideas. This takes about a minute.")).ffType(.caption).foregroundStyle(theme.textSecondary)
+                    }
+                }
+            }
+            // The server counts UTF-16 units, so an emoji uses two of the 24 and 60.
+            FFField(label: String(appLocalized: "Name"), counter: "\(draft.name.utf16.count)/24") {
+                TextField(String(appLocalized: "Your companion’s name"), text: $draft.name)
+                    .onChange(of: draft.name) { _, text in
+                        var text = text
+                        while text.utf16.count > 24 { text.removeLast() }
+                        draft.name = text
+                    }
+            }
+            FFField(label: String(appLocalized: "companion.line", defaultValue: "Line"), counter: "\(draft.line.utf16.count)/60") {
+                TextField(String(appLocalized: "A short, funny line"), text: $draft.line)
+                    .onChange(of: draft.line) { _, text in
+                        var text = text
+                        while text.utf16.count > 60 { text.removeLast() }
+                        draft.line = text
+                    }
+            }
+            FFButton(title: String(appLocalized: "Save"), kind: .primary,
+                     enabled: !name.isEmpty && !line.isEmpty && (name != character.name || line != character.line),
+                     busy: saving, fullWidth: true) {
+                Task { await save(name: name, line: line) }
+            }
+            if character.moreSuggestionsLeft > 0 && !character.suggestionsPending {
+                FFButton(title: suggestions.isEmpty ? String(appLocalized: "Get four ideas") : String(appLocalized: "Four more"), kind: .secondary,
+                         enabled: !asking, busy: asking, fullWidth: true) {
+                    Task { await askForMore() }
+                }
+            }
+            if !error.isEmpty {
+                Text(error).ffType(.caption).foregroundStyle(theme.emberText)
+            }
+        }
+        .task(id: character.suggestionsPending) {
+            // During poses the screen's own polling already advances this character.
+            guard character.suggestionsPending, character.phase == .complete else { return }
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(3))
+                    _ = try await purchases.advance(character.id, session: session)
+                } catch is CancellationError { return }
+                catch { self.error = error.localizedDescription }
+            }
+        }
+    }
+
+    private func save(name: String, line: String) async {
+        saving = true
+        defer { saving = false }
+        error = ""
+        let source = character.suggestions?.contains(.init(name: name, line: line)) == true
+            ? "suggestion" : draft.fromCard ? "edited" : "own"
+        do { try await purchases.saveLabel(character.id, name: name, line: line, source: source, session: session) }
+        catch is CancellationError {}
+        catch { self.error = error.localizedDescription }
+    }
+
+    private func askForMore() async {
+        asking = true
+        defer { asking = false }
+        error = ""
+        do { try await purchases.suggestLabels(character.id, attemptID: UUID(), session: session) }
+        catch is CancellationError {}
+        catch { self.error = error.localizedDescription }
     }
 }
 

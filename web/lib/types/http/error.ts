@@ -28,6 +28,7 @@ export const ERROR_CODES = {
     character_portrait_chosen: "character_portrait_chosen",
     character_portrait_not_ready: "character_portrait_not_ready",
     character_retry_limit: "character_retry_limit",
+    suggestions_limit: "suggestions_limit",
     no_free_characters: "no_free_characters",
     already_member: "already_member",
     fight_not_joinable: "fight_not_joinable",

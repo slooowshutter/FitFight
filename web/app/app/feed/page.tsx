@@ -291,7 +291,9 @@ function PostCard({
     const custom =
         [...new Intl.Segmenter().segment(customEmoji.trim())][0]?.segment ?? "";
     const channel =
-        post.broadcast || post.audience === "main"
+        post.to_friends && !post.broadcast && post.channels.length === 0
+            ? "Friends"
+            : post.broadcast || post.audience === "main"
             ? "Public"
             : post.channels
                   .filter((item) => item.name)

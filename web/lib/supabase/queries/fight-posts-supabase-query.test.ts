@@ -509,6 +509,152 @@ test("a founder fight alone does not open Main posting", async () => {
     assert.match(queries[0] ?? "", /fight\.host_id is null/);
 });
 
+test("a post to friends only is stored without a fight and skips the Main check", async () => {
+    const queries: { sql: string; values: unknown[] }[] = [];
+    const query = Object.assign(
+        (first: TemplateStringsArray, ...values: unknown[]) => {
+            const sql = first.join("?").replace(/\s+/g, " ").trim();
+            queries.push({ sql, values });
+            if (sql.startsWith("insert into public.fight_posts")) {
+                return Promise.resolve([{ id: postId }]);
+            }
+            return Promise.resolve([]);
+        },
+        {
+            begin: async (_mode: string, run: (sql: Sql) => Promise<unknown>) =>
+                run(query),
+        },
+    ) as unknown as Sql;
+    assert.equal(
+        createFeedPostsRequestSchema.safeParse({
+            body: "Lunch walk done.",
+            destinations: [{ type: "friends" }, { type: "broadcast" }],
+        }).success,
+        false,
+    );
+    await writeFeedPosts(
+        userId,
+        createFeedPostsRequestSchema.parse({
+            body: "Lunch walk done.",
+            destinations: [{ type: "friends" }],
+        }),
+        query,
+    );
+    const insert = queries.find(({ sql }) =>
+        sql.startsWith("insert into public.fight_posts"),
+    );
+    assert.ok(insert);
+    assert.match(insert.sql, /to_friends/);
+    assert.deepEqual(insert.values, [
+        null,
+        userId,
+        "Lunch walk done.",
+        "main",
+        false,
+        false,
+        true,
+    ]);
+    assert.equal(
+        queries.some(({ sql }) => sql.includes("fight.host_id is null")),
+        false,
+    );
+});
+
+test("a post to friends and a fight keeps its fight and goes to friends too", async () => {
+    const inserts: unknown[][] = [];
+    const query = Object.assign(
+        (first: TemplateStringsArray, ...values: unknown[]) => {
+            const sql = first.join("?").replace(/\s+/g, " ").trim();
+            if (sql.startsWith("insert into public.fight_posts")) {
+                inserts.push(values);
+                return Promise.resolve([{ id: postId }]);
+            }
+            if (
+                sql.includes("from public.fight_members") &&
+                !sql.includes("fight_posts")
+            ) {
+                return Promise.resolve([{ state: "accepted" }]);
+            }
+            return Promise.resolve([]);
+        },
+        {
+            begin: async (_mode: string, run: (sql: Sql) => Promise<unknown>) =>
+                run(query),
+        },
+    ) as unknown as Sql;
+    await writeFeedPosts(
+        userId,
+        createFeedPostsRequestSchema.parse({
+            body: "Lunch walk done.",
+            destinations: [
+                { type: "friends" },
+                { type: "fight", fight_id: fightId },
+            ],
+        }),
+        query,
+    );
+    assert.deepEqual(inserts, [
+        [fightId, userId, "Lunch walk done.", "fight", false, false, true],
+    ]);
+});
+
+test("the Feed lists friends posts for friends, never inside a fight", async () => {
+    const queries: string[] = [];
+    const query = ((first: TemplateStringsArray) => {
+        queries.push(first.join("?").replace(/\s+/g, " ").trim());
+        return Promise.resolve([]);
+    }) as unknown as Sql;
+    await listFightPosts(userId, undefined, { limit: 30 }, query);
+    const listing = queries[0] ?? "";
+    assert.match(
+        listing,
+        /\? ?::uuid is null and post\.to_friends and \( post\.author_id = \? or \( exists \( select 1 from private\.profile_friendships/,
+    );
+    assert.match(listing, /friendship\.state = 'accepted'/);
+    assert.match(
+        listing,
+        /blocked\.blocker_id = post\.author_id and blocked\.blocked_id = \?/,
+    );
+    assert.match(listing, /post\.audience = 'main' and not post\.to_friends/);
+});
+
+test("a friends-only post opens for friends and nobody else", async () => {
+    const author = "99999999-9999-4999-8999-999999999999";
+    for (const friend of [true, false]) {
+        const queries: string[] = [];
+        const query = ((first: TemplateStringsArray) => {
+            const sql = first.join("?").replace(/\s+/g, " ").trim();
+            queries.push(sql);
+            if (sql.startsWith("select id, audience::text")) {
+                return Promise.resolve([
+                    {
+                        id: postId,
+                        audience: "main",
+                        fight_id: null,
+                        author_id: author,
+                        app_wide: false,
+                        to_friends: true,
+                    },
+                ]);
+            }
+            return Promise.resolve([{ ok: friend }]);
+        }) as unknown as Sql;
+        if (friend) {
+            const post = await loadVisiblePost(userId, postId, query);
+            assert.equal(post.to_friends, true);
+        } else {
+            await assert.rejects(
+                loadVisiblePost(userId, postId, query),
+                (error: unknown) =>
+                    error instanceof Error &&
+                    error.message === "You cannot see that post",
+            );
+        }
+        assert.match(queries[1] ?? "", /private\.profile_friendships/);
+        assert.equal(queries.length, 2);
+    }
+});
+
 test("feed and fight post routes authenticate before reading or writing", async () => {
     const context = {
         params: Promise.resolve({ fightID: fightId, postID: postId }),

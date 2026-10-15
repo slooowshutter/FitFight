@@ -1770,6 +1770,7 @@ struct FeedPostDestination: Encodable, Hashable {
 
     static var main: FeedPostDestination { FeedPostDestination(type: "main", fightId: nil) }
     static var broadcast: FeedPostDestination { FeedPostDestination(type: "broadcast", fightId: nil) }
+    static var friends: FeedPostDestination { FeedPostDestination(type: "friends", fightId: nil) }
 
     static func fight(_ id: UUID) -> FeedPostDestination {
         FeedPostDestination(type: "fight", fightId: id)

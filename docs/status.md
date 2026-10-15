@@ -6,6 +6,49 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Post to friends, Everyone or Choose, prepared 15 Oct 2026
+
+Marc picked composer design H (15 Oct 2026): one composer from Feed and from inside
+a fight; only what starts ticked differs.
+
+**App:** New post shows the note card (with your animal), a "Photo or video" button,
+"Who sees this" with **Everyone | Choose**, and a full-width Post. Everyone = My
+friends + every postable fight, with the faces of who will see it. Choose lists My
+friends and each fight with a tick and a people count. "Seen by N people" counts
+friends (loaded from `GET /friends?kind=accepted`, all pages) plus fight rosters
+without pending invites. Feed opens on Everyone; a fight opens on Choose with that
+fight. A post that reached you only as a friend shows a **Friends** badge. The old
+Channels menu and "All fights" are gone. New 1.1.3 release note.
+
+**Backend:** `POST /api/v1/feed/posts` accepts `{ "type": "friends" }`. Migration
+`20261015170000_feed_friends_audience.sql` adds `fight_posts.to_friends` (default
+false) and updates `current_user_can_see_fight_post`, the fight-delete rehome (a
+friends post becomes friends-only instead of being deleted) and `feed_changed` pings
+(author and friends). Friends see these posts on Feed only, never in a fight's list;
+a friend outside the fight gets it as friends-only, with no fight id or name. Feed blocks hide them both
+ways; removing a friend hides them again. A friends-only post is Main-shaped (no
+fight) and never uses the old shared-fight Main rule.
+
+**Contract:** `/api/v1` only, additive. Old requests are unchanged. Responses gain
+`to_friends`; released Swift decoders ignore it and read `audience` as a string.
+Supported builds checked against the live manifests on 15 Oct: staging 201 and 225,
+production 210 and 226, enforcement off. Those builds show friends-only posts with a
+"Public" badge. Not built: pushes for friends posts (notification intents need a
+fight), Feed Activity for friends-only posts (its contract requires a fight), and
+@mentions of friends who share no finished fight.
+
+**Deploy order:** migration, then backend (the backend reads `to_friends`), then the
+app. Do not roll the backend back once friends posts exist: older backend code would
+show friends-only posts to shared-fight opponents through the old Main rule. Not yet
+deployed or run in GitHub CI.
+
+**Checked locally:** web typecheck and 455 unit tests; pgTAP (all files, new
+`feed_friends.sql`) and `npm run test:database` with the new
+`feed-friends.integration.ts` on a disposable local Supabase (the admin dashboard
+"fixed spans" test is flaky there, unrelated); iOS simulator build; Swift API
+contract test; native script checks. `test_fight_localization` and
+`test_fight_live_updates` also fail on `develop` since #384 (`refreshError`).
+
 ## Last round result card, prepared 15 Oct 2026
 
 Repeating rounds restart the moment one ends, so Marc's brother did not notice

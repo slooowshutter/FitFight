@@ -16173,6 +16173,16 @@
                 }
             }
         },
+        "Custom characters now stand on their own like every other character, at the same size, without a circle around them.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les personnages personnalisés s’affichent maintenant comme tous les autres, à la même taille, sans cercle autour."
+                    }
+                }
+            }
+        },
         "fights.hosted-leading": {
             "extractionState": "manual",
             "localizations": {

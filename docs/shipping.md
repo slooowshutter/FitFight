@@ -174,6 +174,8 @@ Names only. Never print values. Never paste the PostHog project token in chat.
 
 Optional Actions **variable** `POSTHOG_HOST`: `https://us.i.posthog.com` (default) or `https://eu.i.posthog.com` if the PostHog project is EU Cloud. PostHog lives in the FitFight org, project `FitFight iOS` (ID `658541`, also set as `POSTHOG_CLI_PROJECT_ID` in the workflows). Replay, error tracking and surveys are on there. Events carry `environment` (`staging` or `prod`); persons carry `username`.
 
+App errors are also kept in our database. Two PostHog HTTP Webhook destinations send each `$exception` to `POST /api/internal/app-errors`: `environment = prod` to `https://fitfight.app`, `environment = staging` to `https://staging.fitfight.app`. Each sends the secret header `Authorization: Bearer <POSTHOG_APP_ERRORS_SECRET>`, and the backend saves the event in `private.app_error_logs`, once per PostHog event ID. Vercel holds `POSTHOG_APP_ERRORS_SECRET` (sensitive) in Production and Preview, added 15 Oct 2026. Never put the value in git or chat.
+
 Do **not** add a Supabase `service_role` or `sb_secret_...` key to GitHub. Deploys use GitHub Integration. See [`backend.md`](backend.md).
 
 ## GitHub variables (TestFlight environment)

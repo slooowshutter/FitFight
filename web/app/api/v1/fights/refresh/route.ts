@@ -13,6 +13,7 @@ import {
     processDueNotifications,
 } from "@/lib/supabase/queries/close-due-fights-supabase-query";
 import { readFightSnapshot } from "@/lib/supabase/queries/fight-snapshot-supabase-query";
+import { ensureFriendFights } from "@/lib/supabase/queries/friend-fights-supabase-query";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { fightSnapshotRequestSchema } from "@/lib/types/fights/fight-snapshot";
 
@@ -23,9 +24,11 @@ export const POST = apiRoute(async (request, { timing }) => {
     const { userId } = await measureRequestStage(timing, "auth", () =>
         verifyUser(request),
     );
-    const { time_zone: timeZone, hosted } = fightSnapshotRequestSchema.parse(
-        await readJson(request),
-    );
+    const {
+        time_zone: timeZone,
+        hosted,
+        friends,
+    } = fightSnapshotRequestSchema.parse(await readJson(request));
     const sql = createDatabaseClient();
     await measureRequestStage(timing, "app_wide_invite", () =>
         ensureAppWideFightInvite(userId, undefined, undefined, sql),
@@ -33,10 +36,13 @@ export const POST = apiRoute(async (request, { timing }) => {
     await measureRequestStage(timing, "maintenance", () =>
         closeDueFightsForUser(userId),
     );
+    await measureRequestStage(timing, "maintenance", () =>
+        ensureFriendFights(sql, userId),
+    );
     after(() => processDueNotifications(new Date(), sql));
     return json(
         await measureRequestStage(timing, "db", () =>
-            readFightSnapshot(userId, timeZone, undefined, hosted),
+            readFightSnapshot(userId, timeZone, undefined, hosted, friends),
         ),
     );
 }, "fights_refresh");

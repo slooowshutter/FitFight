@@ -9,6 +9,8 @@ enum FFTab { case fights, you }
     var pendingJoinable: Fight?
     var hostedRounds: [Fight] = []
     var showingHosted = false
+    var friendRounds: [Fight] = []
+    var showingFriends = false
 
     // TAB_STATE
     // PRODUCTION_METHODS

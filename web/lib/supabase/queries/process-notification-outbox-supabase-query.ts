@@ -31,6 +31,10 @@ function isMuted(kind: NotificationKind, prefs: NotificationPreferences): boolea
             return true;
         case "social_digest":
             return !prefs.feed_post && !prefs.post_reaction;
+        case "friends_sync":
+            return !prefs.final_sync;
+        case "friends_results":
+            return !prefs.fight_finalized;
         default:
             return !prefs[kind];
     }
@@ -117,7 +121,7 @@ export async function processNotificationOutbox(
         )
         select claimed.id, claimed.user_id, claimed.fight_id, claimed.kind, claimed.slot,
             claimed.route, claimed.copy_key, claimed.alert_body, claimed.expires_at, fight.state::text as fight_state,
-            fight.host_id as fight_host_id,
+            fight.host_id as fight_host_id, fight.friends as fight_friends,
             member.final_steps_complete, member.state::text as member_state,
             coalesce(fight.name, '') as fight_name, owner.handle as owner_handle,
             fight.ends_at, fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' as sync_deadline,
@@ -153,7 +157,12 @@ export async function processNotificationOutbox(
             continue;
         }
 
-        if (row.fight_host_id === intent.user_id) {
+        // Friend rounds batch their round-end pushes into friends_sync and friends_results.
+        if (
+            row.fight_host_id === intent.user_id ||
+            (row.fight_friends &&
+                ["fight_ended", "final_sync", "ending_24h", "ending_week", "fight_finalized", "daily_status"].includes(intent.kind))
+        ) {
             await markIntent(database, intent.id, "skipped", "superseded");
             result.skipped += 1;
             continue;
@@ -166,7 +175,7 @@ export async function processNotificationOutbox(
         }
 
         if (
-            intent.kind === "final_sync" &&
+            (intent.kind === "final_sync" || intent.kind === "friends_sync") &&
             (row.final_steps_complete === true || row.fight_state !== "awaiting_final_sync")
         ) {
             await markIntent(

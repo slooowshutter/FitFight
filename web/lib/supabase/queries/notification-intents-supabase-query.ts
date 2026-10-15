@@ -142,6 +142,74 @@ export async function enqueueFightFinalizedNotifications(
     await insertNotificationIntents(sql, rows);
 }
 
+/** One reminder per person and month, however many friend rounds they are behind in. */
+export async function enqueueFriendsSyncNotifications(
+    sql: Sql,
+    fightId: string,
+): Promise<void> {
+    await sql`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key
+        )
+        select member.user_id || ':friends_sync:' || to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM'),
+            member.user_id, fight.id, 'friends_sync', 't0',
+            -- West of the round's zone the last local day is not over at ends_at. 09:00 local on the 1st
+            -- avoids night pushes and stays inside the 24h grace down to UTC-12.
+            greatest(
+                fight.ends_at,
+                ((fight.ends_at at time zone fight.time_zone)::date + time '09:00')
+                    at time zone coalesce(profile.time_zone, fight.time_zone)
+            ),
+            fight.ends_at + fight.final_sync_grace_seconds * interval '1 second',
+            '/fights/' || fight.id || '?friends=1', 'friends_sync'
+        from public.fights fight
+        join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+        join public.profiles profile on profile.id = member.user_id
+        where fight.id = ${fightId} and fight.friends and not member.final_steps_complete
+        on conflict (idempotency_key) do nothing
+    `;
+}
+
+/** Each member's results push waits for the last of their friend rounds that month to finalize. */
+export async function enqueueFriendsResultsNotifications(
+    sql: Sql,
+    fightId: string,
+    now: Date,
+): Promise<void> {
+    // NOTE: a month's rounds finalize in separate transactions. Serializing them lets the last one see the others final.
+    await sql`
+        select pg_advisory_xact_lock(hashtextextended(
+            'fitfight:friends_results:' || to_char(starts_at at time zone time_zone, 'YYYY-MM'), 0
+        ))
+        from public.fights where id = ${fightId}
+    `;
+    await sql`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key
+        )
+        select member.user_id || ':friends_results:' || month.key,
+            member.user_id, fight.id, 'friends_results', 'final',
+            ${now.toISOString()}::timestamptz, ${new Date(now.getTime() + 24 * HOUR_MS).toISOString()}::timestamptz,
+            '/fights/' || fight.id || '?friends=1', 'friends_results'
+        from public.fights fight
+        cross join lateral (
+            select to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM') as key
+        ) month
+        join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+        where fight.id = ${fightId} and fight.friends
+            and not exists (
+                select 1 from public.fights round
+                join public.fight_members mine on mine.fight_id = round.id
+                    and mine.user_id = member.user_id and mine.state = 'accepted'
+                where round.friends and round.state not in ('final', 'cancelled')
+                    and to_char(round.starts_at at time zone round.time_zone, 'YYYY-MM') = month.key
+            )
+        on conflict (idempotency_key) do nothing
+    `;
+}
+
 export async function supersedeGraceNotifications(
     sql: Sql,
     fightId: string,

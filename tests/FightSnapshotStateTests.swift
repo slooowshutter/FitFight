@@ -19,6 +19,7 @@ struct TestSnapshot {
     var series: [SeriesRow] = []
     var stepDays: [Int] = []
     var hosted: Int? = nil
+    var friends: Int? = nil
 }
 typealias FitFightSnapshot = TestSnapshot
 enum Failure: Error { case offline }
@@ -68,6 +69,11 @@ enum Stage { case session }
     var fights: [Fight] = []
     var hosted: Int?
     var hostedRounds: [Fight] = []
+    var friends: Int?
+    var friendRounds: [Fight] = []
+    var showingFriends = false
+    func refreshFriendRounds() async throws {}
+    var refreshError: String?
     static let fightsCachePrefix = "fitfight.live-test."
     static func person(from profile: TestProfile, isYou: Bool) -> Person { Person() }
     static func mapFight(_ row: FightRow, members: [MemberRow], mine: MemberRow?, profiles: [UUID: TestProfile],

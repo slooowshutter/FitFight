@@ -79,7 +79,7 @@ test("notification controls preserve old clients and batch activity without losi
     const digests = await database`select * from private.notification_intents where user_id = ${owner} and kind = 'social_digest'`;
     assert.equal(digests.length, 1, "Concurrent jobs must create only one evening summary");
     const delivery = notificationDeliveryRowSchema.parse({
-        ...digests[0], fight_state: "live", fight_host_id: null, fight_name: "Weekend Warriors", owner_handle: "owner",
+        ...digests[0], fight_state: "live", fight_host_id: null, fight_friends: false, fight_name: "Weekend Warriors", owner_handle: "owner",
         ends_at: "2026-09-21T17:00:00Z", sync_deadline: "2026-09-22T17:00:00Z", time_zone: "Europe/Paris",
         member_state: "accepted", final_steps_complete: false, preferences: await readNotificationPreferences(owner, database),
     });

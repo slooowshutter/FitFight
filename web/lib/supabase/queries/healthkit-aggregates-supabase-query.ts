@@ -94,6 +94,7 @@ export async function syncHealthKitAggregates(
                 and member.state = 'accepted'
                 and fight.state in ('live', 'awaiting_final_sync')
                 and fight.host_id is distinct from ${userId}
+                and not fight.friends
             order by fight.id
             for update of fight, member
         `,

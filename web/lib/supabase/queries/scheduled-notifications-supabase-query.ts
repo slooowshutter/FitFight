@@ -25,7 +25,7 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
             ('ending_24h', 'before_24h', interval '24 hours'),
             ('ending_week', 'before_week', interval '7 days')
         ) reminder(kind, slot, notice)
-        where fight.state = 'live'
+        where fight.state = 'live' and not fight.friends
             and coalesce(prefs.enabled, true)
             and case when reminder.kind = 'ending_24h' then coalesce(prefs.ending_24h, true)
                 else coalesce(prefs.ending_week, false) end
@@ -52,7 +52,7 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
             and member.user_id is distinct from fight.host_id
         left join private.notification_preferences prefs on prefs.user_id = member.user_id
-        where fight.state = 'awaiting_final_sync' and not member.final_steps_complete
+        where fight.state = 'awaiting_final_sync' and not fight.friends and not member.final_steps_complete
             and coalesce(prefs.enabled, true) and coalesce(prefs.final_sync, true)
             and fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' > ${at}::timestamptz
             and not exists (

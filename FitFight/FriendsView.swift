@@ -4,6 +4,7 @@ struct FriendsView: View {
     /// Embedded on You: no sheet header and no inner scroll, the page scrolls instead.
     var embedded = false
     @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var model: AppModel
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -17,7 +18,6 @@ struct FriendsView: View {
     @State private var error: String?
     @State private var generation = 0
     @State private var lookupGeneration = 0
-    @FocusState private var handleFocused: Bool
 
     var body: some View {
         Group {
@@ -64,24 +64,7 @@ struct FriendsView: View {
                     }
                 }
             }
-            // Search sits in one filled field; the Find action appears once there is something to look up.
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass").foregroundStyle(theme.textSecondary)
-                TextField(String(appLocalized: "Add a friend by username"), text: $handle)
-                    .focused($handleFocused)
-                    .textInputAutocapitalization(.never).autocorrectionDisabled().ffType(.body)
-                    .submitLabel(.search)
-                    .onSubmit { Task { await lookup() } }
-                if !handle.isEmpty {
-                    Button(String(appLocalized: "Find")) { Task { await lookup() } }
-                        .ffType(.label).foregroundStyle(theme.mossText)
-                        .frame(minHeight: 44)
-                        .buttonStyle(FFHapticPlainStyle())
-                }
-            }
-            .padding(.horizontal, 14)
-            .frame(minHeight: 50)
-            .background(theme.control, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            FriendLookupField(handle: $handle) { Task { await lookup() } }
             if let found { personRow(found, source: "lookup") }
             if let error {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
@@ -100,7 +83,14 @@ struct FriendsView: View {
     }
 
     private func personRow(_ person: SharedProfileIdentity, source: String) -> some View {
-        ProfileIdentityLink(userID: person.userId, source: source, onClosed: { found = nil; Task { await load() } }) {
+        // The profile can accept or decline, which changes the Fights card's requests and friend rounds.
+        ProfileIdentityLink(userID: person.userId, source: source, onClosed: {
+            found = nil
+            Task {
+                await load()
+                try? await model.refreshFriendRounds()
+            }
+        }) {
             FFCard {
                 HStack(spacing: 12) {
                     CompanionAvatar(personID: person.userId.uuidString, companionID: person.companionId, isYou: false, monogram: person.initials, photoURL: person.avatarUrl, size: 44)
@@ -166,5 +156,31 @@ struct FriendsView: View {
             guard requestGeneration == lookupGeneration, accountID == session.authSession?.user.id else { return }
             self.error = error.localizedDescription
         }
+    }
+}
+
+/// Exact-username search in one filled field. Find appears once there is something to look up.
+struct FriendLookupField: View {
+    @Binding var handle: String
+    let onFind: () -> Void
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").foregroundStyle(theme.textSecondary)
+            TextField(String(appLocalized: "Add a friend by username"), text: $handle)
+                .textInputAutocapitalization(.never).autocorrectionDisabled().ffType(.body)
+                .submitLabel(.search)
+                .onSubmit(onFind)
+            if !handle.isEmpty {
+                Button(String(appLocalized: "Find"), action: onFind)
+                    .ffType(.label).foregroundStyle(theme.mossText)
+                    .frame(minHeight: 44)
+                    .buttonStyle(FFHapticPlainStyle())
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 50)
+        .background(theme.control, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
     }
 }

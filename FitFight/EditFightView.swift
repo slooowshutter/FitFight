@@ -130,6 +130,23 @@ struct EditFightView: View {
 
     @ViewBuilder
     private var currentStep: some View {
+        // A friend round runs for the calendar month: only its loser action can change.
+        if fight.friends == true {
+            FightComposerLimitedField(
+                label: String(appLocalized: "Loser action"),
+                placeholder: String(appLocalized: "Cook dinner"),
+                text: $actionText,
+                focus: $actionFocused,
+                submitLabel: .done,
+                onSubmit: { actionFocused = false }
+            )
+        } else {
+            composerStep
+        }
+    }
+
+    @ViewBuilder
+    private var composerStep: some View {
         switch step {
         case .metric:
             FightComposerMetricPage()
@@ -199,7 +216,7 @@ struct EditFightView: View {
                 save()
             }
 
-            if isOwner {
+            if isOwner, fight.friends != true {
                 FFButton(
                     title: model.isDeletingFight ? String(appLocalized: "Deleting…") : String(appLocalized: "Delete"),
                     kind: .ember,

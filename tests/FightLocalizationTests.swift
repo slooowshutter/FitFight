@@ -61,6 +61,11 @@ enum Stage { case session }
     var fights: [Fight] = []
     var hosted: FitFightSnapshot.Hosted?
     var hostedRounds: [Fight] = []
+    var friends: FitFightSnapshot.Friends?
+    var friendRounds: [Fight] = []
+    var showingFriends = false
+    func refreshFriendRounds() async throws {}
+    var refreshError: String?
     var pendingJoinable: Fight?
     static var fightsCachePrefix: String { "fitfight.localization-test.\(AppLocalization.languageCode)." }
 

@@ -50,8 +50,9 @@ their URLs and styles are unchanged. The 30 Specials avatars were exported from
 staging.fitfight.app, so on `next dev` the web app signs in by itself as
 `DEV_AUTOLOGIN_EMAIL` from `web/.env.local` (Blend's switch): `POST /api/v1/dev/sign-in`
 mints a one-time magic-link token for that existing account and the browser trades it
-for a session. It answers 404 unless NODE_ENV is development, the variable is set and
-the Host is localhost, and it never creates an account. `npm run dev` now listens on
+for a session. It answers 404 unless NODE_ENV is development, the variable is set, the
+Host is localhost and the browser marks the call same-origin (so another site open in
+the same browser cannot use it), and it never creates an account. `npm run dev` now listens on
 127.0.0.1 only, so nobody else on the network can reach it or forge that Host. Remove
 the variable to stay signed out.
 

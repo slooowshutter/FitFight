@@ -141,12 +141,13 @@ reconciliation and the two pushes. Neither can be refunded. A free claim saves t
 description and portrait rows in one transaction; a replayed key returns the same
 character. Each free character costs the Blend runs of a paid one.
 
-The create screen and onboarding show four ideas: a real description and the
-portrait the Animal Avatars workflow (published `c405d12d`, version `56ebf8a4`, locked
-kit) drew from it. They are unused runs from the Specials work on 11 Oct 2026,
-recorded in `docs/design/source/companion/specials-v2.json` under `v7`: pigeon
-(`cb061446`), opossum (`c316650d`), seagull (`512f1929`) and mole (`ce30fb7b`). The
-app bundles them as `CharacterIdea-*` on the 352 by 400 companion canvas.
+The create screen and onboarding show five ideas: one short, funny line and the
+portrait the Animal Avatars workflow (published `c405d12d`, version `2b22887c`) drew
+from exactly those words on 15 Oct 2026. Marc asked for short lines that are easy to
+read, starting from his 70s hippie orangutan: orangutan (`00bc5ac3`), pirate parrot
+(`08d77108`), flamingo (`8f3c4bf8`), cowboy pig (`126dfd1c`) and chihuahua (`feb47d58`).
+The workflow always draws animals standing on both feet, so lines should not ask for a pose.
+The app bundles them as `CharacterIdea-*` on the 352 by 400 companion canvas.
 
 ## Credits and balance events
 

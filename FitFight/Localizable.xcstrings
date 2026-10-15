@@ -15888,74 +15888,6 @@
                 }
             }
         },
-        "character.idea.pigeon": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A plump grey city pigeon with an iridescent green-purple neck and orange eyes, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small fanny pack worn across the chest. Strutting, nosy, weirdly confident."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un pigeon des villes gris et dodu, au cou vert-violet irisé et aux yeux orange, les ailes servent de bras. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : une petite banane portée en travers de la poitrine. Il se pavane, curieux, étrangement sûr de lui."
-                    }
-                }
-            }
-        },
-        "character.idea.opossum": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A small scruffy grey opossum with a white face, pink nose and a bare pink tail. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny propeller beanie hat. Wide-eyed, slightly panicked, trying his best."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un petit opossum gris ébouriffé, au visage blanc, au nez rose et à la queue rose sans poils. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : un minuscule bonnet à hélice. Les yeux écarquillés, un peu paniqué, il fait de son mieux."
-                    }
-                }
-            }
-        },
-        "character.idea.seagull": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A scrappy white and grey seagull with a yellow beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: small dark sunglasses. Shifty, opportunistic, totally guilty."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une mouette blanche et grise un peu voyou, au bec jaune, les ailes servent de bras. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : de petites lunettes de soleil noires. Louche, opportuniste, totalement coupable."
-                    }
-                }
-            }
-        },
-        "character.idea.mole": {
-            "extractionState": "manual",
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A small velvety dark grey mole with a pink star-like nose and big pink digging paws. Nothing held in the hands or wings, no headband. One worn signature detail only: tiny thick round glasses. Squinting, determined, a bit lost."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une petite taupe gris foncé au poil de velours, au nez rose en étoile et aux grandes pattes roses de fouisseuse. Rien dans les mains ni dans les ailes, pas de bandeau. Un seul détail porté : de minuscules lunettes rondes et épaisses. Elle plisse les yeux, déterminée, un peu perdue."
-                    }
-                }
-            }
-        },
         "You have no free characters left.": {
             "localizations": {
                 "fr": {
@@ -16348,6 +16280,101 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Nouvelle publication propose Tout le monde ou Choix. Tout le monde l’envoie à tes amis et à tous tes défis. Choix te laisse cocher Mes amis et des défis, pour laisser ton défi du travail de côté. Tes amis voient ces publications dans le fil, marquées Amis."
+                    }
+                }
+            }
+        },
+        "character.idea.orangutan": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A 70s hippie orangutan with a tie-dye bandana, a peace sign necklace and round orange glasses."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un orang-outan hippie des années 70 avec un bandana tie-dye, un collier peace and love et des lunettes rondes orange."
+                    }
+                }
+            }
+        },
+        "character.idea.parrot": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A pirate parrot with an eye patch and a tricorn hat."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un perroquet pirate avec un bandeau sur l'œil et un tricorne."
+                    }
+                }
+            }
+        },
+        "character.idea.flamingo": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A diva flamingo with heart sunglasses and a pink feather boa."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un flamant rose diva avec des lunettes cœur et un boa de plumes rose."
+                    }
+                }
+            }
+        },
+        "character.idea.pig": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A cowboy pig with a big hat and a sheriff star."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un cochon cow-boy avec un grand chapeau et une étoile de shérif."
+                    }
+                }
+            }
+        },
+        "character.idea.chihuahua": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A tiny furious chihuahua wearing a huge gold chain."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un minuscule chihuahua furieux qui porte une énorme chaîne en or."
+                    }
+                }
+            }
+        },
+        "New ideas for your own companion, each in one short line: a 70s hippie orangutan, a pirate parrot, a diva flamingo, a cowboy pig and a furious chihuahua.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "De nouvelles idées pour créer votre compagnon, chacune en une courte phrase : un orang-outan hippie des années 70, un perroquet pirate, un flamant rose diva, un cochon cow-boy et un chihuahua furieux."
                     }
                 }
             }

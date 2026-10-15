@@ -44,12 +44,21 @@ read.call("apps/6804230516/reviewSubmissions?filter[platform]=IOS&limit=5").each
 end
 builds = read.call("builds?filter[app]=6804230516&filter[preReleaseVersion.version]=#{release_version}&sort=-uploadedDate&limit=3")
 puts JSON.generate({ builds: builds.map { |build| build["attributes"].slice("version", "processingState", "expired", "usesNonExemptEncryption") } })
+if !version && mode == "draft"
+    version = read.call("appStoreVersions", {
+        data: {
+            type: "appStoreVersions",
+            attributes: { platform: "IOS", versionString: release_version, releaseType: "AFTER_APPROVAL", copyright: "2026 Marc Lamy" },
+            relationships: { app: { data: { type: "apps", id: "6804230516" } } }
+        }
+    }, Net::HTTP::Post)
+end
 abort "Missing #{release_version} draft" unless version
 selected_build = read.call("appStoreVersions/#{version.fetch('id')}/build")
 puts JSON.generate({ selected_build: selected_build && selected_build.fetch("attributes").slice("version", "processingState", "usesNonExemptEncryption") })
-if ["configure", "prepare", "submit"].include?(mode)
+if ["configure", "prepare", "draft", "submit"].include?(mode)
     abort "The draft is no longer editable" unless version.dig("attributes", "appStoreState") == "PREPARE_FOR_SUBMISSION"
-    if mode == "submit"
+    if ["draft", "submit"].include?(mode)
         abort "Expected an explicit production build number" unless production_build&.match?(/\A[1-9]\d*\z/)
         registry = JSON.parse(Net::HTTP.get(URI("https://raw.githubusercontent.com/slooowshutter/FitFight/testflight-latest/builds.json")))
         abort "This build is not registered as a production upload" unless registry.any? { |entry|
@@ -65,6 +74,48 @@ if ["configure", "prepare", "submit"].include?(mode)
     abort "Automatic public release is not enabled" unless configured.dig("attributes", "releaseType") == "AFTER_APPROVAL"
     puts JSON.generate({ configured_version: configured.fetch("attributes").slice("versionString", "appStoreState", "releaseType") })
     exit if mode == "configure"
+    if ["draft", "submit"].include?(mode)
+        build = builds.find { |item| item.dig("attributes", "version") == production_build }
+        abort "Build #{production_build} is not a valid #{release_version} upload" unless build&.dig("attributes", "processingState") == "VALID" && build.dig("attributes", "usesNonExemptEncryption") == false
+        read.call("appStoreVersions/#{version.fetch('id')}/relationships/build", { data: { type: "builds", id: build.fetch("id") } })
+    end
+    if mode == "draft"
+        whats_new = {
+            "en-US" => "Specials: collect limited animals, each with five step poses. Buy any Special once and keep it.\nCreate your own character: describe an animal, pick one of three portraits, and FitFight draws its five fitness poses.\nInvite a friend: when they connect Apple Health, you each get a free character.\nPast shows every finished round of a repeating fight, and trophies follow each round's winner.\nFull-body companions, faster Steps sync, and many fixes.",
+            "fr-FR" => "Spéciaux : collectionnez des animaux en édition limitée, chacun avec cinq poses selon vos pas. Achetez un Spécial une fois et gardez-le.\nCréez votre personnage : décrivez un animal, choisissez l'un des trois portraits, et FitFight dessine ses cinq poses de sport.\nInvitez un ami : quand il connecte Santé d'Apple, vous recevez chacun un personnage gratuit.\nPassés affiche chaque manche terminée d'un défi récurrent, et les trophées suivent le gagnant de chaque manche.\nCompagnons en pied, synchronisation des pas plus rapide et de nombreuses corrections."
+        }
+        read.call("appStoreVersions/#{version.fetch('id')}/appStoreVersionLocalizations").each do |locale|
+            read.call("appStoreVersionLocalizations/#{locale.fetch('id')}", {
+                data: { type: "appStoreVersionLocalizations", id: locale.fetch("id"), attributes: { whatsNew: whats_new.fetch(locale.dig("attributes", "locale")) } }
+            })
+        end
+        notes = File.read(File.expand_path("../docs/app-store/review-notes.md", __dir__))
+            .split("## Paste into App Review Notes").last.split("\n## ").first
+            .lines.grep(/\A>/).map { |line| line.sub(/\A> ?/, "") }.join.strip
+        abort "App Review notes exceed 4,000 characters" if notes.length > 4000
+        detail = read.call("appStoreVersions/#{version.fetch('id')}/appStoreReviewDetail")
+        abort "Missing App Review contact details" unless detail
+        read.call("appStoreReviewDetails/#{detail.fetch('id')}", { data: { type: "appStoreReviewDetails", id: detail.fetch("id"), attributes: { notes: notes } } })
+    end
+    if mode == "submit"
+        abort "Expected both In-App Purchases ready for review" unless iap_versions.length == 2
+        submission = read.call("apps/6804230516/reviewSubmissions?filter[platform]=IOS&filter[state]=READY_FOR_REVIEW").first ||
+            read.call("reviewSubmissions", { data: { type: "reviewSubmissions", attributes: { platform: "IOS" }, relationships: { app: { data: { type: "apps", id: "6804230516" } } } } }, Net::HTTP::Post)
+        abort "The open review submission already has items" unless read.call("reviewSubmissions/#{submission.fetch('id')}/items").empty?
+        [["appStoreVersion", "appStoreVersions", version.fetch("id")], *iap_versions.map { |item| ["inAppPurchaseVersion", "inAppPurchaseVersions", item.fetch("id")] }].each do |name, type, id|
+            read.call("reviewSubmissionItems", {
+                data: { type: "reviewSubmissionItems", relationships: { reviewSubmission: { data: { type: "reviewSubmissions", id: submission.fetch("id") } }, name => { data: { type: type, id: id } } } }
+            }, Net::HTTP::Post)
+        end
+        read.call("reviewSubmissions/#{submission.fetch('id')}", { data: { type: "reviewSubmissions", id: submission.fetch("id"), attributes: { submitted: true } } })
+        submitted = read.call("appStoreVersions/#{version.fetch('id')}")
+        puts JSON.generate({ submitted_version: submitted.fetch("attributes").slice("versionString", "appStoreState", "appVersionState", "releaseType") })
+        abort "Apple has not confirmed review submission" unless %w[WAITING_FOR_REVIEW IN_REVIEW].include?(submitted.dig("attributes", "appStoreState"))
+        abort "Automatic public release is not enabled" unless submitted.dig("attributes", "releaseType") == "AFTER_APPROVAL"
+        exit
+    end
+end
+if mode == "prepare"
     require "fastlane"
     require "deliver"
     require "spaceship"
@@ -79,21 +130,13 @@ if ["configure", "prepare", "submit"].include?(mode)
     values = {
         app_identifier: "com.fitfight.mvp", app_version: release_version,
         skip_binary_upload: true, skip_app_version_update: true,
-        skip_metadata: true, skip_screenshots: mode == "submit",
+        skip_metadata: true, skip_screenshots: false,
         screenshots_path: File.expand_path("../docs/app-store/2026-09-15", __dir__),
-        overwrite_screenshots: mode == "prepare", submit_for_review: mode == "submit",
+        overwrite_screenshots: true, submit_for_review: false,
         automatic_release: true, run_precheck_before_submit: false, force: true
     }
-    values[:build_number] = production_build if mode == "submit"
     options = FastlaneCore::Configuration.create(Deliver::Options.available_options, values)
     Deliver::Runner.new(options).run
-    if mode == "submit"
-        submitted = read.call("appStoreVersions/#{version.fetch('id')}")
-        puts JSON.generate({ submitted_version: submitted.fetch("attributes").slice("versionString", "appStoreState", "appVersionState", "releaseType") })
-        abort "Apple has not confirmed review submission" unless %w[WAITING_FOR_REVIEW IN_REVIEW].include?(submitted.dig("attributes", "appStoreState"))
-        abort "Automatic public release is not enabled" unless submitted.dig("attributes", "releaseType") == "AFTER_APPROVAL"
-        exit
-    end
 
     detail = read.call("appStoreVersions/#{version.fetch('id')}/appStoreReviewDetail")
     notes = detail.dig("attributes", "notes").gsub(/When configured, OpenRouter.*?as well\./m,

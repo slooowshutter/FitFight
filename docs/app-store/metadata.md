@@ -62,6 +62,14 @@ Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French t
 
 > A refreshed App Store description explaining how to start a private step challenge and follow the standings.
 
+## What is new in 1.1.3
+
+> Specials: collect limited animals, each with five step poses. Buy any Special once and keep it.
+> Create your own character: describe an animal, pick one of three portraits, and FitFight draws its five fitness poses.
+> Invite a friend: when they connect Apple Health, you each get a free character.
+> Past shows every finished round of a repeating fight, and trophies follow each round's winner.
+> Full-body companions, faster Steps sync, and many fixes.
+
 ## Screenshot set
 
 Use screenshots generated from the final release commit, showing `prod` in the version line and fictional usernames and Steps. The refresh package contains these six screens as 1320 × 2868 JPEGs for the highest-resolution 6.9-inch iPhone set; App Store Connect scales that set down for smaller iPhone displays:
@@ -124,5 +132,13 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 ### Nouveautés de la version 1.1.2
 
 > Une description App Store actualisée pour découvrir comment lancer un défi de pas privé et suivre le classement.
+
+### Nouveautés de la version 1.1.3
+
+> Spéciaux : collectionnez des animaux en édition limitée, chacun avec cinq poses selon vos pas. Achetez un Spécial une fois et gardez-le.
+> Créez votre personnage : décrivez un animal, choisissez l'un des trois portraits, et FitFight dessine ses cinq poses de sport.
+> Invitez un ami : quand il connecte Santé d'Apple, vous recevez chacun un personnage gratuit.
+> Passés affiche chaque manche terminée d'un défi récurrent, et les trophées suivent le gagnant de chaque manche.
+> Compagnons en pied, synchronisation des pas plus rapide et de nombreuses corrections.
 
 Use the same six screenshot subjects as English, rendered with the app language set to French and fictional usernames and Health data.

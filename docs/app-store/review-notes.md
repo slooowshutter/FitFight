@@ -1,6 +1,6 @@
 # App Review Notes
 
-Technical draft updated 14 Oct 2026 for the 1.1.3 in-app purchases. Test these instructions on the selected production candidate before pasting. This uses the normal two-person product flow, with no reviewer-only mode, bot, hidden username, or shared Apple credentials.
+Updated 15 Oct 2026 for 1.1.3 build 226: only Steps leave the phone, AI daily status is off in production, and the text fits Apple's 4,000-character limit. `scripts/app-store-release-audit.rb draft` saves this block in App Store Connect. Test these instructions on the selected production candidate before pasting. This uses the normal two-person product flow, with no reviewer-only mode, bot, hidden username, or shared Apple credentials.
 
 ## Paste into App Review Notes
 
@@ -30,15 +30,13 @@ Technical draft updated 14 Oct 2026 for the 1.1.3 in-app purchases. Test these i
 >
 > FitFight's server records each purchase, so Restore purchases re-syncs it.
 >
-> Optional notifications include Fight reminders, posts, comments, replies, reactions, and daily status. Manage them under Profile → Settings → Notifications. The app remains usable when notification permission is declined.
+> Optional notifications include Fight reminders, posts, comments, replies, and reactions. Manage them under Profile → Settings → Notifications. The app remains usable when notification permission is declined.
 >
 > APPLE HEALTH AND SHARING
 >
-> FitFight requests read access to Step Count and other movement data, including energy, distance, exercise, stand, flights, and workouts. Steps alone score current Fights. The app sends Apple's merged total and chart checkpoints for each exact Fight window, merged daily totals across accessible history, supported individual quantity and category samples with limited source metadata, workout summaries (type, time, active minutes, distance, energy, and effort when available), and explicit sample and workout deletion IDs. Local anchors, GPS routes, and heart rate stay on the phone.
+> FitFight requests read access to Step Count and other movement data. Steps alone score Fights, and only Steps leave the phone: Apple's merged Steps total and chart checkpoints for each exact Fight window, and daily Steps totals. Other activity, GPS routes, and heart rate stay on the phone.
 >
-> Fight participants see each other's username, profile photo, Fight and daily Steps totals, rank, duration, agreed action, and posts shared with their Fight. Other activity totals and workout summaries remain private to the account. Public Fight listings show join details to signed-in users; posts stay within the selected Fight memberships.
->
-> When configured, OpenRouter generates daily-status wording from standing category, participant count, days remaining, sync freshness, and language. It receives no username, account ID, Fight title, exact Steps total, or raw Health samples. The Privacy Policy describes crash reporting and feedback processors as well.
+> Fight participants see each other's username, companion, Fight and daily Steps totals, rank, duration, agreed action, and posts shared with their Fight. Public Fight listings show join details to signed-in users; posts stay within the selected Fight memberships.
 >
 > ACCOUNT DELETION
 >

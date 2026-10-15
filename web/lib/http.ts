@@ -254,9 +254,20 @@ export function apiRoute<
 }
 
 export function requireCronSecret(request: Request): void {
-    const secret = process.env.CRON_SECRET ?? process.env.FITFIGHT_CRON_SECRET;
+    requireBearerSecret(
+        request,
+        process.env.CRON_SECRET ?? process.env.FITFIGHT_CRON_SECRET,
+        "Cron secret",
+    );
+}
+
+export function requireBearerSecret(
+    request: Request,
+    secret: string | undefined,
+    name: string,
+): void {
     if (!secret) {
-        throw new ApiError(503, ERROR_CODES.config, "Cron secret is not set");
+        throw new ApiError(503, ERROR_CODES.config, `${name} is not set`);
     }
     const bearer = /^Bearer\s+(\S+)$/i.exec(
         request.headers.get("authorization")?.trim() ?? "",

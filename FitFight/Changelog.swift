@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 15,
+            notes: "New ideas for your own companion, each in one short line: a 70s hippie orangutan, a pirate parrot, a diva flamingo, a cowboy pig and a furious chihuahua."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 15,
             notes: "Custom characters now stand on their own like every other character, at the same size, without a circle around them."
         ),
         ReleaseNote(

@@ -467,7 +467,7 @@ struct FreeCharacterBadge: View {
 }
 
 /// Real descriptions next to the portrait the same drawing made from them, so people see what their words give.
-/// The four portraits are unused runs of the Specials work (11 Oct 2026) on the pinned Animal Avatars workflow.
+/// The five portraits are runs of the published Animal Avatars workflow from these exact words (15 Oct 2026).
 struct CharacterIdeas: View {
     @Binding var description: String
     var disabled = false
@@ -475,10 +475,11 @@ struct CharacterIdeas: View {
 
     private var ideas: [(image: String, text: String)] {
         [
-            ("CharacterIdea-pigeon", String(appLocalized: "character.idea.pigeon", defaultValue: "A plump grey city pigeon with an iridescent green-purple neck and orange eyes, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: a small fanny pack worn across the chest. Strutting, nosy, weirdly confident.")),
-            ("CharacterIdea-opossum", String(appLocalized: "character.idea.opossum", defaultValue: "A small scruffy grey opossum with a white face, pink nose and a bare pink tail. Nothing held in the hands or wings, no headband. One worn signature detail only: a tiny propeller beanie hat. Wide-eyed, slightly panicked, trying his best.")),
-            ("CharacterIdea-seagull", String(appLocalized: "character.idea.seagull", defaultValue: "A scrappy white and grey seagull with a yellow beak, wings used as arms. Nothing held in the hands or wings, no headband. One worn signature detail only: small dark sunglasses. Shifty, opportunistic, totally guilty.")),
-            ("CharacterIdea-mole", String(appLocalized: "character.idea.mole", defaultValue: "A small velvety dark grey mole with a pink star-like nose and big pink digging paws. Nothing held in the hands or wings, no headband. One worn signature detail only: tiny thick round glasses. Squinting, determined, a bit lost.")),
+            ("CharacterIdea-orangutan", String(appLocalized: "character.idea.orangutan", defaultValue: "A 70s hippie orangutan with a tie-dye bandana, a peace sign necklace and round orange glasses.")),
+            ("CharacterIdea-parrot", String(appLocalized: "character.idea.parrot", defaultValue: "A pirate parrot with an eye patch and a tricorn hat.")),
+            ("CharacterIdea-flamingo", String(appLocalized: "character.idea.flamingo", defaultValue: "A diva flamingo with heart sunglasses and a pink feather boa.")),
+            ("CharacterIdea-pig", String(appLocalized: "character.idea.pig", defaultValue: "A cowboy pig with a big hat and a sheriff star.")),
+            ("CharacterIdea-chihuahua", String(appLocalized: "character.idea.chihuahua", defaultValue: "A tiny furious chihuahua wearing a huge gold chain.")),
         ]
     }
 
@@ -502,11 +503,11 @@ struct CharacterIdeas: View {
                                 Text(idea.text)
                                     .ffType(.caption)
                                     .foregroundStyle(theme.textSecondary)
-                                    .lineLimit(4)
                                     .multilineTextAlignment(.leading)
                             }
                             .padding(8)
                             .frame(width: 150, alignment: .top)
+                            .frame(maxHeight: .infinity, alignment: .top)
                             .background(picked ? theme.mossWash : theme.card,
                                         in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
                             .ffBorder(picked ? theme.mossEdge : theme.hairline, radius: theme.radius.card)
@@ -516,6 +517,8 @@ struct CharacterIdeas: View {
                         .accessibilityAddTraits(picked ? .isSelected : [])
                     }
                 }
+                // Every card takes the tallest card's height.
+                .fixedSize(horizontal: false, vertical: true)
             }
             Text(String(appLocalized: "Real portraits drawn from these words. Tap one to start from it."))
                 .ffType(.caption).foregroundStyle(theme.textSecondary)

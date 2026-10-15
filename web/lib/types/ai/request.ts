@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { aiWorkflowSchema } from "@/lib/types/ai/workflow";
+import { aiCompanionLinesResultSchema, aiWorkflowSchema } from "@/lib/types/ai/workflow";
 import { aiCreditStateValues } from "@/lib/types/ai/credits";
 import { aiErrorCodeSchema } from "@/lib/types/ai/error";
 import {
@@ -73,9 +73,11 @@ export const aiPollRecordSchema = aiRequestRecordSchema.extend({
 export const aiRequestUpdateSchema = z.object({
     status: z.enum(aiRequestStateValues).exclude(["starting"]),
     runHandle: blendRunHandleSchema.nullable(),
-    result: z.record(z.string()).nullable(),
+    result: z.union([z.record(z.string()), aiCompanionLinesResultSchema]).nullable(),
     errorCode: aiErrorCodeSchema.nullable(),
     providerCompletedAt: z.string().datetime({ offset: true }).nullish(),
+    /** Blend's raw run envelope, kept on the row when a run fails, is cancelled, or returns unreadable output. */
+    providerResponse: z.unknown(),
 });
 
 export const aiProviderBudgetSchema = z.object({

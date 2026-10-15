@@ -746,10 +746,10 @@ struct CompanionIntroduction: View {
                     .foregroundStyle(theme.mossText)
             } else {
                 if companions.isCustom {
-                    Text("Custom")
+                    Text(session.profile?.companionName ?? String(appLocalized: "Custom"))
                         .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
                         .foregroundStyle(theme.text)
-                    Text("Your own animal.")
+                    Text(session.profile?.companionLine ?? String(appLocalized: "Your own animal."))
                         .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
                         .foregroundStyle(theme.textSecondary)
                 } else {
@@ -1401,7 +1401,8 @@ struct CompanionPicker: View {
                             }
                         } label: {
                             collectionTile(
-                                name: character.description ?? entry?.description ?? String(appLocalized: "Your character"),
+                                name: character.name ?? character.suggestions?.first?.name
+                                    ?? character.description ?? entry?.description ?? String(appLocalized: "Your character"),
                                 caption: character.phase == .complete ? (equipped ? String(appLocalized: "Equipped") : nil)
                                     : character.phase == .choosing ? String(appLocalized: "Pick one")
                                     : [.portraits, .poses].contains(character.phase) ? String(appLocalized: "Being drawn")

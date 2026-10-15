@@ -4,6 +4,7 @@ import { sendUserAlert } from "@/lib/notifications/send-user-alert";
 import {
     chooseCustomCharacterPortrait,
     claimCustomCharacterPush,
+    prepareCompanionLines,
     prepareCustomCharacterStage,
     readCustomCharacterStore,
 } from "@/lib/supabase/queries/custom-characters-supabase-query";
@@ -64,9 +65,7 @@ export async function advancePaidCharacter(
         if (result.workflow === "avatar" && result.status === "completed") continue;
         break;
     }
-    const store = await readCustomCharacterStore(userId);
-    const character = store.characters.find((item) => item.id === purchaseId);
-    if (!character) throw new ApiError(404, "not_found", "Character purchase not found");
+    let character = await readPaidCharacter(userId, purchaseId);
 
     const milestone = character.phase === "choosing"
         ? "portraits" as const
@@ -85,6 +84,66 @@ export async function advancePaidCharacter(
             imageUrl: character.portrait_url ?? undefined,
         });
     }
+    // Suggestions come last, so they never delay or stop the portrait, the poses or the push.
+    if (await advanceCompanionLinesBestEffort(userId, purchaseId))
+        character = await readPaidCharacter(userId, purchaseId);
+    return character;
+}
+
+/**
+ * Reads a running suggestion batch, so the app sees it finish while it polls, or starts the first batch once a
+ * portrait is chosen. With an attempt ID it starts one "Four more" batch instead; the same ID returns the same batch.
+ * Returns whether the character's suggestions changed: a batch started or settled.
+ */
+export async function advanceCompanionLines(
+    userId: string,
+    purchaseId: string,
+    attemptId: string | null,
+    deps = { prepare: prepareCompanionLines, start: startAiRun, read: readAiRun },
+) {
+    const step = await deps.prepare(userId, purchaseId, attemptId);
+    if (step.kind === "pending")
+        return !["pending", "running"].includes((await deps.read(userId, step.requestId)).status);
+    if (step.kind === "none") return false;
+    await deps.start(userId, {
+        workflow: "companion_lines",
+        parameters: {
+            avatar_request_id: step.avatarRequestId,
+            description: step.description,
+            language: step.locale === "fr" ? "fr" : "en",
+            avoid: step.avoid,
+        },
+    }, step.key, undefined, purchaseId);
+    return true;
+}
+
+/**
+ * The suggestion step of the character pass and the reconciler. It never breaks the poses or a reconcile batch: a
+ * rejected start or read waits for the next pass. Deferred start codes are expected; any other rejection is logged
+ * with its code and purchase only, never the text.
+ */
+export async function advanceCompanionLinesBestEffort(
+    userId: string,
+    purchaseId: string,
+    advance: typeof advanceCompanionLines = advanceCompanionLines,
+) {
+    try {
+        return await advance(userId, purchaseId, null);
+    } catch (error) {
+        if (!(error instanceof ApiError)) throw error;
+        if (!deferredCharacterStartCodes.includes(error.code))
+            console.error(
+                "fitfight_companion_lines_failed",
+                JSON.stringify({ error_code: error.code, purchase_id: purchaseId }),
+            );
+        return false;
+    }
+}
+
+export async function readPaidCharacter(userId: string, purchaseId: string) {
+    const store = await readCustomCharacterStore(userId);
+    const character = store.characters.find((item) => item.id === purchaseId);
+    if (!character) throw new ApiError(404, "not_found", "Character purchase not found");
     return character;
 }
 
@@ -95,9 +154,6 @@ export async function choosePaidCharacterPortrait(userId: string, purchaseId: st
         return await advancePaidCharacter(userId, purchaseId, {});
     } catch (error) {
         if (!(error instanceof ApiError) || !deferredCharacterStartCodes.includes(error.code)) throw error;
-        const store = await readCustomCharacterStore(userId);
-        const character = store.characters.find((item) => item.id === purchaseId);
-        if (!character) throw new ApiError(404, "not_found", "Character purchase not found");
-        return character;
+        return readPaidCharacter(userId, purchaseId);
     }
 }

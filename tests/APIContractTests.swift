@@ -135,6 +135,17 @@ struct APIContractTests {
             from: JSONSerialization.data(withJSONObject: withCompanionJSON))
         precondition(customCompanion.companionId == "custom")
         precondition(customCompanion.companionPrompt == "a cream frenchie with gold sunglasses")
+        precondition(profile.companionName == nil && customCompanion.companionLine == nil,
+                     "Profiles from servers without companion names remain decodable")
+        withCompanionJSON["companion_name"] = "Sir Waddles"
+        withCompanionJSON["companion_line"] = "Slow start. Strong finish."
+        let namedData = try JSONSerialization.data(withJSONObject: withCompanionJSON)
+        let namedCompanion = try decoder.decode(FitFightProfile.self, from: namedData)
+        precondition(namedCompanion.companionName == "Sir Waddles" && namedCompanion.companionLine == "Slow start. Strong finish.")
+        let cachedNamedCompanion = try decoder.decode(FitFightProfile.self, from: JSONEncoder().encode(namedCompanion))
+        precondition(cachedNamedCompanion == namedCompanion, "The cached profile keeps the companion name and line")
+        let releasedNamedCompanion = try decoder.decode(Build201Profile.self, from: namedData)
+        precondition(releasedNamedCompanion.companionId == "custom", "Released builds ignore the additive companion name and line")
 
         guard var extendedProfile = try JSONSerialization.jsonObject(with: profileData) as? [String: Any] else {
             preconditionFailure("Profile fixture must be a JSON object")

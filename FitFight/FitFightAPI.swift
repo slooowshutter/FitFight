@@ -30,6 +30,10 @@ enum FitFightAPIError: LocalizedError {
                 return String(appLocalized: "This purchase belongs to another FitFight account. Sign in to that account or contact support.")
             case "no_free_characters":
                 return String(appLocalized: "You have no free characters left.")
+            case "suggestions_limit":
+                return String(appLocalized: "No more ideas for this companion.")
+            case "label_validation":
+                return String(appLocalized: "Check the name and line, then try again.")
             case "already_member":
                 return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
@@ -931,6 +935,21 @@ struct FitFightAPI {
     func chooseCustomCharacterPortrait(id: UUID, candidateID: UUID, accessToken: String) async throws -> CustomCharacterProgress {
         try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/choose", accessToken: accessToken,
                        body: ["candidate_id": candidateID.uuidString.lowercased()], expected: [200, 202])
+    }
+
+    func labelCustomCharacter(id: UUID, name: String, line: String, accessToken: String) async throws -> CustomCharacterProgress {
+        do {
+            return try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/label", accessToken: accessToken,
+                                  body: ["name": name, "line": line], expected: [200])
+        } catch FitFightAPIError.http(let status, "validation", _) {
+            // The server's validation text is English and technical; the shared "validation" fallback talks about titles.
+            throw FitFightAPIError.http(status: status, code: "label_validation", message: nil)
+        }
+    }
+
+    func suggestCustomCharacterLabels(id: UUID, attemptID: UUID, accessToken: String) async throws -> CustomCharacterProgress {
+        try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/suggestions", accessToken: accessToken,
+                       body: ["attempt_id": attemptID.uuidString.lowercased()], expected: [200, 202])
     }
 
     func updateProfile(

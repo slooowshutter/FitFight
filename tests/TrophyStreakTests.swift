@@ -67,6 +67,29 @@ import Foundation
         truncated.windowEnd = current.windowStart.addingTimeInterval(0.000_4)
         precondition(streak([round(1, [ana]), truncated], for: current) == "ana x2",
                      "Server millisecond truncation still chains adjacent rounds")
+        func mine(_ fight: Fight) -> Fight {
+            var fight = fight
+            fight.recurring = true
+            fight.standings[0].person.isYou = true
+            return fight
+        }
+        func lastRound(_ rounds: [Fight], for fight: Fight) -> String {
+            model.fights = rounds + [fight]
+            return model.lastRound(before: fight)?.id ?? "none"
+        }
+        let next = mine(round(3, [], state: "live"))
+        precondition(lastRound([mine(round(1, [ana])), mine(round(2, [ben]))], for: next) == "round-2",
+                     "The card shows the round that ended as the live one started")
+        precondition(lastRound([mine(round(1, [ana]))], for: next) == "none",
+                     "A round you were not in hides the card")
+        precondition(lastRound([mine(round(2, [], state: "awaiting_final_sync"))], for: next) == "none",
+                     "A round still settling hides the card")
+        var deferred = mine(round(2, [ana]))
+        deferred.standings[0].deferred = true
+        precondition(lastRound([deferred], for: next) == "none",
+                     "A round you only waited out hides the card")
+        precondition(lastRound([mine(round(1, [ana]))], for: mine(round(2, [ana]))) == "none",
+                     "A finished History round shows no card")
         print("PASS: trophy streaks follow each round's own result and stop at missing, cancelled, tied, or lost rounds")
     }
 }

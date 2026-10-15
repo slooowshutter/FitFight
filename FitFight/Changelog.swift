@@ -25,7 +25,7 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 16,

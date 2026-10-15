@@ -13,28 +13,40 @@ token = JWT.encode(
 )
 
 # Keep contact information and credentials out of this public repository's CI log.
-read = lambda do |path, payload = nil|
-    uri = URI("https://api.appstoreconnect.apple.com/v1/#{path}")
-    request = payload ? Net::HTTP::Patch.new(uri) : Net::HTTP::Get.new(uri)
+read = lambda do |path, payload = nil, method = Net::HTTP::Patch|
+    uri = URI("https://api.appstoreconnect.apple.com#{path.start_with?('/') ? path : "/v1/#{path}"}")
+    request = payload ? method.new(uri) : Net::HTTP::Get.new(uri)
     request["Authorization"] = "Bearer #{token}"
     if payload
         request["Content-Type"] = "application/json"
         request.body = JSON.generate(payload)
     end
     response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true, read_timeout: 30) { |http| http.request(request) }
-    body = JSON.parse(response.body)
+    body = JSON.parse(response.body.to_s.empty? ? "{}" : response.body)
     abort JSON.generate({ path: path, status: response.code, errors: body["errors"] }) unless response.is_a?(Net::HTTPSuccess)
-    body.fetch("data")
+    body["data"]
 end
 
 release_version = ENV.fetch("FITFIGHT_RELEASE_VERSION")
 versions = read.call("apps/6804230516/appStoreVersions?filter[platform]=IOS&limit=20")
 puts JSON.generate({ versions: versions.map { |version| { id: version["id"], attributes: version["attributes"].slice("versionString", "appStoreState", "appVersionState", "releaseType", "copyright") } } })
 version = versions.find { |item| item.dig("attributes", "versionString") == release_version }
+mode, production_build = ARGV
+# Apple reviews a first In-App Purchase only in the same submission as an app version.
+iap_versions = read.call("apps/6804230516/inAppPurchasesV2?limit=200").filter_map do |product|
+    iap_versions_of_product = read.call("/v2/inAppPurchases/#{product.fetch('id')}/versions?limit=200")
+    puts JSON.generate({ in_app_purchase: product["attributes"].slice("productId", "state", "inAppPurchaseType"), versions: iap_versions_of_product.map { |item| item["attributes"] } })
+    iap_versions_of_product.find { |item| %w[PREPARE_FOR_SUBMISSION READY_FOR_REVIEW].include?(item.dig("attributes", "state")) }
+end
+read.call("apps/6804230516/reviewSubmissions?filter[platform]=IOS&limit=5").each do |submission|
+    items = read.call("reviewSubmissions/#{submission.fetch('id')}/items?include=appStoreVersion,inAppPurchaseVersion")
+    puts JSON.generate({ review_submission: submission["attributes"], items: items.map { |item| { state: item.dig("attributes", "state"), relationships: item["relationships"]&.transform_values { |value| value["data"] }&.compact } } })
+end
+builds = read.call("builds?filter[app]=6804230516&filter[preReleaseVersion.version]=#{release_version}&sort=-uploadedDate&limit=3")
+puts JSON.generate({ builds: builds.map { |build| build["attributes"].slice("version", "processingState", "expired", "usesNonExemptEncryption") } })
 abort "Missing #{release_version} draft" unless version
 selected_build = read.call("appStoreVersions/#{version.fetch('id')}/build")
 puts JSON.generate({ selected_build: selected_build && selected_build.fetch("attributes").slice("version", "processingState", "usesNonExemptEncryption") })
-mode, production_build = ARGV
 if ["configure", "prepare", "submit"].include?(mode)
     abort "The draft is no longer editable" unless version.dig("attributes", "appStoreState") == "PREPARE_FOR_SUBMISSION"
     if mode == "submit"

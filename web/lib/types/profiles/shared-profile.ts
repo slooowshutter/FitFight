@@ -109,6 +109,8 @@ export const profileViewRequestSchema = z.object({
     source: z.enum(profileEntryPointValues),
 }).strict();
 
+export const profileViewResponseSchema = z.object({ recorded: z.boolean() });
+
 export const profileReportRequestSchema = z.object({
     reason: z.string().trim().min(1).max(1000),
 }).strict();

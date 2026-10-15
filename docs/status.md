@@ -1,10 +1,70 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **14 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **15 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
-Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, only the home page, the privacy and support pages, and the invite and referral pages exist.
+Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
 
 ---
+
+## Web app at /app, prepared 15 Oct 2026
+
+Marc asked (15 Oct 2026) to use everything in the app from a browser, mostly on
+desktop, as a shadcn dashboard.
+
+**Code:** `web/app/app/` is a signed-in web app at `fitfight.app/app` (and
+`staging.fitfight.app/app`). Sign in with Apple or Google (same Services ID, Google
+Web client and nonce flow as the referral page, now shared in
+`web/components/sign-in-buttons.tsx`); the Supabase session stays in the browser.
+Every screen calls the existing `/api/v1` with the bearer token, exactly like the
+iPhone app, and parses answers with the server's Zod schemas. Screens: Fights
+dashboard (live, lead and invitation counts, Current / Invited / Past), Fight detail
+(standings, daily steps chart, details, accept, decline, leave, delete, posts), New
+fight (create with the app's defaults, join by code, public and suggested fights),
+Feed (posts, reactions, comments, new post, edit, delete, report), Feedback (filters,
+vote, detail, comments, new request, admin archive and delete), Profile and other
+people's profiles (record, step statistics and chart, rivalries, history, friends,
+edit name). Signing out on the web ends only that browser's session (`scope:
+"local"`), so the iPhone app stays signed in. Sidebar navigation, Night/Day from the system setting, colours mapped
+from `tokens.json`. Tailwind v4 and shadcn load only under `/app`: the marketing
+pages moved into the `web/app/(site)/` route group with their own `globals.css`, so
+their URLs and styles are unchanged. The 30 Specials avatars were exported from
+`Assets.xcassets` to `web/public/landing/` as small webp files.
+
+**Local testing:** Apple and Google accept only fitfight.app and
+staging.fitfight.app, so on `next dev` the web app signs in by itself as
+`DEV_AUTOLOGIN_EMAIL` from `web/.env.local` (Blend's switch): `POST /api/v1/dev/sign-in`
+mints a one-time magic-link token for that existing account and the browser trades it
+for a session. It answers 404 unless NODE_ENV is development, the variable is set and
+the Host is localhost, and it never creates an account. `npm run dev` now listens on
+127.0.0.1 only, so nobody else on the network can reach it or forge that Host. Remove
+the variable to stay signed out.
+
+**Admin (15 Oct):** `/app/admin`, in the sidebar for the app's admin usernames
+(marc, rad), draws the iPhone admin dashboard from `GET /admin/dashboard`: every
+section, period and bucket, cards with their change, line, bar and heatmap charts, and
+a Production / Staging switch (Production by default, like the app; a production
+server shows Production only). Production comes through the server's read-only
+`PRODUCTION_ANALYTICS_DATABASE_URL`. Vercel marks that and every production secret
+Sensitive, so `vercel env pull` returns them empty and `next dev` cannot reach
+production; on `next dev` the page reads through the `preview` server instead
+(`GET /api/v1/dev/admin-dashboard`, localhost only), exactly as the iPhone app does.
+
+**Not on the web:** Apple Health sync, purchases (Specials, custom characters),
+companion and photo changes, photo and video upload in posts and feedback,
+notifications, fight editing and admin tools, account deletion, French.
+
+**Contract:** none changed. No API, database or iPhone app change.
+
+**Verification (local, 15 Oct):** web typecheck, all 451 unit tests (one new:
+`web-fight-view.test.ts`) and `next build` passed. Against `next dev` and a local
+Supabase stack with four test users, every screen loaded real data in Chrome and
+every call it makes was exercised (create, join, accept, decline, leave, delete,
+post, react, comment, vote, feedback, friends, edit name). The home, privacy,
+support, French and referral pages rendered from the production build, and the
+referral page still shows both sign-in buttons. Not run: a real Apple or Google
+sign-in (works only on `fitfight.app` and `staging.fitfight.app`) and GitHub CI.
+
+**Live:** nothing deployed.
 
 ## Open on saved data, 10-second refresh limit, prepared 15 Oct 2026
 

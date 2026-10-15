@@ -56,3 +56,9 @@ export const errorCodeSchema = z.union([
 ]);
 
 export type ErrorCode = z.infer<typeof errorCodeSchema>;
+
+/** The body of every `/api/v1` failure (`jsonError` and `errorResponse`). An unknown code still keeps its message. */
+export const apiErrorResponseSchema = z.object({
+    error: z.string(),
+    code: errorCodeSchema.optional().catch(undefined),
+});

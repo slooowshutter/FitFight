@@ -10,6 +10,8 @@ import { FightRow, Icon, PostCard } from "./landing-mocks";
 import { LandingPhone } from "./landing-phone";
 
 const factIcons = ["walk", "lock", "check"] as const;
+// Leo, Nina and Sam from the sample standings and posts.
+const friendAnimals = ["silverback", "capybara", "hedgehog"] as const;
 const optionIcons = [
     "walk",
     "calendar",
@@ -148,21 +150,19 @@ export function LandingPage({
                                     {statement[1]}
                                 </span>
                                 {statement[2]}
-                                <span className="lp-chip">
-                                    <img
-                                        src="/landing/companion-silverback-avatar.webp"
-                                        alt=""
-                                        width={24}
-                                        height={24}
-                                    />
+                                <span className="lp-chip lp-chip-group">
+                                    {friendAnimals.map((animal) => (
+                                        <img
+                                            key={animal}
+                                            src={`/landing/companion-${animal}-avatar.webp`}
+                                            alt=""
+                                            width={24}
+                                            height={24}
+                                        />
+                                    ))}
                                     {statement[3]}
                                 </span>
                                 {statement[4]}
-                                <span className="lp-chip lp-chip-icon">
-                                    <Icon name="heart" size={18} weight={2.2} />
-                                    {statement[5]}
-                                </span>
-                                {statement[6]}
                             </p>
                             <div className="lp-facts">
                                 {copy.what.facts.map((fact, index) => (
@@ -329,10 +329,6 @@ export function LandingPage({
                             </div>
                             <div className="lp-how-phone">
                                 <FightComposerDemo language={language} />
-                                <p className="lp-hint">
-                                    <Icon name="sparkle" size={14} />
-                                    {copy.how.tryIt}
-                                </p>
                             </div>
                         </div>
                     </div>

@@ -6,6 +6,100 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Admin dashboard: audit fixes, prepared 15 Oct 2026
+
+Marc asked to fix the admin dashboard after the 15 Oct audit compared every tile with production
+(64 findings; F26, F55, F58, F60 and one opens claim were refuted and left alone). All number
+fixes are server SQL, so they correct history for every installed build. Admin-only app changes
+ride the next build. One ReleaseNote: Fights refresh on open after a background Apple Health launch.
+
+**App opens (F1, F2, F7, F9, F10, F59):** an open is a `foreground` trace that read Apple
+Health, or that only refreshed Fights with no background sync in the minute before (people
+without Apple Health). Not opens: the activity import each sync starts (1,625 a week), the
+Fights refresh within 60 s after a background sync, and relaunches by 1.1.2 (210) and the 1.1.3
+in review on a locked phone (HealthKit error 6) or 59.5 to 66 minutes after the person's
+previous Health sync (iOS delivers late, never early). In the week to 15 Oct the hour rule drops
+about 550 relaunches and about 25 real opens. An open during a background sync now counts (598 a
+week). About 150 later relaunches a week still count, so opens read slightly high until people
+update. Opens are complete from 2 Oct 2026: comparisons whose earlier window starts before that
+are empty (weekly from 16 Oct, return rate 23 Oct, monthly 1 Dec) and activity charts start on 2
+Oct (WAU 8 Oct, MAU 31 Oct). The next app build waits for the open before its launch refresh
+when Apple Health launches it in the background; the deferred launch still considers the push
+pre-prompt, as today.
+
+**App tab (F3, F18, F19, F36, F37, F54):** sync tiles count only traces that read Steps. Errors
+by code show failed syncs, split into Steps and Other activity. Sync time leaves out cancelled
+syncs and syncs over 2 minutes (iOS suspension). "Steps sync failing now" reads each person's
+latest Steps sync. The Health cards count people whose phone completed a Steps sync, not
+Fights-only refreshes. Push tiles say "registered": the app never reports a denial.
+
+**Steps (F8, F13, F30-F32, F42, F50):** 15 accounts that connected Apple Health before 16 Sep
+store no daily Steps since 24-27 Sep: on 1.1.2 (210) the activity import stops at HealthKit
+error 5 for types they were never asked for. 1.1.3 already fixes it (#376, 12 Oct). Until then
+the dashboard reads those days from Fight daily checkpoints (read-only; 13 of 15 covered, silly
+and samuel upload no Fights). Single fallback days can differ from the phone's daily total (more
+than 10% on about a quarter of days that have both); totals and 10K-day counts agree within 1%.
+Fight-day lift compares each person with themselves. Change after joining, Steps around signup
+and People by daily average need complete, balanced data.
+
+**Fights (F4, F5, F12, F14-F16, F24, F33-F35, F44, F51, F52):** a Fight counts once someone
+besides its owner joined it, which drops Marc's 14 solo test Fights of 26-28 Aug. Roster copies
+into a new round are not joins. A repeating Fight counts once in funnels, sizes, Most fights
+joined and posts. Recurring share dates Fights by their first round. Live fights and Rounds
+finished count rounds with 2+ fighters. Cancel rate counts every cancelled round, joined or not;
+all 4 cancellations behind today's 9.1% are Fights nobody joined. Time to first fight is in
+minutes.
+
+**Founder filters (F6, F41, F63, F64):** develop's founder filters read `host_id`, which
+production lacks until 20261014140000, so a develop to preview merge would have blanked 34 tiles
+on the Production view. Every filter now reads `to_jsonb(row) ->> 'host_id'`, valid on both
+schemas; switch back once production has the migration. Founder Fights count for the challenger,
+never the founder, in person-progress tiles; fight-count and social tiles still leave them out.
+The Founder fights admin row names its environment.
+
+**Users, retention, churn, social (F11, F22, F23, F25, F27-F29, F43, F45, F47, F53, F57):**
+referrals apply the 7-day new-account rule (3 late claims dropped). Connected Apple Health means
+the phone sent a day with steps. Health cards count phones that completed a Steps sync in the
+last 7 days. Small groups are hidden: retention cards under 10 people, churn points under 10,
+onboarding and retention-by-signup points under 5 signups, growth points on a base under 20.
+Internal accounts still count (F20 skipped: no staff list, not asked).
+
+**Server errors (F17):** `private.server_error_logs` had no row since 12 Sep while sync traces
+show 9 HTTP 500s on `GET /api/v1/provider-uploads/context` (3 to 13 Oct, 8 users, build 210).
+Next 15 passes no params to static routes, so `apiRoute` handed `undefined` to the 5xx logger,
+which threw and swallowed the row. `apiRoute` now uses `{}` (unit test added). Weeks before the
+deploy read 0. Errors by route group by method and route template.
+
+**App rendering (F40, F24):** cards keep one truncated decimal under 10 (2.68 shows 2.6, not 2),
+and a previous of 0 shows "+3 from 0" instead of "New" (app and web /app/admin).
+
+**Production, merged code, read-only, 15 Oct 20:15 to 20:55 UTC (deployed in brackets):** weekly
+opens 1,697, no comparison [3,328 vs 2,731]; 14 Oct opens 235 [572]; opens per active user 28.3
+[55.5]; stickiness 65.8% [32.3%]; DAU 49, WAU 60, MAU 75. Weekly steps 2,775,929 vs 2,146,823
+[1,889,114 vs 1,319,628 on the same day]: the whole rise is about 887K Fight-checkpoint steps of
+13 people whose daily Steps upload fails on 1.1.2, not growth; walkers 56 [44]; fight-day lift
++17.7% [+84.6%]; change after joining +17.8% of 12 [+3.5% of 34]. Weekly fight joins 10 vs 2 [37
+vs 14]; users in a live fight 43.2% [77.8%]; fighters per fight 3.2 vs 2.88 [2.68 vs 1.97];
+recurring share 80% vs 68.8% [43.3% vs 68.4%]; time to first fight 36.1 min vs 8.6 min [0 d vs 0
+d]; Most fights joined @marc 15 [51]. Health connect rate 80.7% [91.4%]; people syncing Health
+59 vs 45 [connected 76]; share syncing Health 72.8% [93.8% connected]; monthly referrals 6 [9].
+Weekly background syncs 2,705 vs 2,376 [71,510 vs 54,582]; sync success 87.8% [89.5%]; median
+sync time 3.29 s [4.17 s]; Steps sync failing now 9 [Sync errors now 29]; 14 Oct Syncs by
+trigger 748 [13,067]. Retention week 1 89.6% of 48 [76.8%], week 2 82.9% [53.1%]; week 4 and
+every previous are hidden until cohorts reach 10. Weekly sync churn 2.3% vs 9.1% [0% vs 40.9%].
+
+**Contract:** `/api/v1/admin/dashboard` response shape, ids, kinds and units unchanged
+(`minutes` already renders in build 210); only titles, notes, definitions, examples and label
+values change. No migration, no database write, no app-facing RPC. **Checked:** with every
+changed web file in place, `npm test` passed 457 of 457 and `npm run typecheck` showed no new
+error versus develop (the pre-existing errors are missing shadcn dependencies under `app/app`
+and `components` in the local tree); every section ran on production read-only with no failed
+tile. **Not run here (CI):** `npm run test:database` on a disposable database, which must pass
+before the develop PR merges: its new asserts (13 opens, 7 background syncs, the founder
+challenger adding exactly one person to join rate and users in a live fight) have never
+executed; the web typecheck with full dependencies, the only full check of `/app/admin`; the iOS
+simulator build. **Live:** nothing merged or deployed.
+
 ## Monthly friend fights, prepared 15 Oct 2026
 
 Marc asked (14 and 15 Oct) that every pair of friends fights automatically: one 1v1 Steps

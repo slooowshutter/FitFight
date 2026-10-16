@@ -225,9 +225,9 @@ function StatCard({ card }: { card: AdminDashboardCard }) {
             : card.unit === "percent"
               ? `${change > 0 ? "+" : ""}${formatValue(change, "count")} pts`
               : card.previous === 0
-                ? change > 0
-                    ? "New"
-                    : "No change"
+                ? change === 0
+                    ? "No change"
+                    : `${change > 0 ? "+" : ""}${formatValue(change, card.unit)} from 0`
                 : `${change > 0 ? "+" : ""}${formatValue((change / Math.abs(card.previous)) * 100, "count")}% (${change > 0 ? "+" : ""}${formatValue(change, card.unit)})`;
     const tone =
         change === null || change === 0 || card.higher_is_better === null

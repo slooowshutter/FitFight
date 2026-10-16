@@ -168,6 +168,32 @@ test("apiRoute persists 5xx failures and still returns the short client body", a
     }
 });
 
+test("apiRoute persists 5xx failures on static routes, where Next passes no params", async () => {
+    const writes: ServerErrorLogInsert[] = [];
+    setServerErrorLogWriter(async (row) => {
+        writes.push(row);
+    });
+    const originalError = console.error.bind(console);
+    console.error = () => {};
+    try {
+        const route = apiRoute(async () => {
+            throw new Error("boom");
+        });
+        const response = await route(
+            new Request("https://fitfight.app/api/v1/provider-uploads/context"),
+            // NOTE: Next's route type says params is always a Promise, but static routes get none at runtime.
+            { params: undefined } as unknown as { params: Promise<Record<string, never>> },
+        );
+        assert.equal(response.status, 500);
+        assert.equal(writes.length, 1);
+        assert.equal(writes[0]?.action, "GET /api/v1/provider-uploads/context");
+        assert.deepEqual(writes[0]?.route_params, {});
+    } finally {
+        console.error = originalError;
+        setServerErrorLogWriter(null);
+    }
+});
+
 test("apiRoute does not persist 4xx failures", async () => {
     const writes: ServerErrorLogInsert[] = [];
     setServerErrorLogWriter(async (row) => {

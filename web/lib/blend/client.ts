@@ -195,11 +195,14 @@ export async function startBlendWorkflow(
     };
 }
 
-/** Reads an existing run; callers must authorize its owner and validate feature output. */
+/**
+ * Reads an existing run; callers must authorize its owner and validate feature output. providerResponse is the
+ * unfiltered envelope, for the private request row only: it can hold provider details that never reach the app.
+ */
 export async function readBlendWorkflowRun(
     run: BlendRunHandle,
     fetchImpl: typeof fetch = fetch,
-): Promise<BlendTransportResult<BlendRunResponse>> {
+): Promise<BlendTransportResult<BlendRunResponse> & { providerResponse?: unknown }> {
     const response = await blendRequest(
         `/runs/${encodeURIComponent(run.runId)}`,
         "GET",
@@ -242,11 +245,13 @@ export async function readBlendWorkflowRun(
             {
                 rateLimit: response.rateLimit,
                 providerCompletedAt: parsed.data.completed_at,
+                providerResponse: response.data,
             },
         );
     }
     return {
         data: { ...parsed.data, output: output.data },
         rateLimit: response.rateLimit,
+        providerResponse: response.data,
     };
 }

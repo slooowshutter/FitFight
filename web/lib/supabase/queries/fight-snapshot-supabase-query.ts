@@ -5,12 +5,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     fightSnapshotSchema,
+    snapshotFriendshipsRowSchema,
     type FightSnapshot,
 } from "@/lib/types/fights/fight-snapshot";
 import { companionIdSchema } from "@/lib/types/companions/companion";
 import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 
 const snapshotRowSchema = fightSnapshotSchema.extend({
+    fights: z.array(
+        fightSnapshotSchema.shape.fights.element.extend({ friends: z.boolean() }),
+    ),
+    friends: fightSnapshotSchema.shape.friends.unwrap(),
     profiles: z.array(
         z.object({
             user_id: z.string().uuid(),
@@ -29,8 +34,31 @@ export async function readFightSnapshot(
     timeZone: string,
     database: Sql = createDatabaseClient(),
     hosted = false,
+    friends = false,
 ): Promise<FightSnapshot> {
     const row = await database.begin("read only", async (sql) => {
+        // NOTE: friendships are private and the reader role cannot see them, so read the caller's
+        // friends and incoming requests (as GET /friends lists them) before dropping to that role.
+        const [friendshipsRow] = await sql`
+            select count(*) filter (
+                    where friendship.state = 'pending' and friendship.requester_id <> ${userId}
+                )::int as requests,
+                coalesce(array_agg(profile.id) filter (where friendship.state = 'accepted'), '{}') as friend_ids
+            from private.profile_friendships as friendship
+            join public.profiles as profile on profile.id = case when friendship.user_low = ${userId}
+                then friendship.user_high else friendship.user_low end
+            where (friendship.user_low = ${userId} or friendship.user_high = ${userId})
+                and profile.deleted_at is null
+                and not exists (
+                    select 1 from (
+                        select blocker_id, blocked_id from private.profile_blocks
+                        union all select blocker_id, blocked_id from private.feed_blocks
+                        union all select blocker_id, blocked_id from private.feedback_blocks
+                    ) as blocks where (blocker_id = ${userId} and blocked_id = profile.id)
+                        or (blocker_id = profile.id and blocked_id = ${userId})
+                )
+        `;
+        const friendships = snapshotFriendshipsRowSchema.parse(friendshipsRow);
         await sql`set local role fitfight_backend_reader`;
         await sql`
             select set_config('request.jwt.claim.sub', ${userId}, true),
@@ -38,8 +66,16 @@ export async function readFightSnapshot(
         `;
         const [result] = await sql<{ snapshot: unknown }[]>`
             with visible_fights as materialized (
-                select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id,
-                    (ends_at + (final_sync_grace_seconds * interval '1 second')) as grace_ends_at
+                select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id, friends,
+                    -- null: the Fight waits for everyone's final Steps.
+                    case when closes_after_grace
+                        then ends_at + final_sync_grace_seconds * interval '1 second' end as grace_ends_at,
+                    (
+                        select image.image_url from private.fight_group_images as image
+                        where image.fight_id = fight.id and image.status = 'ready'
+                        order by image.finished_at desc
+                        limit 1
+                    ) as group_image_url
                 from public.fights as fight
                 where ${hosted
                     // ponytail: every current hosted round in one payload; page it if a host has thousands.
@@ -49,7 +85,30 @@ export async function readFightSnapshot(
                             where racer.fight_id = fight.id and racer.user_id in (fight.owner_id, fight.host_id)
                                 and racer.state = 'accepted'
                         ) = 2`
-                    : sql`fight.host_id is distinct from ${userId}
+                    : friends
+                    // This month's live rounds plus, for a week, each pair's last finished round, so
+                    // results stay visible after the month turns. Only pairs that are still friends.
+                    ? sql`fight.friends
+                        and fight.id in (
+                            select fight_id from public.fight_members where user_id = ${userId} and state = 'accepted'
+                        )
+                        and exists (
+                            select 1 from public.fight_members as friend
+                            where friend.fight_id = fight.id and friend.state = 'accepted'
+                                and friend.user_id = any(${sql.array(friendships.friend_ids)}::uuid[])
+                        )
+                        and (
+                            (fight.state = 'live' and fight.ends_at > now())
+                            or fight.id = (
+                                select last.id from public.fights as last
+                                where last.series_id = fight.series_id and last.friends
+                                    and last.ends_at <= now() and last.ends_at > now() - interval '7 days'
+                                    and last.state in ('live', 'awaiting_final_sync', 'final')
+                                order by last.ends_at desc, last.id desc
+                                limit 1
+                            )
+                        )`
+                    : sql`not fight.friends and fight.host_id is distinct from ${userId}
                         and fight.id in (
                             select id from public.fights where owner_id = ${userId}
                             union
@@ -135,6 +194,22 @@ export async function readFightSnapshot(
                         and challenger.state = 'accepted'
                     where fight.host_id = ${userId} and fight.state in ('live', 'awaiting_final_sync')
                     having count(*) > 0
+                ),
+                'friends', (
+                    select jsonb_build_object(
+                        'rounds', count(*),
+                        'leading', count(*) filter (
+                            where coalesce(caller.current_value, 0) > coalesce(friend.current_value, 0)
+                        ),
+                        'requests', ${friendships.requests}::int
+                    )
+                    from public.fights as fight
+                    join public.fight_members as caller
+                        on caller.fight_id = fight.id and caller.user_id = ${userId} and caller.state = 'accepted'
+                    join public.fight_members as friend
+                        on friend.fight_id = fight.id and friend.state = 'accepted'
+                        and friend.user_id = any(${sql.array(friendships.friend_ids)}::uuid[])
+                    where fight.friends and fight.state = 'live' and fight.ends_at > now()
                 )
             ) as snapshot
         `;

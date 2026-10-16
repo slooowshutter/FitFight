@@ -7,10 +7,11 @@ export const notificationDeliveryRowSchema = pendingNotificationIntentSchema.ext
     alert_body: z.string().nullable(),
     fight_state: z.string().nullable(),
     fight_host_id: z.string().uuid().nullable(),
+    fight_friends: z.boolean().nullable(),
     fight_name: z.string(),
     owner_handle: z.string().nullable(),
     ends_at: z.coerce.date(),
-    sync_deadline: z.coerce.date(),
+    sync_deadline: z.coerce.date().nullable(),
     time_zone: z.string(),
     member_state: z.string().nullable(),
     final_steps_complete: z.boolean().nullable(),
@@ -34,6 +35,11 @@ export const notificationContentSchema = z.object({
     threadId: z.string(),
     imageUrl: z.string().url().nullable(),
 });
+export const friendsResultsCountsSchema = z.object({
+    month: z.string().regex(/^\d{4}-\d{2}$/),
+    won: z.number().int().nonnegative(),
+    total: z.number().int().positive(),
+});
 export const notificationRecipientRowSchema = z.object({
     user_id: z.string().uuid(),
     locale: z.string().nullable(),
@@ -48,3 +54,4 @@ export type NotificationRecipientRow = z.infer<typeof notificationRecipientRowSc
 export type NotificationDeliveryRow = z.infer<typeof notificationDeliveryRowSchema>;
 export type NotificationPostContext = z.infer<typeof notificationPostContextSchema>;
 export type NotificationContent = z.infer<typeof notificationContentSchema>;
+export type FriendsResultsCounts = z.infer<typeof friendsResultsCountsSchema>;

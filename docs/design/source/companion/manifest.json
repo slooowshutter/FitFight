@@ -9,6 +9,8 @@
     "animals": [
         {
             "id": "badger",
+            "name": "Badger",
+            "description": "A stocky badger with grey body fur and a black-and-white striped face.",
             "source": "originals/atlas.png",
             "source_bounds": [58, 31, 325, 385],
             "body_pixels": [352, 400],
@@ -24,6 +26,8 @@
         },
         {
             "id": "raccoon",
+            "name": "Raccoon",
+            "description": "A grey raccoon with a black eye mask and a thick black-and-grey ringed tail.",
             "source": "originals/atlas.png",
             "source_bounds": [411, 23, 691, 385],
             "body_pixels": [352, 400],
@@ -39,6 +43,8 @@
         },
         {
             "id": "red-panda",
+            "name": "Red Panda",
+            "description": "A red panda with rusty-orange fur, white ear tips and cheek markings, and a big ringed orange tail.",
             "source": "originals/atlas.png",
             "source_bounds": [735, 22, 1001, 386],
             "body_pixels": [352, 400],
@@ -54,6 +60,8 @@
         },
         {
             "id": "otter",
+            "name": "Otter",
+            "description": "A slim brown river otter with a lighter chest, small round ears, whiskers and a long tapered tail.",
             "source": "originals/atlas.png",
             "source_bounds": [1056, 24, 1328, 387],
             "body_pixels": [352, 400],
@@ -69,6 +77,8 @@
         },
         {
             "id": "rabbit",
+            "name": "Rabbit",
+            "description": "A slender tan rabbit with tall upright ears and a cream muzzle.",
             "source": "originals/atlas.png",
             "source_bounds": [75, 380, 316, 753],
             "body_pixels": [352, 400],
@@ -84,6 +94,8 @@
         },
         {
             "id": "fox",
+            "name": "Fox",
+            "description": "A slim red fox with bright orange fur, white chest and muzzle, black ear backs and a bushy white-tipped tail.",
             "source": "originals/atlas.png",
             "source_bounds": [417, 395, 682, 753],
             "body_pixels": [352, 400],
@@ -99,6 +111,8 @@
         },
         {
             "id": "bear",
+            "name": "Bear",
+            "description": "A big round brown bear with thick shaggy fur, round ears and a tan muzzle.",
             "source": "originals/atlas.png",
             "source_bounds": [723, 393, 986, 753],
             "body_pixels": [352, 400],
@@ -114,6 +128,8 @@
         },
         {
             "id": "boar",
+            "name": "Boar",
+            "description": "A stocky wild boar with shaggy dark brown bristly fur, pointed ears, a pink snout and small white tusks.",
             "source": "originals/atlas.png",
             "source_bounds": [1044, 398, 1310, 756],
             "body_pixels": [352, 400],
@@ -129,6 +145,8 @@
         },
         {
             "id": "sloth",
+            "name": "Sloth",
+            "description": "A shaggy brown sloth with a pale face, dark eye stripes, long arms and long curved claws.",
             "source": "originals/atlas.png",
             "source_bounds": [54, 766, 323, 1101],
             "body_pixels": [352, 400],
@@ -144,6 +162,8 @@
         },
         {
             "id": "dog",
+            "name": "Dog",
+            "description": "A lean tan greyhound-type dog with a white chest and muzzle, folded ears and a long thin curled tail.",
             "source": "originals/atlas.png",
             "source_bounds": [414, 756, 643, 1102],
             "body_pixels": [352, 400],
@@ -159,6 +179,8 @@
         },
         {
             "id": "goat",
+            "name": "Goat",
+            "description": "A shaggy cream-white goat with long backward-curving dark horns, floppy ears and a small chin beard.",
             "source": "originals/atlas.png",
             "source_bounds": [735, 745, 983, 1103],
             "body_pixels": [352, 400],
@@ -174,6 +196,8 @@
         },
         {
             "id": "turtle",
+            "name": "Turtle",
+            "description": "A round olive-green turtle with a large dark green domed shell on its back and scaly limbs.",
             "source": "originals/atlas.png",
             "source_bounds": [1040, 777, 1314, 1103],
             "body_pixels": [352, 400],

@@ -103,6 +103,7 @@ export const blendErrorDetailSchema = z.object({
         })
         .optional(),
     providerCompletedAt: z.string().datetime({ offset: true }).nullish(),
+    providerResponse: z.unknown(),
 });
 
 export type BlendApiKey = z.infer<typeof blendApiKeySchema>;

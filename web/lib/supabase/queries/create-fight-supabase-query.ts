@@ -152,14 +152,14 @@ export async function createFight(
             insert into public.fights (
                 owner_id, name, state, starts_at, ends_at, time_zone, metric,
                 outcome_rule, goal_policy, default_goal_value, stake_kind,
-                stake_minor, currency, action_text, series_id
+                stake_minor, currency, action_text, series_id, closes_after_grace
             )
             values (
                 ${userId}, ${stored.name}, ${state}, ${startsAt}, ${endsAt}, ${input.timeZone}, 'steps',
                 ${input.outcomeRule}, ${input.goalPolicy}, ${input.defaultGoalValue ?? null}, ${input.stakeKind},
                 ${input.stakeMinor ?? null},
                 ${input.stakeKind === "money" ? input.currency : (input.currency ?? null)},
-                ${stored.actionText}, ${series.id}
+                ${stored.actionText}, ${series.id}, false
             )
             returning id, state::text as state
         `;

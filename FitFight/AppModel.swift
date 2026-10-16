@@ -78,6 +78,8 @@ struct DayScore: Codable, Identifiable, Hashable {
 struct FightDay: Codable, Identifiable, Hashable {
     var label: String
     var scores: [DayScore]
+    /// The civil day, yyyy-MM-dd, so History can find the best day and week across rounds.
+    var day: String? = nil
 
     var id: String { label }
 }
@@ -112,14 +114,22 @@ struct Fight: Codable, Identifiable, Hashable {
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
     var timeZone: String? = nil
+    /// A monthly friend round. Optional so cached Fights from earlier builds still decode.
+    var friends: Bool? = nil
+    /// Everyone's companions running together, drawn by the server. Optional for the same reason.
+    var groupImageURL: URL? = nil
 
     var hasAction: Bool {
         !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Title shown on Fights. A typed name wins; otherwise the action; otherwise the stored name.
+    /// Title shown on Fights. A friend round shows the friend. Otherwise a typed name wins, then the
+    /// action, then the stored name.
     var listTitle: String {
-        Self.displayTitle(name: name, actionText: actionText)
+        if friends == true, let friend = standings.first(where: { !$0.person.isYou }) {
+            return friend.person.name
+        }
+        return Self.displayTitle(name: name, actionText: actionText)
     }
 
     static func displayTitle(name: String, actionText: String?) -> String {
@@ -197,6 +207,7 @@ final class AppModel: ObservableObject {
             if oldValue != tab {
                 openFightID = nil
                 showingHosted = false
+                showingFriends = false
                 openPost = nil
                 showingActivity = false
             }
@@ -213,6 +224,10 @@ final class AppModel: ObservableObject {
     @Published var showingActivity = false
     @Published var feedRevision = 0
     @Published var dailyStatusRecap: DailyStatusRecap?
+    /// The in-app alert on screen. The rest of this open's alerts wait in `queuedInAppAlerts`.
+    @Published var inAppAlert: InAppAlert?
+    @Published var showingPaidCharacter = false
+    private var queuedInAppAlerts: [InAppAlert] = []
     @Published var showingVersions = false
     @Published var showingPreferences = false
     @Published var showingBetaTesting = false
@@ -248,6 +263,15 @@ final class AppModel: ObservableObject {
     @Published private(set) var hostedRounds: [Fight] = []
     /// The hosted screen, under any open fight in the Fights stack.
     @Published var showingHosted = false
+    /// Monthly friend fights. nil from servers before 15 Oct 2026, which hides the Friends card.
+    /// Its rounds stay out of `fights` and its cache, like `hostedRounds`.
+    @Published private(set) var friends: FitFightSnapshot.Friends?
+    @Published private(set) var friendRounds: [Fight] = []
+    /// The Friends screen, under any open fight in the Fights stack.
+    @Published var showingFriends = false
+    /// The custom character screen over Fights, on `characterRouteID` when a push named one.
+    @Published var showingCharacter = false
+    var characterRouteID: UUID?
     @Published private(set) var joinableFights: [FitFightJoinableFight] = []
     @Published private(set) var suggestedFights: [FitFightJoinableFight] = []
     @Published private(set) var isLoadingDiscovery = false
@@ -257,6 +281,7 @@ final class AppModel: ObservableObject {
     private let api = FitFightAPI()
     private var cachedUserID: UUID?
     private var snapshotGeneration = 0
+    private var friendRoundsGeneration = 0
     private var discoveryUserID: UUID?
     private var discoveryLoadedAt: Date?
     private var discoveryTask: Task<Void, Never>?
@@ -329,6 +354,7 @@ final class AppModel: ObservableObject {
             let bundle = AppModelFixtures.load()
             you = bundle.you
             fights = bundle.fights
+            friends = FitFightSnapshot.Friends(rounds: 3, leading: 2, requests: 1)
         } else {
             you = Person(id: "", name: String(appLocalized: "You"), handle: "", initials: "", isYou: true)
             fights = []
@@ -346,6 +372,7 @@ final class AppModel: ObservableObject {
         fights.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
             ?? pendingJoinable.flatMap { $0.id.caseInsensitiveCompare(id) == .orderedSame ? $0 : nil }
             ?? hostedRounds.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+            ?? friendRounds.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
     }
 
     func canonicalFight(for id: String) -> Fight? {
@@ -367,27 +394,17 @@ final class AppModel: ObservableObject {
             .sorted { $0.windowStart > $1.windowStart }
     }
 
-    /// Who holds the trophy in this round and how many rounds in a row they have won.
-    /// A final round's own winner holds it, so History cards match their result. A round still
-    /// being played shows the previous round's winner, and a cancelled round has no holder.
-    /// ponytail: only rounds this user was in are in the snapshot; a skipped or cancelled round ends the streak early.
-    func trophyStreak(for fight: Fight) -> (userId: String, count: Int)? {
-        if fight.serverState == "cancelled" { return nil }
-        let ended = fight.serverState == "final"
-        var holder: String?
-        var count = 0
-        var nextStart = ended ? fight.windowEnd : fight.windowStart
-        let earlier = seriesHistory(for: fight).filter { $0.windowStart < fight.windowStart }
-        for round in (ended ? [fight] : []) + earlier {
-            // The server starts each round at the previous round's end, truncated to milliseconds.
-            guard abs(round.windowEnd.timeIntervalSince(nextStart)) < 1, round.serverState == "final" else { break }
-            nextStart = round.windowStart
+    /// Trophies per user id: every final round of this fight they won outright, up to and including
+    /// this round, so History cards count up to their own round. A tied round gives no trophy.
+    /// ponytail: only rounds this user was in are in the snapshot, so rounds they skipped are not counted.
+    func trophies(in fight: Fight) -> [String: Int] {
+        var trophies: [String: Int] = [:]
+        for round in [fight] + seriesHistory(for: fight).filter({ $0.windowStart < fight.windowStart })
+        where round.serverState == "final" {
             let leaders = round.standings.filter { !$0.invited && !$0.deferred && $0.rank == 1 }
-            guard leaders.count == 1, holder == nil || leaders[0].person.id == holder else { break }
-            holder = leaders[0].person.id
-            count += 1
+            if leaders.count == 1 { trophies[leaders[0].person.id, default: 0] += 1 }
         }
-        return holder.map { ($0, count) }
+        return trophies
     }
 
     /// The round that ended as this live round started, once it is final and you raced in it.
@@ -494,8 +511,11 @@ final class AppModel: ObservableObject {
                 defaultValue: "Final steps synced · \(freshness)"
             )
         }
+        // Without final Steps the last synced total counts. Only a lone leader can finish before the deadline.
         if fight.serverState == "final", !standing.invited, !standing.deferred {
-            return String(appLocalized: "Did not sync · forfeited")
+            return standing.rank == 1 && !fight.isTiedForFirst
+                ? String(appLocalized: "Last sync counted")
+                : String(appLocalized: "Didn’t sync in time")
         }
         let finalized = fight.serverState == "final" || fight.serverState == "cancelled"
         if let lastSyncedAt = standing.lastSyncedAt {
@@ -530,6 +550,8 @@ final class AppModel: ObservableObject {
             fights = []
             hosted = nil
             hostedRounds = []
+            friends = nil
+            friendRounds = []
             return
         }
         guard cachedUserID != userID else { return }
@@ -537,6 +559,8 @@ final class AppModel: ObservableObject {
         cachedUserID = userID
         hosted = nil
         hostedRounds = []
+        friends = nil
+        friendRounds = []
         guard
             let data = UserDefaults.standard.data(forKey: Self.fightsCachePrefix + userID.uuidString),
             let cached = try? JSONDecoder().decode([Fight].self, from: data)
@@ -741,6 +765,7 @@ final class AppModel: ObservableObject {
             guard session.authSession?.user.id == userId else { throw CancellationError() }
             fights = loaded
             hosted = snapshot.hosted
+            friends = snapshot.friends
             cachedUserID = userId
             refreshError = nil
             if let data = try? JSONEncoder().encode(loaded) {
@@ -751,6 +776,10 @@ final class AppModel: ObservableObject {
                     .compactMap { $0 },
                 kind: .avatar
             )
+            // Friend rounds have their own snapshot; keep any that are on screen or opened current.
+            if !friendRounds.isEmpty || showingFriends {
+                try? await refreshFriendRounds()
+            }
         } catch {
             attempt.fail(HealthKitStepsStore.errorCode(for: error))
             // Keep the last successful result visible while the phone is offline, and say it is not current.
@@ -799,6 +828,20 @@ final class AppModel: ObservableObject {
         guard session.authSession?.user.id == userId else { return }
         hosted = snapshot.hosted
         hostedRounds = mapSnapshot(snapshot, userId: userId)
+    }
+
+    /// Reads the rounds behind `friends` through their own snapshot, mapped like the Fights list.
+    func refreshFriendRounds() async throws {
+        guard let session, let userId = session.authSession?.user.id else { return }
+        friendRoundsGeneration += 1
+        let generation = friendRoundsGeneration
+        let snapshot = try await api.fightsSnapshot(
+            accessToken: try await session.freshAccessToken(), trace: nil, performMaintenance: false, friends: true
+        )
+        // A newer read owns publication.
+        guard generation == friendRoundsGeneration, session.authSession?.user.id == userId else { return }
+        friends = snapshot.friends
+        friendRounds = mapSnapshot(snapshot, userId: userId)
     }
 
     func createAndStartFight(
@@ -893,8 +936,10 @@ final class AppModel: ObservableObject {
         startsAt: Date?,
         endsAt: Date,
         timeZone: String?,
+        joinCode: String?,
         inviteHandles: [String],
-        removeUserIds: [String]
+        removeUserIds: [String],
+        closesAfterGrace: Bool?
     ) async -> Bool {
         guard !CompanionPreview.isEnabled else {
             createError = CompanionPreview.writeUnavailable
@@ -952,8 +997,10 @@ final class AppModel: ObservableObject {
                     startsAt: startsAt,
                     endsAt: endsAt,
                     timeZone: timeZone,
+                    joinCode: joinCode,
                     inviteHandles: handles.isEmpty ? nil : handles,
-                    removeUserIds: removals.isEmpty ? nil : removals
+                    removeUserIds: removals.isEmpty ? nil : removals,
+                    closesAfterGrace: closesAfterGrace
                 ),
                 accessToken: try await session.freshAccessToken()
             )
@@ -1057,7 +1104,7 @@ final class AppModel: ObservableObject {
                 FitFightJoinableFight(
                     fightId: UUID(uuidString: fight.id)!,
                     seriesId: UUID(uuidString: fight.seriesId ?? fight.id)!,
-                    name: fight.name, joinCode: fight.joinCode!, ownerHandle: "lea",
+                    name: fight.name, joinCode: fight.joinCode!, ownerHandle: "sam",
                     actionText: fight.actionText, startsAt: fight.windowStart.ISO8601Format(),
                     endsAt: fight.windowEnd.ISO8601Format(), memberCount: fight.of,
                     recurring: fight.recurring, alreadyMember: true, canJoinNext: false
@@ -1204,8 +1251,8 @@ final class AppModel: ObservableObject {
         self.session = session
         createError = nil
         let code = raw.replacingOccurrences(of: "[\\s-]", with: "", options: .regularExpression).uppercased()
-        guard code.count == 4 else {
-            createError = String(appLocalized: "Enter the 4-character code.")
+        guard Self.joinCodeLength.contains(code.count) else {
+            createError = String(appLocalized: "Enter a code of 4 to 12 letters or numbers.")
             return
         }
         guard let userID = session.authSession?.user.id, api.isConfigured,
@@ -1366,6 +1413,16 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Random codes are 4 characters; an owner can pick up to 12.
+    static let joinCodeLength = 4...12
+
+    /// What a code field keeps of typed text: uppercase letters and digits, at most 12.
+    static func typedJoinCode(_ value: String) -> String {
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+        let cleaned = value.uppercased().unicodeScalars.filter { allowed.contains($0) }
+        return String(String.UnicodeScalarView(cleaned).prefix(joinCodeLength.upperBound))
+    }
+
     static func joinCode(from url: URL) -> String? {
         let parts = url.path.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "j" else {
@@ -1374,8 +1431,7 @@ final class AppModel: ObservableObject {
         let code = parts[1]
             .replacingOccurrences(of: "-", with: "")
             .uppercased()
-        let alphabet = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
-        guard code.count == 4, code.unicodeScalars.allSatisfy({ alphabet.contains($0) }) else {
+        guard joinCodeLength.contains(code.count), typedJoinCode(code) == code else {
             return nil
         }
         return code
@@ -1497,7 +1553,7 @@ final class AppModel: ObservableObject {
                 return DayScore(person: row.person, value: Double(value))
             }
             let date = formatter.date(from: day) ?? Date()
-            return FightDay(label: label.string(from: date), scores: scores)
+            return FightDay(label: label.string(from: date), scores: scores, day: day)
         }
     }
 
@@ -1533,12 +1589,72 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Each time the app opens: the backend picks up to three alerts, shown one after another.
+    func loadInAppAlerts(session: SessionStore) async {
+        guard session.authSession != nil, api.isConfigured, inAppAlert == nil else { return }
+        do {
+            queuedInAppAlerts = try await api.inAppAlerts(accessToken: try await session.freshAccessToken())
+        } catch {
+            queuedInAppAlerts = []
+        }
+        showNextInAppAlert()
+    }
+
+    /// Returns the update link to open. Not now shows the next alert; a button that opens something
+    /// leaves the rest for the next open.
+    func chooseInAppAlert(_ choice: InAppAlert.Choice, session: SessionStore) -> URL? {
+        guard let alert = inAppAlert else { return nil }
+        answerInAppAlert(alert, response: "tapped", action: choice.action, session: session)
+        inAppAlert = nil
+        switch choice.action {
+        case "update": return choice.url
+        case "open_character": showingPaidCharacter = true
+        case "new_fight": tab = .newFight
+        default: showNextInAppAlert()
+        }
+        return nil
+    }
+
+    func dismissInAppAlert(session: SessionStore) {
+        guard let alert = inAppAlert else { return }
+        answerInAppAlert(alert, response: "dismissed", session: session)
+        showNextInAppAlert()
+    }
+
+    func answerInAppAlert(_ alert: InAppAlert, response: String, action: String? = nil, session: SessionStore) {
+        Task {
+            try? await api.answerInAppAlert(
+                id: alert.id, response: response, action: action, accessToken: try await session.freshAccessToken()
+            )
+        }
+    }
+
+    /// Signing out drops the last account's alerts.
+    func forgetInAppAlerts() {
+        inAppAlert = nil
+        queuedInAppAlerts = []
+    }
+
+    private func showNextInAppAlert() {
+        inAppAlert = queuedInAppAlerts.isEmpty ? nil : queuedInAppAlerts.removeFirst()
+    }
+
     private func consumePendingFightRoute(showDailyStatusRecap: Bool) {
         guard let route = UserDefaults.standard.string(forKey: Self.pendingFightRouteKey) else { return }
         UserDefaults.standard.removeObject(forKey: Self.pendingFightRouteKey)
         UserDefaults.standard.removeObject(forKey: Self.pendingDailyStatusKey)
         guard let components = URLComponents(string: route) else { return }
         let parts = components.path.split(separator: "/").map(String.init)
+        // A character push opens that character's screen over Fights.
+        if parts.count == 2, parts[0] == "characters", let id = UUID(uuidString: parts[1]) {
+            tab = .fights
+            openFightID = nil
+            showingHosted = false
+            showingFriends = false
+            characterRouteID = id
+            Task { @MainActor in self.showingCharacter = true }
+            return
+        }
         guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
         if components.queryItems?.contains(where: { $0.name == "activity" && $0.value == "1" }) == true {
             tab = .you
@@ -1549,6 +1665,14 @@ final class AppModel: ObservableObject {
             let commentID = components.queryItems?.first(where: { $0.name == "comment" })?.value.flatMap(UUID.init(uuidString:))
             tab = .feed
             openPost = FeedPostLink(id: postID, commentID: commentID)
+            return
+        }
+        // Batched friend pushes name any one friend round; they open the Friends screen.
+        if components.queryItems?.contains(where: { $0.name == "friends" && $0.value == "1" }) == true {
+            tab = .fights
+            openFightID = nil
+            showingHosted = false
+            Task { @MainActor in self.showingFriends = true }
             return
         }
         // A final-sync reminder can refer to an earlier round while the next is live.
@@ -1668,7 +1792,9 @@ final class AppModel: ObservableObject {
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
                 && mine?.state == "invited",
-            timeZone: row.timeZone
+            timeZone: row.timeZone,
+            friends: row.friends,
+            groupImageURL: row.groupImageUrl.flatMap(URL.init(string:))
         )
         localizeFight(&fight, formatScore: formatScore)
         return fight
@@ -1736,14 +1862,13 @@ final class AppModel: ObservableObject {
             )
             if youRow?.deferred == true {
                 fight.kickerEmphasis = String(appLocalized: "Started next round")
-            } else if youRow?.finalStepsComplete == true {
-                let submitted = people.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
-                let submittedRank = youRow.flatMap { you in
-                    submitted.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 }
-                } ?? 0
-                fight.kickerEmphasis = submittedRank == 1
-                    ? String(appLocalized: "Tentative lead")
-                    : String(appLocalized: "Tentative loss")
+            } else if let youRow, youRow.finalStepsComplete == true {
+                // A missing final sync keeps its last synced total, so it can already be ahead.
+                fight.kickerEmphasis = joined.contains { $0.score > youRow.score }
+                    ? String(appLocalized: "Tentative loss")
+                    : joined.contains { $0.person.id != youRow.person.id && $0.score == youRow.score }
+                        ? String(appLocalized: "Tied")
+                        : String(appLocalized: "Tentative lead")
             } else {
                 fight.kickerEmphasis = String(appLocalized: "Pending. Open the app")
             }

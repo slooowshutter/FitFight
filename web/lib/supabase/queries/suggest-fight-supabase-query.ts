@@ -29,6 +29,8 @@ export async function setFightSuggested(userId: string, fightId: string, suggest
             if (profileCountRowSchema.parse(capacity).n >= 50) throw new ApiError(409, "conflict", "This fight is full");
         }
         await sql`update public.fight_series set suggested = ${suggested}, suggested_at = ${suggested ? now : null} where id = ${series.id}`;
+        // Everyone is invited to a Suggested fight, so its rounds close 24 hours after the end.
+        if (suggested) await sql`update public.fights set closes_after_grace = true where id = ${fightId}`;
         await sql`insert into private.fight_admin_actions(actor_id, fight_id, changes) values (${userId}, ${fightId}, ${sql.json({ suggested })})`;
         if (suggested && !series.suggested) {
             const invitedIds = await inviteEveryoneToOpenFight(

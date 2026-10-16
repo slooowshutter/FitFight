@@ -3,6 +3,7 @@ import { revokeAppleRefreshToken } from "@/lib/apple/apple-sign-in";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { readStoredAppleRefreshToken } from "./apple-sign-in-supabase-query";
+import { endFriendFight } from "./friend-fights-supabase-query";
 import { removeStoragePaths } from "./media-supabase-query";
 import { removeProviderInboxObjects } from "./provider-uploads-supabase-query";
 
@@ -39,6 +40,19 @@ export async function deleteAccount(
                     "Account not found",
                 );
             }
+            // Each friend round ends as on unfriending. A series the friend owns stays theirs, unpaired
+            // so it no longer references this account; one this account owns goes with its fights below.
+            const friendSeries = await sql<{ friend_low: string; friend_high: string }[]>`
+                select friend_low, friend_high from public.fight_series
+                where friend_low = ${userId} or friend_high = ${userId}
+            `;
+            for (const pair of friendSeries) {
+                await endFriendFight(sql, pair.friend_low, pair.friend_high);
+            }
+            await sql`
+                update public.fight_series set friend_low = null, friend_high = null
+                where (friend_low = ${userId} or friend_high = ${userId}) and owner_id <> ${userId}
+            `;
             const media = await sql<{ object_path: string }[]>`
                 select object_path from public.media_objects where owner_id = ${userId} for update
             `;

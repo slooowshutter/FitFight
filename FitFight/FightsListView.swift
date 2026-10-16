@@ -72,6 +72,17 @@ struct FightsListView: View {
                 }
             }
 
+            // First on Current, above any empty state: everyone can add friends.
+            if filter == .current, let friends = model.friends {
+                FightGroupCard(
+                    title: String(appLocalized: "Friends"),
+                    subtitle: friends.summary,
+                    badge: friends.requests > 0
+                        ? String(appLocalized: "fights.friend-requests", defaultValue: "\(friends.requests) requests")
+                        : nil
+                ) { model.showingFriends = true }
+            }
+
             if isEmpty, model.isRefreshingFights {
                 ForEach(0..<3, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: theme.radius.card)
@@ -91,7 +102,7 @@ struct FightsListView: View {
                 )
             }
 
-            if !isEmpty, selectedFights.isEmpty, filter != .current || model.hosted == nil {
+            if !isEmpty, selectedFights.isEmpty, filter != .current || (model.hosted == nil && !hasFriendRounds) {
                 Text(filter == .current ? String(appLocalized: "No current fights")
                      : filter == .invited ? String(appLocalized: "No invitations")
                      : String(appLocalized: "No past fights"))
@@ -115,26 +126,7 @@ struct FightsListView: View {
 
             if filter == .current {
                 if let hosted = model.hosted {
-                    Button { model.showingHosted = true } label: {
-                        HStack(spacing: 13) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(verbatim: hosted.name)
-                                    .ffType(.heading)
-                                    .foregroundStyle(theme.text)
-                                Text(hosted.leadingSummary)
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                            }
-                            Spacer(minLength: 8)
-                            FFChevron()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-                        .ffBorder(theme.hairline, radius: theme.radius.card)
-                    }
-                    .buttonStyle(FFPressStyle())
+                    FightGroupCard(title: hosted.name, subtitle: hosted.leadingSummary) { model.showingHosted = true }
                 }
                 ForEach(sorted(model.live)) { fight in
                     LiveFightCard(fight: fight) { model.openFightID = fight.id }
@@ -171,8 +163,13 @@ struct FightsListView: View {
         )
     }
 
+    /// With no friend rounds the Friends card only invites you to add friends, so it is not a fight.
     private var isEmpty: Bool {
-        model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty && model.hosted == nil
+        model.live.isEmpty && model.invitations.isEmpty && model.finished.isEmpty && model.hosted == nil && !hasFriendRounds
+    }
+
+    private var hasFriendRounds: Bool {
+        (model.friends?.rounds ?? 0) > 0
     }
 
     private var selectedFights: [Fight] {
@@ -432,6 +429,50 @@ private struct FightsSortSheet: View {
 extension FitFightSnapshot.Hosted {
     var leadingSummary: String {
         String(appLocalized: "fights.hosted-leading", defaultValue: "Leading \(leading) of \(rounds)")
+    }
+}
+
+extension FitFightSnapshot.Friends {
+    var summary: String {
+        rounds > 0
+            ? String(appLocalized: "fights.hosted-leading", defaultValue: "Leading \(leading) of \(rounds)")
+            : String(appLocalized: "Add friends to fight them every month")
+    }
+}
+
+/// A Fights row that opens a group of rounds, such as Friends or Fight Marc.
+private struct FightGroupCard: View {
+    let title: String
+    let subtitle: String
+    var badge: String?
+    let onOpen: () -> Void
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Button(action: onOpen) {
+            HStack(spacing: 13) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: title)
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                    Text(verbatim: subtitle)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+                Spacer(minLength: 8)
+                if let badge {
+                    FFPill(badge)
+                        .fixedSize()
+                }
+                FFChevron()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+            .ffBorder(theme.hairline, radius: theme.radius.card)
+        }
+        .buttonStyle(FFPressStyle())
     }
 }
 

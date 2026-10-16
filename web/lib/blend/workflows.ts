@@ -26,7 +26,8 @@ export function blendWorkflowConfiguration(workflow: AiWorkflow, paidCharacter =
     const version = blendWorkflowVersionSchema.safeParse({ workflowId, versionId });
     if (!version.success)
         throw new ApiError(503, "ai_unavailable", "This feature is temporarily unavailable on our side.");
-    if (paidCharacter) return { ...provider, version: version.data, creditPrice: 0 };
+    // A prompt check is free text work done before buying, like a paid character's own runs.
+    if (paidCharacter || workflow === "prompt_check") return { ...provider, version: version.data, creditPrice: 0 };
     const parsed = aiWorkflowConfigurationSchema.safeParse({
         version: version.data,
         creditPrice,

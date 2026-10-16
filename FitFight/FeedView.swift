@@ -431,51 +431,66 @@ struct FeedComposeSheet: View {
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
-    @State private var destinations: Set<FeedPostDestination>
+    @Environment(\.ffStaticRender) private var staticRender
+    @State private var everyone: Bool
+    @State private var friends: Bool
+    @State private var fightIDs: Set<UUID>
+    @State private var friendPeople: [SharedProfileIdentity]?
 
     init(defaultFightID: UUID? = nil, broadcastOnly: Bool = false, onPosted: (() -> Void)? = nil) {
         self.defaultFightID = defaultFightID
         self.broadcastOnly = broadcastOnly
         self.onPosted = onPosted
-        _destinations = State(
-            initialValue: broadcastOnly
-                ? Set([FeedPostDestination.broadcast])
-                : defaultFightID.map { Set([FeedPostDestination.fight($0)]) } ?? []
-        )
+        // Same composer from Feed and from a fight; only what starts ticked differs.
+        _everyone = State(initialValue: defaultFightID == nil)
+        _friends = State(initialValue: false)
+        _fightIDs = State(initialValue: defaultFightID.map { [$0] } ?? [])
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled { _friendPeople = State(initialValue: CompanionPreview.friendIdentities) }
+        #endif
     }
 
     private var fights: [Fight] {
         postableFights(model.fights)
     }
 
+    private var allFightIDs: [UUID] {
+        fights.compactMap { UUID(uuidString: $0.id) }
+    }
+
+    /// Everyone always means my friends and every fight I can post in right now.
+    private var sendsToFriends: Bool { everyone || friends }
+
+    private var chosenFightIDs: [UUID] {
+        everyone ? allFightIDs : allFightIDs.filter(fightIDs.contains) + fightIDs.subtracting(allFightIDs)
+    }
+
+    private var destinations: [FeedPostDestination] {
+        if broadcastOnly { return [.broadcast] }
+        return (sendsToFriends ? [.friends] : []) + chosenFightIDs.map { .fight($0) }
+    }
+
     var body: some View {
         FFScreen(clearance: false) {
             FFSheetHeader(title: broadcastOnly ? String(appLocalized: "Broadcast") : String(appLocalized: "New post")) { dismiss() }
-            Text(
-                broadcastOnly
-                    ? String(appLocalized: "This post appears on Feed for everyone signed in.")
-                    : "Your post will only appear in the channels you select. You can choose more than one."
-            )
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
             if broadcastOnly {
-                FightPostComposer(destinations: Array(destinations)) {
+                Text(String(appLocalized: "This post appears on Feed for everyone signed in."))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                FightPostComposer(destinations: destinations) {
                     onPosted?()
                     dismiss()
                 }
-            } else if fights.isEmpty && defaultFightID == nil {
+            } else if fights.isEmpty && defaultFightID == nil && friendPeople?.isEmpty == true {
                 FFCard {
-                    Text(String(appLocalized: "Join a fight first, then post from here."))
+                    Text(String(appLocalized: "Add a friend or join a fight first, then post from here."))
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                FightPostComposer(
-                    destinations: Array(destinations),
-                    destination: AnyView(FeedDestinationMenu(fights: fights, destinations: $destinations))
-                ) {
+                FightPostComposer(destinations: destinations, destination: AnyView(audience)) {
                     onPosted?()
                     dismiss()
                 }
@@ -484,100 +499,116 @@ struct FeedComposeSheet: View {
                 FFNotice(text: error, tone: .ember, systemImage: "exclamationmark.triangle")
             }
         }
-    }
-}
-
-struct FeedDestinationMenu: View {
-    let fights: [Fight]
-    @Binding var destinations: Set<FeedPostDestination>
-    @Environment(\.ffTheme) private var theme
-    @Environment(\.ffStaticRender) private var staticRender
-
-    private var allFightDestinations: Set<FeedPostDestination> {
-        Set(fights.compactMap { fight in
-            UUID(uuidString: fight.id).map { FeedPostDestination.fight($0) }
-        })
-    }
-
-    private var everythingSelected: Bool {
-        destinations.contains(.main)
-            && !allFightDestinations.isEmpty
-            && allFightDestinations.isSubset(of: destinations)
-    }
-
-    private var label: String {
-        if destinations.isEmpty {
-            return String(appLocalized: "Choose where")
+        .task {
+            guard !broadcastOnly, !staticRender, friendPeople == nil else { return }
+            await loadFriends()
         }
-        if everythingSelected {
-            return String(appLocalized: "All fights")
-        }
-        if destinations.count == 1, let id = destinations.first?.fightId {
-            return fights.first(where: { $0.id.caseInsensitiveCompare(id.uuidString) == .orderedSame })?.listTitle
-                ?? String(appLocalized: "Choose where")
-        }
-        return String(appLocalized: "\(destinations.count) fights")
     }
 
-    var body: some View {
-        if staticRender {
-            menuLabel
-        } else {
-            Menu {
-                Button {
-                    if everythingSelected {
-                        destinations.removeAll()
-                    } else {
-                        destinations = allFightDestinations.union([.main])
+    private var audience: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(String(appLocalized: "Who sees this"))
+                .ffType(.label)
+                .foregroundStyle(theme.text)
+            FFSegmented(
+                items: [true, false],
+                selection: Binding(
+                    get: { everyone },
+                    set: { picked in
+                        // Choose starts from everything Everyone had, so you untick what to leave out.
+                        if everyone && !picked {
+                            friends = true
+                            fightIDs = Set(allFightIDs)
+                        }
+                        everyone = picked
                     }
-                } label: {
-                    destinationLabel(String(appLocalized: "All fights"), selected: everythingSelected)
+                ),
+                fill: true
+            ) { $0 ? String(appLocalized: "Everyone") : String(appLocalized: "Choose") }
+            if everyone {
+                FFCard {
+                    HStack(spacing: 12) {
+                        if !audiencePeople.isEmpty {
+                            CompanionAvatarStack(people: audiencePeople, visible: 4, size: 30, ring: theme.card, halfBody: true)
+                        }
+                        Text(String(appLocalized: "My friends and everyone in my fights"))
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
                 }
-                ForEach(fights) { fight in
-                    if let id = UUID(uuidString: fight.id) {
-                        Button {
-                            toggle(.fight(id))
-                        } label: {
-                            destinationLabel(fight.listTitle, selected: destinations.contains(.fight(id)))
+            } else {
+                FFGroupedRows {
+                    audienceRow(String(appLocalized: "My friends"), systemImage: "person.2", count: friendPeople?.count, selected: friends) {
+                        friends.toggle()
+                    }
+                    ForEach(fights) { fight in
+                        if let id = UUID(uuidString: fight.id) {
+                            FFDivider()
+                            audienceRow(fight.listTitle, systemImage: "trophy", count: members(of: fight).count, selected: fightIDs.contains(id)) {
+                                if fightIDs.contains(id) { fightIDs.remove(id) } else { fightIDs.insert(id) }
+                            }
                         }
                     }
                 }
-            } label: {
-                menuLabel
             }
-            .menuOrder(.fixed)
-            .menuActionDismissBehavior(.disabled)
-            .accessibilityLabel(String(appLocalized: "Choose where"))
-            .accessibilityValue(label)
+            if destinations.isEmpty {
+                Text(String(appLocalized: "Pick who sees this"))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.emberText)
+            } else if !sendsToFriends || friendPeople != nil {
+                Text(String(appLocalized: "feed.seen-by", defaultValue: "Seen by \(audiencePeople.count) people"))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
         }
     }
 
-    private var menuLabel: some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .ffType(.label)
-                .lineLimit(1)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 10, weight: .bold))
-        }
-        .foregroundStyle(destinations.isEmpty ? theme.emberText : theme.mossText)
+    private func audienceRow(_ title: String, systemImage: String, count: Int?, selected: Bool, action: @escaping () -> Void) -> some View {
+        FFGroupedRow(
+            title: title,
+            subtitle: count.map { String(appLocalized: "feed.audience-people", defaultValue: "\($0) people") },
+            systemImage: systemImage,
+            subtitleTone: .neutral,
+            trailing: AnyView(
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(selected ? theme.mossText : theme.textFaint)
+            ),
+            action: action
+        )
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    @ViewBuilder
-    private func destinationLabel(_ title: String, selected: Bool) -> some View {
-        if selected {
-            Label(title, systemImage: "checkmark")
-        } else {
-            Text(title)
-        }
+    /// Who can see a post in this fight: everyone on the roster but you and pending invites.
+    private func members(of fight: Fight) -> [Person] {
+        fight.standings.filter { !$0.invited && !$0.person.isYou }.map(\.person)
     }
 
-    private func toggle(_ destination: FeedPostDestination) {
-        if destinations.contains(destination) {
-            destinations.remove(destination)
-            destinations.remove(.main)
-        } else {
-            destinations.insert(destination)
+    /// Everyone the chosen audience reaches, once each.
+    private var audiencePeople: [Person] {
+        let friendList = sendsToFriends ? (friendPeople ?? []).map {
+            Person(id: $0.userId.uuidString, name: $0.displayName, handle: $0.handle, initials: $0.initials, photoURL: $0.avatarUrl, companionId: $0.companionId)
+        } : []
+        let fightMembers = fights.filter { UUID(uuidString: $0.id).map(chosenFightIDs.contains) ?? false }.flatMap(members(of:))
+        var seen = Set<String>()
+        return (friendList + fightMembers).filter { seen.insert($0.id.lowercased()).inserted }
+    }
+
+    private func loadFriends() async {
+        do {
+            let token = try await session.freshAccessToken()
+            var people: [SharedProfileIdentity] = []
+            var cursor: UUID?
+            repeat {
+                let page = try await FitFightAPI().profileFriends(kind: "accepted", cursor: cursor, accessToken: token)
+                people += page.people
+                cursor = page.nextCursor
+            } while cursor != nil
+            friendPeople = people
+        } catch {
+            // No count when friends fail to load; posting still works.
         }
     }
 }
@@ -696,6 +727,7 @@ struct FightPostComposer: View {
     var destination: AnyView? = nil
     var onPosted: (() -> Void)? = nil
 
+    @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var feed: FeedStore
     @Environment(\.ffTheme) private var theme
@@ -719,101 +751,103 @@ struct FightPostComposer: View {
     }
 
     var body: some View {
-        FFCard {
-            VStack(alignment: .leading, spacing: 12) {
-                if staticRender {
-                    Text(String(appLocalized: "Add a note or some proof…"))
-                        .ffType(.body)
-                        .foregroundStyle(theme.textTertiary)
-                        .frame(maxWidth: .infinity, minHeight: 63, alignment: .topLeading)
-                } else {
-                    FeedMentionField(
-                        text: $bodyText,
-                        people: $mentionPeople,
-                        main: destinations.contains { $0.type == "main" || $0.type == "broadcast" },
-                        fightIDs: destinations.compactMap(\.fightId)
-                    ) {
-                        TextField(String(appLocalized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
-                            .focused($bodyFocused)
-                            .ffType(.body)
-                            .foregroundStyle(theme.text)
-                            .lineLimit(3...6)
-                            .onChange(of: bodyText) { _, value in
-                                if value.count > 500 {
-                                    bodyText = String(value.prefix(500))
-                                }
-                            }
-                    }
-                }
-                if !images.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(images.enumerated()), id: \.offset) { index, image in
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 72, height: 72)
-                                    .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                                    .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
-                                    .onTapGesture {
-                                        images.remove(at: index)
+        VStack(alignment: .leading, spacing: 14) {
+            FFCard {
+                HStack(alignment: .top, spacing: 12) {
+                    CompanionAvatar(model.you, size: 36)
+                    VStack(alignment: .leading, spacing: 12) {
+                        if staticRender {
+                            Text(String(appLocalized: "Add a note or some proof…"))
+                                .ffType(.body)
+                                .foregroundStyle(theme.textTertiary)
+                                .frame(maxWidth: .infinity, minHeight: 63, alignment: .topLeading)
+                        } else {
+                            FeedMentionField(
+                                text: $bodyText,
+                                people: $mentionPeople,
+                                main: destinations.contains { $0.type == "main" || $0.type == "broadcast" },
+                                fightIDs: destinations.compactMap(\.fightId)
+                            ) {
+                                TextField(String(appLocalized: "Add a note or some proof…"), text: $bodyText, axis: .vertical)
+                                    .focused($bodyFocused)
+                                    .ffType(.body)
+                                    .foregroundStyle(theme.text)
+                                    .lineLimit(3...6)
+                                    .onChange(of: bodyText) { _, value in
+                                        if value.count > 500 {
+                                            bodyText = String(value.prefix(500))
+                                        }
                                     }
                             }
                         }
-                    }
-                }
-                if videoURL != nil {
-                    HStack(spacing: 8) {
-                        Image(systemName: "video.fill")
-                            .foregroundStyle(theme.mossText)
-                        Text(String(appLocalized: "Video"))
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                    }
-                    .onTapGesture {
-                        clearVideo()
-                    }
-                }
-                if let destination {
-                    HStack {
-                        Text("Channels")
-                            .ffType(.caption)
-                            .foregroundStyle(theme.textSecondary)
-                        Spacer(minLength: 8)
-                        destination
-                    }
-                    .padding(.vertical, 8)
-                }
-                HStack(alignment: .center, spacing: 10) {
-                    Button {
-                        showCamera = false
-                        showLibrary = false
-                        if CameraPhotoPicker.isAvailable {
-                            showMediaSource = true
-                        } else {
-                            presentMedia(.library, waitForSourceDialog: false)
+                        if !images.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 72, height: 72)
+                                            .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                                            .contentShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+                                            .onTapGesture {
+                                                images.remove(at: index)
+                                            }
+                                    }
+                                }
+                            }
                         }
-                    } label: {
-                        Label(String(appLocalized: "Media"), systemImage: "photo.on.rectangle.angled")
-                            .ffType(.label)
-                            .foregroundStyle(theme.mossText)
+                        if videoURL != nil {
+                            HStack(spacing: 8) {
+                                Image(systemName: "video.fill")
+                                    .foregroundStyle(theme.mossText)
+                                Text(String(appLocalized: "Video"))
+                                    .ffType(.caption)
+                                    .foregroundStyle(theme.textSecondary)
+                            }
+                            .onTapGesture {
+                                clearVideo()
+                            }
+                        }
                     }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .disabled(images.count >= 4 || videoURL != nil || isLoadingMedia || feed.isSaving)
-                    if isLoadingMedia { ProgressView().tint(theme.mossText) }
-                    Spacer(minLength: 8)
-                    FFButton(
-                        title: feed.isSaving ? String(appLocalized: "Posting…") : String(appLocalized: "Post"),
-                        kind: .primary,
-                        fullWidth: false
-                    ) {
-                        Task { await submit() }
-                    }
-                    .disabled(!canPost)
                 }
             }
-            .ffKeyboardDismissOnBackgroundTap()
+            HStack(spacing: 10) {
+                Button {
+                    showCamera = false
+                    showLibrary = false
+                    if CameraPhotoPicker.isAvailable {
+                        showMediaSource = true
+                    } else {
+                        presentMedia(.library, waitForSourceDialog: false)
+                    }
+                } label: {
+                    Label(String(appLocalized: "Photo or video"), systemImage: "photo.on.rectangle.angled")
+                        .ffType(.label)
+                        .foregroundStyle(theme.mossText)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 42)
+                        .background(theme.chip, in: Capsule())
+                        .overlay { Capsule().strokeBorder(theme.chipEdge, lineWidth: 1) }
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(images.count >= 4 || videoURL != nil || isLoadingMedia || feed.isSaving)
+                if isLoadingMedia { ProgressView().tint(theme.mossText) }
+            }
+            if let destination {
+                destination
+            }
+            FFButton(
+                title: feed.isSaving ? String(appLocalized: "Posting…") : String(appLocalized: "Post"),
+                kind: .primary,
+                size: .large,
+                enabled: canPost,
+                fullWidth: true
+            ) {
+                Task { await submit() }
+            }
         }
+        .ffKeyboardDismissOnBackgroundTap()
         .confirmationDialog(String(appLocalized: "Add media"), isPresented: $showMediaSource, titleVisibility: .visible) {
             Button(String(appLocalized: "Take Photo")) {
                 pendingMedia = .camera

@@ -160,6 +160,15 @@ export async function getProviderUpload(
     };
 }
 
+/**
+ * A member's own final Steps for a still-awaiting Fight stop being re-read this many days after
+ * its end: no Apple Health day changed after 6 days (staging, 14 Oct 2026). A Fight that waits for
+ * someone else then drops out of every other member's upload, so those Fights cannot pile up there.
+ * NOTE: syncHealthKitAggregates validates the upload against the same window set, and
+ * publishCivilDayScores applies it to friend and founder rounds.
+ */
+export const SETTLED_FINAL_SYNC_DAYS = 7;
+
 export async function getProviderUploadContext(
     userId: string,
     database: Sql = createDatabaseClient(),
@@ -175,6 +184,9 @@ export async function getProviderUploadContext(
             and member.state = 'accepted'
             and fight.state in ('live', 'awaiting_final_sync')
             and fight.host_id is distinct from ${userId}
+            and not fight.friends
+            and not (fight.state = 'awaiting_final_sync' and member.final_steps_complete
+                and fight.ends_at < now() - make_interval(days => ${SETTLED_FINAL_SYNC_DAYS}))
         order by fight.starts_at, fight.id
     `,
     );

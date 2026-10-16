@@ -49,6 +49,7 @@ export const fightPostSchema = z
         fight_id: z.string().uuid().nullable(),
         fight_name: z.string(),
         broadcast: z.boolean(),
+        to_friends: z.boolean(),
         channels: z.array(fightPostChannelSchema),
         body: z.string(),
         created_at: z.string().datetime({ offset: true }),
@@ -99,6 +100,7 @@ export const updateFightPostRequestSchema = z
 export const feedDestinationSchema = z.discriminatedUnion("type", [
     z.object({ type: z.literal("main") }).strict(),
     z.object({ type: z.literal("broadcast") }).strict(),
+    z.object({ type: z.literal("friends") }).strict(),
     z
         .object({
             type: z.literal("fight"),

@@ -474,14 +474,9 @@ body:has(.lp) {
     border-radius: 50%;
 }
 
-.lp-chip-icon {
-    padding-left: 0.45em;
-    color: var(--moss-text);
-}
-
-.lp-chip-icon .lp-icon {
-    width: 0.9em;
-    height: 0.9em;
+.lp-chip-group img + img {
+    margin-left: -0.62em;
+    outline: 0.08em solid var(--control);
 }
 
 .lp-facts {
@@ -1744,8 +1739,7 @@ body:has(.lp) {
     line-height: 1.35;
 }
 
-.lp-scr-fights-tag span,
-.lp-scr-new-tag span {
+.lp-scr-fights-tag span {
     display: block;
     color: var(--moss-text);
 }
@@ -1776,11 +1770,6 @@ body:has(.lp) {
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1.3;
-}
-
-.lp-scr-new-tag span {
-    max-width: 8.5em;
-    margin-top: 6px;
 }
 
 .lp-scr-new-hero img {

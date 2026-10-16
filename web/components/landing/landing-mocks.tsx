@@ -242,10 +242,7 @@ export function PhoneScreen({
             <div className="lp-scr-new">
                 <div className="lp-ph-title">{phone.newTitle}</div>
                 <div className="lp-scr-new-hero">
-                    <div className="lp-scr-new-tag">
-                        {phone.newTagline}
-                        <span>{phone.newTaglineAccent}</span>
-                    </div>
+                    <div className="lp-scr-new-tag">{phone.newRule}</div>
                     <img
                         src="/landing/companion-tiger-2.webp"
                         alt=""
@@ -398,8 +395,7 @@ export function PhoneScreen({
                 <div>
                     <div className="lp-ph-title">{phone.fightsTitle}</div>
                     <div className="lp-scr-fights-tag">
-                        {phone.tagline}
-                        <span>{phone.taglineAccent}</span>
+                        <span>{phone.leading}</span>
                     </div>
                     <div className="lp-ph-metric">
                         {formatSteps(steps, language)}

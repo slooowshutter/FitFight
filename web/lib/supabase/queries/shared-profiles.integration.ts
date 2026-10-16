@@ -37,11 +37,18 @@ async function seedStepDays(
     }
 }
 
+/** Accepting a friend starts a friend round, whose fights and series hold both accounts. */
+async function removeFriendFights(users: string[]) {
+    await database`delete from public.fights where friends and owner_id = any(${database.array(users)}::uuid[])`;
+    await database`delete from public.fight_series where friend_low is not null and owner_id = any(${database.array(users)}::uuid[])`;
+}
+
 test("shared activity uses one saved personal time zone across travel", async (t) => {
     const users = [randomUUID(), randomUUID()];
     const [owner, friend] = users;
     const sourceId = randomUUID();
     t.after(async () => {
+        await removeFriendFights(users);
         await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
     });
     for (const id of users) await database`insert into auth.users(id) values (${id})`;
@@ -113,7 +120,10 @@ test("private history IDs and cursors cannot correlate participants across profi
 test("private profiles require mutual acceptance and enforce sharing on every read", async (t) => {
     const users = [randomUUID(), randomUUID(), randomUUID()];
     const [viewer, target, stranger] = users;
-    t.after(async () => { await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`; });
+    t.after(async () => {
+        await removeFriendFights(users);
+        await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
+    });
     for (const id of users) await database`insert into auth.users(id) values (${id})`;
     assert.deepEqual(await readProfileSettings(target, database), defaultProfileSettings);
     assert.equal((await readSharedProfile(viewer, target, undefined, database)).access, "private");
@@ -170,6 +180,7 @@ test("step statistics keep owner records private and clip every shared aggregate
     const [owner, friend, stranger] = users;
     const sourceId = randomUUID();
     t.after(async () => {
+        await removeFriendFights(users);
         await database`delete from auth.users where id = any(${database.array(users)}::uuid[])`;
     });
     for (const id of users) await database`insert into auth.users(id) values (${id})`;
@@ -482,6 +493,7 @@ test("rivalries match each opponent's Profile, newest first, under current shari
     const olderId = randomUUID();
     t.after(async () => {
         await database`delete from public.fights where id = any(${database.array([...fightIds, olderId])}::uuid[])`;
+        await removeFriendFights(users);
         await database`delete from auth.users where id in ${database(users)}`;
     });
     for (const id of users) await database`insert into auth.users(id) values (${id})`;

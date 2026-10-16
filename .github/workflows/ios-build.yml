@@ -194,9 +194,12 @@ jobs:
             - name: Verify Past lists every finished round
               run: python3 scripts/test_past_rounds.py
 
+            - name: Verify History leaderboard and records
+              run: python3 scripts/test_series_stats.py
+
             - name: Verify native API contracts
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift FitFight/InAppAlert.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
                   /tmp/fitfight-contract-tests contracts/fixtures
 
             - name: Verify generation recovery and account isolation

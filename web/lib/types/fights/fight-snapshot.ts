@@ -26,6 +26,8 @@ export const fightSnapshotRequestSchema = z
             }, "invalid time zone"),
         /** Only the caller's current hosted rounds, such as a founder's challengers. */
         hosted: z.boolean().optional(),
+        /** Only the caller's current friend rounds where both friends still race. */
+        friends: z.boolean().optional(),
     })
     .strict();
 
@@ -39,9 +41,13 @@ export const fightSnapshotSchema = z.object({
             starts_at: timestampSchema,
             ends_at: timestampSchema,
             time_zone: z.string().optional(),
-            grace_ends_at: timestampSchema,
+            grace_ends_at: timestampSchema.nullable(),
             action_text: z.string().nullable(),
             series_id: z.string().uuid().nullable(),
+            /** Always sent by current servers; absent from older responses. */
+            friends: z.boolean().optional(),
+            /** The fight's newest group image, a transparent PNG on Blend; null until one is ready, absent from older responses. */
+            group_image_url: z.string().url().nullable().optional(),
         }),
     ),
     members: z.array(
@@ -94,6 +100,23 @@ export const fightSnapshotSchema = z.object({
             leading: z.number().int().nonnegative(),
         })
         .nullable(),
+    /**
+     * The caller's Friends card, always sent by current servers and absent from older responses.
+     * leading counts rounds the caller is strictly ahead in; requests counts incoming friend requests.
+     */
+    friends: z
+        .object({
+            rounds: z.number().int().nonnegative(),
+            leading: z.number().int().nonnegative(),
+            requests: z.number().int().nonnegative(),
+        })
+        .optional(),
+});
+
+/** The caller's friendships as GET /friends shows them: blocked and deleted people left out. */
+export const snapshotFriendshipsRowSchema = z.object({
+    requests: z.number().int().nonnegative(),
+    friend_ids: z.array(z.string().uuid()),
 });
 
 export const fightMaintenanceCandidateSchema = z.object({
@@ -110,6 +133,7 @@ export const userFightMaintenanceSchema = z.object({
 
 export type FightSnapshotRequest = z.infer<typeof fightSnapshotRequestSchema>;
 export type FightSnapshot = z.infer<typeof fightSnapshotSchema>;
+export type SnapshotFriendshipsRow = z.infer<typeof snapshotFriendshipsRowSchema>;
 export type FightMaintenanceCandidate = z.infer<
     typeof fightMaintenanceCandidateSchema
 >;

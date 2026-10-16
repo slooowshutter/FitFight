@@ -22,11 +22,23 @@ struct FitFightSnapshot: Decodable {
         let leading: Int
     }
 
+    /// The Friends card: one monthly 1v1 per accepted friend. nil from servers before
+    /// 15 Oct 2026, which hides the card.
+    struct Friends: Decodable {
+        /// Current friend rounds.
+        let rounds: Int
+        /// Rounds the caller is strictly ahead in.
+        let leading: Int
+        /// Incoming friend requests.
+        let requests: Int
+    }
+
     let fights: [FightRow]
     let members: [MemberRow]
     let profiles: [FitFightProfile]
     let series: [SeriesRow]
     let hosted: Hosted?
+    let friends: Friends?
 }
 
 struct SeriesRow: Decodable {
@@ -65,6 +77,11 @@ struct FightRow: Decodable {
     let actionText: String?
     let seriesId: UUID?
     let timeZone: String?
+    /// A monthly friend round. nil from servers before 15 Oct 2026.
+    let friends: Bool?
+    /// The fight's newest group image. A String so a malformed link never fails the whole snapshot;
+    /// nil until one is ready and from servers before 16 Oct 2026.
+    let groupImageUrl: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -77,6 +94,8 @@ struct FightRow: Decodable {
         case actionText = "action_text"
         case seriesId = "series_id"
         case timeZone = "time_zone"
+        case friends
+        case groupImageUrl = "group_image_url"
     }
 
     var startsAtDate: Date { parseServerDate(startsAt) ?? Date() }

@@ -103,6 +103,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
     var commentCount: Int
     let mine: Bool
     let broadcast: Bool
+    let toFriends: Bool
     let channels: [Channel]
 
     struct Channel: Codable, Equatable, Hashable {
@@ -169,6 +170,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         commentCount: Int,
         mine: Bool,
         broadcast: Bool = false,
+        toFriends: Bool = false,
         channels: [Channel] = []
     ) {
         self.id = id
@@ -184,6 +186,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         self.commentCount = commentCount
         self.mine = mine
         self.broadcast = broadcast
+        self.toFriends = toFriends
         self.channels = channels
     }
 
@@ -192,6 +195,9 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
     var isMain: Bool { audience == "main" }
 
     var channelLabel: String {
+        if toFriends && !broadcast && channels.isEmpty {
+            return String(appLocalized: "Friends")
+        }
         if broadcast || isMain {
             return String(appLocalized: "Public")
         }
@@ -217,6 +223,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         case fightName = "fight_name"
         case createdAt = "created_at"
         case commentCount = "comment_count"
+        case toFriends = "to_friends"
     }
 
     init(from decoder: Decoder) throws {
@@ -234,6 +241,7 @@ struct FitFightFightPost: Codable, Equatable, Hashable, Identifiable {
         commentCount = try container.decode(Int.self, forKey: .commentCount)
         mine = try container.decode(Bool.self, forKey: .mine)
         broadcast = try container.decodeIfPresent(Bool.self, forKey: .broadcast) ?? false
+        toFriends = try container.decodeIfPresent(Bool.self, forKey: .toFriends) ?? false
         channels = try container.decodeIfPresent([Channel].self, forKey: .channels) ?? []
     }
 }

@@ -144,10 +144,15 @@ struct SharedProfile: Codable, Equatable {
     let activity: ProfileActivity?
     let stepStatistics: ProfileStepStatistics?
     let viewMeasurementEnabled: Bool
+    /// A custom companion's name and line. Stock companions and older servers send none.
+    let companionName: String?
+    let companionLine: String?
     enum CodingKeys: String, CodingKey {
         case identity, access, competitive, friendship, record, rivalry, activity
         case viewMeasurementEnabled = "view_measurement_enabled"
         case stepStatistics = "step_statistics"
+        case companionName = "companion_name"
+        case companionLine = "companion_line"
     }
 }
 
@@ -183,6 +188,10 @@ struct ProfileFriendsPage: Decodable {
 }
 
 struct ProfileFriendshipResponse: Decodable { let friendship: String }
+
+/// `GET /api/v1/friends/suggestions`, most shared fights first. Each person also carries
+/// `shared_fights`, which the app does not show.
+struct FriendSuggestionList: Decodable { let people: [SharedProfileIdentity] }
 
 struct ProfileChallengeDraft: Equatable {
     let handle: String

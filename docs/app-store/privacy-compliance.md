@@ -50,7 +50,7 @@ Declare these collected data types:
 | Device ID             | Encrypted APNs device token and its fingerprint for notification delivery                                          |                Yes | App Functionality |
 | Photos or Videos      | Profile photo, Fight post photos/videos, and feedback attachments                                                  |                Yes | App Functionality |
 | Gameplay Content      | Fights, invitations, membership state, standings, scores, and results                                              |                Yes | App Functionality, Analytics |
-| Other User Content    | Fight titles/actions, posts, comments, reactions, companion descriptions, and uploaded feedback files              |                Yes | App Functionality |
+| Other User Content    | Fight titles/actions, posts, comments, reactions, companion descriptions, companion names and lines (friends see them on the profile), and uploaded feedback files |                Yes | App Functionality |
 | Customer Support      | Support emails, in-app bug/feature reports, comments, and report device metadata                                   |                Yes | App Functionality |
 | Other Data Types      | Time zone and limited request metadata such as IP address                                                          |                Yes | App Functionality, Analytics |
 | Other Diagnostic Data | Limited server errors, Health sync timing/failure reports, app version and request sizes                           |                Yes | App Functionality, Analytics |

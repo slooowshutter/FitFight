@@ -18,6 +18,30 @@ import { recalculateFight } from "./recalculate-fight-supabase-query";
 
 const BATCH = 25;
 
+/**
+ * When an awaiting Fight can finalize: now if no missing final sync can change a rank (Steps only go
+ * up, so only a lone missing leader may still be missing), else at its deadline, else never.
+ * recalculateFight decides; this keeps Fights still waiting for someone out of every tick.
+ */
+function awaitingDueAt(database: Sql) {
+    return database`case
+        when (
+            select count(*) > 0 and (
+                count(*) filter (where not racer.final_steps_complete) = 0
+                or (fight.outcome_rule = 'highest_total' and count(*) > 1
+                    and count(*) filter (where not racer.final_steps_complete) = 1
+                    and max(coalesce(racer.current_value, 0)) filter (where not racer.final_steps_complete)
+                        > max(coalesce(racer.current_value, 0)) filter (where racer.final_steps_complete))
+            )
+            from public.fight_members as racer
+            where racer.fight_id = fight.id and racer.state = 'accepted'
+        ) then fight.ends_at
+        when fight.closes_after_grace then fight.ends_at + fight.final_sync_grace_seconds * interval '1 second'
+    end`;
+}
+/** The cron route allows 60 s and first spends up to 20 s on received activity. */
+const CLOSE_BUDGET_MS = 30_000;
+
 export type CloseDueResult = {
     checked: number;
     closed: number;
@@ -57,30 +81,39 @@ export async function closeDueFights(
     now: Date = new Date(),
     database: Sql = createDatabaseClient(),
 ): Promise<CloseDueResult> {
-    const rows = fightMaintenanceCandidateSchema.pick({ id: true }).array().parse(await database`
-        with candidates as (
-            select id,
-                case state
-                    when 'scheduled' then starts_at
-                    when 'live' then ends_at
-                    when 'awaiting_final_sync' then ends_at
-                        + final_sync_grace_seconds * interval '1 second'
-                end as next_transition_at
-            from public.fights
-            where state in ('scheduled', 'live', 'awaiting_final_sync')
-        )
-        select id
-        from candidates
-        where next_transition_at <= ${now.toISOString()}::timestamptz
-        order by next_transition_at, id
-        limit ${BATCH}
-    `);
-    const fightIds = await recalculateIds(rows.map((row) => row.id), now, database);
+    // Every friend round ends at the same moment, so keep closing batches until none is due or the
+    // budget runs out. A fight already tried this run is not picked again, even if it stayed due.
+    const startedAt = Date.now();
+    const fightIds: string[] = [];
+    let checked = 0;
+    while (Date.now() - startedAt < CLOSE_BUDGET_MS) {
+        const rows = fightMaintenanceCandidateSchema.pick({ id: true }).array().parse(await database`
+            with candidates as (
+                select fight.id,
+                    case fight.state
+                        when 'scheduled' then fight.starts_at
+                        when 'live' then fight.ends_at
+                        when 'awaiting_final_sync' then ${awaitingDueAt(database)}
+                    end as next_transition_at
+                from public.fights as fight
+                where fight.state in ('scheduled', 'live', 'awaiting_final_sync')
+                    and not (fight.id = any(${database.array(fightIds)}::uuid[]))
+            )
+            select id
+            from candidates
+            where next_transition_at <= ${now.toISOString()}::timestamptz
+            order by next_transition_at, id
+            limit ${BATCH}
+        `);
+        checked += rows.length;
+        fightIds.push(...await recalculateIds(rows.map((row) => row.id), now, database));
+        if (rows.length < BATCH) break;
+    }
     await mintDueRecurringFights(admin, now);
     await enqueueScheduledNotifications(database, now);
     const notifications = await processNotificationOutbox(now, database);
     return {
-        checked: rows.length,
+        checked,
         closed: fightIds.length,
         fightIds,
         notifications,
@@ -114,6 +147,8 @@ export async function closeDueFightsForUser(
             where member.user_id = ${userId} and member.state = 'accepted'
                 and fight.state in ('live', 'scheduled', 'awaiting_final_sync')
                 and fight.host_id is distinct from ${userId}
+                and (fight.state <> 'awaiting_final_sync'
+                    or ${awaitingDueAt(database)} <= ${now.toISOString()}::timestamptz)
         ), '[]'::jsonb) as candidates,
         coalesce((
             select jsonb_agg(series.current_fight_id order by current_fight.ends_at, series.id)

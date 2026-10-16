@@ -14,11 +14,12 @@ export const fightCalculationRowSchema = z.object({
     state: membershipDecisionRowSchema.shape.state,
     starts_at: timestampSchema,
     ends_at: timestampSchema,
-    final_sync_grace_seconds: z.number().int().nonnegative(),
+    grace_ends_at: timestampSchema.nullable(),
     outcome_rule: z.enum(outcomeRuleValues),
     stake_minor: z.number().int().nullable(),
     default_goal_value: z.coerce.number().finite().nullable(),
     host_id: z.string().uuid().nullable(),
+    friends: z.boolean(),
 });
 
 export const fightCalculationMemberSchema = z.object({

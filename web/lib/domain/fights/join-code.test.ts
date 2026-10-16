@@ -19,13 +19,16 @@ test("the app-wide join code is the existing PGG7 alphabet value", () => {
     assert.equal(normalizeJoinCode("pgg7"), APP_WIDE_JOIN_CODE);
 });
 
-test("isJoinCode accepts the 4-character alphabet and rejects lookalikes", () => {
+test("isJoinCode accepts 4 to 12 uppercase letters or digits", () => {
     assert.equal(isJoinCode("K7M2"), true);
     assert.equal(isJoinCode("2345"), true);
     assert.equal(isJoinCode("ABCD"), true);
-    assert.equal(isJoinCode("O0I1"), false);
+    assert.equal(isJoinCode("O0I1"), true);
+    assert.equal(isJoinCode("GOLFCLUB2026"), true);
     assert.equal(isJoinCode("K7M"), false);
+    assert.equal(isJoinCode("GOLFCLUB20261"), false);
     assert.equal(isJoinCode("k7m2"), false);
+    assert.equal(isJoinCode("GOLF_CLUB"), false);
 });
 
 test("randomJoinCode draws from the join-code alphabet", () => {

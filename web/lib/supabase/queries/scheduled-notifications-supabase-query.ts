@@ -25,7 +25,7 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
             ('ending_24h', 'before_24h', interval '24 hours'),
             ('ending_week', 'before_week', interval '7 days')
         ) reminder(kind, slot, notice)
-        where fight.state = 'live'
+        where fight.state = 'live' and not fight.friends
             and coalesce(prefs.enabled, true)
             and case when reminder.kind = 'ending_24h' then coalesce(prefs.ending_24h, true)
                 else coalesce(prefs.ending_week, false) end
@@ -52,7 +52,7 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
             and member.user_id is distinct from fight.host_id
         left join private.notification_preferences prefs on prefs.user_id = member.user_id
-        where fight.state = 'awaiting_final_sync' and not member.final_steps_complete
+        where fight.state = 'awaiting_final_sync' and not fight.friends and not member.final_steps_complete
             and coalesce(prefs.enabled, true) and coalesce(prefs.final_sync, true)
             and fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' > ${at}::timestamptz
             and not exists (
@@ -61,6 +61,30 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
                     and previous.kind = 'fight_ended' and previous.copy_key = 'fight_ended_sync'
                     and previous.status = 'sent'
             )
+        on conflict (idempotency_key) do nothing
+    `;
+
+    // A friend round waiting on someone who stopped syncing never finalizes, and the results push
+    // waits for a person's last round. A day after the month, anyone with a finished round gets it.
+    await database`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key
+        )
+        select distinct on (member.user_id, month.key)
+            member.user_id || ':friends_results:' || month.key,
+            member.user_id, fight.id, 'friends_results', 'final',
+            ${at}::timestamptz, ${at}::timestamptz + interval '24 hours',
+            '/fights/' || fight.id || '?friends=1', 'friends_results'
+        from public.fights fight
+        cross join lateral (
+            select to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM') as key
+        ) month
+        join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+        where fight.friends and fight.state = 'final'
+            and fight.ends_at <= ${at}::timestamptz - interval '1 day'
+            and fight.ends_at > ${at}::timestamptz - interval '8 days'
+        order by member.user_id, month.key, fight.id
         on conflict (idempotency_key) do nothing
     `;
 

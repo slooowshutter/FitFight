@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { recurringRoundSchema, recurringSeriesSchema } from "@/lib/types/fights/recurring-round";
 import { lockFightSeries } from "./fight-series-lock-supabase-query";
+import { calendarMonthWindow } from "./friend-fights-supabase-query";
 
 /** Creates a round and copies its accepted series roster in one transaction. */
 export async function mintNextRecurringFight(
@@ -15,14 +16,17 @@ export async function mintNextRecurringFight(
 ): Promise<string | null> {
     return database.begin(async (sql) => {
         await lockFightSeries(sql, previousFightId);
-        const [row] = await sql`select id, series_id, starts_at::text, ends_at::text, state::text from public.fights where id = ${previousFightId} for update`;
+        const [row] = await sql`select id, series_id, starts_at::text, ends_at::text, state::text, time_zone, friends from public.fights where id = ${previousFightId} for update`;
         if (!row) return null;
         const previous = recurringRoundSchema.parse(row);
         if (!previous.series_id || Date.parse(previous.ends_at) > now.getTime() || previous.state === "cancelled") return null;
         const [seriesRow] = await sql`select recurring, paused_at, current_fight_id from public.fight_series where id = ${previous.series_id}`;
         const series = recurringSeriesSchema.parse(seriesRow);
         if (!series.recurring || series.paused_at) return null;
-        const window = rollingWindow(previous.starts_at, previous.ends_at);
+        // A friend round always runs to the end of the next calendar month, whatever the last one's length.
+        const window = previous.friends
+            ? { startsAt: previous.ends_at, endsAt: calendarMonthWindow(new Date(previous.ends_at), previous.time_zone).endsAt }
+            : rollingWindow(previous.starts_at, previous.ends_at);
         const [existing] = await sql`select id from public.fights where series_id = ${previous.series_id} and starts_at = ${window.startsAt}`;
         if (existing) {
             const existingId = recurringRoundSchema.shape.id.parse(existing.id);
@@ -34,9 +38,11 @@ export async function mintNextRecurringFight(
         if (series.current_fight_id !== previous.id) return null;
         const [inserted] = await sql`
             insert into public.fights(owner_id, name, state, starts_at, ends_at, time_zone, metric,
-                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id)
+                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id, friends,
+                closes_after_grace)
             select owner_id, name, 'live', ${window.startsAt}, ${window.endsAt}, time_zone, 'steps',
-                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id
+                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id, friends,
+                closes_after_grace
             from public.fights where id = ${previous.id} returning id
         `;
         const nextId = recurringRoundSchema.shape.id.parse(inserted.id);
@@ -44,14 +50,17 @@ export async function mintNextRecurringFight(
             insert into public.data_sources(user_id, provider, source_label, connection_route, capabilities, status, consent_version, connected_at)
             select user_id, 'apple_health', 'Apple Health', 'healthkit', array['steps'], 'healthy', 1, ${now}
             from public.fight_series_members where series_id = ${previous.series_id} and state = 'accepted'
+                and not ${previous.friends}
             on conflict (user_id, provider, connection_route) do nothing
         `;
+        // A friend never gets a made-up source: one who has not synced joins without one until their first day Steps.
         await sql`
             insert into public.fight_members(fight_id, user_id, state, accepted_at, selected_source_id, source_label)
             select ${nextId}, member.user_id, 'accepted', ${now}, source.id, source.source_label
             from public.fight_series_members member
-            join public.data_sources source on source.user_id = member.user_id and source.provider = 'apple_health' and source.connection_route = 'healthkit'
+            left join public.data_sources source on source.user_id = member.user_id and source.provider = 'apple_health' and source.connection_route = 'healthkit'
             where member.series_id = ${previous.series_id} and member.state = 'accepted'
+                and (source.id is not null or ${previous.friends})
         `;
         await sql`update public.fight_series set current_fight_id = ${nextId} where id = ${previous.series_id}`;
         await recordSharedFightParticipation(sql, nextId, null);

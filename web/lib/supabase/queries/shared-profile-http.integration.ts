@@ -32,7 +32,12 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
         assert.equal(created.error, null);
         assert.ok(created.data.user);
         const userId = created.data.user.id;
-        t.after(async () => { await database`delete from auth.users where id = ${userId}`; });
+        t.after(async () => {
+            // Accepting the friend request below starts a friend round that holds both accounts.
+            await database`delete from public.fights where friends and id in (select fight_id from public.fight_members where user_id = ${userId})`;
+            await database`delete from public.fight_series where friend_low = ${userId} or friend_high = ${userId}`;
+            await database`delete from auth.users where id = ${userId}`;
+        });
         const client = createClient(env.SUPABASE_TEST_URL, env.SUPABASE_TEST_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
         const signedIn = await client.auth.signInWithPassword({ email, password });
         assert.equal(signedIn.error, null);

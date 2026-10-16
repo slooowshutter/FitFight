@@ -23,8 +23,14 @@ visibility. iPhone notification permission is also required.
 | Mentions | On | Promptly |
 
 Ending reminders are separate from final sync. A pre-end sync does not contain
-the entire fight. Users still have the existing 24-hour post-end grace period;
-this change removes the repeated 12-hour, 6-hour, and 1-hour pushes. When both
+the entire fight. A fight that closes 24 hours after the end (the default for the
+Everybody fight, Suggested Fights and Fight Marc) names that deadline in its
+final-sync push. One that waits for everyone (the default for fights people make
+and friend rounds) only asks for the final steps. The monthly friends results push goes
+out when a person's last friend round finalizes, or a day after the month to anyone with
+a finished friend round, so a round waiting on someone who stopped syncing holds nobody's
+push back.
+This change removes the repeated 12-hour, 6-hour, and 1-hour pushes. When both
 Fight ended and Final sync needed are enabled, a missing final sync produces one
 request instead of two alerts. Completion or finalization cancels that request.
 

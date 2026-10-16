@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Two Claude subscriptions, one setup.
+
+  claude-lb          usage of both accounts (5-hour, weekly, Fable)
+  claude-lb a|b      switch Conductor (new chats) to account a or b
+  claude-lb auto     switch to whichever account has more room
+
+Account a = ~/.claude (default), b = ~/.claude-b (shares everything but the login).
+Conductor runs ~/.local/bin/claude-active, which reads the choice from ~/.claude-lb.
+Install: copy claude-lb, claude-active and claude-b from scripts/claude-accounts/ into ~/.local/bin,
+then set claude_code_executable_path = "~/.local/bin/claude-active" (full path) in ~/.conductor/settings.toml.
+"""
+import hashlib, json, os, subprocess, sys, time, urllib.request
+from datetime import datetime
+
+HOME = os.path.expanduser("~")
+STATE = f"{HOME}/.claude-lb"
+SERVICES = {
+    "a": "Claude Code-credentials",
+    "b": "Claude Code-credentials-" + hashlib.sha256(f"{HOME}/.claude-b".encode()).hexdigest()[:8],
+}
+
+
+def usage(service):
+    try:
+        raw = json.loads(subprocess.check_output(["security", "find-generic-password", "-s", service, "-w"], stderr=subprocess.DEVNULL))
+    except subprocess.CalledProcessError:
+        return None
+    oauth = raw["claudeAiOauth"]
+    if oauth["expiresAt"] / 1000 < time.time() + 60:
+        # Idle account: refresh like Claude Code does and save it back. Running claude processes re-read the keychain every 30s.
+        body = json.dumps({"grant_type": "refresh_token", "refresh_token": oauth["refreshToken"], "client_id": "9d1c250a-e61b-44d9-88ed-5944d1962f5e"}).encode()
+        req = urllib.request.Request("https://platform.claude.com/v1/oauth/token", body, {"Content-Type": "application/json"})
+        new = json.load(urllib.request.urlopen(req))
+        oauth.update(accessToken=new["access_token"], refreshToken=new.get("refresh_token", oauth["refreshToken"]), expiresAt=int((time.time() + new["expires_in"]) * 1000))
+        cmd = f'add-generic-password -U -a "{os.environ["USER"]}" -s "{service}" -X "{json.dumps(raw).encode().hex()}"\n'
+        subprocess.run(["security", "-i"], input=cmd.encode(), check=True, capture_output=True)
+    req = urllib.request.Request("https://api.anthropic.com/api/oauth/usage", headers={"Authorization": "Bearer " + oauth["accessToken"], "anthropic-beta": "oauth-2025-04-20"})
+    return json.load(urllib.request.urlopen(req))["limits"]
+
+
+active = open(STATE).read().strip() if os.path.exists(STATE) else "a"
+arg = sys.argv[1] if len(sys.argv) > 1 else ""
+limits = {name: usage(service) for name, service in SERVICES.items()}
+
+if arg in ("a", "b", "auto"):
+    if arg == "auto":
+        # ponytail: picks the account whose fullest limit is lowest; ignores reset times
+        arg = min((n for n in limits if limits[n]), key=lambda n: max(l["percent"] for l in limits[n]))
+    if not limits[arg]:
+        sys.exit(f"Account {arg} is not logged in. Run {'claude-b' if arg == 'b' else 'claude'} in a terminal and /login first.")
+    open(STATE, "w").write(arg)
+    print(f"Switched to {arg}. New Conductor chats use it; open chats keep their account.")
+    active = arg
+elif arg:
+    sys.exit(__doc__)
+
+for name, rows in limits.items():
+    print(f"\n{name}{'  <- active' if name == active else ''}")
+    if not rows:
+        print("  not logged in")
+        continue
+    for l in rows:
+        label = {"session": "5-hour", "weekly_all": "weekly"}.get(l["kind"]) or "weekly " + ((l["scope"] or {}).get("model") or {}).get("display_name", l["kind"])
+        resets = datetime.fromisoformat(l["resets_at"]).astimezone().strftime("%a %H:%M")
+        filled = round(l["percent"] * 40 / 100)
+        print(f"  {label:<14} {'█' * filled}{'░' * (40 - filled)} {l['percent']:>3}%   resets {resets}")

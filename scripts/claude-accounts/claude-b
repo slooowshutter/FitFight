@@ -1,0 +1,3 @@
+#!/bin/sh
+# Second Claude subscription. Shares ~/.claude settings, skills, plugins, memory, sessions via symlinks; own login.
+CLAUDE_CONFIG_DIR="$HOME/.claude-b" exec "$HOME/.local/bin/claude" "$@"

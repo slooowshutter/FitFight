@@ -68,6 +68,15 @@ test("shared activity uses one saved personal time zone across travel", async (t
     const [period] = await database`select ((now() at time zone 'Pacific/Kiritimati')::date - 6)::text first_day`;
     assert.equal(shared.activity?.values[0].day, period.first_day);
     assert.deepEqual((await readSharedProfile(owner, owner, "friend", database)).activity, shared.activity);
+    assert.deepEqual(shared.ten_k_streak, { goal: 10_000, current: 0, today_counted: false, best: null, recent: null });
+    assert.equal(shared.friend_comparison?.days, 0);
+    assert.equal(shared.friend_comparison?.them.recorded_days, 0);
+    assert.deepEqual(shared.head_to_head, { wins: 0, draws: 0, losses: 0, form: [] });
+    assert.match(shared.member_since ?? "", /^\d{4}-\d{2}-\d{2}$/);
+    const own = await readSharedProfile(owner, owner, undefined, database);
+    assert.equal(own.ten_k_streak?.recent?.length, 13);
+    assert.equal(own.head_to_head, null);
+    assert.equal(own.friend_comparison, null);
 });
 
 test("private history IDs and cursors cannot correlate participants across profiles", async (t) => {
@@ -111,6 +120,9 @@ test("private history IDs and cursors cannot correlate participants across profi
         await assert.rejects(readProfileHistory(stranger, owner, { ...query, cursor }, database),
             (error: unknown) => error instanceof ApiError && error.status === 400);
     }
+    assert.equal("head_to_head" in first.results[0], false);
+    const together = await readProfileHistory(opponent, owner, profilePageQuerySchema.parse({ limit: 1, shared: "true" }), database);
+    assert.ok("viewer_placement" in together.results[0] && "head_to_head" in together.results[0]);
     const own = await readProfileHistory(owner, owner, query, database);
     assert.equal(own.results[0].id, first.results[0].id);
     assert.ok(own.results[0].fight_id && fightIds.includes(own.results[0].fight_id));

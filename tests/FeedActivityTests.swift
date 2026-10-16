@@ -35,6 +35,8 @@ struct Fight {
     var showingHosted = false
     var friendRounds: [Fight] = []
     var showingFriends = false
+    var showingCharacter = false
+    var characterRouteID: UUID?
     var dailyRecapID: String?
     static let pendingFightRouteKey = "fitfight.tests.activity.route"
     static let pendingDailyStatusKey = "fitfight.tests.activity.daily"

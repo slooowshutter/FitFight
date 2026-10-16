@@ -1,5 +1,5 @@
-import type { ClassifiedFightResult, FightRecordFact } from "@/lib/types/profiles/profile-results";
-import type { ProfileRecord, RivalryRecord } from "@/lib/types/profiles/shared-profile";
+import type { ClassifiedFightResult, FightRecordFact, HeadToHeadResult } from "@/lib/types/profiles/profile-results";
+import type { HeadToHead, ProfileRecord, RivalryRecord } from "@/lib/types/profiles/shared-profile";
 
 /** Uses frozen ranks and participation evidence. */
 export function classifyFightResult(fight: FightRecordFact, userId: string): ClassifiedFightResult {
@@ -94,4 +94,29 @@ export function rivalryRecord(fights: FightRecordFact[], viewerId: string, targe
         }
     }
     return record;
+}
+
+/**
+ * The viewer's result against the target in one finished Fight. In a group the better place wins;
+ * a withdrawal or incomplete finish places behind everyone who finished.
+ */
+export function headToHeadResult(fight: FightRecordFact, viewerId: string, targetId: string): HeadToHeadResult | null {
+    const [viewer, target] = [classifyFightResult(fight, viewerId), classifyFightResult(fight, targetId)];
+    if (!viewer.counted || !target.counted) return null;
+    if (viewer.fieldSize === 2) return viewer.result === "win" ? "win" : target.result === "win" ? "loss" : "draw";
+    const [mine, theirs] = [viewer, target].map((result) => ["withdrawn", "incomplete"].includes(result.result)
+        ? Number.POSITIVE_INFINITY
+        : result.placement ?? Number.POSITIVE_INFINITY);
+    return mine < theirs ? "win" : mine > theirs ? "loss" : "draw";
+}
+
+/** `fights` are the Fights both people are still members of, newest first. */
+export function headToHeadRecord(fights: FightRecordFact[], viewerId: string, targetId: string): HeadToHead {
+    const results = fights.flatMap((fight) => headToHeadResult(fight, viewerId, targetId) ?? []);
+    return {
+        wins: results.filter((result) => result === "win").length,
+        draws: results.filter((result) => result === "draw").length,
+        losses: results.filter((result) => result === "loss").length,
+        form: results.slice(0, 10).reverse(),
+    };
 }

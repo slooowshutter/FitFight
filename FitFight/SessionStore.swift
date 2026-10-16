@@ -176,7 +176,7 @@ final class SessionStore: ObservableObject {
         self.init(screenshot: ())
         profile = FitFightProfile(
             userId: UUID(uuidString: CompanionPreview.people[0].id)!,
-            handle: "marc", displayName: "Marc", handleSetAt: "2026-09-13T00:00:00Z",
+            handle: "alex", displayName: "Alex", handleSetAt: "2026-09-13T00:00:00Z",
             referralCode: nil, avatar: nil
         )
     }

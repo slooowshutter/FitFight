@@ -194,7 +194,7 @@ export function apiRoute<
     ) => Promise<Response>,
     operation?: RequestOperation,
 ) {
-    return async (request: Request, context: { params?: Promise<P> }) => {
+    return async (request: Request, context: { params: Promise<P> }) => {
         const started = performance.now();
         const timing: RequestTiming = { phases: {} };
         let response: Response;

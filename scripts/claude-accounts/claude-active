@@ -1,6 +1,6 @@
 #!/bin/sh
-# Conductor's Claude Code executable. Runs Conductor's bundled claude on the account picked with `claude-lb a|b`.
+# Conductor's Claude Code executable. Runs Conductor's bundled claude on the account picked with `claude-lb <x>`.
 bin=$(ls -d "$HOME/Library/Application Support/com.conductor.app/agent-binaries/claude/"*/claude 2>/dev/null | sort -V | tail -1)
 [ -n "$bin" ] || bin="$HOME/.local/bin/claude"
-[ "$(cat "$HOME/.claude-lb" 2>/dev/null)" = b ] && export CLAUDE_CONFIG_DIR="$HOME/.claude-b"
+case "$(cat "$HOME/.claude-lb" 2>/dev/null)" in [b-z]) export CLAUDE_CONFIG_DIR="$HOME/.claude-$(cat "$HOME/.claude-lb")" ;; esac
 exec "$bin" "$@"

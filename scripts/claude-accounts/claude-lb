@@ -1,32 +1,34 @@
 #!/usr/bin/env python3
-"""Two Claude subscriptions, one setup. Commands are listed in COMMANDS below.
+"""Several Claude subscriptions, one setup. Commands are listed in COMMANDS below.
 
-Account a = ~/.claude (default), b = ~/.claude-b (shares everything but the login).
-Conductor runs ~/.local/bin/claude-active, which reads the choice from ~/.claude-lb.
-Install: copy claude-lb, claude-active and claude-b from scripts/claude-accounts/ into ~/.local/bin,
-then set claude_code_executable_path = "~/.local/bin/claude-active" (full path) in ~/.conductor/settings.toml.
+Account a = ~/.claude (default). Account x = ~/.claude-x, which shares settings, skills, plugins,
+memory and sessions with ~/.claude through symlinks and keeps its own login.
+Conductor runs ~/.local/bin/claude-active, which reads the chosen account from ~/.claude-lb.
+Install: copy claude-lb and claude-active from scripts/claude-accounts/ into ~/.local/bin, set
+claude_code_executable_path = "<full path to ~/.local/bin/claude-active>" in ~/.conductor/settings.toml,
+then add accounts with `claude-lb new b`.
 """
-import hashlib, json, os, subprocess, sys, time, urllib.request
+import glob, hashlib, json, os, re, subprocess, sys, time, urllib.request
 from datetime import datetime
 
 COMMANDS = """
 Commands
-  claude-lb          show 5-hour, weekly and Fable usage of both accounts
-  claude-lb a        new Conductor chats use account a (open chats keep theirs)
-  claude-lb b        new Conductor chats use account b
-  claude-lb auto     switch to whichever account has the most room left
-  claude             open account a in a terminal
-  claude-b           open account b in a terminal (first time: /login)"""
+  claude-lb            show 5-hour, weekly and Fable usage of every account
+  claude-lb <x>        new Conductor chats use account x, e.g. claude-lb b (open chats keep theirs)
+  claude-lb auto       switch to whichever account has the most room left
+  claude-lb new <x>    add account x (one letter, b-z), then run claude-<x> and /login
+  claude               open account a in a terminal
+  claude-<x>           open account x in a terminal, e.g. claude-b"""
 
 HOME = os.path.expanduser("~")
 STATE = f"{HOME}/.claude-lb"
-SERVICES = {
-    "a": "Claude Code-credentials",
-    "b": "Claude Code-credentials-" + hashlib.sha256(f"{HOME}/.claude-b".encode()).hexdigest()[:8],
-}
+SHARED = ["settings.json", "settings.local.json", "CLAUDE.md", "agents", "skills", "plugins", "hooks", "memory", "projects", "history.jsonl", "chrome", "ide"]
+ACCOUNTS = {"a": f"{HOME}/.claude"} | {d[-1]: d for d in sorted(glob.glob(f"{HOME}/.claude-[b-z]"))}
 
 
-def usage(service):
+def usage(name):
+    # Claude Code names a non-default login's keychain item after a hash of its config dir.
+    service = "Claude Code-credentials" + ("" if name == "a" else "-" + hashlib.sha256(ACCOUNTS[name].encode()).hexdigest()[:8])
     try:
         raw = json.loads(subprocess.check_output(["security", "find-generic-password", "-s", service, "-w"], stderr=subprocess.DEVNULL))
     except subprocess.CalledProcessError:
@@ -44,16 +46,36 @@ def usage(service):
     return json.load(urllib.request.urlopen(req))["limits"]
 
 
-active = open(STATE).read().strip() if os.path.exists(STATE) else "a"
 arg = sys.argv[1] if len(sys.argv) > 1 else ""
-limits = {name: usage(service) for name, service in SERVICES.items()}
 
-if arg in ("a", "b", "auto"):
+if arg == "new":
+    name = sys.argv[2] if len(sys.argv) > 2 else ""
+    if not re.fullmatch("[b-z]", name) or name in ACCOUNTS:
+        sys.exit(f"Pick an unused letter from b to z. In use: {', '.join(ACCOUNTS)}")
+    folder = f"{HOME}/.claude-{name}"
+    os.mkdir(folder)
+    for f in SHARED:
+        if os.path.exists(f"{HOME}/.claude/{f}"):
+            os.symlink(f"{HOME}/.claude/{f}", f"{folder}/{f}")
+    config = json.load(open(f"{HOME}/.claude.json"))
+    config.pop("oauthAccount", None)  # the new account logs in fresh; MCP servers and project trust carry over
+    with open(f"{folder}/.claude.json", "w", opener=lambda p, fl: os.open(p, fl, 0o600)) as out:
+        json.dump(config, out, indent=2)
+    launcher = f"{HOME}/.local/bin/claude-{name}"
+    with open(launcher, "w") as out:
+        out.write(f'#!/bin/sh\n# Claude account {name}: own login, everything else shared with ~/.claude. Made by claude-lb new.\nCLAUDE_CONFIG_DIR="$HOME/.claude-{name}" exec "$HOME/.local/bin/claude" "$@"\n')
+    os.chmod(launcher, 0o755)
+    sys.exit(f"Added account {name}. Run claude-{name} in a terminal, then /login with that subscription.")
+
+active = open(STATE).read().strip() if os.path.exists(STATE) else "a"
+limits = {name: usage(name) for name in ACCOUNTS}
+
+if arg in ACCOUNTS or arg == "auto":
     if arg == "auto":
         # ponytail: picks the account whose fullest limit is lowest; ignores reset times
         arg = min((n for n in limits if limits[n]), key=lambda n: max(l["percent"] for l in limits[n]))
     if not limits[arg]:
-        sys.exit(f"Account {arg} is not logged in. Run {'claude-b' if arg == 'b' else 'claude'} in a terminal and /login first.")
+        sys.exit(f"Account {arg} is not logged in. Run {'claude' if arg == 'a' else 'claude-' + arg} in a terminal and /login first.")
     open(STATE, "w").write(arg)
     print(f"Switched to {arg}. New Conductor chats use it; open chats keep their account.")
     active = arg
@@ -61,7 +83,9 @@ elif arg:
     sys.exit(COMMANDS)
 
 for name, rows in limits.items():
-    print(f"\n{name}{'  <- active' if name == active else ''}")
+    config = f"{HOME}/.claude.json" if name == "a" else f"{ACCOUNTS[name]}/.claude.json"
+    email = json.load(open(config)).get("oauthAccount", {}).get("emailAddress", "") if os.path.exists(config) else ""
+    print(f"\n{name}  {email}{'  <- active' if name == active else ''}")
     if not rows:
         print("  not logged in")
         continue

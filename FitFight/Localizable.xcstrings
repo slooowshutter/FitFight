@@ -17124,16 +17124,6 @@
                 }
             }
         },
-        "Now": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "En cours"
-                    }
-                }
-            }
-        },
         "Change my words": {
             "localizations": {
                 "fr": {
@@ -18065,6 +18055,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Touchez le nom de quelqu’un pour ouvrir sa carte de joueur : votre bilan face à lui dans chaque Fight, en 1 contre 1 ou en groupe, vos pas comparés depuis que vous êtes amis, et vos Fights en commun. Le bouton Bloquer disparaît, Signaler reste. La flamme à côté de Fights est votre série 10K, le nombre de jours d’affilée à 10 000 pas."
+                    }
+                }
+            }
+        },
+        "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer ton propre compagnon est plus sobre : l’étape en cours utilise la carte habituelle, sans bordure jaune."
                     }
                 }
             }

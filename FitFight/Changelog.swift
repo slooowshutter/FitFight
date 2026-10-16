@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "Tap someone's name to open their Player card: your record against them in every Fight, 1v1 or group, your steps compared since you became friends, and your Fights together. Block is gone; Report stays. The flame next to Fights is your 10K streak, the days in a row you walked 10,000 steps."
         ),
         ReleaseNote(

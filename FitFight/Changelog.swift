@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "Trophies now count every round each player has won in a fight, not only rounds won in a row. Everyone who has won a round shows a trophy, with ×N for more than one."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "When Apple Health wakes FitFight in the background, your fights now refresh as soon as you open the app, instead of showing standings from the wake."
         ),
         ReleaseNote(

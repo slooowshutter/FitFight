@@ -729,7 +729,7 @@ struct FightDetailView: View {
                     name: row.person.name,
                     value: model.formatScore(row.score, metric: contextFight.metric),
                     isYou: row.person.isYou,
-                    trophies: model.trophyStreak(for: contextFight).flatMap { $0.userId == row.person.id ? $0.count : nil } ?? 0,
+                    trophies: model.trophies(in: contextFight)[row.person.id] ?? 0,
                     avatar: AnyView(CompanionAvatar(row.person, size: 38)),
                     captionUrgent: !inWinnerBand && row.person.isYou && contextFight.status == .live,
                     captionAt: { now in

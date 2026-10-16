@@ -6,6 +6,101 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Last sync counts, final-sync deadline as a fight setting: prepared 16 Oct 2026
+
+Marc's decisions (15-16 Oct 2026, brainstormed in chat): a winner who forgets to open
+FitFight after the end should not lose, and friends should not be cut off after 24
+hours. Friends' fights wait until everyone syncs, repeating rounds included; fights
+everyone is invited to keep the 24-hour deadline; the owner can change it.
+
+**Rules (server):**
+- A member without final Steps is ranked by their last synced total instead of
+  forfeiting. Nobody syncing is no longer a draw; last syncs decide.
+- Steps only go up, so a Fight finalizes as soon as no missing final sync can change a
+  rank: everyone has final Steps, or the only member without them is strictly ahead of
+  every other racer (`highest_total`, two or more racers). Otherwise it waits.
+- New column `fights.closes_after_grace` (migration
+  `20261016140000_last_sync_counts.sql`): on, the Fight also finalizes 24 hours after the
+  end; off, it waits for everyone. Defaults: on for the Everybody fight, founder rounds
+  and a round Marc suggests; off for fights people make and friend rounds. New rounds
+  copy it. The migration turns it off for open fights people made and open friend
+  rounds, as a metadata backfill (replica mode only around that update, so no triggers,
+  broadcasts or timestamps, while PostgREST still reloads its schema; it also sends
+  `notify pgrst, 'reload schema'`). Older backends ignore the column and keep the 24-hour
+  rule.
+- Edit fight has a "Close 24 hours after the end" switch (owner, or either friend in a
+  friend round, until the fight ends): `closesAfterGrace` on `PATCH /api/v1/fights/{id}`.
+  Fight Marc rounds, the Everybody fight and Suggested fights refuse switching it off
+  (`403` with a reason the app shows as is, in English, since it cannot tell those
+  fights apart to hide the switch), so none of them can wait forever on one person.
+- The closer and app refresh recalculate an awaiting fight only once it is settled or
+  past its deadline (`awaitingDueAt`), so settled fights close within one cron tick even
+  if nobody opens the app, and fights still waiting cost nothing per tick or refresh.
+- Seven days after a fight ends, a member who already sent final Steps stops re-reading
+  it while it waits for someone else (`SETTLED_FINAL_SYNC_DAYS`: the upload context, its
+  validation, and the daily-Steps scoring of friend and founder rounds): no Apple Health
+  day changed after 6 days, and waiting rounds cannot pile up in active members' uploads.
+- A finalized fight still ignores later uploads, so it keeps the counted total.
+- Profile wins, draws and rivalries count every first place. New result summaries add
+  `rank_one_finishers` (same migration replaces `private.snapshot_profile_result_evidence`);
+  summaries frozen earlier keep their forfeits, "incomplete" labels and all-missing draws.
+- The final-sync push names a deadline only when the fight has one.
+
+**App (1.2.0 release note):** a finalized row without final Steps says "Didn’t sync in
+time", or "Last sync counted" for first place (the only case a fight can close early
+without someone). While pending, Tentative lead/loss/Tied and the rank numbers count
+missing members' last synced totals. A fight without a deadline shows no "left to sync"
+line. Edit fight shows the switch, starting from the fight's current setting. A tie for
+first while pending reads Tied in neutral text, and a finalized tie without final Steps
+reads "Didn’t sync in time".
+
+**Contract:** `/api/v1` keeps every field. `grace_ends_at` in the fights snapshot is now
+null when a fight waits for everyone (OpenAPI updated); every installed iOS build decodes
+it as optional and hides the countdown. `closesAfterGrace` is a new optional PATCH field.
+Ranks and outcomes keep their meaning; installed builds read W/L/draw from the server
+rank. Until people update, installed builds label a finalized member without final Steps
+"Did not sync · forfeited" (even when they won), a pending fight of three or more can
+show Tentative lead to someone a missing member already beats, and Edit fight has no
+switch. Deployment order: migration, then backend, then app. Without the migration the
+backend fails on the missing column.
+
+**Friend rounds that wait (#395 interplay, fixed):** the monthly results push still goes
+out when a person's last friend round of the month finalizes, and now also a day after
+the month to anyone with a finished friend round (cron catch-up, same idempotency key),
+so a round stuck on someone who stopped syncing no longer holds everyone's push back. A
+friend or founder round also completes once a later date is stored for that phone: the
+app stores no day without Steps, so a friend with no Steps on the 31st no longer holds
+the round. An awaiting round still cannot be edited, left or cancelled.
+
+**Known limits:** a fight that waits for everyone stays Pending while someone behind
+never syncs again (Marc's choice; one person can hold a result back). Only that person's
+own uploads keep listing such rounds; someone returning with more than 100 pending
+fights would fail upload validation until some finalize. A browser tab still running the
+old `/app` code fails to read fights with a null `grace_ends_at` until it reloads. Unrelated to this change: the
+admin dashboard "fixed spans" check fails when the database already holds rows from an earlier run, the
+`When Apple Health wakes FitFight in the background` release note on develop has no
+French entry (`check_localizations.py` fails on develop), and
+`scripts/test_fight_localization.py` fails on develop (`refreshError`).
+
+**Verification (local, disposable Supabase on a fresh reset):** web typecheck; 508 of
+508 unit tests; `test:database` 136 of 136 (new: a missing leader wins at once and gets
+`rank_one_finishers`; the worker closes a settled fight without a deadline within a
+tick and leaves one where someone behind is missing; deadline fights close at 24 hours;
+the snapshot's `grace_ends_at` is null or ends + 24h; friend and founder rounds keep
+their setting into the next round; suggesting turns it on; a settled member's upload
+drops a week-old waiting fight; an awaiting fight that becomes settled closes on the
+next tick and on an app refresh, which skips one still waiting; a friend with no Steps
+on the last date completes from a later date; a stuck friend round no longer holds the
+results push back past a day); pgTAP 329 of 329; the
+PostgREST schema reload after the migration without a restart (Edit PATCH of the new
+column returns 200); the closed-client-access flow
+(client-access-closed and backend_reader pgTAP, then `test:database` passed, 2
+skipped); the legacy migration boundary (three migration tests and the profile backfill
+compatibility test, standard-row 20 of 20 with no Realtime messages); a manual backfill
+check on one open fight of each kind; `test:legacy-113`; `db lint`; destructive-SQL and
+native API boundary checks. `npm run build` fails on `app/api/admin/notifications/route.ts`
+route types, the same on an untouched develop checkout. Not compiled for iOS here
+(AGENTS.md); the PR's simulator build does that. Not on staging or TestFlight.
 ## App Store 1.2.0: version, website sample data and screenshots, prepared 16 Oct 2026
 
 Marc asked to start 1.2.0 for the App Store, with screenshots and listing that match the
@@ -617,8 +712,8 @@ same shape. Older builds never send the flag and ignore the field. The admin men
 a founder round public, and so cannot suggest it. In a round, Leave is still shown to the
 host: it ends that challenger's series. No release note: only hosts see this.
 
-**Known limits:** Marc forfeits a round if his phone does not sync within the 24-hour final
-sync grace after it ends. While his phone is in another zone, his days are that zone's
+**Known limits:** if Marc's phone does not sync within the 24-hour final sync grace after a
+round ends, his last synced total counts (since 15 Oct 2026; before that he forfeited). While his phone is in another zone, his days are that zone's
 local days. A new round shows Marc at 0 until his phone's next sync. A result appears at
 the challenger's next refresh, or when the grace ends.
 

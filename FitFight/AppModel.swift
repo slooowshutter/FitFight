@@ -509,8 +509,11 @@ final class AppModel: ObservableObject {
                 defaultValue: "Final steps synced · \(freshness)"
             )
         }
+        // Without final Steps the last synced total counts. Only a lone leader can finish before the deadline.
         if fight.serverState == "final", !standing.invited, !standing.deferred {
-            return String(appLocalized: "Did not sync · forfeited")
+            return standing.rank == 1 && !fight.isTiedForFirst
+                ? String(appLocalized: "Last sync counted")
+                : String(appLocalized: "Didn’t sync in time")
         }
         let finalized = fight.serverState == "final" || fight.serverState == "cancelled"
         if let lastSyncedAt = standing.lastSyncedAt {
@@ -933,7 +936,8 @@ final class AppModel: ObservableObject {
         timeZone: String?,
         joinCode: String?,
         inviteHandles: [String],
-        removeUserIds: [String]
+        removeUserIds: [String],
+        closesAfterGrace: Bool?
     ) async -> Bool {
         guard !CompanionPreview.isEnabled else {
             createError = CompanionPreview.writeUnavailable
@@ -993,7 +997,8 @@ final class AppModel: ObservableObject {
                     timeZone: timeZone,
                     joinCode: joinCode,
                     inviteHandles: handles.isEmpty ? nil : handles,
-                    removeUserIds: removals.isEmpty ? nil : removals
+                    removeUserIds: removals.isEmpty ? nil : removals,
+                    closesAfterGrace: closesAfterGrace
                 ),
                 accessToken: try await session.freshAccessToken()
             )
@@ -1854,14 +1859,13 @@ final class AppModel: ObservableObject {
             )
             if youRow?.deferred == true {
                 fight.kickerEmphasis = String(appLocalized: "Started next round")
-            } else if youRow?.finalStepsComplete == true {
-                let submitted = people.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
-                let submittedRank = youRow.flatMap { you in
-                    submitted.firstIndex { $0.person.id == you.person.id }.map { $0 + 1 }
-                } ?? 0
-                fight.kickerEmphasis = submittedRank == 1
-                    ? String(appLocalized: "Tentative lead")
-                    : String(appLocalized: "Tentative loss")
+            } else if let youRow, youRow.finalStepsComplete == true {
+                // A missing final sync keeps its last synced total, so it can already be ahead.
+                fight.kickerEmphasis = joined.contains { $0.score > youRow.score }
+                    ? String(appLocalized: "Tentative loss")
+                    : joined.contains { $0.person.id != youRow.person.id && $0.score == youRow.score }
+                        ? String(appLocalized: "Tied")
+                        : String(appLocalized: "Tentative lead")
             } else {
                 fight.kickerEmphasis = String(appLocalized: "Pending. Open the app")
             }

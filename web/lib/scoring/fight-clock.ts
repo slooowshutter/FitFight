@@ -5,8 +5,10 @@ export type FightClockInput = {
     nowMs: number;
     startsAtMs: number;
     endsAtMs: number;
-    graceEndsMs: number;
-    allSourcesCompleteThroughEnd: boolean;
+    /** null: the Fight waits for everyone's final Steps. */
+    graceEndsMs: number | null;
+    /** No final sync still missing can change any rank. */
+    resultSettled: boolean;
 };
 
 export type FightDueInput = {
@@ -24,7 +26,7 @@ export function nextFightState(input: FightClockInput): FightState {
         startsAtMs,
         endsAtMs,
         graceEndsMs,
-        allSourcesCompleteThroughEnd,
+        resultSettled,
     } = input;
     if (
         state === "draft" ||
@@ -45,7 +47,7 @@ export function nextFightState(input: FightClockInput): FightState {
 
     if (
         next === "awaiting_final_sync" &&
-        (nowMs >= graceEndsMs || allSourcesCompleteThroughEnd)
+        ((graceEndsMs !== null && nowMs >= graceEndsMs) || resultSettled)
     ) {
         return "final";
     }

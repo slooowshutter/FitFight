@@ -3,6 +3,7 @@ import { workoutDayMetricValues } from "@/lib/domain/activity/activity-measureme
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { civilDayBounds, civilDayStamp } from "@/lib/scoring/civil-day";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { SETTLED_FINAL_SYNC_DAYS } from "./provider-uploads-supabase-query";
 import {
     healthKitAggregateFightSchema,
     healthKitAggregateSourceSchema,
@@ -95,6 +96,8 @@ export async function syncHealthKitAggregates(
                 and fight.state in ('live', 'awaiting_final_sync')
                 and fight.host_id is distinct from ${userId}
                 and not fight.friends
+                and not (fight.state = 'awaiting_final_sync' and member.final_steps_complete
+                    and fight.ends_at < now() - make_interval(days => ${SETTLED_FINAL_SYNC_DAYS}))
             order by fight.id
             for update of fight, member
         `,

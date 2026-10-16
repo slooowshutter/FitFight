@@ -36,6 +36,7 @@ import {
     healthKitAggregateMemberSchema,
 } from "@/lib/types/healthkit/healthkit-aggregate-database";
 import { skipGraceNotificationsForMember } from "./notification-intents-supabase-query";
+import { SETTLED_FINAL_SYNC_DAYS } from "./provider-uploads-supabase-query";
 
 const MAX_PROCESSING_ATTEMPTS = 5;
 
@@ -586,11 +587,18 @@ export async function publishCivilDayScores(
                 and member.finalized_at is null
                 and member.selected_source_id = ${sourceId}
                 and (${fightId}::uuid is null or fight.id = ${fightId}::uuid)
+                and not (fight.state = 'awaiting_final_sync' and member.final_steps_complete
+                    and fight.ends_at < now() - make_interval(days => ${SETTLED_FINAL_SYNC_DAYS}))
         )
         select fight.id as fight_id, fight.starts_at::text as starts_at, fight.ends_at::text as ends_at,
             -- Only a fully observed last date completes the round. A phone west of the round's zone
             -- passes ends_at before its own last day ends, so an incomplete cutoff stays below it.
-            (case when bool_or(days.completes_round) then fight.ends_at
+            -- A date without Steps stores no day, so a stored later date also proves the last one ended.
+            (case when bool_or(days.completes_round) or exists (
+                    select 1 from private.activity_metrics as later
+                    where later.source_id = ${sourceId} and later.scope = 'day' and later.metric = 'steps'
+                        and later.day >= (fight.ends_at at time zone fight.time_zone)::date
+                ) then fight.ends_at
                 else least(fight.ends_at - interval '1 millisecond', max(days.observed_through)) end)::text as cutoff_at,
             max(days.steps)::integer as steps,
             jsonb_agg(jsonb_build_object(

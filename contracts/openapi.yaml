@@ -3457,7 +3457,10 @@ components:
                             time_zone:
                                 type: string
                                 description: Fight calendar time zone; optional for older responses.
-                            grace_ends_at: { type: string, format: date-time }
+                            grace_ends_at:
+                                type: [string, "null"]
+                                format: date-time
+                                description: Final-sync deadline. Null when the Fight waits for everyone's final Steps (Fights people make). Every installed iOS build decodes it as optional.
                             action_text: { type: [string, "null"] }
                             series_id: { type: [string, "null"], format: uuid }
                             friends:

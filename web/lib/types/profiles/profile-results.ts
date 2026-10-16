@@ -20,6 +20,7 @@ export const participationFactSchema = z.object({
 export const resultEvidenceSummarySchema = z.object({
     field_size: z.number().int().nonnegative(), complete_finishers: z.number().int().nonnegative(),
     first_place_finishers: z.number().int().nonnegative(), verified: z.boolean(),
+    rank_one_finishers: z.number().int().nonnegative().optional(),
 });
 
 export const fightRecordFactSchema = z.object({

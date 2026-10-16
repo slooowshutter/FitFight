@@ -67,7 +67,9 @@ export async function readFightSnapshot(
         const [result] = await sql<{ snapshot: unknown }[]>`
             with visible_fights as materialized (
                 select id, owner_id, name, state, starts_at, ends_at, time_zone, action_text, series_id, friends,
-                    (ends_at + (final_sync_grace_seconds * interval '1 second')) as grace_ends_at
+                    -- null: the Fight waits for everyone's final Steps.
+                    case when closes_after_grace
+                        then ends_at + final_sync_grace_seconds * interval '1 second' end as grace_ends_at
                 from public.fights as fight
                 where ${hosted
                     // ponytail: every current hosted round in one payload; page it if a host has thousands.

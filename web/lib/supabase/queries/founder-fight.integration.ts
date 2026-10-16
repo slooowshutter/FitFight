@@ -156,11 +156,12 @@ test("the next founder round keeps its host", async (t) => {
 
     const nextId = await mintNextRecurringFight(fight.id, new Date(Date.parse(round.ends_at) + 1_000), database);
     assert.ok(nextId);
-    const [next] = await database<{ host_id: string; members: number }[]>`
-        select fight.host_id, (select count(*)::int from public.fight_members where fight_id = fight.id and state = 'accepted') as members
+    const [next] = await database<{ host_id: string; members: number; closes_after_grace: boolean }[]>`
+        select fight.host_id, (select count(*)::int from public.fight_members where fight_id = fight.id and state = 'accepted') as members,
+            fight.closes_after_grace
         from public.fights as fight where id = ${nextId}
     `;
-    assert.deepEqual(next, { host_id: founder, members: 2 });
+    assert.deepEqual(next, { host_id: founder, members: 2, closes_after_grace: true });
 });
 
 test("a founder round completes from his last date, even with his phone in another zone", async (t) => {

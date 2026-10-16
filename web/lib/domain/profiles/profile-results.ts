@@ -1,7 +1,7 @@
 import type { ClassifiedFightResult, FightRecordFact } from "@/lib/types/profiles/profile-results";
 import type { ProfileRecord, RivalryRecord } from "@/lib/types/profiles/shared-profile";
 
-/** Uses frozen results and participation evidence; rank alone never establishes a win. */
+/** Uses frozen ranks and participation evidence. */
 export function classifyFightResult(fight: FightRecordFact, userId: string): ClassifiedFightResult {
     const member = fight.members.find((item) => item.user_id === userId);
     const entrants = fight.members.filter((item) => item.entered_at !== null
@@ -27,16 +27,20 @@ export function classifyFightResult(fight: FightRecordFact, userId: string): Cla
     if (finishers.some((item) => item.finalized_at === null || item.complete === null || item.rank === null)) {
         return { ...excluded, result: "unavailable" };
     }
-    const complete = finishers.filter((item) => item.complete);
-    const completeCount = fight.summary?.complete_finishers ?? complete.length;
-    const firstPlaceCount = fight.summary?.first_place_finishers ?? complete.filter((item) => item.rank === 1).length;
-    const result = completeCount === 0
-        ? "draw"
-        : !member.complete
-            ? "incomplete"
-            : member.rank !== 1
-                ? "loss"
-                : firstPlaceCount === 1 ? "win" : "draw";
+    // Summaries frozen before 15 Oct 2026 lack rank_one_finishers: a missing final sync forfeited,
+    // and nobody completing was a draw.
+    if (fight.summary && fight.summary.rank_one_finishers === undefined) {
+        const result = fight.summary.complete_finishers === 0
+            ? "draw"
+            : !member.complete
+                ? "incomplete"
+                : member.rank !== 1
+                    ? "loss"
+                    : fight.summary.first_place_finishers === 1 ? "win" : "draw";
+        return { ...excluded, counted: true, result };
+    }
+    const firstPlaces = fight.summary?.rank_one_finishers ?? finishers.filter((item) => item.rank === 1).length;
+    const result = member.rank !== 1 ? "loss" : firstPlaces === 1 ? "win" : "draw";
     return { ...excluded, counted: true, result };
 }
 

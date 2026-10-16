@@ -746,10 +746,27 @@ stay frozen. Old apps never called this from the Edit screen.
 Recalculation locks the Fight, then accepted memberships, before reading the latest
 selected-source exact-window snapshots. It freezes scores, completeness, selected
 snapshots (`is_final`), and Fight state in the same transaction. It never substitutes
-raw observations or daily chart totals. The existing policy remains: finalize when
-every accepted participant has an end-cutoff snapshot, or after the 24-hour grace
-period with missing data marked incomplete. The choice of a full 24-hour provisional
-period remains a product decision; Apple provides no historical immutability deadline.
+raw observations or daily chart totals. A member without an end-cutoff snapshot keeps
+their last synced total and is ranked with it, marked incomplete (decided by Marc,
+15 Oct 2026). Steps only go up, so the Fight finalizes as soon as no missing final
+sync can change a rank: everyone has an end-cutoff snapshot, or the only member
+without one is already strictly ahead of every other racer. Otherwise it waits.
+
+The deadline is the per-fight setting `fights.closes_after_grace`: on, the Fight also
+finalizes at `ends_at + final_sync_grace_seconds` (24 hours); off, it waits for
+everyone. It starts on for the Everybody fight (`PGG7`), founder rounds and a round
+when Marc suggests it, and off for fights people make and friend rounds (Marc,
+16 Oct 2026). Every new round copies it. The owner, or either friend for a friend
+round, changes it with `closesAfterGrace` on `PATCH /api/v1/fights/{id}` while the
+fight is still editable; founder rounds, the Everybody fight and Suggested fights refuse `false` (`403`). The snapshot's
+`grace_ends_at` and the final-sync push deadline are null when it is off. The
+closer and app refresh recalculate an awaiting Fight only once it is settled or past
+its deadline (`awaitingDueAt`, mirroring `recalculateFight`), so a Fight still
+waiting for someone costs nothing per tick. A member who already sent final Steps stops
+re-reading a still-awaiting Fight 7 days after its end (`SETTLED_FINAL_SYNC_DAYS`, also
+for friend and founder rounds scored from daily Steps), so waiting rounds leave active
+members' uploads. Profile results count every first place;
+summaries frozen before this change keep their forfeits and all-missing draws.
 
 The snapshot fingerprint includes the read's `complete_through` timestamp. Replaying
 the same reading is idempotent, but a later reading that returns to an earlier total

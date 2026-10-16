@@ -631,14 +631,13 @@ struct CompanionIntroduction: View {
                         Text("Fights")
                             .ffType(.title)
                             .foregroundStyle(theme.text)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("A little further.")
-                                .foregroundStyle(theme.text)
-                            Text("Together.")
-                                .foregroundStyle(theme.mossText)
+                        let live = model.fights.filter { $0.status == .live && !$0.isUpcoming }
+                        if !live.isEmpty {
+                            let leading = live.filter { $0.rank == 1 }.count
+                            Text(String(appLocalized: "fights.hosted-leading", defaultValue: "Leading \(leading) of \(live.count)"))
+                                .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
+                                .foregroundStyle(leading > 0 ? theme.mossText : theme.emberText)
                         }
-                        .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
-                        .fixedSize(horizontal: false, vertical: true)
                         dailySteps
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -738,12 +737,9 @@ struct CompanionIntroduction: View {
     private var copy: some View {
         VStack(alignment: .leading, spacing: 7) {
             if surface == .newFight {
-                Text("Good company.")
+                Text("Steps. Highest total wins.")
                     .font(.custom("Nunito-ExtraBold", size: 24, relativeTo: .title2))
                     .foregroundStyle(theme.text)
-                Text("A good excuse to walk.")
-                    .font(.custom("Nunito-ExtraBold", size: 24, relativeTo: .title2))
-                    .foregroundStyle(theme.mossText)
             } else {
                 if companions.isCustom {
                     Text(session.profile?.companionName ?? String(appLocalized: "Custom"))

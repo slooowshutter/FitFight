@@ -17,10 +17,10 @@ Marc asked on 16 Oct 2026 for the 1.2.0 screenshots to match the fitfight.app re
 
 ## Capture
 
-The Screenshots workflow (`.github/workflows/ios-screenshots.yml`, step "Capture App Store screenshots") builds the Debug simulator app with the production `BuildEnv.swift`, then launches it on an iPhone 17 Pro Max simulator with `FF_COMPANION_PREVIEW=1`, `FF_SHOOT=1` and `FF_SHOT` set to `fights`, `fight`, `new`, `invitation`, `you` or `feed`, in English and French. The status bar shows 9:41. The images come from the `app-store-screenshots` and `app-store-screenshots-fr` artifacts. No Mac other than GitHub's hosted runner was used.
+The Screenshots workflow (`.github/workflows/ios-screenshots.yml`, step "Capture App Store screenshots") builds the Debug simulator app with the production `BuildEnv.swift`, then launches it on an iPhone 17 Pro Max simulator with `FF_COMPANION_PREVIEW=1`, `FF_SHOOT=1` and `FF_SHOT` set to `fights`, `fight`, `new`, `invitation`, `you` or `feed`, in English and French. The status bar shows 9:41. The images come from the `app-store-screenshots` and `app-store-screenshots-fr` artifacts. No Mac other than GitHub's hosted runner was used. Look at every image before committing it: a run on 16 Oct caught an iOS "Ready for Apple Intelligence" banner on one French capture, and a rerun fixed it.
 
 The Profile screen shows the simulator build's version line, `1.2.0 · build 1 · prod`. The captures use sample data only; they do not prove sign-in, Apple Health sync or the live backend.
 
 ## Upload
 
-Not uploaded. 1.1.3 (226) is still in App Review, so App Store Connect cannot hold a 1.2.0 version yet. When it can, upload these twelve images with the 1.2.0 copy in [metadata](../metadata.md), replacing the 15 Sep set.
+Not uploaded. 1.1.3 (226) is still in App Review, so App Store Connect cannot hold a 1.2.0 version yet. When it can, `scripts/app-store-release-audit.rb prepare` uploads these twelve images, replacing the 15 Sep set; save the 1.2.0 copy in [metadata](../metadata.md) with them.

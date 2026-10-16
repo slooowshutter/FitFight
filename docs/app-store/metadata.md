@@ -75,13 +75,13 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 > New post: send it to everyone, or choose your friends and the fights that see it.
 > Name your companion: pick a name and a line, and see your friends' companions on their profiles.
 > Change your fight's code in Edit. A repeating fight shows your last round's result when it starts again.
-> FitFight opens on your last fights, even offline, and refreshes faster.
+> FitFight opens on your last fights, even offline, and updates them in the background.
 
 ## Screenshot set
 
 Six 1320 x 2868 JPEGs per language for the 6.9-inch iPhone set; App Store Connect scales them down for smaller iPhones. The Screenshots workflow captures them from the running app on an iPhone 17 Pro Max simulator in Companion preview, which uses the website's sample people and fights: Alex (you, Tiger), Leo (Silverback), Nina (Capybara), Sam (Hedgehog) and Theo (Panda), in Walk Wars, Eat it and Step it Up, with 8,432 steps today. The 1.2.0 set is in [2026-10-16](2026-10-16/index.html), from the `app-store-screenshots` and `app-store-screenshots-fr` artifacts.
 
-1. Fights with Walk Wars (+860), Eat it (-1,260) and Step it Up (+2,840).
+1. Fights with Walk Wars (+860), Step it Up (+2,840) and Eat it (-1,260).
 2. Eat it, a live 1v1 against Theo with totals and standings.
 3. New with the Tiger: Create, Join or Post, and two suggested fights.
 4. An invitation from Sam with Accept and Decline.
@@ -153,6 +153,6 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 > Nouvelle publication : envoyez-la à tout le monde, ou choisissez les amis et les défis qui la voient.
 > Nommez votre compagnon : choisissez un nom et une phrase, et découvrez les compagnons de vos amis sur leur profil.
 > Changez le code de votre défi dans Modifier. Un défi récurrent affiche le résultat de votre dernière manche quand il recommence.
-> FitFight s’ouvre sur vos derniers défis, même hors ligne, et se met à jour plus vite.
+> FitFight s’ouvre sur vos derniers défis, même hors ligne, et les met à jour en arrière-plan.
 
 Use the same six screenshot subjects as English, from the `app-store-screenshots-fr` artifact.

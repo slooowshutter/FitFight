@@ -12,22 +12,22 @@ Marc asked to start 1.2.0 for the App Store, with screenshots and listing that m
 fitfight.app redesign of 15 Oct.
 
 **Version:** `MARKETING_VERSION`, the TestFlight and App Store workflows and the docs say
-1.2.0 (the 15 Oct `version-1.2.0` commit, replayed on develop). The eleven Versions rows added
-since 1.1.3 (226) say 1.2.0; rows shipped in 226 keep 1.1.3. The 16 Oct release note got its
+1.2.0 (the 15 Oct `version-1.2.0` commit, replayed on develop). Every Versions row added
+since 1.1.3 (226) says 1.2.0; rows shipped in 226 keep 1.1.3. The 16 Oct release note got its
 missing French, which had turned develop's Screenshots and simulator checks red. New's
 "Create, join, or post?" heading and its line had no French entry at all (the localization
 check only covers `String(appLocalized:)` keys); both are translated, with a release note.
 
 **Sample data:** Companion preview now uses the website's cast: Alex (you, Tiger), Leo
 (Silverback), Nina (Capybara), Sam (Hedgehog), Theo (Panda); fights Walk Wars, Eat it and
-Step it Up with the website's numbers; the website's three Feed posts. Change
+Step it Up with the website's gaps and time left; the website's three Feed posts. Change
 `FitFight/CompanionPreview.swift` and `web/components/landing/landing-copy.ts` together.
 Preview only; no production code path or API contract changed.
 
 **Screenshots:** the Screenshots workflow now captures six real-simulator screens per language
 on an iPhone 17 Pro Max (1320 x 2868), replacing the five ImageRenderer JPEGs, which showed no
 steps, initials instead of companions and a broken search field. The set is in
-`docs/app-store/2026-10-16/`. Listing copy (promotional text, description, What's new) is in
+`docs/app-store/2026-10-16/`, which `scripts/app-store-release-audit.rb prepare` now uploads. Listing copy (promotional text, description, What's new) is in
 `docs/app-store/metadata.md`, from the website's English and French.
 
 **Not done:** nothing is uploaded to App Store Connect. 1.1.3 (226) is still in review

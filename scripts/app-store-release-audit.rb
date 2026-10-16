@@ -68,7 +68,7 @@ if ["configure", "prepare", "submit"].include?(mode)
         app_identifier: "com.fitfight.mvp", app_version: release_version,
         skip_binary_upload: true, skip_app_version_update: true,
         skip_metadata: true, skip_screenshots: mode == "submit",
-        screenshots_path: File.expand_path("../docs/app-store/2026-09-15", __dir__),
+        screenshots_path: File.expand_path("../docs/app-store/2026-10-16", __dir__),
         overwrite_screenshots: mode == "prepare", submit_for_review: mode == "submit",
         automatic_release: true, run_precheck_before_submit: false, force: true
     }

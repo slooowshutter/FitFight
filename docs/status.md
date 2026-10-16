@@ -6,6 +6,40 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## In-app alerts, prepared 15 Oct 2026
+
+Marc asked for messages inside the app that reach the right people: news for a
+new version, tips for new users, a pitch for characters. When the app opens, the
+backend picks up to three alerts from rules over the account (days since signup,
+fights, characters, purchases, friends, Steps this week, app version, Apple's
+latest build) and the app shows them one at a time in a centered dialog with one
+or two buttons; tapping outside closes it. Tapping or closing one stops it for good; every show, tap, and close is
+kept in `private.alert_responses`. Alerts are code in
+`web/lib/alerts/in-app-alerts.ts`, so agents add them in a PR with no app build;
+see [backend](backend.md#in-app-alerts-prepared-15-oct-2026). Two alerts ship
+with it: "Start your first fight" (3+ days after signup, no fight yet; automatic friend
+and founder fights do not count) and "Make
+your own character" (1+ day after signup, no custom character). Buttons can open
+the update link, the character screen, or New. New 1.1.3 release note.
+
+**Contract:** new `GET /api/v1/alerts` and `POST /api/v1/alerts/{id}/responses`;
+no existing contract changes. Older builds never call them and keep the update
+toast. Rollout: apply `20261016120000_alert_responses.sql`, deploy the backend,
+then distribute the app.
+
+**When update alerts turn on:** the GitHub release job that feeds the update
+toast runs only every 3 to 10 hours, not every 15 minutes as scheduled. On
+production, update alerts instead ask Apple's public App Store lookup (no key,
+reused for 5 minutes), so a pitch starts within minutes of the App Store offering
+the new version. Staging still uses the GitHub job's `releases.json`. No new
+secret or cron.
+
+**Verified locally (16 Oct, rebased on develop):** web typecheck and alert unit tests; the facts
+query, responses, permissions, and account-deletion cascade against a disposable
+local database with every migration; all 333 pgTAP checks; the native contract
+test; an iOS simulator build; the dialog rendered by the screenshot export. Not
+yet: a staging deploy, or the dialog on a signed-in phone.
+
 ## Admin dashboard: audit fixes, prepared 15 Oct 2026
 
 Marc asked to fix the admin dashboard after the 15 Oct audit compared every tile with production
@@ -334,6 +368,7 @@ deployed or run in GitHub CI.
 "fixed spans" test is flaky there, unrelated); iOS simulator build; Swift API
 contract test; native script checks. `test_fight_localization` and
 `test_fight_live_updates` also fail on `develop` since #384 (`refreshError`).
+
 
 ## Last round result card, prepared 15 Oct 2026
 

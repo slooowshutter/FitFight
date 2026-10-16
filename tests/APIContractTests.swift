@@ -257,7 +257,18 @@ struct APIContractTests {
         precondition(founder.challengers[0].steps == 41250 && founder.challengers[0].founderSteps == 52010)
         precondition(founder.challengers[1].state == "awaiting_final_sync")
         precondition(founder.challengers[1].wins == 0 && founder.challengers[1].losses == 2 && founder.challengers[1].draws == 1)
-        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, founder fights passed")
+        let alerts = try decoder.decode(InAppAlertList.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("in-app-alerts.json"))).alerts
+        precondition(alerts.map(\.id) == ["make-your-character", "update-example"])
+        precondition(alerts[0].imageURL?.lastPathComponent == "companion-alpaca-1.webp" && alerts[1].imageURL == nil)
+        precondition(alerts[0].buttons.map(\.primary) == [true, false] && alerts[0].buttons[0].url == nil)
+        precondition(alerts[1].buttons[0].action == "update" && alerts[1].buttons[0].url?.host == "apps.apple.com")
+        let laterAction = try decoder.decode(InAppAlertList.self, from: Data(#"""
+            {"alerts":[{"id":"x","title":"T","body":"B","image_url":null,"extra":1,
+            "buttons":[{"title":"Go","action":"open_store","url":null,"primary":true}]}]}
+            """#.utf8))
+        precondition(laterAction.alerts[0].buttons[0].action == "open_store", "A newer server's action still decodes")
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, founder fights, in-app alerts passed")
     }
 }
 

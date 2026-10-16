@@ -222,6 +222,10 @@ final class AppModel: ObservableObject {
     @Published var showingActivity = false
     @Published var feedRevision = 0
     @Published var dailyStatusRecap: DailyStatusRecap?
+    /// The in-app alert on screen. The rest of this open's alerts wait in `queuedInAppAlerts`.
+    @Published var inAppAlert: InAppAlert?
+    @Published var showingPaidCharacter = false
+    private var queuedInAppAlerts: [InAppAlert] = []
     @Published var showingVersions = false
     @Published var showingPreferences = false
     @Published var showingBetaTesting = false
@@ -1573,6 +1577,56 @@ final class AppModel: ObservableObject {
         } catch {
             dailyStatusRecap = nil
         }
+    }
+
+    /// Each time the app opens: the backend picks up to three alerts, shown one after another.
+    func loadInAppAlerts(session: SessionStore) async {
+        guard session.authSession != nil, api.isConfigured, inAppAlert == nil else { return }
+        do {
+            queuedInAppAlerts = try await api.inAppAlerts(accessToken: try await session.freshAccessToken())
+        } catch {
+            queuedInAppAlerts = []
+        }
+        showNextInAppAlert()
+    }
+
+    /// Returns the update link to open. Not now shows the next alert; a button that opens something
+    /// leaves the rest for the next open.
+    func chooseInAppAlert(_ choice: InAppAlert.Choice, session: SessionStore) -> URL? {
+        guard let alert = inAppAlert else { return nil }
+        answerInAppAlert(alert, response: "tapped", action: choice.action, session: session)
+        inAppAlert = nil
+        switch choice.action {
+        case "update": return choice.url
+        case "open_character": showingPaidCharacter = true
+        case "new_fight": tab = .newFight
+        default: showNextInAppAlert()
+        }
+        return nil
+    }
+
+    func dismissInAppAlert(session: SessionStore) {
+        guard let alert = inAppAlert else { return }
+        answerInAppAlert(alert, response: "dismissed", session: session)
+        showNextInAppAlert()
+    }
+
+    func answerInAppAlert(_ alert: InAppAlert, response: String, action: String? = nil, session: SessionStore) {
+        Task {
+            try? await api.answerInAppAlert(
+                id: alert.id, response: response, action: action, accessToken: try await session.freshAccessToken()
+            )
+        }
+    }
+
+    /// Signing out drops the last account's alerts.
+    func forgetInAppAlerts() {
+        inAppAlert = nil
+        queuedInAppAlerts = []
+    }
+
+    private func showNextInAppAlert() {
+        inAppAlert = queuedInAppAlerts.isEmpty ? nil : queuedInAppAlerts.removeFirst()
     }
 
     private func consumePendingFightRoute(showDailyStatusRecap: Bool) {

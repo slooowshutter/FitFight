@@ -205,6 +205,7 @@ struct FitFightApp: App {
                         model.showingFriends = false
                         model.showingActivity = false
                         model.showingPreferences = false
+                        model.forgetInAppAlerts()
                         return
                     }
                     Analytics.identify(userId: userId)

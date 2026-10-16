@@ -54,7 +54,13 @@ export const appReleaseProjectValues = [
 ] as const;
 export const appReleaseProjectSchema = z.enum(appReleaseProjectValues);
 
+/** Apple's public App Store lookup (itunes.apple.com/lookup) for one app id. */
+export const appStoreLookupSchema = z.object({
+    results: z.array(z.object({ version: marketingVersionSchema })).length(1),
+});
+
 export type AppRelease = z.infer<typeof appReleaseSchema>;
 export type AppReleasePolicy = z.infer<typeof appReleasePolicySchema>;
 export type AppReleaseManifest = z.infer<typeof appReleaseManifestSchema>;
 export type AppReleaseProject = z.infer<typeof appReleaseProjectSchema>;
+export type InstallableRelease = { version: string; updateUrl: string };

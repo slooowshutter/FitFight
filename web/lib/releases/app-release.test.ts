@@ -4,6 +4,7 @@ import { GET } from "@/app/api/app-release/route";
 import { ApiError } from "@/lib/http";
 import {
     appReleasePolicy,
+    latestInstallableRelease,
     resetAppReleasePolicyCacheForTests,
 } from "./app-release";
 import { verifyUser } from "@/lib/supabase/queries/auth-supabase-query";
@@ -329,4 +330,32 @@ test("a second policy read within a minute reuses the last manifest", async (t) 
         enforced: false,
     });
     assert.equal(fetch.mock.callCount(), 1);
+});
+
+test("update alerts read the live App Store version on production and TestFlight on staging", async (t) => {
+    const previousProject = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    t.after(() => {
+        if (previousProject === undefined)
+            delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+        else process.env.NEXT_PUBLIC_SUPABASE_URL = previousProject;
+    });
+    const fetch = t.mock.method(globalThis, "fetch", async (input: string | URL | Request) =>
+        String(input).startsWith("https://itunes.apple.com/lookup?id=6804230516")
+            ? Response.json({ resultCount: 1, results: [{ version: "1.2", bundleId: "com.fitfight.mvp" }] })
+            : Response.json(manifest),
+    );
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://pvqntpteehdvhqyctwum.supabase.co";
+    const live = { version: "1.2.0", updateUrl: "https://apps.apple.com/app/id6804230516" };
+    assert.deepEqual(await latestInstallableRelease(), live);
+    assert.deepEqual(await latestInstallableRelease(), live);
+    assert.equal(fetch.mock.callCount(), 1, "Apple is asked at most every 5 minutes");
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://zstzbfocunthczzubggz.supabase.co";
+    assert.deepEqual(await latestInstallableRelease(), { version: "1.0.0", updateUrl: "itms-beta://" });
+
+    resetAppReleasePolicyCacheForTests();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://pvqntpteehdvhqyctwum.supabase.co";
+    fetch.mock.mockImplementation(async () => new Response(null, { status: 503 }));
+    await assert.rejects(latestInstallableRelease());
 });

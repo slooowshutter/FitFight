@@ -116,6 +116,8 @@ struct Fight: Codable, Identifiable, Hashable {
     var timeZone: String? = nil
     /// A monthly friend round. Optional so cached Fights from earlier builds still decode.
     var friends: Bool? = nil
+    /// Everyone's companions running together, drawn by the server. Optional for the same reason.
+    var groupImageURL: URL? = nil
 
     var hasAction: Bool {
         !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1773,7 +1775,8 @@ final class AppModel: ObservableObject {
                 && Self.isAfterFightStartDay(starts)
                 && mine?.state == "invited",
             timeZone: row.timeZone,
-            friends: row.friends
+            friends: row.friends,
+            groupImageURL: row.groupImageUrl.flatMap(URL.init(string:))
         )
         localizeFight(&fight, formatScore: formatScore)
         return fight

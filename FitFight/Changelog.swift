@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "Each fight now has its own picture at the top: everyone's companions running together, drawn for your fight. A new picture comes about an hour after someone joins or changes their companion."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "When you open FitFight, it can now show a short tip, like how to start your first fight or make your own character. Tap the button to try it, or Not now to close it."
         ),
         ReleaseNote(

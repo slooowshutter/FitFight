@@ -209,6 +209,8 @@ struct APIContractTests {
                      && friendRounds.friends?.requests == 2)
         precondition(friendRounds.fights.count == 1 && friendRounds.fights[0].friends == true
                      && friendRounds.fights[0].name == "Friends")
+        precondition(friendRounds.fights[0].groupImageUrl?.hasPrefix("https://supabase.tryblend.ai/") == true)
+        precondition(snapshot.fights[0].groupImageUrl == nil, "Servers before group images remain decodable")
         guard var unflagged = try JSONSerialization.jsonObject(with: friendsData) as? [String: Any] else {
             preconditionFailure("Friends snapshot fixture must be a JSON object")
         }

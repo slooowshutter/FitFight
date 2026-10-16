@@ -36,6 +36,46 @@ the first one uploads when this reaches `preview`.
 
 ---
 
+## Fight group image, prepared 16 Oct 2026
+
+Marc asked for one AI picture at the top of each fight with every runner's
+companion. The approved look (16 Oct): one transparent image, everyone running
+left to right on ground. 2 to 16 runners: a straight trail. 17 or more: a race
+start at head height, 12 featured runners up front (creator, then custom
+companions, then Specials, then join order) and the rest as a crowd behind.
+Model: GPT Image 2.5 Sunburst through two published Blend workflows, "FitFight
+Group Vignette" and "FitFight Race Start Close", each with a Claude count check.
+Plan and evidence: [companion plan, Stage 5](design/companion-implementation-plan.md).
+
+**When it draws:** a running or upcoming fight with 2 or more accepted runners
+gets an image an hour after it is created, someone joins, or a runner changes
+companion; changes inside that hour fold into one image. At most 2 per fight
+per rolling 24 hours, 200 a day and 6 at once app-wide. The check needs every
+runner drawn once (trail) or every featured runner present (race start) and
+nobody facing left, with up to 3 tries. A failed image keeps the previous one.
+Every image and attempt stays in `private.fight_group_images`. FitFight pays
+(about $0.12 to $0.17 an image). Settings are code in
+`web/lib/types/fight-images/fight-image.ts`; it runs inside the existing
+`/api/internal/ai/reconcile` cron, so no new cron or secret.
+
+**Contract:** additive optional `group_image_url` on each fight in
+`POST /api/v1/fights/snapshot` and `/refresh`. Older builds ignore it; the new
+build shows the image instead of the four-companion preview, and keeps the
+roster when there is none. Rollout: apply `20261016160000_fight_group_images.sql`
+(table plus the private `fight-group-references` storage bucket), deploy the
+backend, then distribute the app. Turning it on draws images for every active
+fight with 2+ runners over the first days, within the daily cap.
+
+**Verified locally (16 Oct, on develop):** web typecheck, all unit tests and 12
+new ones; the queue, daily allowance, cancel, snapshot and permissions test
+against a disposable local database with every migration; schema lint; all 333
+pgTAP checks; the native contract test; an iOS simulator build; reference sheets
+rendered by the production code; one end-to-end run of each published workflow
+(5 runners passed first try, 30 runners passed on the retry after one runner
+faced left). Not yet: a staging deploy, or the image on a signed-in phone.
+
+---
+
 ## In-app alerts, prepared 15 Oct 2026
 
 Marc asked for messages inside the app that reach the right people: news for a

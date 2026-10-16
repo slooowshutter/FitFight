@@ -46,6 +46,8 @@ export const fightSnapshotSchema = z.object({
             series_id: z.string().uuid().nullable(),
             /** Always sent by current servers; absent from older responses. */
             friends: z.boolean().optional(),
+            /** The fight's newest group image, a transparent PNG on Blend; null until one is ready, absent from older responses. */
+            group_image_url: z.string().url().nullable().optional(),
         }),
     ),
     members: z.array(

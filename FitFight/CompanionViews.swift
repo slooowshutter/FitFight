@@ -970,7 +970,14 @@ struct CompanionFightSummary: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if CompanionPreview.isEnabled && racing.count == 4 {
+            if let groupImageURL = fight.groupImageURL {
+                // Transparent art straight on the screen, no box, 12 pt from the edges like the approved proposal.
+                RemotePhoto(url: groupImageURL, kind: .photo, contentMode: .fit) { Color.clear }
+                    .aspectRatio(3 / 2, contentMode: .fit)
+                    .padding(.horizontal, 12 - theme.space.screenPadding)
+                    .accessibilityElement()
+                    .accessibilityLabel(String(appLocalized: "Everyone in this fight running together"))
+            } else if CompanionPreview.isEnabled && racing.count == 4 {
                 CompanionScene()
                     .frame(height: 220)
                     .frame(maxWidth: .infinity)
@@ -992,7 +999,7 @@ struct CompanionFightSummary: View {
                 .frame(height: 144)
                 .frame(maxWidth: .infinity)
             } else {
-                // There is no saved group identity/art contract yet. Keep the real roster visible.
+                // Until the fight's group image is ready, keep the real roster visible.
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         ForEach(racing.prefix(6)) { row in

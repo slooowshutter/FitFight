@@ -383,27 +383,17 @@ final class AppModel: ObservableObject {
             .sorted { $0.windowStart > $1.windowStart }
     }
 
-    /// Who holds the trophy in this round and how many rounds in a row they have won.
-    /// A final round's own winner holds it, so History cards match their result. A round still
-    /// being played shows the previous round's winner, and a cancelled round has no holder.
-    /// ponytail: only rounds this user was in are in the snapshot; a skipped or cancelled round ends the streak early.
-    func trophyStreak(for fight: Fight) -> (userId: String, count: Int)? {
-        if fight.serverState == "cancelled" { return nil }
-        let ended = fight.serverState == "final"
-        var holder: String?
-        var count = 0
-        var nextStart = ended ? fight.windowEnd : fight.windowStart
-        let earlier = seriesHistory(for: fight).filter { $0.windowStart < fight.windowStart }
-        for round in (ended ? [fight] : []) + earlier {
-            // The server starts each round at the previous round's end, truncated to milliseconds.
-            guard abs(round.windowEnd.timeIntervalSince(nextStart)) < 1, round.serverState == "final" else { break }
-            nextStart = round.windowStart
+    /// Trophies per user id: every final round of this fight they won outright, up to and including
+    /// this round, so History cards count up to their own round. A tied round gives no trophy.
+    /// ponytail: only rounds this user was in are in the snapshot, so rounds they skipped are not counted.
+    func trophies(in fight: Fight) -> [String: Int] {
+        var trophies: [String: Int] = [:]
+        for round in [fight] + seriesHistory(for: fight).filter({ $0.windowStart < fight.windowStart })
+        where round.serverState == "final" {
             let leaders = round.standings.filter { !$0.invited && !$0.deferred && $0.rank == 1 }
-            guard leaders.count == 1, holder == nil || leaders[0].person.id == holder else { break }
-            holder = leaders[0].person.id
-            count += 1
+            if leaders.count == 1 { trophies[leaders[0].person.id, default: 0] += 1 }
         }
-        return holder.map { ($0, count) }
+        return trophies
     }
 
     /// The round that ended as this live round started, once it is final and you raced in it.

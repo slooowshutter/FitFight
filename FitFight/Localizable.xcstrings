@@ -568,15 +568,39 @@
             "extractionState": "manual",
             "localizations": {
                 "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Won the last %lld rounds"
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Won %lld round"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "Won %lld rounds"
+                                }
+                            }
+                        }
                     }
                 },
                 "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "A gagné les %lld dernières manches"
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "A gagné %lld manche"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "A gagné %lld manches"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -14708,6 +14732,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "L’animal de chacun s’affiche maintenant en entier dans le classement, Fil et Profil, et de la tête à la taille sur les cartes Défis, au lieu d’un visage rogné dans un rond."
+                    }
+                }
+            }
+        },
+        "Trophies now count every round each player has won in a fight, not only rounds won in a row. Everyone who has won a round shows a trophy, with ×N for more than one.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les trophées comptent maintenant chaque manche gagnée par chaque joueur dans un défi, pas seulement les manches gagnées d’affilée. Chaque joueur qui a gagné une manche affiche un trophée, avec ×N s’il en a plusieurs."
                     }
                 }
             }

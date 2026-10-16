@@ -1097,7 +1097,7 @@ final class AppModel: ObservableObject {
                 FitFightJoinableFight(
                     fightId: UUID(uuidString: fight.id)!,
                     seriesId: UUID(uuidString: fight.seriesId ?? fight.id)!,
-                    name: fight.name, joinCode: fight.joinCode!, ownerHandle: "lea",
+                    name: fight.name, joinCode: fight.joinCode!, ownerHandle: "sam",
                     actionText: fight.actionText, startsAt: fight.windowStart.ISO8601Format(),
                     endsAt: fight.windowEnd.ISO8601Format(), memberCount: fight.of,
                     recurring: fight.recurring, alreadyMember: true, canJoinNext: false

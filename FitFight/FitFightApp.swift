@@ -76,6 +76,7 @@ struct FitFightApp: App {
             let model = CompanionPreview.model(state: state)
             model.showCompanionPreviewState(state)
             let companions = CompanionStore()
+            companions.selection = .limitedTiger
             if ProcessInfo.processInfo.environment["FF_COMPANION_PICKER"] == "1" {
                 model.tab = .you
                 companions.selection = .limitedBlackPanther

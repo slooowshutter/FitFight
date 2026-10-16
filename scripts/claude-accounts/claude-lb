@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Two Claude subscriptions, one setup.
-
-  claude-lb          usage of both accounts (5-hour, weekly, Fable)
-  claude-lb a|b      switch Conductor (new chats) to account a or b
-  claude-lb auto     switch to whichever account has more room
+"""Two Claude subscriptions, one setup. Commands are listed in COMMANDS below.
 
 Account a = ~/.claude (default), b = ~/.claude-b (shares everything but the login).
 Conductor runs ~/.local/bin/claude-active, which reads the choice from ~/.claude-lb.
@@ -12,6 +8,15 @@ then set claude_code_executable_path = "~/.local/bin/claude-active" (full path) 
 """
 import hashlib, json, os, subprocess, sys, time, urllib.request
 from datetime import datetime
+
+COMMANDS = """
+Commands
+  claude-lb          show 5-hour, weekly and Fable usage of both accounts
+  claude-lb a        new Conductor chats use account a (open chats keep theirs)
+  claude-lb b        new Conductor chats use account b
+  claude-lb auto     switch to whichever account has the most room left
+  claude             open account a in a terminal
+  claude-b           open account b in a terminal (first time: /login)"""
 
 HOME = os.path.expanduser("~")
 STATE = f"{HOME}/.claude-lb"
@@ -53,7 +58,7 @@ if arg in ("a", "b", "auto"):
     print(f"Switched to {arg}. New Conductor chats use it; open chats keep their account.")
     active = arg
 elif arg:
-    sys.exit(__doc__)
+    sys.exit(COMMANDS)
 
 for name, rows in limits.items():
     print(f"\n{name}{'  <- active' if name == active else ''}")
@@ -65,3 +70,5 @@ for name, rows in limits.items():
         resets = datetime.fromisoformat(l["resets_at"]).astimezone().strftime("%a %H:%M")
         filled = round(l["percent"] * 40 / 100)
         print(f"  {label:<14} {'█' * filled}{'░' * (40 - filled)} {l['percent']:>3}%   resets {resets}")
+
+print(COMMANDS)

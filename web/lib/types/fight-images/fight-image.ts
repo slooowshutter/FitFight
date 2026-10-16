@@ -17,7 +17,7 @@ export const fightImageConfiguration = {
     /** Images started across the whole app in any rolling 24 hours, a cost ceiling. */
     globalPerDay: 200,
     /** Images running at once across the app. */
-    maxRunning: 6,
+    maxRunning: 30,
     /** From this many runners the race start replaces the straight trail. */
     raceStartFrom: 17,
     /** Runners drawn in full in a race start; everyone else is in the crowd. */

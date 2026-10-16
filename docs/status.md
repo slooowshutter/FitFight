@@ -50,7 +50,7 @@ Plan and evidence: [companion plan, Stage 5](design/companion-implementation-pla
 **When it draws:** a running or upcoming fight with 2 or more accepted runners
 gets an image an hour after it is created, someone joins, or a runner changes
 companion; changes inside that hour fold into one image. At most 2 per fight
-per rolling 24 hours, 200 a day and 6 at once app-wide. The check needs every
+per rolling 24 hours, 200 a day and 30 at once app-wide. The check needs every
 runner drawn once (trail) or every featured runner present (race start) and
 nobody facing left, with up to 3 tries. A failed image keeps the previous one
 and waits for the next change of runners; a failure before Blend judged a run

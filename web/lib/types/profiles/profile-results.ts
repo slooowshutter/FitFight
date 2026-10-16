@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const profileResultValues = ["win", "loss", "draw", "withdrawn", "removed", "incomplete", "cancelled", "ongoing", "solo", "not_entered", "unavailable"] as const;
+export const headToHeadResultValues = ["win", "loss", "draw"] as const;
 export const recordCategoryValues = ["public", "private", "unknown"] as const;
 export const recordTimestampSchema = z.string().refine((value) => Number.isFinite(Date.parse(value))).transform((value) => new Date(value).toISOString());
 
@@ -50,6 +51,9 @@ export const profileHistoryRowSchema = z.object({
     field_size: z.number().int().nonnegative(),
     counted: z.boolean(),
     complete: z.boolean().nullable(),
+    /** Shared history only: the viewer's place and the result between the two of them. */
+    viewer_placement: z.number().int().positive().nullable().optional(),
+    head_to_head: z.enum(headToHeadResultValues).nullable().optional(),
 });
 
 export const profileHistoryPageSchema = z.object({
@@ -68,4 +72,5 @@ export type ClassifiedFightResult = {
     placement: number | null;
 };
 
+export type HeadToHeadResult = (typeof headToHeadResultValues)[number];
 export type ResultEvidenceSummary = z.infer<typeof resultEvidenceSummarySchema>;

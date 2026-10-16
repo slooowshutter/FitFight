@@ -17204,6 +17204,861 @@
                 }
             }
         },
+        "10K+ days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jours à 10K+"
+                    }
+                }
+            }
+        },
+        "1v1": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "1 contre 1"
+                    }
+                }
+            }
+        },
+        "2 weeks ago": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Il y a 2 semaines"
+                    }
+                }
+            }
+        },
+        "Against you": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Contre vous"
+                    }
+                }
+            }
+        },
+        "Become friends to compare steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Devenez amis pour comparer vos pas."
+                    }
+                }
+            }
+        },
+        "Cancel request": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annuler la demande"
+                    }
+                }
+            }
+        },
+        "Cancel your friend request?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Annuler votre demande d’ami ?"
+                    }
+                }
+            }
+        },
+        "Compare steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Comparer les pas"
+                    }
+                }
+            }
+        },
+        "Friends can see each other's shared steps and stats.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les amis voient les pas et les stats que chacun partage."
+                    }
+                }
+            }
+        },
+        "Hide steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Masquer les pas"
+                    }
+                }
+            }
+        },
+        "Keep request": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Garder la demande"
+                    }
+                }
+            }
+        },
+        "No finished Fights together yet.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aucun Fight terminé ensemble pour le moment."
+                    }
+                }
+            }
+        },
+        "No streak": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas de série"
+                    }
+                }
+            }
+        },
+        "Private profile": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Profil privé"
+                    }
+                }
+            }
+        },
+        "Since you became friends today": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis depuis aujourd’hui"
+                    }
+                }
+            }
+        },
+        "Total steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Total des pas"
+                    }
+                }
+            }
+        },
+        "You stop seeing each other's steps. Fights together and your record stay.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous ne verrez plus les pas de l’autre. Vos Fights en commun et votre bilan restent."
+                    }
+                }
+            }
+        },
+        "Your comparison starts tomorrow.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre comparaison commence demain."
+                    }
+                }
+            }
+        },
+        "best streak": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "meilleure série"
+                    }
+                }
+            }
+        },
+        "current streak": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "série en cours"
+                    }
+                }
+            }
+        },
+        "This also shares step records, averages and activity levels for that period. Friends also see your current 10K streak and your totals since you became friends. The rest of your daily history stays private.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cela partage aussi les records, moyennes et niveaux d’activité de cette période. Vos amis voient aussi votre série 10K en cours et vos totaux depuis que vous êtes amis. Le reste de votre historique quotidien reste privé."
+                    }
+                }
+            }
+        },
+        "profile.against-accessibility": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "You: %1$d wins, %2$d draws, %3$d losses"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous : %1$d victoires, %2$d nuls, %3$d défaites"
+                    }
+                }
+            }
+        },
+        "profile.against-legend": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "you · draw · %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "vous · nul · %@"
+                    }
+                }
+            }
+        },
+        "profile.best-day-period": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "best day · %d days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "meilleur jour · %d jours"
+                    }
+                }
+            }
+        },
+        "profile.both-places": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "You %1$@ · %2$@ %3$@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vous %1$@ · %2$@ %3$@"
+                    }
+                }
+            }
+        },
+        "profile.day-average": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d-day average"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "moyenne sur %d jours"
+                    }
+                }
+            }
+        },
+        "profile.ends-on": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "ends %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "fin le %@"
+                    }
+                }
+            }
+        },
+        "profile.form-draw": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "D"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "N"
+                    }
+                }
+            }
+        },
+        "profile.form-loss": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "D"
+                    }
+                }
+            }
+        },
+        "profile.form-win": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "W"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "V"
+                    }
+                }
+            }
+        },
+        "profile.friends-since": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Since you became friends on %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis depuis le %@"
+                    }
+                }
+            }
+        },
+        "profile.group-of": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Group of %d"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Groupe de %d"
+                    }
+                }
+            }
+        },
+        "profile.last-results": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Last %d"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%d derniers"
+                    }
+                }
+            }
+        },
+        "profile.live-ahead": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ ahead"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ d’avance"
+                    }
+                }
+            }
+        },
+        "profile.live-behind": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ behind"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ de retard"
+                    }
+                }
+            }
+        },
+        "profile.locked-incoming": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Accept %@'s request to see their steps and stats."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Acceptez la demande de %@ pour voir ses pas et ses stats."
+                    }
+                }
+            }
+        },
+        "profile.locked-not-shared": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ doesn't share steps."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ ne partage pas ses pas."
+                    }
+                }
+            }
+        },
+        "profile.locked-requested": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Request sent. You'll see more once %@ accepts."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Demande envoyée. Vous en verrez plus quand %@ aura accepté."
+                    }
+                }
+            }
+        },
+        "profile.member-since": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Member since %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Membre depuis %@"
+                    }
+                }
+            }
+        },
+        "profile.private-note": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Only %@'s friends see their record and steps. Fights you were both in stay visible."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Seuls les amis de %@ voient son bilan et ses pas. Les Fights que vous avez faits ensemble restent visibles."
+                    }
+                }
+            }
+        },
+        "profile.show-all": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Show all %d"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout afficher (%d)"
+                    }
+                }
+            }
+        },
+        "profile.their-last-days": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@'s last %2$d days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les %2$d derniers jours de %1$@"
+                    }
+                }
+            }
+        },
+        "profile.their-streak-detail": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ has walked 10,000 steps or more for %2$@ in a row. A day under 10,000 starts it over."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ a fait 10 000 pas ou plus %2$@ d’affilée. Un jour sous 10 000 et tout recommence."
+                    }
+                }
+            }
+        },
+        "profile.their-streak-title": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "10K streak · %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Série 10K · %@"
+                    }
+                }
+            }
+        },
+        "profile.they-won": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ won"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ a gagné"
+                    }
+                }
+            }
+        },
+        "profile.wants-to-be-friends": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ wants to be friends"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ veut être votre ami"
+                    }
+                }
+            }
+        },
+        "profile.win-rate-fights": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "win rate · %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "taux de victoire · %@"
+                    }
+                }
+            }
+        },
+        "streak.best-dates": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ to %2$@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "du %1$@ au %2$@"
+                    }
+                }
+            }
+        },
+        "streak.explanation": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "A day with %1$@ steps or more keeps it going, a day under starts it over. Today counts once you pass %2$@. Counted from all your Apple Health history, not only since you joined."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un jour à %1$@ pas ou plus prolonge la série, un jour en dessous la remet à zéro. Aujourd’hui compte dès que vous passez %2$@. Calculé sur tout votre historique Apple Health, pas seulement depuis votre inscription."
+                    }
+                }
+            }
+        },
+        "streak.start": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Walk %@ steps today to start one."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Faites %@ pas aujourd’hui pour en commencer une."
+                    }
+                }
+            }
+        },
+        "streak.to-go": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Walk %1$@ more today to make it %2$d."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Encore %1$@ pas aujourd’hui pour passer à %2$d."
+                    }
+                }
+            }
+        },
+        "streak.today-counts": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Today counts: %1$@ of %2$@+ in a row."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aujourd’hui compte : %1$@ d’affilée à %2$@+."
+                    }
+                }
+            }
+        },
+        "streak.today-progress": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ / %2$@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ / %2$@"
+                    }
+                }
+            }
+        },
+        "streak.day-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld day"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld days"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld jour"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld jours"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "profile.fight-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld Fight"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld Fights"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld Fight"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld Fights"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "profile.ten-k-day-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld day at 10K+"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld days at 10K+"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld jour à 10K+"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld jours à 10K+"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "Tap someone's name to open their Player card: your record against them in every Fight, 1v1 or group, your steps compared since you became friends, and your Fights together. Block is gone; Report stays. The flame next to Fights is your 10K streak, the days in a row you walked 10,000 steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touchez le nom de quelqu’un pour ouvrir sa carte de joueur : votre bilan face à lui dans chaque Fight, en 1 contre 1 ou en groupe, vos pas comparés depuis que vous êtes amis, et vos Fights en commun. Le bouton Bloquer disparaît, Signaler reste. La flamme à côté de Fights est votre série 10K, le nombre de jours d’affilée à 10 000 pas."
+                    }
+                }
+            }
+        },
         "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border.": {
             "localizations": {
                 "fr": {

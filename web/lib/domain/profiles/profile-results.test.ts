@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { classifyFightResult, profileRecord, rivalryRecord } from "./profile-results";
+import { classifyFightResult, headToHeadRecord, headToHeadResult, profileRecord, rivalryRecord } from "./profile-results";
 import { fightRecordFactSchema } from "@/lib/types/profiles/profile-results";
 
 const first = "00000000-0000-4000-8000-000000000001";
@@ -126,4 +126,23 @@ test("a rivalry scores the same from either person's recorded Fights", () => {
     assert.deepEqual(rivalryRecord(firstFacts, first, second, new Set([recent, older])), {
         wins: 1, losses: 1, draws: 0, rematch: { duration_seconds: 3 * 86400, duration_days: 3, action_text: "Make coffee" },
     });
+});
+
+test("head to head counts group Fights by place, ties as draws, and a withdrawal behind every finisher", () => {
+    const third = "00000000-0000-4000-8000-000000000004";
+    const group = (ranks: [number | null, number | null, number | null], departure: "voluntary" | null = null) => ({
+        ...fight,
+        members: [first, second, third].map((user_id, index) => ({
+            ...fight.members[0], user_id, rank: ranks[index],
+            departure: index === 1 ? departure : null, departed_at: index === 1 && departure ? "2026-09-12T00:00:00Z" : null,
+        })),
+    });
+    assert.equal(headToHeadResult(group([3, 1, 2]), first, second), "loss");
+    assert.equal(headToHeadResult(group([2, 3, 1]), first, second), "win");
+    assert.equal(headToHeadResult(group([2, 2, 1]), first, second), "draw");
+    assert.equal(headToHeadResult(group([2, null, 1], "voluntary"), first, second), "win");
+    assert.equal(headToHeadResult(fight, first, second), "win");
+    assert.equal(headToHeadResult({ ...fight, state: "live" }, first, second), null);
+    const record = headToHeadRecord([group([3, 1, 2]), fight, { ...fight, state: "live" }, group([2, 2, 1])], first, second);
+    assert.deepEqual(record, { wins: 1, draws: 1, losses: 1, form: ["draw", "win", "loss"] });
 });

@@ -51,7 +51,7 @@ struct ProfileStepStatisticsView: View {
                         ForEach(statistics.levels) { level in
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(alignment: .firstTextBaseline) {
-                                    Text(levelName(level.level)).ffType(.label)
+                                    Text(Self.levelName(level.level)).ffType(.label)
                                     Spacer(minLength: 8)
                                     Text(String(format: String(appLocalized: "profile.stats-level-days"), level.days))
                                         .ffType(.caption)
@@ -88,7 +88,7 @@ struct ProfileStepStatisticsView: View {
         }
     }
 
-    private func levelName(_ level: String) -> String {
+    static func levelName(_ level: String) -> String {
         switch level {
         case "couch": String(appLocalized: "profile.stats-level-couch")
         case "warming_up": String(appLocalized: "profile.stats-level-warming-up")

@@ -17124,16 +17124,6 @@
                 }
             }
         },
-        "Now": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "En cours"
-                    }
-                }
-            }
-        },
         "Change my words": {
             "localizations": {
                 "fr": {
@@ -17210,6 +17200,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Le titre de Nouveau est maintenant en français quand ton téléphone est en français."
+                    }
+                }
+            }
+        },
+        "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer ton propre compagnon est plus sobre : l’étape en cours utilise la carte habituelle, sans bordure jaune."
                     }
                 }
             }

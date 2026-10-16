@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "The heading of New is now in French when your phone is in French."
         ),
         ReleaseNote(

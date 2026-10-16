@@ -231,7 +231,7 @@ struct PaidCharacterView: View {
         }
     }
 
-    /// One part of the page: open now (gold), finished (folded to one line), or still to come (dashed).
+    /// One part of the page: open now, finished (folded to one line), or still to come (dashed).
     @ViewBuilder
     private func part<Content: View>(_ index: Int, _ title: String, later: String, summary: String?,
                                      thumbnail: URL? = nil, @ViewBuilder content: () -> Content) -> some View {
@@ -239,11 +239,11 @@ struct PaidCharacterView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 ZStack {
-                    Circle().fill(index < current ? theme.mossFill : index == current ? theme.gold : theme.control)
+                    Circle().fill(index < current ? theme.mossFill : theme.control)
                     if index < current {
                         Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(theme.mossOn)
                     } else {
-                        Text(verbatim: "\(index + 1)").ffType(.label).foregroundStyle(index == current ? theme.goldInk : theme.textSecondary)
+                        Text(verbatim: "\(index + 1)").ffType(.label).foregroundStyle(index == current ? theme.text : theme.textSecondary)
                     }
                 }
                 .frame(width: 26, height: 26)
@@ -262,11 +262,6 @@ struct PaidCharacterView: View {
                         .frame(width: 36, height: 36)
                         .accessibilityHidden(true)
                 }
-                if index == current {
-                    Text(String(appLocalized: "Now")).ffType(.micro).foregroundStyle(theme.gold)
-                        .padding(.horizontal, 9).padding(.vertical, 3)
-                        .background(theme.gold.opacity(0.15), in: Capsule())
-                }
             }
             .accessibilityElement(children: .combine)
             if index == current { content() }
@@ -277,7 +272,7 @@ struct PaidCharacterView: View {
         .background(index > current ? Color.clear : theme.card, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous)
-                .strokeBorder(index == current ? theme.gold : index < current ? theme.hairline : theme.line,
+                .strokeBorder(index > current ? theme.line : theme.hairline,
                               style: StrokeStyle(lineWidth: 1, dash: index > current ? [4, 4] : []))
         }
         .clipShape(RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))

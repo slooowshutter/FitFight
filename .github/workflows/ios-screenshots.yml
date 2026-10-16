@@ -34,7 +34,7 @@ jobs:
     shots:
         name: Render screens
         runs-on: macos-26
-        timeout-minutes: 30
+        timeout-minutes: 45
         permissions:
             contents: read
         steps:

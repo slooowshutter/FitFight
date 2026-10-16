@@ -3872,16 +3872,6 @@
                 }
             }
         },
-        "Count me in!": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Compte sur moi !"
-                    }
-                }
-            }
-        },
         "Display state": {
             "localizations": {
                 "fr": {
@@ -12229,22 +12219,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les commentaires sont plus lisibles grâce aux noms en gras, au texte plus léger et aux espacements réduits. Les réactions commencent à gauche, classées par nombre de votes, et la barre de réponse reste alignée."
-                    }
-                }
-            }
-        },
-        "See you on Sunday! Let's take the longer route by the river.": {
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "See you on Sunday! Let's take the longer route by the river."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "À dimanche ! Prenons le chemin le plus long au bord de la rivière."
                     }
                 }
             }

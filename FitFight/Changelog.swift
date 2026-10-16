@@ -60,70 +60,70 @@ enum Changelog {
             notes: "When Apple Health wakes FitFight in the background, your fights now refresh as soon as you open the app, instead of showing standings from the wake."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "Friends: you now have a Steps fight with each friend that runs the whole calendar month and starts again on the 1st. Tap Friends at the top of Fights to see them, answer requests, and add friends."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "New ideas for your own companion, each in one short line: a 70s hippie orangutan, a pirate parrot, a diva flamingo, a cowboy pig and a furious chihuahua."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "Custom characters now stand on their own like every other character, at the same size, without a circle around them."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "Name your own companion: pick one of four name and line ideas written for your character, change it, or write your own, and ask for four more. Your companion’s name and line now show on your profile, and your friends’ companions show theirs on their profiles."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "You can now change your fight’s code in Edit. Pick 4 to 12 letters or numbers that no other fight uses."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "New post has Everyone or Choose. Everyone sends it to your friends and every fight you’re in. Choose lets you pick My friends and fights, so you can leave your work fight out. Friends see these posts on Feed, marked Friends."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 15,
             notes: "FitFight opens straight to the fights you saw last time, even without internet, and updates them in the background. If it can’t update, it says so."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 14,
             notes: "On a slow connection, refreshing now gives up after 10 seconds instead of 30, so Try again shows sooner."
         ),
         ReleaseNote(
-            version: "1.1.3",
+            version: "1.2.0",
             year: 2026,
             month: 10,
             day: 14,

@@ -79,13 +79,13 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 
 ## Screenshot set
 
-Six 1320 x 2868 JPEGs per language for the 6.9-inch iPhone set; App Store Connect scales them down for smaller iPhones. The Screenshots workflow captures them from the running app on an iPhone 17 Pro Max simulator in Companion preview, which uses the website's sample people and fights: Alex (you, Tiger), Leo (Silverback), Nina (Capybara), Sam (Hedgehog) and Theo (Panda), in Walk Wars, Eat it and Step it Up, with 8,432 steps today. Download the `app-store-screenshots` and `app-store-screenshots-fr` artifacts from a run on the release commit.
+Six 1320 x 2868 JPEGs per language for the 6.9-inch iPhone set; App Store Connect scales them down for smaller iPhones. The Screenshots workflow captures them from the running app on an iPhone 17 Pro Max simulator in Companion preview, which uses the website's sample people and fights: Alex (you, Tiger), Leo (Silverback), Nina (Capybara), Sam (Hedgehog) and Theo (Panda), in Walk Wars, Eat it and Step it Up, with 8,432 steps today. The 1.2.0 set is in [2026-10-16](2026-10-16/index.html), from the `app-store-screenshots` and `app-store-screenshots-fr` artifacts.
 
 1. Fights with Walk Wars (+860), Eat it (-1,260) and Step it Up (+2,840).
 2. Eat it, a live 1v1 against Theo with totals and standings.
 3. New with the Tiger: Create, Join or Post, and two suggested fights.
 4. An invitation from Sam with Accept and Decline.
-5. Profile with Alex, the Tiger, statistics and friends.
+5. Profile with Alex, the Tiger and statistics.
 6. Feed with the website's three posts from Leo, Nina and Sam.
 
 The Profile capture shows the version line of the simulator build (`1.2.0 · build 1 · prod`). Do not use real names or real Health data in marketing assets.

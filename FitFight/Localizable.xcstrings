@@ -16875,6 +16875,36 @@
                     }
                 }
             }
+        },
+        "Create, join, or post?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer, rejoindre ou publier ?"
+                    }
+                }
+            }
+        },
+        "Start a new fight, join one that's already going, or post to the Feed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lance un nouveau défi, rejoins-en un déjà en cours ou publie dans le Fil."
+                    }
+                }
+            }
+        },
+        "The heading of New is now in French when your phone is in French.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le titre de Nouveau est maintenant en français quand ton téléphone est en français."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

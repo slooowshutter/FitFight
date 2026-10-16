@@ -66,6 +66,8 @@ extension CompanionPreview {
         let now = Date()
         let french = Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
         model.you = people[0]
+        let dayKey = DateFormatter()
+        dayKey.dateFormat = "yyyy-MM-dd"
 
         func fight(_ index: Int, name: String, code: String, totals: [Double], cast: [Person], length: Int, hoursLeft: Int) -> Fight {
             var fight = template
@@ -97,7 +99,7 @@ extension CompanionPreview {
                     DayScore(person: person, value:
                         (total * (previousWeight + weights[day]) / weightTotal).rounded()
                         - (total * previousWeight / weightTotal).rounded())
-                })
+                }, day: dayKey.string(from: fight.windowStart.addingTimeInterval(Double(day) * 86_400)))
             }
             return fight
         }
@@ -135,6 +137,11 @@ extension CompanionPreview {
             history.windowStart = history.windowEnd.addingTimeInterval(-7 * 86_400)
             history.status = .finished
             history.serverState = "final"
+            history.days = history.days.enumerated().map { index, day in
+                var day = day
+                day.day = dayKey.string(from: history.windowStart.addingTimeInterval(Double(index) * 86_400))
+                return day
+            }
             history.standings = history.standings.map { var row = $0; row.finalStepsComplete = true; return row }
             return history
         }

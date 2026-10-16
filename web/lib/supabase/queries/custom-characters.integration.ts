@@ -15,7 +15,12 @@ import {
     claimCustomCharacterPush,
     claimFreeCustomCharacter,
     giftFreeCharacters,
+    dueCompanionLines,
+    prepareCompanionLines,
+    readCompanionLabel,
+    saveCustomCharacterLabel,
 } from "./custom-characters-supabase-query";
+import { readSharedProfile, updateProfileSettings } from "./shared-profiles-supabase-query";
 import { readSpecialStore } from "./specials-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
@@ -394,4 +399,166 @@ test("new accounts get no free character, gifts add some, and a free claim draws
 
     await assert.rejects(database`insert into private.custom_character_purchases (account_id, environment)
         values (${account}, 'Sandbox')`, { code: "23514" });
+});
+
+test("a chosen portrait gets one free suggestion batch, three more at most, and a saved name and line", async (context) => {
+    const owner = randomUUID();
+    const other = randomUUID();
+    await database`insert into auth.users (id) values (${owner}), (${other})`;
+    await database`update private.ai_provider_budget set requests = 0, starts = 0, remaining = null,
+        reset_at = null, blocked_until = null, window_started_at = clock_timestamp(),
+        starts_day = (clock_timestamp() at time zone 'UTC')::date where provider = 'blend'`;
+    const account = (await readSpecialStore(owner, database)).app_account_token;
+    context.after(async () => {
+        await database`delete from private.ai_library_images where user_id = ${owner}`;
+        await database`delete from private.ai_requests where user_id = ${owner}`;
+        await database`delete from private.custom_character_purchases where account_id = ${account}`;
+        await database`delete from private.special_accounts where id = ${account}`;
+        await database`delete from auth.users where id in (${owner}, ${other})`;
+    });
+    const transactionId = BigInt(`0x${randomUUID().replaceAll("-", "")}`).toString();
+    const claim = await recordCustomCharacterTransaction(appleCustomCharacterTransactionSchema.parse({
+        transactionId,
+        originalTransactionId: transactionId,
+        bundleId: "com.fitfight.mvp",
+        productId: customCharacterProductId,
+        environment: "Sandbox",
+        type: "Consumable",
+        inAppOwnershipType: "PURCHASED",
+        quantity: 1,
+        appAccountToken: account,
+        purchaseDate: Date.now(),
+        signedDate: Date.now() + 1_000,
+    }), database);
+    const purchaseId = claim.purchase_id;
+    const portraitStage = await prepareCustomCharacterStage(owner, purchaseId, { description: "A grumpy pigeon" }, database);
+    if (portraitStage.kind !== "avatar") assert.fail("Expected the portrait stage");
+    // No portrait yet: nothing to start, and "Four more" has nothing to describe.
+    assert.deepEqual(await prepareCompanionLines(owner, purchaseId, null, database), { kind: "none" });
+    await assert.rejects(prepareCompanionLines(owner, purchaseId, randomUUID(), database), { code: "not_found" });
+    assert.equal((await dueCompanionLines(database)).some((item) => item.id === purchaseId), false);
+    const portrait = await reserveAiRequest(owner, {
+        workflow: "avatar", resourceId: purchaseId, idempotencyKey: portraitStage.key, requestHash: "a".repeat(64),
+        version, creditPrice: 0, sourceRequestIds: [], description: portraitStage.description,
+    }, limits, database);
+    assert.ok(portrait.request.lease_token);
+    await finishAiRequestAttempt(owner, portrait.request.id, portrait.request.lease_token, {
+        status: "completed", runHandle: { ...version, runId: randomUUID() },
+        result: { image_url: "https://cdn.tryblend.ai/pigeon.png" }, errorCode: null,
+    }, {}, database);
+    // The backfill takes the oldest character per run, so make this one older than any other test's.
+    await database`update private.custom_character_purchases set created_at = '2000-01-01' where id = ${purchaseId}`;
+    assert.deepEqual(await dueCompanionLines(database), [{ id: purchaseId, userId: owner }]);
+
+    // The app and the reconciler prepare the same first batch.
+    const first = await prepareCompanionLines(owner, purchaseId, null, database);
+    if (first.kind !== "start") assert.fail("Expected the first batch");
+    assert.deepEqual(await prepareCompanionLines(owner, purchaseId, null, database), first);
+    assert.equal(first.avatarRequestId, portrait.request.id);
+    assert.equal(first.description, "A grumpy pigeon");
+    assert.equal(first.locale, null);
+    assert.deepEqual(first.avoid, []);
+    const batchInput = (key: string, hash: string) => ({
+        workflow: "companion_lines" as const, resourceId: purchaseId, idempotencyKey: key, requestHash: hash.repeat(64),
+        version, creditPrice: 0, sourceRequestIds: [portrait.request.id], description: "A grumpy pigeon",
+    });
+    await assert.rejects(reserveAiRequest(owner, { ...batchInput(first.key, "b"), creditPrice: 1 }, limits, database), {
+        code: "character_purchase_required",
+    });
+    await assert.rejects(reserveAiRequest(owner, { ...batchInput(first.key, "b"), sourceRequestIds: [] }, limits, database), {
+        code: "not_found",
+    });
+    const firstRun = await reserveAiRequest(owner, batchInput(first.key, "b"), limits, database);
+    if (!firstRun.shouldStart) assert.fail("Expected the first batch to start");
+    assert.deepEqual(firstRun.portraits, ["https://cdn.tryblend.ai/pigeon.png"]);
+    assert.equal((await reserveAiRequest(owner, batchInput(first.key, "b"), limits, database)).request.id, firstRun.request.id);
+    assert.deepEqual(await prepareCompanionLines(owner, purchaseId, null, database), { kind: "pending", requestId: firstRun.request.id });
+    assert.equal((await dueCompanionLines(database)).some((item) => item.id === purchaseId), false);
+    await assert.rejects(reserveAiRequest(owner, batchInput(randomUUID(), "c"), limits, database), { code: "ai_in_progress" });
+    // A running batch holds up neither the owner's other work nor the reconciler's pass over characters.
+    const unrelated = await reserveAiRequest(owner, {
+        workflow: "avatar", resourceId: null, idempotencyKey: randomUUID(), requestHash: "d".repeat(64),
+        version, creditPrice: 0, sourceRequestIds: [], description: "An unpaid pigeon",
+    }, limits, database);
+    assert.equal(unrelated.shouldStart, true);
+    assert.ok(unrelated.request.lease_token);
+    await finishAiRequestAttempt(owner, unrelated.request.id, unrelated.request.lease_token, {
+        status: "failed", runHandle: null, result: null, errorCode: "ai_failed",
+    }, {}, database);
+    let character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.suggestions_pending, true);
+    assert.equal(character.more_suggestions_left, 3);
+
+    const batch = (label: string) => ({
+        options: [1, 2, 3, 4].map((index) => ({ name: `${label} ${index}`, line: `${label} walks ${index} blocks.` })),
+    });
+    const finish = async (run: typeof firstRun.request, status: "completed" | "failed", label: string) => {
+        assert.ok(run.lease_token);
+        await finishAiRequestAttempt(owner, run.id, run.lease_token, status === "completed"
+            ? { status, runHandle: { ...version, runId: randomUUID() }, result: batch(label), errorCode: null }
+            : { status, runHandle: { ...version, runId: randomUUID() }, result: null, errorCode: "ai_invalid_result",
+                providerResponse: { id: "blend-run", status: "completed", output: { options: [] }, note: label } }, {}, database);
+    };
+    await finish(firstRun.request, "completed", "First");
+    assert.equal((await database`select count(*)::int as count from private.ai_library_images
+        where request_id = ${firstRun.request.id}`)[0].count, 0);
+    assert.deepEqual(await prepareCompanionLines(owner, purchaseId, null, database), { kind: "none" });
+    character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.deepEqual(character.suggestions, batch("First").options);
+    assert.equal(character.suggestions_pending, false);
+    assert.equal(character.more_suggestions_left, 3);
+    assert.equal(character.name, null);
+
+    // "Four more": a failed batch keeps its raw provider response and uses none of the three.
+    const attempts = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    for (const [index, attempt] of attempts.entries()) {
+        const extra = await prepareCompanionLines(owner, purchaseId, attempt, database);
+        if (extra.kind !== "start") assert.fail("Expected another batch");
+        assert.equal(extra.key, attempt);
+        assert.equal(extra.avoid.length, index === 0 ? 4 : index === 1 ? 4 : index === 2 ? 8 : 12);
+        const run = await reserveAiRequest(owner, batchInput(attempt, String(index + 1)), limits, database);
+        if (!run.shouldStart) assert.fail("Expected the batch to start");
+        assert.deepEqual(await prepareCompanionLines(owner, purchaseId, attempt, database), { kind: "none" });
+        await finish(run.request, index === 0 ? "failed" : "completed", `Extra${index}`);
+    }
+    const [failed] = await database`select provider_response from private.ai_requests
+        where user_id = ${owner} and idempotency_key = ${attempts[0]}`;
+    assert.deepEqual(failed.provider_response, { id: "blend-run", status: "completed", output: { options: [] }, note: "Extra0" });
+    character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.suggestions.length, 16);
+    assert.equal(character.more_suggestions_left, 0);
+    await assert.rejects(reserveAiRequest(owner, batchInput(randomUUID(), "9"), limits, database), { code: "suggestions_limit" });
+
+    // The profile shows the first suggestion until the owner saves a pair; nobody else can save one.
+    await database`update public.profiles set companion_id = 'custom', companion_prompt = 'A grumpy pigeon',
+        companion_image_url = 'https://cdn.tryblend.ai/pigeon.png' where id = ${owner}`;
+    assert.deepEqual(await readCompanionLabel(owner, "https://cdn.tryblend.ai/pigeon.png", database), {
+        companion_name: "First 1", companion_line: "First walks 1 blocks.",
+    });
+    assert.deepEqual(await readCompanionLabel(other, "https://cdn.tryblend.ai/pigeon.png", database), {});
+    await assert.rejects(saveCustomCharacterLabel(other, purchaseId, { name: "Thief", line: "Not mine." }, database), {
+        code: "not_found",
+    });
+    await saveCustomCharacterLabel(owner, purchaseId, { name: "Sir Waddles", line: "Slow start. Strong finish." }, database);
+    character = (await readCustomCharacterStore(owner, database)).characters[0];
+    assert.equal(character.name, "Sir Waddles");
+    assert.equal(character.line, "Slow start. Strong finish.");
+    assert.deepEqual(await readCompanionLabel(owner, "https://cdn.tryblend.ai/pigeon.png", database), {
+        companion_name: "Sir Waddles", companion_line: "Slow start. Strong finish.",
+    });
+    // Another viewer sees the pair only once the profile is shared with them.
+    assert.equal("companion_name" in await readSharedProfile(other, owner, undefined, database), false);
+    await updateProfileSettings(owner, { audience: "public" }, database);
+    const shared = await readSharedProfile(other, owner, undefined, database);
+    assert.equal(shared.companion_name, "Sir Waddles");
+    assert.equal(shared.companion_line, "Slow start. Strong finish.");
+    await database`update public.profiles set companion_id = 'fox', companion_prompt = null, companion_image_url = null
+        where id = ${owner}`;
+    assert.equal("companion_name" in await readSharedProfile(other, owner, undefined, database), false);
+    await assert.rejects(database`update private.custom_character_purchases set name = ${"n".repeat(25)} where id = ${purchaseId}`, {
+        code: "23514",
+    });
+    await assert.rejects(database`update private.custom_character_purchases set line = null where id = ${purchaseId}`, {
+        code: "23514",
+    });
 });

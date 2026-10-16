@@ -141,7 +141,7 @@ struct NewFightView: View {
             FFButton(
                 title: lookingUp ? String(appLocalized: "Looking up…") : String(appLocalized: "Open fight"),
                 size: .large,
-                enabled: joinCode.count == 4,
+                enabled: AppModel.joinCodeLength.contains(joinCode.count),
                 busy: lookingUp,
                 fullWidth: true
             ) {
@@ -359,10 +359,7 @@ struct NewFightView: View {
                             .submitLabel(.go)
                             .onSubmit { lookupCode() }
                             .onChange(of: joinCode) { _, value in
-                                let allowed = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
-                                let cleaned = value.uppercased().unicodeScalars
-                                    .filter { allowed.contains($0) }
-                                joinCode = String(String.UnicodeScalarView(cleaned).prefix(4))
+                                joinCode = AppModel.typedJoinCode(value)
                             }
                     }
                 }
@@ -505,7 +502,7 @@ struct NewFightView: View {
     }
 
     private func lookupCode() {
-        guard joinCode.count == 4, !lookingUp else { return }
+        guard AppModel.joinCodeLength.contains(joinCode.count), !lookingUp else { return }
         lookingUp = true
         Task {
             await model.openJoinCode(joinCode, session: session)

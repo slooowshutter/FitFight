@@ -235,19 +235,16 @@ export function PhoneScreen({
 }) {
     const copy = landingCopy[language];
     const phone = copy.phone;
-    const fox = copy.companions.animals[0];
+    const tiger = copy.companions.animals[0];
 
     if (tab === 1) {
         return (
             <div className="lp-scr-new">
                 <div className="lp-ph-title">{phone.newTitle}</div>
                 <div className="lp-scr-new-hero">
-                    <div className="lp-scr-new-tag">
-                        {phone.newTagline}
-                        <span>{phone.newTaglineAccent}</span>
-                    </div>
+                    <div className="lp-scr-new-tag">{phone.newRule}</div>
                     <img
-                        src="/landing/companion-fox-2.webp"
+                        src="/landing/companion-tiger-2.webp"
                         alt=""
                         width={146}
                         height={166}
@@ -342,7 +339,7 @@ export function PhoneScreen({
                 <div className="lp-scr-me">
                     <img
                         className="lp-av"
-                        src="/landing/companion-fox-avatar.webp"
+                        src="/landing/companion-tiger-avatar.webp"
                         alt=""
                         width={64}
                         height={64}
@@ -355,12 +352,12 @@ export function PhoneScreen({
                 </div>
                 <div className="lp-scr-companion">
                     <div>
-                        <b>{fox.name}</b>
-                        <small>{fox.caption}</small>
+                        <b>{tiger.name}</b>
+                        <small>{tiger.caption}</small>
                         <span>{phone.changeAnimal}</span>
                     </div>
                     <img
-                        src={`/landing/companion-fox-${companionPose(steps)}.webp`}
+                        src={`/landing/companion-tiger-${companionPose(steps)}.webp`}
                         alt=""
                         width={132}
                         height={150}
@@ -398,8 +395,7 @@ export function PhoneScreen({
                 <div>
                     <div className="lp-ph-title">{phone.fightsTitle}</div>
                     <div className="lp-scr-fights-tag">
-                        {phone.tagline}
-                        <span>{phone.taglineAccent}</span>
+                        <span>{phone.leading}</span>
                     </div>
                     <div className="lp-ph-metric">
                         {formatSteps(steps, language)}
@@ -407,7 +403,7 @@ export function PhoneScreen({
                     <div className="lp-ph-cap">{phone.stepsToday}</div>
                 </div>
                 <img
-                    src={`/landing/companion-fox-${companionPose(steps)}.webp`}
+                    src={`/landing/companion-tiger-${companionPose(steps)}.webp`}
                     alt=""
                     width={168}
                     height={192}

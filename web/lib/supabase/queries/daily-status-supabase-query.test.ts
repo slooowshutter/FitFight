@@ -64,6 +64,7 @@ test("daily status selects only opted-in users with an authorized active device 
     );
     assert.match(candidateQuery, /coalesce\(preferences.daily_status, false\)/);
     assert.match(candidateQuery, /coalesce\(preferences.enabled, true\)/);
+    assert.match(candidateQuery, /and not fight.friends/);
     assert.match(
         candidateQuery,
         /join lateral \( select locale from private.device_installations/,

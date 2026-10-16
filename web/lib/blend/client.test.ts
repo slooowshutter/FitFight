@@ -257,7 +257,9 @@ test("reads preserve every documented state and never create another run", async
                 },
             );
             assert.equal(result.data.status, status);
-            assert.equal(JSON.stringify(result).includes("SECRET"), false);
+            // Only the private request row keeps the raw envelope; parsed data never carries provider details.
+            assert.equal(JSON.stringify(result.data).includes("SECRET"), false);
+            assert.equal(JSON.stringify(result.providerResponse).includes("SECRET provider detail"), true);
             if (status === "completed") {
                 assert.equal(result.data.output?.avatar[0].status, "failed");
             }
@@ -397,5 +399,18 @@ test("provider completion time survives output validation and failed terminal ou
             typeof error.detail === "object" &&
             error.detail !== null &&
             Reflect.get(error.detail, "providerCompletedAt") === completedAt,
+    );
+});
+
+test("an unreadable completed run keeps Blend's raw envelope for the private request row", async () => {
+    const raw = { id: handle.runId, status: "completed", output: "invalid terminal output", error: "Provider detail" };
+    await assert.rejects(
+        readBlendWorkflowRun(handle, async () => Response.json(raw)),
+        (error: unknown) => {
+            assert.ok(error instanceof ApiError && typeof error.detail === "object" && error.detail !== null);
+            assert.equal(error.code, "ai_invalid_result");
+            assert.deepEqual(Reflect.get(error.detail, "providerResponse"), raw);
+            return true;
+        },
     );
 });

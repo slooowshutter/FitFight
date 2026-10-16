@@ -686,6 +686,7 @@ struct FFNotice: View {
     var systemImage: String?
     var actionTitle: String?
     var action: (() -> Void)?
+    var onDismiss: (() -> Void)?
 
     @Environment(\.ffTheme) private var theme
 
@@ -707,6 +708,19 @@ struct FFNotice: View {
                     FFPill(actionTitle, style: .solidMoss)
                 }
                 .buttonStyle(FFPressStyle())
+            }
+            if let onDismiss {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(theme.textSecondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .padding(.vertical, -10)
+                .padding(.trailing, -12)
+                .accessibilityLabel(String(appLocalized: "Dismiss"))
             }
         }
         .padding(.horizontal, 16)

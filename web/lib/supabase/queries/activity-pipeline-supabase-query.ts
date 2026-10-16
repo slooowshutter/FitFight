@@ -477,7 +477,17 @@ async function resolveActivity(
         })));
     }
     if (measurements.some((measurement) => measurement.scope === "day" && measurement.metric === "steps")) {
-        await publishHostScores(sql, userId, sourceId);
+        // A friend round can start before its member ever synced; their first day Steps give it a source.
+        await sql`
+            update public.fight_members as member
+            set selected_source_id = ${sourceId}, source_label = 'Apple Health'
+            from public.fights as fight
+            where fight.id = member.fight_id and fight.friends
+                and fight.state in ('live', 'awaiting_final_sync')
+                and member.user_id = ${userId} and member.state = 'accepted'
+                and member.selected_source_id is null
+        `;
+        await publishCivilDayScores(sql, userId, sourceId);
     }
     await mirrorLegacyStepDays(sql, userId, sourceId, selected);
 
@@ -544,14 +554,14 @@ async function saveMeasurements(
 }
 
 /**
- * A founder fight's host never uploads its total. His score is the sum of his stored daily Steps
- * for the round's dates, published through the same path as a phone upload. Dates, not instants,
- * so a day still counts while his phone is in another zone; the round is complete once its last
- * date is.
+ * A founder fight's host and both members of a friend round never upload a window total. Their
+ * score is the sum of their stored daily Steps for the round's dates, published through the same
+ * path as a phone upload. Dates, not instants, so each person's own local days count and a day
+ * still counts while the phone is in another zone; the round is complete once its last date is.
  */
-export async function publishHostScores(
+export async function publishCivilDayScores(
     sql: TransactionSql,
-    hostId: string,
+    userId: string,
     sourceId: string,
     fightId: string | null = null,
 ): Promise<void> {
@@ -564,13 +574,13 @@ export async function publishHostScores(
                 sum(day.value) over (partition by fight.id order by day.day)::bigint as steps
             from public.fights as fight
             join public.fight_members as member
-                on member.fight_id = fight.id and member.user_id = fight.host_id
+                on member.fight_id = fight.id and member.user_id = ${userId}
             join private.activity_metrics as day
                 on day.source_id = member.selected_source_id and day.scope = 'day'
                 and day.metric = 'steps'
                 and day.day >= (fight.starts_at at time zone fight.time_zone)::date
                 and day.day < (fight.ends_at at time zone fight.time_zone)::date
-            where fight.host_id = ${hostId}
+            where (fight.host_id = ${userId} or fight.friends)
                 and fight.state in ('live', 'awaiting_final_sync')
                 and member.state = 'accepted'
                 and member.finalized_at is null
@@ -578,8 +588,10 @@ export async function publishHostScores(
                 and (${fightId}::uuid is null or fight.id = ${fightId}::uuid)
         )
         select fight.id as fight_id, fight.starts_at::text as starts_at, fight.ends_at::text as ends_at,
+            -- Only a fully observed last date completes the round. A phone west of the round's zone
+            -- passes ends_at before its own last day ends, so an incomplete cutoff stays below it.
             (case when bool_or(days.completes_round) then fight.ends_at
-                else least(fight.ends_at, max(days.observed_through)) end)::text as cutoff_at,
+                else least(fight.ends_at - interval '1 millisecond', max(days.observed_through)) end)::text as cutoff_at,
             max(days.steps)::integer as steps,
             jsonb_agg(jsonb_build_object(
                 'day', days.day::text, 'cutoff_at', days.cutoff_at, 'steps', days.steps
@@ -592,7 +604,7 @@ export async function publishHostScores(
         group by fight.id
     `);
     if (totals.length > 0) {
-        await publishFightScores(sql, hostId, sourceId, totals);
+        await publishFightScores(sql, userId, sourceId, totals);
     }
 }
 

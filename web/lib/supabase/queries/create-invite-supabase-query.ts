@@ -57,11 +57,11 @@ export async function createInvite(
             "Cannot invite after the fight has closed",
         );
     }
-    if (fight.host_id) {
+    if (fight.host_id || fight.friends) {
         throw new ApiError(
             409,
             ERROR_CODES.conflict,
-            "A founder fight stays one on one",
+            fight.friends ? "A friend fight stays one on one" : "A founder fight stays one on one",
         );
     }
 

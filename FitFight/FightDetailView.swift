@@ -37,6 +37,7 @@ struct FightDetailView: View {
     @State private var canAdminister = false
     @State private var adminBusy = false
     @State private var confirmOwnerLeave = false
+    @State private var confirmFriendLeave = false
     @State private var adminAction: String? = nil
     @StateObject private var fightFeed = FeedStore()
     @State private var isRefreshingFeed = false
@@ -44,6 +45,7 @@ struct FightDetailView: View {
     @State private var board: SeriesBoard = .wins
     @State private var showsWholeBoard = false
     @State private var placeRound: Fight?
+    @AppStorage("fight.dismissedLastRounds") private var dismissedLastRounds = ""
 
     init(fight: Fight, pane: FightDetailPane = .stats) {
         initialFight = fight
@@ -106,6 +108,11 @@ struct FightDetailView: View {
                 )
                 .id(fightsRevision)
             } else {
+                if let lastRound = model.lastRound(before: fight), !dismissedLastRounds.contains(lastRound.id) {
+                    lastRoundNotice(lastRound)
+                        .contentShape(Rectangle())
+                        .onTapGesture { pane = .history }
+                }
                 FFSegmented(items: panes, selection: $pane) { item in
                     item.title
                 }
@@ -184,6 +191,14 @@ struct FightDetailView: View {
                 ? String(appLocalized: "You are the only one in this fight. Deleting it can’t be undone.")
                 : String(appLocalized: "You own this fight. Pick who takes over, then you leave."))
         }
+        .confirmationDialog(String(appLocalized: "Leave this fight?"), isPresented: $confirmFriendLeave, titleVisibility: .visible) {
+            Button(String(appLocalized: "Leave fight"), role: .destructive) {
+                Task { await model.leaveFight(id: fight.id) }
+            }
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(appLocalized: "fight.friend-leave", defaultValue: "This pauses your monthly fight with \(fight.listTitle)."))
+        }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -232,11 +247,15 @@ struct FightDetailView: View {
 
         if canLeave {
             FFButton(
-                title: isOwner && otherMembers.isEmpty ? String(appLocalized: "Delete fight") : String(appLocalized: "Leave fight"),
+                title: isOwner && otherMembers.isEmpty && fight.friends != true
+                    ? String(appLocalized: "Delete fight") : String(appLocalized: "Leave fight"),
                 kind: .ghost,
                 fullWidth: true
             ) {
-                if isOwner {
+                // A friend round has no owner to hand over: either friend can leave, which pauses it.
+                if fight.friends == true {
+                    confirmFriendLeave = true
+                } else if isOwner {
                     confirmOwnerLeave = true
                 } else {
                     Task { await model.leaveFight(id: fight.id) }
@@ -532,6 +551,30 @@ struct FightDetailView: View {
         .buttonStyle(FFHapticPlainStyle())
     }
 
+    private func lastRoundNotice(_ round: Fight) -> some View {
+        let tied = round.rank == 1 && round.isTiedForFirst
+        let text: String
+        if round.of == 2,
+           let you = model.youStanding(in: round),
+           let rival = round.standings.first(where: { !$0.person.isYou && !$0.invited && !$0.deferred }) {
+            let yours = Int(you.score).formatted(.number.locale(AppLocalization.locale))
+            let theirs = Int(rival.score).formatted(.number.locale(AppLocalization.locale))
+            text = tied
+                ? String(appLocalized: "fight.last-round-draw", defaultValue: "Last round: a draw, \(yours) to \(theirs). New round started. See more in History.")
+                : round.rank == 1
+                    ? String(appLocalized: "fight.last-round-won", defaultValue: "Last round: you won \(yours) to \(theirs). New round started. See more in History.")
+                    : String(appLocalized: "fight.last-round-lost", defaultValue: "Last round: you lost \(yours) to \(theirs). New round started. See more in History.")
+        } else {
+            text = tied
+                ? String(appLocalized: "fight.last-round-tied-place", defaultValue: "Last round: you tied for 1st of \(round.of). New round started. See more in History.")
+                : String(appLocalized: "fight.last-round-place", defaultValue: "Last round: you came \(AppModel.ordinal(round.rank)) of \(round.of). New round started. See more in History.")
+        }
+        // Stored on this phone only, keyed by the finished round's id.
+        return FFNotice(text: text, tone: tied ? .neutral : round.rank == 1 ? .moss : .ember, onDismiss: {
+            dismissedLastRounds += round.id + " "
+        })
+    }
+
     /// `expandable` is a History round: a plain ranking, the top three plus you until Show all.
     @ViewBuilder
     private func standingsBands(for fight: Fight, expandable: Bool = false) -> some View {
@@ -705,7 +748,7 @@ struct FightDetailView: View {
                         Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44).foregroundStyle(theme.mossText)
                     }.disabled(adminBusy).accessibilityLabel(String(appLocalized: "Manage Fight"))
                 }
-                if fight.canOwnerEdit, !pendingJoin {
+                if fight.canOwnerEdit || (fight.friends == true && fight.status == .live), !pendingJoin {
                     Button {
                         model.createError = nil
                         showingEdit = true
@@ -852,7 +895,7 @@ struct FightDetailView: View {
                     subtitleTone: .neutral
                 )
             }
-            if fight.joinCode != nil {
+            if fight.joinCode != nil, fight.friends != true {
                 FFSection(title: String(appLocalized: "Share")) {
                     shareCard
                 }
@@ -882,6 +925,8 @@ struct FightDetailView: View {
                             Text(copiedCode ? String(appLocalized: "Copied") : code)
                                 .ffType(.heading)
                                 .foregroundStyle(theme.mossText)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
                                 .frame(minHeight: 44)
                         }
                         .buttonStyle(FFHapticPlainStyle())
@@ -960,7 +1005,7 @@ struct FightDetailView: View {
                     name: row.person.name,
                     value: model.formatScore(row.score, metric: contextFight.metric),
                     isYou: row.person.isYou,
-                    trophies: model.trophyStreak(for: contextFight).flatMap { $0.userId == row.person.id ? $0.count : nil } ?? 0,
+                    trophies: model.trophies(in: contextFight)[row.person.id] ?? 0,
                     avatar: AnyView(CompanionAvatar(row.person, size: 38)),
                     captionUrgent: !inWinnerBand && row.person.isYou && contextFight.status == .live,
                     captionAt: { now in

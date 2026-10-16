@@ -11,7 +11,7 @@ import {
     founderUserIds,
     type FounderChallengers,
 } from "@/lib/types/fights/founder-fight";
-import { publishHostScores } from "./activity-pipeline-supabase-query";
+import { publishCivilDayScores } from "./activity-pipeline-supabase-query";
 import { ensureAppleHealthSource } from "./apple-health-source-supabase-query";
 import { allocateJoinCode } from "./create-fight-supabase-query";
 import { readEnvironment } from "./environment-supabase-query";
@@ -93,7 +93,7 @@ export async function createFounderFight(
             insert into public.fight_series_members (series_id, user_id, state, joined_at)
             values (${series.id}, ${userId}, 'accepted', now()), (${series.id}, ${founderId}, 'accepted', now())
         `;
-        await publishHostScores(sql, founderId, founderSource.id, inserted.id);
+        await publishCivilDayScores(sql, founderId, founderSource.id, inserted.id);
         return inserted;
     });
     return fightSummary(fight);

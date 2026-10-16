@@ -52,8 +52,8 @@ query only marks its own tile with `Query failed: ...`.
   `bucket` (the app's Day, Week or Month choice) overrides that bucket. Each metric
   is computed per bucket: counts add up, people count once per bucket, averages
   and shares use every person-day in it, and DAU is the daily average. Activity
-  charts start where sync history starts. Every other chart names its own span
-  ("last 30 days", "all time", "now").
+  charts leave out buckets that start before 2 Oct 2026 (see App opens). Every
+  other chart names its own span ("last 30 days", "all time", "now").
 - **Chart pages (10 Oct 2026):** every chart carries a `definition` (what it
   measures) and an `example` sentence that reads one current number off it: the
   newest complete day, week or month, or now for totals and states. Both are built
@@ -61,15 +61,51 @@ query only marks its own tile with `Query failed: ...`.
 - **Card pages (11 Oct 2026):** every card also carries a `definition` (what it
   measures and what it compares with) and an `example` sentence that reads its
   number and the previous one. A card without a value has no example. The app
-  shows only the name, number and change on a card, and the rest on its page.
-- **App opens:** `private.healthkit_sync_attempts` rows with trigger `foreground`
-  (manual refreshes also count as activity). A foreground trace within 60 seconds
-  after a background `observer` sync is the post-sync refresh, not an open. The
-  refresh after an action in the app, such as create, join, edit or leave a Fight,
-  sends `manual` since the 12 Oct 2026 change. Older builds send it as
-  `foreground`, so their opens include those actions. Sync
-  history is kept since 29 Sep (never-delete rule), so engagement history grows
-  from that date; earlier rows were pruned after 7 days.
+  shows only the name, number and change on a card, and the rest on its page. A
+  null `previous` (no history for the earlier span) shows no change and no
+  Previous line; a `previous` of 0 shows the change as "+3 from 0". Cards round
+  down with one decimal under 10 (2.68 shows 2.6), whole numbers to 999, then
+  1.5K; app builds from 15 Oct 2026.
+- **App opens (15 Oct 2026):** `private.healthkit_sync_attempts` rows with
+  trigger `foreground` that read Apple Health: a stage other than `session`,
+  `fights_refresh`, `healthkit_activity` and `activity_upload`, or that only
+  refreshed Fights (people without Apple Health); `manual` pulls to refresh
+  also count as activity. Not opens: the activity import a sync
+  starts (activity stages only; it copies the sync's trigger), the Fights
+  refresh after a background `observer` sync (refresh stages only, within 60
+  seconds after it), and background relaunches that builds without the launch
+  guard (1.1.2 (210) and the 1.1.3 in review) record as `foreground`: today's
+  total failed with HealthKit error 6 (phone locked), or the trace starts 59.5
+  to 66 minutes after the person's previous Health sync (hourly background
+  delivery, which iOS can deliver late but not early). In the week to 15 Oct
+  that drops about 550 relaunches and about 25 real opens; about 150 later
+  relaunches a week still count, so opens from those builds read slightly high.
+  Delete the hour rule once every installed build has the launch guard. An open
+  while a background sync runs counts; before 15 Oct it was dropped with the
+  post-sync refresh. The refresh after an action in the app, such as create,
+  join, edit or leave a Fight, sends `manual` since the 12 Oct 2026 change;
+  older builds send it as `foreground` with refresh stages only, so it counts
+  when no background sync came just before. App opens are complete from 2 Oct
+  2026: production deleted sync reports past 7 days or 100 per person until 1
+  Oct, and builds before 1.1.1 (202) sent none. Activity comparisons whose
+  previous period starts earlier stay empty, activity chart buckets that start
+  earlier are left out (WAU starts on 8 Oct and MAU on 31 Oct), and stickiness
+  and active days read the complete Paris days since 2 Oct until 1 Nov.
+- **App syncs (15 Oct 2026):** the App tab counts a Steps sync only when its
+  trace read Steps (a `local_state` or `today_total` stage). Build 210 reports
+  every HealthKit observer wake, and most only join a sync already running and
+  record no stage (65,542 of 71,510 background rows in the week to 15 Oct); the
+  other-activity import and Fights-only refreshes write their own traces. The
+  rule reads stages, so it holds for every build and for history. Sync errors by
+  code shows failed syncs only, with Other activity as its own bars. Sync time
+  leaves out cancelled syncs and syncs over 2 minutes, because `total_ms` is
+  wall-clock time and includes iOS pausing the app. Steps sync failing now reads
+  each person's latest Steps sync, not the diagnostics error, which the
+  other-activity import also sets. Push tiles count registered devices: the app
+  registers only after permission is granted and never reports a later denial.
+  Server error tiles count the HTTP 5xx rows in `private.server_error_logs`,
+  which receives rows only from the 15 Oct 2026 logging fix on; errors by route
+  group by method and route template.
 - **Churn (14 Oct 2026):** a person churned when they were active in the 7 (or
   30) complete Paris days before the latest 7 (or 30) and not active in the
   latest. Two meanings of active: an app open (as above), or a phone sync, which
@@ -79,27 +115,88 @@ query only marks its own tile with `Query failed: ...`.
   last reports of people who left; weekly numbers show from 16 Oct, monthly from
   1 Dec. A returning phone uploads the days it missed, so older sync churn drops
   when people come back.
-- **Steps:** the profile-statistics rule (newest complete Apple Health day,
-  `activity_metrics` over legacy `metric_days`), counted from each person's signup
-  day. "Health history" cards include imported days before signup.
+- **Steps (15 Oct 2026):** complete Apple Health days only: a complete row beats
+  a newer incomplete one (profile statistics take the newest row), then the
+  newest row, `activity_metrics` over legacy `metric_days`, then the Fight
+  fallback below, counted from each person's signup day. A day with no complete
+  daily row falls back to the person's Fight uploads: the difference between two
+  consecutive daily `step_checkpoints` of their newest
+  `private.fight_score_snapshots` row per Fight, whole Fight days only, highest
+  across Fights. That covers 1.1.2 (210) phones that connected Health before 16
+  Sep 2026: their daily Steps upload fails with HealthKit error 5 (authorization
+  not determined for activity types they were never asked for) while Fight
+  totals still upload. The day follows the Fight's time zone, and checkpoints
+  reflect when steps reached the server, so single days can differ from the
+  phone's daily total (more than 10% on about a quarter of the days that have
+  both, even in the same zone); over 834 days that have both, totals and 10K-day
+  counts agree within 1%. In the week to 15 Oct the fallback supplied about 887K
+  of the 2.78M weekly steps (13 people). 1.1.3 uploads Steps only and imports
+  the missing days itself, and real rows win. The fallback is read-only: nothing
+  is written to `activity_metrics`, which founder-Fight scores read. "Health
+  history" cards include imported days before signup.
+- **Steps comparisons (15 Oct 2026):** fight-day lift is the median person's own
+  Fight days against their own other days (3+ of each, at least 5 people, else no
+  number). A day is a Fight day from the person's acceptance, in a Fight with
+  another accepted member, never the app-wide or suggested Fight; a founder
+  Fight counts for its challenger only. Change after joining reads only people
+  who signed up more than 4 weeks ago, with 20+ days on each side, and leaves the
+  signup day out. Steps around signup follows the same people on both sides (7+
+  days each) and hides days under 20 people. People by daily average needs 7+
+  days in the 30.
 - **Speed:** a tab's tiles take turns on the pool's connections (10 for the
   read-only production connection, 3 for the server's own database), and each
   note ends with that tile's own query time (`Took 1.2 s.`). The route reuses a
   running or under-5-minute-old result for the same environment, section and
   period on that server instance, so Refresh can show data up to 5 minutes old.
   A result with a failed tile is not reused.
-- **Retention:** follows people who connected Apple Health. Someone is retained in
+- **Retention:** follows people whose phone has sent at least one day with Apple
+  Health steps; iOS reports a denied Health read as an empty success, so a
+  connection that never sent steps is not followed. Someone is retained in
   a week (or 30-day month) counted from their own signup day when their phone
   synced steps that week: background syncs run without an open until the app is
   deleted or Health is turned off. A person counts for a week only once it has
   passed. Charts draw one line per signup week (last 8) and month (last 6).
   Cards take the signups of the latest 28 days (weeks) or 30 days (months) that
-  got past that week or month, against the span before. App opens are not used
-  yet: the servers the app talks to still delete sync reports after 7 days, which
-  would make week 1 look close to 0%.
+  got past that week or month, against the span before. App opens are not used:
+  they are complete only from 2 Oct 2026, after most cohorts' first weeks.
 - **Social metrics** exclude the app-wide (`PGG7`) and suggested Fights, whose
   invitations are automatic, and founder fights (`fights.host_id`), which every
-  new user may start against Marc.
+  new user may start against Marc. Tiles about a person's own progress (fight
+  join rate, time to first fight, onboarding by signup, the funnels, users in a
+  live fight, churn by fight, fight-day Steps) count a founder fight for its
+  challenger but never for the founder. The Production view runs preview's code
+  against production, so these filters read `to_jsonb(row) ->> 'host_id'`, which
+  works before and after the founder-fight migration; use the column directly
+  once production has it.
+- **Fights (15 Oct 2026):** a Fight counts once someone besides its owner has
+  accepted a round of it (`contests`). Fights nobody joined, such as the 14 solo
+  test Fights of 26-28 Aug 2026, drafts and cancelled Fights are left out of
+  Fights created, recurring share, fighters per fight, users in a live fight,
+  durations, Most fights joined, loser actions and every "joined a fight" step
+  (join rate, time to first fight, onboarding by signup, funnels). Users in a
+  live fight also leaves out the app-wide and suggested Fights. Live fights and
+  Rounds finished count rounds with two or more accepted fighters, the app-wide
+  round included. A join is a person's first accepted round of someone else's
+  Fight; copying the roster into each new round of a repeating Fight is not a
+  join. A repeating Fight counts once in the funnels, Fight sizes, Most fights
+  joined and Fights with the most posts. Posts are counted as a Fight's feed
+  shows them: posts shared to any of its rounds plus Fight posts made in them.
+  Recurring share dates a Fight by its first round, because a backfill stamped
+  `fight_series.created_at` on 15 Sep 2026. Invite acceptance counts acceptance
+  in any round, and invites have timestamps only from 26 Sep 2026. Cancel rate
+  counts every cancelled round, joined or not, against cancelled rounds plus
+  contests; so far every cancelled Fight is one nobody joined. Time to first
+  fight is in minutes.
+- **Users and small groups (15 Oct 2026):** "Connected Apple Health" in
+  onboarding, funnels and retention means the phone has sent a day with steps.
+  Nothing can see a Health disconnect, so the Overview and App Health cards count
+  people whose phone completed a Steps sync in the last 7 days against the 7
+  before (Fights-only refreshes and the activity import do not count). Referral
+  tiles apply the 7-day new-account rule to rows written before it shipped and
+  date each referral by the signup. Small groups are hidden rather than compared:
+  retention cards need 10 people (the comparison needs both groups), churn chart
+  points 10, onboarding and retention-by-signup points 5 signups, and user growth
+  a base of 20 users. The time zone chart leaves out people without a saved zone.
 - **Access:** only the FitFight admin (`isFitFightAdmin`: username `marc` or `rad`, or the
   admin email). The app always sends `X-FitFight-Auth-Project` with its own
   Supabase project ref. When it names the other FitFight project, the backend
@@ -225,6 +322,9 @@ for a photo or short video; `POST /api/v1/media/{id}/commit` verifies size and c
 is the older one Feed (Main and fight posts). `GET /api/v1/feed?scope=main`
 is Main-only. `POST /api/v1/feed/posts` creates one copy per selected destination
 (Main still accepted for old clients; current compose sends fights only) and applies tags only where that person can already see the copy.
+`{ "type": "friends" }` sets `fight_posts.to_friends`: the author's accepted friends see the post on `GET /api/v1/feed`
+(never in a fight's own list), next to any fight destinations. A friends-only post keeps the Main shape (no fight)
+and skips the old shared-fight Main rule. Posts return `to_friends`.
 `GET /api/v1/feed/people` lists tag candidates. `GET/POST /api/v1/fights/{id}/posts`
 remain the single-fight list and the old one-fight compose. Comments, reactions,
 delete, and report for any post use `/api/v1/posts/{id}/...`.
@@ -333,6 +433,41 @@ an app-facing RPC. The existing `GET/PATCH /api/v1/me` contract remains unchange
 including a null active prompt for stock animals. Reusing a description still uses
 the existing custom-companion PATCH. Libraries are isolated by user and cascade
 away when the account is deleted. This stores descriptions, not generated artwork.
+
+## Companion names and lines (prepared 15 Oct 2026)
+
+A custom character can have a name (1 to 24 characters) and a line (1 to 60),
+trimmed and on one line, saved together in `private.custom_character_purchases`
+(`name`, `line`). Typed text is not reviewed first, like usernames and Fight
+names. Blend's Companion Lines workflow suggests four pairs per batch from the
+chosen portrait and the description, in the owner's language (`fr` when the
+newest installation is French, else `en`). See
+[Blend workflows](blend-workflows.md#configuration-and-rollout).
+
+- `GET /api/v1/me/custom-characters`: each character adds `suggestions` (every
+  completed batch, first batch first), `suggestions_pending`,
+  `more_suggestions_left` (0 to 3), and `name` and `line` (null until saved).
+- `POST /api/v1/me/custom-characters/{purchase_id}/label`, `{ "name", "line" }`:
+  owner only, not refunded. Returns the character, 200.
+- `POST /api/v1/me/custom-characters/{purchase_id}/suggestions`,
+  `{ "attempt_id": uuid }`: starts one more batch that avoids every earlier
+  suggestion; the same `attempt_id` returns the same batch. 202 while it runs,
+  `409 suggestions_limit` after three extra batches or six batches of any status,
+  `409 ai_in_progress` while a
+  batch runs, `404 not_found` before a portrait is chosen. A batch is extra only
+  when an earlier batch had completed, so a failed first batch is retried free.
+- `GET /api/v1/me` and `GET /api/v1/profiles/{user_id}` add optional
+  `companion_name` and `companion_line` for an equipped custom character: the
+  saved pair, else the first suggestion. Another viewer gets them only when the
+  profile is shared with them. Stock companions and Specials send neither.
+- `private.ai_requests.provider_response` (jsonb) keeps Blend's raw run response
+  when a run fails, is cancelled, or returns unreadable output, for every
+  workflow. It never reaches the app or the server error log.
+
+The first batch starts once, when a portrait is chosen (`lines_action_key`); the
+reconciler backfills existing characters one per run. A batch is first read 30
+seconds after it starts, then every 10 seconds. Apply
+`20261015120000_companion_labels.sql` before deploying the backend.
 
 ## Fight chart consistency (prepared 15 Sep 2026)
 
@@ -554,7 +689,12 @@ invitations in one transaction. Repeating a successful decline is harmless.
 private/public, whether the series repeats, the end time (and the start only while the
 fight is still `scheduled`), extra usernames, and kicking anyone except the owner.
 `draft`, `inviting`, `scheduled`, and `live` fights can be edited; `awaiting_final_sync`,
-`final`, and `cancelled` stay frozen. Old apps never call this route.
+`final`, and `cancelled` stay frozen. Old apps never call this route. An optional
+`joinCode` (15 Oct 2026) renames the series code: 4 to 12 letters or digits, normalized
+like a typed code (uppercase, spaces and dashes dropped), written before anything else.
+Random codes stay 4 characters without lookalikes. A code another series holds returns
+`409 join_code_taken` with nothing changed. `PGG7` keeps its code (`403`) and no other
+fight can take it, since signup and the admin dashboard find the app-wide fight by it. The old code is freed and its links stop working.
 
 `POST /api/v1/fights/{fightID}/cancel` is owner-only. The app’s Edit summary Delete
 uses it. It pauses the series first, then marks the fight `cancelled`, so a repeating
@@ -689,7 +829,7 @@ The native API sends `X-FitFight-Trace-ID` for context, upload, and Fights refre
 
 One immutable completed attempt is logged locally under OSLog category `HealthKitPerformance` and sent through the existing diagnostics endpoint after product work completes. Reporting is best effort and is excluded from the attempt's own duration, avoiding recursive timing reports. Network loss, suspension, or termination can prevent server delivery; there is no background retry queue. The underlying HealthKit callback may still finish after observer expiry, but cancellation prevents a subsequent upload from that expired attempt.
 
-Time limits (12 Oct 2026): requests that carry a trace (context, upload, activity upload, Fights refresh) time out after 120 seconds without data. Slow data that still moves does not count, and the 30-second refresh limit and the 25-second background limit stop sooner. A foreground/manual refresh stops its network part after 30 seconds, records a cancelled attempt, and shows Try again on Fights, a Fight, and Profile. The limit starts after the HealthKit read, because a permission sheet waits for the person. The refresh holds an iOS background task, so leaving the app lets it finish instead of freezing it until the next open. `ContinuousClock` keeps counting while iOS suspends the app, so a very long attempt usually means a suspension, not a slow request. HealthKit error 6 (database inaccessible while the phone is locked) records `protected_data_unavailable`. When a foreground refresh finds read types that the app never requested, such as types added after the person connected Apple Health, it shows the Health sheet again. iOS lists only the new types, which removes HealthKit error 5 from the activity sync.
+Time limits (12 Oct 2026): requests that carry a trace (context, upload, activity upload, Fights refresh) time out after 120 seconds without data. Slow data that still moves does not count, and the 10-second refresh limit and the 25-second background limit stop sooner. A foreground/manual refresh stops its network part after 10 seconds (30 until 14 Oct 2026), records a cancelled attempt, and shows Try again on Fights, a Fight, and Profile. The limit starts after the HealthKit read, because a permission sheet waits for the person. The refresh holds an iOS background task, so leaving the app lets it finish instead of freezing it until the next open. `ContinuousClock` keeps counting while iOS suspends the app, so a very long attempt usually means a suspension, not a slow request. HealthKit error 6 (database inaccessible while the phone is locked) records `protected_data_unavailable`. When a foreground refresh finds read types that the app never requested, such as types added after the person connected Apple Health, it shows the Health sheet again. iOS lists only the new types, which removes HealthKit error 5 from the activity sync.
 
 Failed stages preserve HealthKit/URL/Cocoa numeric errors, HTTP status, decoding/configuration failures, and the app's unavailable/invalid Steps errors. Unknown error domains are reduced to `unknown`; messages, URLs, query predicates and `NSError.userInfo` are never logged. The existing `stages` JSON stores these details without another migration. After authentication and validation, the diagnostics route emits `fitfight_healthkit_failure` to Vercel logs before database persistence, with trace ID, app version/build, trigger, outcome and failed stages. Legacy reports such as build 153 emit their coarse error only; discarded device errors cannot be recovered retroactively.
 

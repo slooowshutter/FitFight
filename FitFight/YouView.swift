@@ -197,6 +197,18 @@ struct YouView: View {
                 headerButton("gearshape", label: String(appLocalized: "Settings")) { showingSettings = true }
             }
             .padding(.top, 12)
+            // A stock or Special companion's words ship in the app; a custom one's come with the profile.
+            let animal = companions.animal(for: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true)
+            if let name = animal?.name ?? session.profile?.companionName {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: name).ffType(.label).foregroundStyle(theme.text)
+                    if let line = animal?.caption ?? session.profile?.companionLine {
+                        Text(verbatim: line).ffType(.caption).foregroundStyle(theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
         } else {
             SignInControls()
         }

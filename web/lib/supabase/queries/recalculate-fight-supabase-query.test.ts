@@ -38,6 +38,7 @@ test("finalizing a fight uses a bounded number of writes as the roster grows", a
                             stake_minor: null,
                             default_goal_value: null,
                             host_id: null,
+                            friends: false,
                         },
                     ]);
                 if (query.includes("from public.fight_members"))
@@ -126,6 +127,7 @@ test("finalizing a fight uses a bounded number of writes as the roster grows", a
 
 function mockRecalculateDatabase(input: {
     endsAt: string;
+    friends?: boolean;
     members: Array<{
         user_id: string;
         personal_target: null;
@@ -154,6 +156,7 @@ function mockRecalculateDatabase(input: {
                         stake_minor: null,
                         default_goal_value: null,
                         host_id: null,
+                        friends: input.friends ?? false,
                     },
                 ]);
             if (query.includes("from public.fight_members"))
@@ -367,4 +370,80 @@ test("finalizing with every member incomplete is a draw and keeps last verified 
             },
         ]),
     );
+});
+
+test("a friend round queues one batched push per person instead of per-fight pushes", async () => {
+    const fightId = "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7";
+    const endsAt = "2026-11-01T00:00:00.000Z";
+    const members = [
+        {
+            user_id: "a0000000-0000-4000-8000-000000000000",
+            personal_target: null,
+            input_revision: 0,
+        },
+        {
+            user_id: "a0000000-0000-4000-8000-000000000001",
+            personal_target: null,
+            input_revision: 0,
+        },
+    ];
+    const snapshots = [
+        {
+            id: "c0000000-0000-4000-8000-000000000000",
+            user_id: members[0].user_id,
+            value: "9000",
+            cutoff_at: endsAt,
+        },
+    ];
+    const perFightIntent = ({ query }: { query: string }) =>
+        query.includes("jsonb_to_recordset") &&
+        query.includes("insert into private.notification_intents");
+
+    const awaiting = mockRecalculateDatabase({
+        endsAt,
+        friends: true,
+        members,
+        snapshots,
+    });
+    await recalculateFight(
+        fightId,
+        new Date("2026-11-01T01:00:00.000Z"),
+        awaiting.database,
+    );
+    assert.ok(
+        awaiting.queries.some(
+            ({ query, values }) =>
+                query.includes("update public.fights set state") &&
+                values.includes("awaiting_final_sync"),
+        ),
+    );
+    assert.equal(
+        awaiting.queries.filter(({ query }) => query.includes("'friends_sync'"))
+            .length,
+        1,
+    );
+    assert.equal(awaiting.queries.filter(perFightIntent).length, 0);
+
+    const finalized = mockRecalculateDatabase({
+        endsAt,
+        friends: true,
+        members,
+        snapshots,
+    });
+    await recalculateFight(
+        fightId,
+        new Date("2026-11-02T00:00:00.000Z"),
+        finalized.database,
+    );
+    const lock = finalized.queries.findIndex(({ query }) =>
+        query.includes("pg_advisory_xact_lock"),
+    );
+    const results = finalized.queries.findIndex(({ query }) =>
+        query.includes("'friends_results'"),
+    );
+    assert.ok(
+        lock >= 0 && results > lock,
+        "the month lock is taken before checking the other rounds",
+    );
+    assert.equal(finalized.queries.filter(perFightIntent).length, 0);
 });

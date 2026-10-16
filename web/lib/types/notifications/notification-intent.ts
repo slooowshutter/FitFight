@@ -15,6 +15,8 @@ export const notificationKindValues = [
     "ending_week",
     "final_sync",
     "social_digest",
+    "friends_sync",
+    "friends_results",
 ] as const;
 export const notificationSlotValues = [
     "t0",
@@ -70,6 +72,8 @@ export const notificationCopyKeyValues = [
     "ending_week",
     "final_sync",
     "social_digest",
+    "friends_sync",
+    "friends_results",
 ] as const;
 
 export const notificationCopyKeySchema = z.enum(notificationCopyKeyValues);

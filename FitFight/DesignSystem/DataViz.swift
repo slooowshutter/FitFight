@@ -38,7 +38,7 @@ struct FFLeaderboardRow: View {
     let name: String
     let value: String
     var isYou: Bool = false
-    /// Rounds the trophy holder has won in a row: one trophy, with ×N when N > 1.
+    /// Rounds this player has won in this fight: one trophy, with ×N when N > 1.
     var trophies: Int = 0
     var avatar: AnyView? = nil
     var captionUrgent: Bool = false
@@ -78,7 +78,7 @@ struct FFLeaderboardRow: View {
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(String(
                             appLocalized: "fight.trophies",
-                            defaultValue: "Won the last \(trophies) rounds"
+                            defaultValue: "Won \(trophies) rounds"
                         ))
                     }
                 }

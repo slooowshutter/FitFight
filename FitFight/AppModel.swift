@@ -114,14 +114,20 @@ struct Fight: Codable, Identifiable, Hashable {
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
     var timeZone: String? = nil
+    /// A monthly friend round. Optional so cached Fights from earlier builds still decode.
+    var friends: Bool? = nil
 
     var hasAction: Bool {
         !actionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Title shown on Fights. A typed name wins; otherwise the action; otherwise the stored name.
+    /// Title shown on Fights. A friend round shows the friend. Otherwise a typed name wins, then the
+    /// action, then the stored name.
     var listTitle: String {
-        Self.displayTitle(name: name, actionText: actionText)
+        if friends == true, let friend = standings.first(where: { !$0.person.isYou }) {
+            return friend.person.name
+        }
+        return Self.displayTitle(name: name, actionText: actionText)
     }
 
     static func displayTitle(name: String, actionText: String?) -> String {
@@ -199,6 +205,7 @@ final class AppModel: ObservableObject {
             if oldValue != tab {
                 openFightID = nil
                 showingHosted = false
+                showingFriends = false
                 openPost = nil
                 showingActivity = false
             }
@@ -250,6 +257,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var hostedRounds: [Fight] = []
     /// The hosted screen, under any open fight in the Fights stack.
     @Published var showingHosted = false
+    /// Monthly friend fights. nil from servers before 15 Oct 2026, which hides the Friends card.
+    /// Its rounds stay out of `fights` and its cache, like `hostedRounds`.
+    @Published private(set) var friends: FitFightSnapshot.Friends?
+    @Published private(set) var friendRounds: [Fight] = []
+    /// The Friends screen, under any open fight in the Fights stack.
+    @Published var showingFriends = false
     @Published private(set) var joinableFights: [FitFightJoinableFight] = []
     @Published private(set) var suggestedFights: [FitFightJoinableFight] = []
     @Published private(set) var isLoadingDiscovery = false
@@ -259,6 +272,7 @@ final class AppModel: ObservableObject {
     private let api = FitFightAPI()
     private var cachedUserID: UUID?
     private var snapshotGeneration = 0
+    private var friendRoundsGeneration = 0
     private var discoveryUserID: UUID?
     private var discoveryLoadedAt: Date?
     private var discoveryTask: Task<Void, Never>?
@@ -331,6 +345,7 @@ final class AppModel: ObservableObject {
             let bundle = AppModelFixtures.load()
             you = bundle.you
             fights = bundle.fights
+            friends = FitFightSnapshot.Friends(rounds: 3, leading: 2, requests: 1)
         } else {
             you = Person(id: "", name: String(appLocalized: "You"), handle: "", initials: "", isYou: true)
             fights = []
@@ -348,6 +363,7 @@ final class AppModel: ObservableObject {
         fights.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
             ?? pendingJoinable.flatMap { $0.id.caseInsensitiveCompare(id) == .orderedSame ? $0 : nil }
             ?? hostedRounds.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+            ?? friendRounds.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
     }
 
     func canonicalFight(for id: String) -> Fight? {
@@ -369,27 +385,28 @@ final class AppModel: ObservableObject {
             .sorted { $0.windowStart > $1.windowStart }
     }
 
-    /// Who holds the trophy in this round and how many rounds in a row they have won.
-    /// A final round's own winner holds it, so History cards match their result. A round still
-    /// being played shows the previous round's winner, and a cancelled round has no holder.
-    /// ponytail: only rounds this user was in are in the snapshot; a skipped or cancelled round ends the streak early.
-    func trophyStreak(for fight: Fight) -> (userId: String, count: Int)? {
-        if fight.serverState == "cancelled" { return nil }
-        let ended = fight.serverState == "final"
-        var holder: String?
-        var count = 0
-        var nextStart = ended ? fight.windowEnd : fight.windowStart
-        let earlier = seriesHistory(for: fight).filter { $0.windowStart < fight.windowStart }
-        for round in (ended ? [fight] : []) + earlier {
-            // The server starts each round at the previous round's end, truncated to milliseconds.
-            guard abs(round.windowEnd.timeIntervalSince(nextStart)) < 1, round.serverState == "final" else { break }
-            nextStart = round.windowStart
+    /// Trophies per user id: every final round of this fight they won outright, up to and including
+    /// this round, so History cards count up to their own round. A tied round gives no trophy.
+    /// ponytail: only rounds this user was in are in the snapshot, so rounds they skipped are not counted.
+    func trophies(in fight: Fight) -> [String: Int] {
+        var trophies: [String: Int] = [:]
+        for round in [fight] + seriesHistory(for: fight).filter({ $0.windowStart < fight.windowStart })
+        where round.serverState == "final" {
             let leaders = round.standings.filter { !$0.invited && !$0.deferred && $0.rank == 1 }
-            guard leaders.count == 1, holder == nil || leaders[0].person.id == holder else { break }
-            holder = leaders[0].person.id
-            count += 1
+            if leaders.count == 1 { trophies[leaders[0].person.id, default: 0] += 1 }
         }
-        return holder.map { ($0, count) }
+        return trophies
+    }
+
+    /// The round that ended as this live round started, once it is final and you raced in it.
+    func lastRound(before fight: Fight) -> Fight? {
+        guard fight.recurring, fight.status == .live,
+              let previous = seriesHistory(for: fight).first(where: { $0.windowStart < fight.windowStart }),
+              abs(previous.windowEnd.timeIntervalSince(fight.windowStart)) < 1,
+              previous.serverState == "final",
+              let you = previous.standings.first(where: { $0.person.isYou }), !you.invited, !you.deferred
+        else { return nil }
+        return previous
     }
 
     func fightResult(for fight: Fight) -> FFResult {
@@ -521,6 +538,8 @@ final class AppModel: ObservableObject {
             fights = []
             hosted = nil
             hostedRounds = []
+            friends = nil
+            friendRounds = []
             return
         }
         guard cachedUserID != userID else { return }
@@ -528,6 +547,8 @@ final class AppModel: ObservableObject {
         cachedUserID = userID
         hosted = nil
         hostedRounds = []
+        friends = nil
+        friendRounds = []
         guard
             let data = UserDefaults.standard.data(forKey: Self.fightsCachePrefix + userID.uuidString),
             let cached = try? JSONDecoder().decode([Fight].self, from: data)
@@ -620,11 +641,12 @@ final class AppModel: ObservableObject {
             steps.completeAttempt(trace, session: session, userID: userID)
             return
         }
-        // The network part stops after 30 seconds, so a stalled connection cannot keep the spinner turning.
+        // The network part stops after 10 seconds, so a stalled connection cannot keep the spinner turning.
+        // 99% of successful production refreshes finish in under 7 seconds (14 Oct 2026).
         // The limit starts after the Health read, because the Health permission sheet waits for the user.
         let refresh = refreshTask
         let limit = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            do { try await Task.sleep(for: .seconds(10)) } catch { return }
             self.refreshError = String(appLocalized: "Refreshing took too long. Check your internet connection.")
             refresh?.cancel()
         }
@@ -731,7 +753,9 @@ final class AppModel: ObservableObject {
             guard session.authSession?.user.id == userId else { throw CancellationError() }
             fights = loaded
             hosted = snapshot.hosted
+            friends = snapshot.friends
             cachedUserID = userId
+            refreshError = nil
             if let data = try? JSONEncoder().encode(loaded) {
                 UserDefaults.standard.set(data, forKey: Self.fightsCachePrefix + userId.uuidString)
             }
@@ -740,9 +764,17 @@ final class AppModel: ObservableObject {
                     .compactMap { $0 },
                 kind: .avatar
             )
+            // Friend rounds have their own snapshot; keep any that are on screen or opened current.
+            if !friendRounds.isEmpty || showingFriends {
+                try? await refreshFriendRounds()
+            }
         } catch {
             attempt.fail(HealthKitStepsStore.errorCode(for: error))
-            // Keep the last successful result visible while the phone is offline.
+            // Keep the last successful result visible while the phone is offline, and say it is not current.
+            // A cancel (sign-out, or the time limit, which sets its own message) is not a failure to show.
+            if !(error is CancellationError), !Task.isCancelled {
+                refreshError = String(appLocalized: "Not up to date. Check your internet connection.")
+            }
         }
     }
 
@@ -784,6 +816,20 @@ final class AppModel: ObservableObject {
         guard session.authSession?.user.id == userId else { return }
         hosted = snapshot.hosted
         hostedRounds = mapSnapshot(snapshot, userId: userId)
+    }
+
+    /// Reads the rounds behind `friends` through their own snapshot, mapped like the Fights list.
+    func refreshFriendRounds() async throws {
+        guard let session, let userId = session.authSession?.user.id else { return }
+        friendRoundsGeneration += 1
+        let generation = friendRoundsGeneration
+        let snapshot = try await api.fightsSnapshot(
+            accessToken: try await session.freshAccessToken(), trace: nil, performMaintenance: false, friends: true
+        )
+        // A newer read owns publication.
+        guard generation == friendRoundsGeneration, session.authSession?.user.id == userId else { return }
+        friends = snapshot.friends
+        friendRounds = mapSnapshot(snapshot, userId: userId)
     }
 
     func createAndStartFight(
@@ -878,6 +924,7 @@ final class AppModel: ObservableObject {
         startsAt: Date?,
         endsAt: Date,
         timeZone: String?,
+        joinCode: String?,
         inviteHandles: [String],
         removeUserIds: [String]
     ) async -> Bool {
@@ -937,6 +984,7 @@ final class AppModel: ObservableObject {
                     startsAt: startsAt,
                     endsAt: endsAt,
                     timeZone: timeZone,
+                    joinCode: joinCode,
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals
                 ),
@@ -1189,8 +1237,8 @@ final class AppModel: ObservableObject {
         self.session = session
         createError = nil
         let code = raw.replacingOccurrences(of: "[\\s-]", with: "", options: .regularExpression).uppercased()
-        guard code.count == 4 else {
-            createError = String(appLocalized: "Enter the 4-character code.")
+        guard Self.joinCodeLength.contains(code.count) else {
+            createError = String(appLocalized: "Enter a code of 4 to 12 letters or numbers.")
             return
         }
         guard let userID = session.authSession?.user.id, api.isConfigured,
@@ -1351,6 +1399,16 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Random codes are 4 characters; an owner can pick up to 12.
+    static let joinCodeLength = 4...12
+
+    /// What a code field keeps of typed text: uppercase letters and digits, at most 12.
+    static func typedJoinCode(_ value: String) -> String {
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+        let cleaned = value.uppercased().unicodeScalars.filter { allowed.contains($0) }
+        return String(String.UnicodeScalarView(cleaned).prefix(joinCodeLength.upperBound))
+    }
+
     static func joinCode(from url: URL) -> String? {
         let parts = url.path.split(separator: "/").map(String.init)
         guard parts.count == 2, parts[0] == "j" else {
@@ -1359,8 +1417,7 @@ final class AppModel: ObservableObject {
         let code = parts[1]
             .replacingOccurrences(of: "-", with: "")
             .uppercased()
-        let alphabet = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
-        guard code.count == 4, code.unicodeScalars.allSatisfy({ alphabet.contains($0) }) else {
+        guard joinCodeLength.contains(code.count), typedJoinCode(code) == code else {
             return nil
         }
         return code
@@ -1536,6 +1593,14 @@ final class AppModel: ObservableObject {
             openPost = FeedPostLink(id: postID, commentID: commentID)
             return
         }
+        // Batched friend pushes name any one friend round; they open the Friends screen.
+        if components.queryItems?.contains(where: { $0.name == "friends" && $0.value == "1" }) == true {
+            tab = .fights
+            openFightID = nil
+            showingHosted = false
+            Task { @MainActor in self.showingFriends = true }
+            return
+        }
         // A final-sync reminder can refer to an earlier round while the next is live.
         openFight(id: parts[1], preserveRound: true)
         if showDailyStatusRecap {
@@ -1653,7 +1718,8 @@ final class AppModel: ObservableObject {
             offersJoinNext: (series?.recurring ?? false)
                 && Self.isAfterFightStartDay(starts)
                 && mine?.state == "invited",
-            timeZone: row.timeZone
+            timeZone: row.timeZone,
+            friends: row.friends
         )
         localizeFight(&fight, formatScore: formatScore)
         return fight

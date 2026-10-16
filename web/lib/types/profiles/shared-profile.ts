@@ -97,6 +97,9 @@ export const sharedProfileSchema = z.object({
     step_statistics: profileStepStatisticsSchema.nullable().optional(),
     artwork: z.object({ id: z.string().uuid(), image_path: z.string() }).nullable(),
     view_measurement_enabled: z.boolean(),
+    /** An equipped custom character's name and line. Stock companions and Specials send none. */
+    companion_name: z.string().optional(),
+    companion_line: z.string().optional(),
 });
 
 export const profileLookupSchema = z.object({
@@ -108,6 +111,8 @@ export const profileViewRequestSchema = z.object({
     event_id: z.string().uuid(),
     source: z.enum(profileEntryPointValues),
 }).strict();
+
+export const profileViewResponseSchema = z.object({ recorded: z.boolean() });
 
 export const profileReportRequestSchema = z.object({
     reason: z.string().trim().min(1).max(1000),

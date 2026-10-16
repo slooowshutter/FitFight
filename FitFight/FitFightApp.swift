@@ -202,6 +202,7 @@ struct FitFightApp: App {
                     guard let userId = session.authSession?.user.id else {
                         model.openPost = nil
                         model.showingHosted = false
+                        model.showingFriends = false
                         model.showingActivity = false
                         model.showingPreferences = false
                         return
@@ -218,7 +219,13 @@ struct FitFightApp: App {
                     model.restoreCachedFights(session: session)
                     // Before sign-in is restored this run skips Apple Health, and the real run would only join it.
                     guard session.authSession != nil else { return }
-                    await model.refreshFights(session: session, steps: steps)
+                    // Apple Health can launch the app in the background, where its observer syncs. The refresh
+                    // waits for the person to open the app, so the launch is not recorded as an open.
+                    if UIApplication.shared.applicationState == .background {
+                        returnedFromBackground = true
+                    } else {
+                        await model.refreshFights(session: session, steps: steps)
+                    }
                     if session.firstFightOnboarding == nil,
                        !session.needsOnboarding,
                        !session.needsHealthOnboarding,

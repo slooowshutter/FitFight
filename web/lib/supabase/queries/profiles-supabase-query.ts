@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readAiCompanionImage } from "./ai-library-supabase-query";
+import { readCompanionLabel } from "./custom-characters-supabase-query";
 import {
     profileDatabaseRowSchema,
     type Profile,
@@ -49,7 +50,10 @@ async function asProfile(
         companion_id: row.companion_id,
         companion_prompt: row.companion_prompt,
         ...(row.companion_id === "custom" && row.companion_image_url
-            ? { companion_image_url: row.companion_image_url }
+            ? {
+                  companion_image_url: row.companion_image_url,
+                  ...(await readCompanionLabel(row.id, row.companion_image_url)),
+              }
             : {}),
         time_zone: row.time_zone ?? "UTC",
     };

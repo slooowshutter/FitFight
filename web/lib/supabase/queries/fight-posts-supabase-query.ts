@@ -28,6 +28,7 @@ import {
     enqueueMentionNotifications,
     mentionHandlesFromBody,
 } from "./feed-social-notifications-supabase-query";
+import { endFriendFight } from "./friend-fights-supabase-query";
 import {
     isoUtc,
     loadReadyMedia,
@@ -45,6 +46,7 @@ export type VisibleFightPost = {
     fight_id: string | null;
     author_id: string;
     app_wide: boolean;
+    to_friends: boolean;
 };
 
 type PostRow = AvatarMediaColumns & {
@@ -53,6 +55,7 @@ type PostRow = AvatarMediaColumns & {
     fight_id: string | null;
     fight_name: string;
     broadcast: boolean;
+    to_friends: boolean;
     body: string;
     created_at: Date | string;
     author_id: string;
@@ -133,7 +136,7 @@ export async function loadVisiblePost(
     database: Sql = createDatabaseClient(),
 ): Promise<VisibleFightPost> {
     const [post] = await database<VisibleFightPost[]>`
-        select id, audience::text as audience, fight_id, author_id, app_wide
+        select id, audience::text as audience, fight_id, author_id, app_wide, to_friends
         from public.fight_posts
         where id = ${postId}
     `;
@@ -142,6 +145,32 @@ export async function loadVisiblePost(
     }
     if (post.app_wide) {
         return post;
+    }
+    if (post.to_friends) {
+        if (post.author_id === userId) return post;
+        const [friend] = await database<{ ok: boolean }[]>`
+            select exists (
+                select 1
+                from private.profile_friendships as friendship
+                where friendship.user_low = least(${userId}::uuid, ${post.author_id}::uuid)
+                    and friendship.user_high = greatest(${userId}::uuid, ${post.author_id}::uuid)
+                    and friendship.state = 'accepted'
+            )
+            and not exists (
+                select 1 from private.feed_blocks as blocked
+                where (blocked.blocker_id = ${post.author_id} and blocked.blocked_id = ${userId})
+                    or (blocked.blocker_id = ${userId} and blocked.blocked_id = ${post.author_id})
+            ) as ok
+        `;
+        if (friend?.ok) return post;
+        // A friends-only post has no fight, so nobody else may see it.
+        if (post.audience === "main") {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "You cannot see that post",
+            );
+        }
     }
     if (post.audience === "main") {
         if (post.author_id === userId) return post;
@@ -343,38 +372,44 @@ async function mapPosts(
         channelsByPost.set(channel.post_id, list);
     }
 
-    return rows.map((row) => ({
-        id: row.id,
-        audience: row.audience,
-        fight_id:
-            (channelsByPost.get(row.id) ?? [])[0]?.fight_id ?? row.fight_id,
-        fight_name: row.broadcast
-            ? "Public"
-            : (channelsByPost.get(row.id) ?? [])[0]?.name || row.fight_name,
-        broadcast: row.broadcast,
-        channels: channelsByPost.get(row.id) ?? [],
-        body: row.body,
-        created_at: isoUtc(row.created_at),
-        mine: row.author_id === userId,
-        author: {
-            user_id: row.author_id,
-            handle: row.author_handle,
-            display_name: row.author_display_name,
-            avatar: mapAvatar(row, row.author_id, urls),
-            companion_id: companionIdSchema
-                .nullable()
-                .parse(row.author_companion_id),
-            ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
-        },
-        media: attachments
-            .filter((attachment) => attachment.post_id === row.id)
-            .map((attachment) =>
-                mapMedia(attachment, urls.get(attachment.object_path) ?? null),
-            ),
-        tags: tagsByPost.get(row.id) ?? [],
-        reactions: reactionsByPost.get(row.id) ?? [],
-        comment_count: commentCount.get(row.id) ?? 0,
-    }));
+    return rows.map((row) => {
+        const channels = channelsByPost.get(row.id) ?? [];
+        // A friend outside the post's fights sees it as friends-only and learns nothing about them.
+        const outsider =
+            row.to_friends && row.author_id !== userId && channels.length === 0;
+        return {
+            id: row.id,
+            audience: outsider ? "main" : row.audience,
+            fight_id: channels[0]?.fight_id ?? (outsider ? null : row.fight_id),
+            fight_name: row.broadcast
+                ? "Public"
+                : channels[0]?.name || (outsider ? "" : row.fight_name),
+            broadcast: row.broadcast,
+            to_friends: row.to_friends,
+            channels,
+            body: row.body,
+            created_at: isoUtc(row.created_at),
+            mine: row.author_id === userId,
+            author: {
+                user_id: row.author_id,
+                handle: row.author_handle,
+                display_name: row.author_display_name,
+                avatar: mapAvatar(row, row.author_id, urls),
+                companion_id: companionIdSchema
+                    .nullable()
+                    .parse(row.author_companion_id),
+                ...(row.author_companion_id === "custom" && row.author_companion_image_url ? { companion_image_url: row.author_companion_image_url } : {}),
+            },
+            media: attachments
+                .filter((attachment) => attachment.post_id === row.id)
+                .map((attachment) =>
+                    mapMedia(attachment, urls.get(attachment.object_path) ?? null),
+                ),
+            tags: tagsByPost.get(row.id) ?? [],
+            reactions: reactionsByPost.get(row.id) ?? [],
+            comment_count: commentCount.get(row.id) ?? 0,
+        };
+    });
 }
 
 export async function listFightPosts(
@@ -393,7 +428,7 @@ export async function listFightPosts(
     const rows = cursor
         ? await database<PostRow[]>`
                 select
-                    post.id, post.audience::text as audience, post.fight_id, post.broadcast,
+                    post.id, post.audience::text as audience, post.fight_id, post.broadcast, post.to_friends,
                     coalesce(fight.name, '') as fight_name, post.body,
                     to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
@@ -457,6 +492,7 @@ export async function listFightPosts(
                             ${fightId ?? null}::uuid is null
                             and ${includeMainAudience}::boolean
                             and post.audience = 'main'
+                            and not post.to_friends
                             and (
                                 post.author_id = ${userId}
                                 or exists (
@@ -525,13 +561,33 @@ export async function listFightPosts(
                             ${fightId ?? null}::uuid is null
                             and post.app_wide
                         )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.to_friends
+                            and (
+                                post.author_id = ${userId}
+                                or (
+                                    exists (
+                                        select 1
+                                        from private.profile_friendships as friendship
+                                        where friendship.user_low = least(${userId}::uuid, post.author_id)
+                                            and friendship.user_high = greatest(${userId}::uuid, post.author_id)
+                                            and friendship.state = 'accepted'
+                                    )
+                                    and not exists (
+                                        select 1 from private.feed_blocks as blocked
+                                        where blocked.blocker_id = post.author_id and blocked.blocked_id = ${userId}
+                                    )
+                                )
+                            )
+                        )
                     )
                 order by post.created_at desc, post.id desc
                 limit ${query.limit + 1}
             `
         : await database<PostRow[]>`
                 select
-                    post.id, post.audience::text as audience, post.fight_id, post.broadcast,
+                    post.id, post.audience::text as audience, post.fight_id, post.broadcast, post.to_friends,
                     coalesce(fight.name, '') as fight_name, post.body,
                     to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
@@ -591,6 +647,7 @@ export async function listFightPosts(
                             ${fightId ?? null}::uuid is null
                             and ${includeMainAudience}::boolean
                             and post.audience = 'main'
+                            and not post.to_friends
                             and (
                                 post.author_id = ${userId}
                                 or exists (
@@ -659,6 +716,26 @@ export async function listFightPosts(
                             ${fightId ?? null}::uuid is null
                             and post.app_wide
                         )
+                        or (
+                            ${fightId ?? null}::uuid is null
+                            and post.to_friends
+                            and (
+                                post.author_id = ${userId}
+                                or (
+                                    exists (
+                                        select 1
+                                        from private.profile_friendships as friendship
+                                        where friendship.user_low = least(${userId}::uuid, post.author_id)
+                                            and friendship.user_high = greatest(${userId}::uuid, post.author_id)
+                                            and friendship.state = 'accepted'
+                                    )
+                                    and not exists (
+                                        select 1 from private.feed_blocks as blocked
+                                        where blocked.blocker_id = post.author_id and blocked.blocked_id = ${userId}
+                                    )
+                                )
+                            )
+                        )
                     )
                 order by post.created_at desc, post.id desc
                 limit ${query.limit + 1}
@@ -684,14 +761,15 @@ async function insertFightPost(
     channelIds: string[],
     broadcast: boolean,
     appWide: boolean,
+    toFriends: boolean,
     database: Sql,
 ): Promise<string> {
     const [created] = await database<{ id: string }[]>`
         insert into public.fight_posts (
-            fight_id, author_id, body, audience, broadcast, app_wide
+            fight_id, author_id, body, audience, broadcast, app_wide, to_friends
         )
         values (
-            ${fightId}, ${userId}, ${body}, ${audience}, ${broadcast}, ${appWide}
+            ${fightId}, ${userId}, ${body}, ${audience}, ${broadcast}, ${appWide}, ${toFriends}
         )
         returning id
     `;
@@ -729,7 +807,7 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
     if (ids.length === 0) return [];
     return database<PostRow[]>`
         select
-            post.id, post.audience::text as audience, post.fight_id, post.broadcast,
+            post.id, post.audience::text as audience, post.fight_id, post.broadcast, post.to_friends,
             coalesce(fight.name, '') as fight_name, post.body, post.created_at,
             post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
             profile.companion_id as author_companion_id,
@@ -859,6 +937,7 @@ export async function createFightPost(
             [fightId],
             false,
             false,
+            false,
             sql,
         );
         await enqueueMentionNotifications(sql, {
@@ -902,6 +981,7 @@ export async function createFeedPosts(
 ): Promise<FightPostBatchResponse> {
     let includeMain = false;
     let includeBroadcast = false;
+    let includeFriends = false;
     const fightIds: string[] = [];
     for (const destination of input.destinations) {
         switch (destination.type) {
@@ -910,6 +990,9 @@ export async function createFeedPosts(
                 break;
             case "broadcast":
                 includeBroadcast = true;
+                break;
+            case "friends":
+                includeFriends = true;
                 break;
             case "fight":
                 if (!fightIds.includes(destination.fight_id)) {
@@ -926,14 +1009,19 @@ export async function createFeedPosts(
             }
         }
     }
-    if (includeBroadcast && (includeMain || fightIds.length > 0)) {
+    if (includeBroadcast && (includeMain || includeFriends || fightIds.length > 0)) {
         throw new ApiError(
             400,
             ERROR_CODES.validation,
             "Broadcast is its own post",
         );
     }
-    if (!includeBroadcast && !includeMain && fightIds.length === 0) {
+    if (
+        !includeBroadcast &&
+        !includeMain &&
+        !includeFriends &&
+        fightIds.length === 0
+    ) {
         throw new ApiError(
             400,
             ERROR_CODES.validation,
@@ -1018,6 +1106,7 @@ export async function createFeedPosts(
                   [],
                   true,
                   true,
+                  false,
                   sql,
               )
             : fightIds.length > 0
@@ -1031,6 +1120,7 @@ export async function createFeedPosts(
                     fightIds,
                     broadcast,
                     false,
+                    includeFriends,
                     sql,
                 )
               : await insertFightPost(
@@ -1043,6 +1133,7 @@ export async function createFeedPosts(
                     [],
                     broadcast,
                     false,
+                    includeFriends,
                     sql,
                 );
         await enqueueMentionNotifications(sql, {
@@ -1313,11 +1404,14 @@ export async function blockFeedAuthor(
             "That person is not on FitFight",
         );
     }
-    await database`
-        insert into private.feed_blocks (blocker_id, blocked_id)
-        values (${userId}, ${blockedId})
-        on conflict (blocker_id, blocked_id) do nothing
-    `;
+    await database.begin("read write", async (sql) => {
+        await sql`
+            insert into private.feed_blocks (blocker_id, blocked_id)
+            values (${userId}, ${blockedId})
+            on conflict (blocker_id, blocked_id) do nothing
+        `;
+        await endFriendFight(sql, userId, blockedId);
+    });
     return { blocked: true };
 }
 

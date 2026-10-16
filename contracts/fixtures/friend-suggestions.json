@@ -1,0 +1,20 @@
+{
+    "people": [
+        {
+            "user_id": "33333333-3333-4333-8333-333333333333",
+            "handle": "maya",
+            "display_name": "Maya",
+            "companion_id": "fox",
+            "avatar_url": "https://example.com/maya.jpg",
+            "shared_fights": 3
+        },
+        {
+            "user_id": "55555555-5555-4555-8555-555555555555",
+            "handle": "leo",
+            "display_name": "Leo",
+            "companion_id": null,
+            "avatar_url": null,
+            "shared_fights": 1
+        }
+    ]
+}

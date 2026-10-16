@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Sql } from "postgres";
+import { APP_WIDE_JOIN_CODE } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FightState } from "@/lib/types/database";
@@ -7,11 +8,7 @@ import { departFightMemberships } from "./membership-departure-supabase-query";
 import type { UpdateFightRequest } from "@/lib/types/fights/update-fight";
 import { storedFightIdentity } from "./create-fight-supabase-query";
 import { createInvite } from "./create-invite-supabase-query";
-import {
-    fightSummary,
-    loadFight,
-    loadOwnedFight,
-} from "./fight-access-supabase-query";
+import { fightSummary, loadFight } from "./fight-access-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
 const OPEN_STATES: FightState[] = [
@@ -28,7 +25,25 @@ export async function updateFight(
     now: Date = new Date(),
     sql?: Sql,
 ) {
-    const fight = await loadOwnedFight(fightId, userId, admin);
+    const fight = await loadFight(fightId, admin);
+    if (fight.friends) {
+        // Either friend may change the loser action of their round.
+        const { data, error } = await admin
+            .from("fight_members")
+            .select("user_id")
+            .eq("fight_id", fightId)
+            .eq("user_id", userId)
+            .eq("state", "accepted")
+            .maybeSingle();
+        if (error) {
+            throw new ApiError(500, ERROR_CODES.db_error, "Could not load membership");
+        }
+        if (!data) {
+            throw new ApiError(403, ERROR_CODES.forbidden, "Only the two friends can do this");
+        }
+    } else if (fight.owner_id !== userId) {
+        throw new ApiError(403, ERROR_CODES.forbidden, "Only the owner can do this");
+    }
     switch (fight.state) {
         case "draft":
         case "inviting":
@@ -63,6 +78,10 @@ export async function updateFight(
             endsAt: undefined,
             timeZone: undefined,
         };
+    }
+    if (fight.friends) {
+        // A friend round keeps its name, month, repetition, privacy and pair. Only the action changes.
+        input = { actionText: input.actionText };
     }
 
     const removeIds = [...new Set(input.removeUserIds ?? [])];
@@ -136,6 +155,46 @@ export async function updateFight(
     const windowChanged =
         nextStarts.getTime() !== Date.parse(fight.starts_at) ||
         nextEnds.getTime() !== Date.parse(fight.ends_at);
+
+    // Before every other write, so a taken code leaves the fight unchanged.
+    if (input.joinCode !== undefined && fight.series_id) {
+        // Signup and the admin dashboard find the app-wide fight by its code:
+        // it never moves, and nobody else takes it.
+        if (input.joinCode === APP_WIDE_JOIN_CODE) {
+            throw new ApiError(
+                409,
+                ERROR_CODES.join_code_taken,
+                "That code is taken",
+            );
+        }
+        const { data, error } = await admin
+            .from("fight_series")
+            .update({ join_code: input.joinCode })
+            .eq("id", fight.series_id)
+            .neq("join_code", APP_WIDE_JOIN_CODE)
+            .select("id");
+        if (error?.code === "23505") {
+            throw new ApiError(
+                409,
+                ERROR_CODES.join_code_taken,
+                "That code is taken",
+            );
+        }
+        if (error) {
+            throw new ApiError(
+                500,
+                ERROR_CODES.db_error,
+                "Could not update fight",
+            );
+        }
+        if (data.length === 0) {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "The Everybody fight keeps its code",
+            );
+        }
+    }
 
     const fightPatch: Record<string, unknown> = {};
     if (stored) {

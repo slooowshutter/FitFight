@@ -91,10 +91,13 @@ struct FFField<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(label)
-                .ffType(.label)
-                .foregroundStyle(labelInk)
-                .padding(.bottom, 7)
+            // An empty label leaves the field alone, when a heading above already names it.
+            if !label.isEmpty {
+                Text(label)
+                    .ffType(.label)
+                    .foregroundStyle(labelInk)
+                    .padding(.bottom, 7)
+            }
             content
                 .font(.ff(15, 700))
                 .foregroundStyle(state == .disabled ? theme.disabledText : theme.text)

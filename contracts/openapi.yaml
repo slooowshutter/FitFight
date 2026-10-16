@@ -1556,6 +1556,60 @@ paths:
                     content:
                         application/json:
                             schema: { $ref: "#/components/schemas/ApiError" }
+    /snake/scores:
+        get:
+            operationId: readSnakeRecord
+            summary: The highest Snake score across all players.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: The record, 0 before the first game.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [record]
+                                properties:
+                                    record: { type: integer, minimum: 0 }
+                "401": { description: Missing or invalid session }
+        post:
+            operationId: recordSnakeScore
+            summary: Save a finished Snake game and return the record, this game included.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [score, duration_ms]
+                            properties:
+                                score: { type: integer, minimum: 0, maximum: 222 }
+                                duration_ms:
+                                    type: integer
+                                    minimum: 0
+                                    maximum: 86400000
+                                    description: Playing time, pauses excluded. Must be at least 80 ms per point.
+            responses:
+                "200":
+                    description: The record after this game.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [record]
+                                properties:
+                                    record: { type: integer, minimum: 0 }
+                "400": { description: Score outside 0 to 222, or too high for its playing time }
+                "401": { description: Missing or invalid session }
+                "429": { description: snake_too_soon, sent before this game could have been played since the player's last score }
     /fights/snapshot:
         post:
             operationId: readFightSnapshot
@@ -3258,6 +3312,19 @@ components:
                 - type: object
                   additionalProperties: false
                   required: [workflow, parameters]
+                  description: Free review of a custom character description before buying. Takes about a minute.
+                  properties:
+                      workflow: { const: prompt_check }
+                      parameters:
+                          type: object
+                          additionalProperties: false
+                          required: [description, language]
+                          properties:
+                              description: { type: string, minLength: 1, maxLength: 1000 }
+                              language: { type: string, enum: [en, fr] }
+                - type: object
+                  additionalProperties: false
+                  required: [workflow, parameters]
                   properties:
                       workflow: { const: group_photo }
                       parameters:
@@ -3278,7 +3345,7 @@ components:
                   required: [request_id, workflow, status, poll_after_seconds]
                   properties:
                       request_id: { $ref: "#/components/schemas/UUIDv4" }
-                      workflow: { enum: [avatar, fitness, group_photo] }
+                      workflow: { enum: [avatar, fitness, group_photo, prompt_check] }
                       status: { type: string, enum: [pending, running] }
                       poll_after_seconds: { type: integer, minimum: 1 }
                 - type: object
@@ -3308,10 +3375,26 @@ components:
                               fit: { type: string, format: uri }
                               strong: { type: string, format: uri }
                 - type: object
+                  required: [request_id, workflow, status, data]
+                  properties:
+                      request_id: { $ref: "#/components/schemas/UUIDv4" }
+                      workflow: { const: prompt_check }
+                      status: { const: completed }
+                      data:
+                          type: object
+                          required: [note, variations]
+                          properties:
+                              note: { type: string, nullable: true, maxLength: 300 }
+                              variations:
+                                  type: array
+                                  minItems: 3
+                                  maxItems: 3
+                                  items: { type: string, minLength: 1, maxLength: 1000 }
+                - type: object
                   required: [request_id, workflow, status, code, error]
                   properties:
                       request_id: { $ref: "#/components/schemas/UUIDv4" }
-                      workflow: { enum: [avatar, fitness, group_photo] }
+                      workflow: { enum: [avatar, fitness, group_photo, prompt_check] }
                       status: { type: string, enum: [failed, cancelled, start_unconfirmed] }
                       code: { $ref: "#/components/schemas/AiErrorCode" }
                       error: { type: string }

@@ -49,6 +49,10 @@ const testConfiguration: typeof blendConfiguration = {
             workflowId: "lines-publication",
             versionId: "lines-version",
         },
+        prompt_check: {
+            workflowId: "check-publication",
+            versionId: "check-version",
+        },
     },
 };
 const originalConfiguration = { ...blendConfiguration };
@@ -1038,6 +1042,80 @@ test("a completed lines run stores its four options; failed, cancelled and unrea
                     failed_item: "ai_failed",
                     unreadable_envelope: "ai_invalid_result",
                 }[scenario]);
+            }
+        });
+    }
+});
+
+test("a prompt check is free, needs no character, and sends only the description and language to Blend", async () => {
+    const selected = { workflowId: "check-publication", versionId: "check-version" };
+    const record = requestRecord({ workflow: "prompt_check", workflow_version: selected, credit_price: 0, credit_state: "none" });
+    const check = createAiRunRequestSchema.parse({
+        workflow: "prompt_check",
+        parameters: { description: "  a dog  ", language: "en" },
+    });
+    const result = await startAiRun(userId, check, key, requestDependencies(record, {
+        reserve: async (_owner, reservation) => {
+            assert.equal(reservation.workflow, "prompt_check");
+            assert.equal(reservation.description, "a dog");
+            assert.equal(reservation.creditPrice, 0);
+            assert.equal(reservation.resourceId, null);
+            assert.deepEqual(reservation.sourceRequestIds, []);
+            return { request: record, shouldStart: true, portraits: [] };
+        },
+        start: async (version, inputs) => {
+            assert.deepEqual(version, selected);
+            assert.deepEqual(inputs, { description: "a dog", language: "en" });
+            return { data: { ...selected, runId: "check-run" }, rateLimit: {} };
+        },
+    }));
+    assert.equal(result.workflow, "prompt_check");
+    assert.equal(result.status, "pending");
+    for (const invalid of [
+        { description: " ", language: "en" },
+        { description: "a dog", language: "de" },
+        { description: "a".repeat(1001), language: "en" },
+        { description: "a dog", language: "en", avatar_request_id: requestId },
+    ])
+        assert.equal(createAiRunRequestSchema.safeParse({ workflow: "prompt_check", parameters: invalid }).success, false);
+});
+
+test("a completed prompt check stores its note and three rewrites; anything else fails as unreadable", async (t) => {
+    const variations = ["A red dog.", "A blue dog.", "A gold dog."];
+    for (const scenario of ["note", "empty_note", "fenced", "two_variations", "not_json"] as const) {
+        await t.test(scenario, async () => {
+            const record = requestRecord({ workflow: "prompt_check", status: "running", run_handle: run, credit_price: 0, credit_state: "none" });
+            const text = {
+                note: JSON.stringify({ note: "What colour is the dog?", variations }),
+                empty_note: JSON.stringify({ note: "", variations }),
+                fenced: "```json\n" + JSON.stringify({ note: null, variations }) + "\n```",
+                two_variations: JSON.stringify({ note: null, variations: variations.slice(0, 2) }),
+                not_json: "Sure! Here are some ideas.",
+            }[scenario];
+            const output = { check: [{ id: "item", item_index: 0, status: "completed", parts: [{ type: "text", text }] }] };
+            const response = await readAiRun(userId, requestId, requestDependencies(record, {
+                read: async () => ({
+                    data: blendRunResponseSchema.parse({ id: run.runId, status: "completed", output }),
+                    rateLimit: {},
+                    providerResponse: output,
+                }),
+                finish: async (_owner, _id, _token, update) => requestRecord({
+                    ...record,
+                    status: update.status,
+                    result: update.result,
+                    error_code: update.errorCode,
+                }),
+            }));
+            if (scenario === "two_variations" || scenario === "not_json") {
+                assert.equal(response.status, "failed");
+                assert.equal(response.status === "failed" && response.code, "ai_invalid_result");
+            } else {
+                assert.deepEqual(response, {
+                    request_id: requestId,
+                    workflow: "prompt_check",
+                    status: "completed",
+                    data: { note: scenario === "note" ? "What colour is the dog?" : null, variations },
+                });
             }
         });
     }

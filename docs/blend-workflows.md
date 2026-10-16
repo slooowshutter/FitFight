@@ -349,6 +349,7 @@ every environment. Changing one is a code change that ships with a deploy.
 | `workflows.fitness` | ID below, latest published version, price unset |
 | `workflows.group_photo` | ID below, latest published version, price unset |
 | `workflows.companion_lines` | ID below, latest published version, price unset (free character work) |
+| `workflows.prompt_check` | ID below, latest published version, always free (checked before buying) |
 
 Omit `versionId` to run the latest published version. Omit `creditPrice` to keep
 credit-funded starts for that workflow closed; paid characters never use it.
@@ -383,6 +384,7 @@ StoreKit's unfinished transaction stream recovers undelivered purchases.
 | Five Fitness Levels | `fa770c5b-25ba-46cc-a758-a08aeebc1c92` | `cf9177c3-9ba5-4a53-87df-e8e304490f43` | `character_portrait`, `identity_details` | `resting`, `soft`, `average`, `fit`, `strong` |
 | Group Photo | `f740d71e-06fe-41d4-a92d-a85c90abd3f9` | `2d6e0596-14c5-4ba2-948f-642bae407815` | `character_portraits`, `scene`, `cast_roster` | `group_photo` |
 | FitFight Companion Lines | `8df8fe50-aefb-4855-b421-7bfc89f7e825` | `2358f106-e3c6-47c6-9920-fccd5c6fd409` | `character_portrait`, `description`, `language`, `avoid` | `options` |
+| FitFight Prompt Check | `6d906477-6606-436e-95aa-b627d7fafbde` | `47eadd2b-2441-4666-a5d1-a4b8c3d703a2` | `description`, `language` | `check` |
 
 Companion Lines (15 Oct 2026) is published from source workflow
 `009abf71-601e-444c-a8d0-1dc3fb601597` and runs
@@ -390,6 +392,13 @@ Companion Lines (15 Oct 2026) is published from source workflow
 $0.02 and takes 40 to 55 seconds. `options` holds a JSON part, or text with
 that JSON, of exactly four `{ name, line }` pairs; anything else fails the run as
 `ai_invalid_result`. See [backend](backend.md#companion-names-and-lines-prepared-15-oct-2026).
+
+Prompt Check (16 Oct 2026) is published from source workflow
+`7698d31a-3b2f-4577-a198-d192ad7fa617` and runs `openrouter:anthropic/claude-haiku-5.5`
+with no reasoning. Version 2 tells it never to mention AI and to speak as FitFight ("we"); the app never says "AI". One run costs about $0.0006. Five test runs took 44 s, 46 s, 62 s,
+1 min 50 s and 2 min 52 s; the slow ones ran at the same time as others. `check` holds a
+JSON part, or text with that JSON, of `{ note, variations }` with exactly three
+variations. See [backend](backend.md#character-prompt-check-prepared-16-oct-2026).
 
 The older Avatar version `bbf425cb-1c8a-4dfa-9f0d-637f22e8f4e1` retains its original
 `variable:prompt:user_request` input mapping. Saved requests always use their own

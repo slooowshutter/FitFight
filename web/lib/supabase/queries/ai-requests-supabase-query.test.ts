@@ -74,10 +74,12 @@ function pollDelayDatabase(row: ReturnType<typeof record>) {
     return { database: sql, delays };
 }
 
-test("a suggestion batch is first read 30 s after its start, then every 10 s; other runs keep 3 s", async () => {
+test("a suggestion batch is read 30 s after its start, then every 10 s; a prompt check 20 s, then 5 s; other runs 3 s", async () => {
     for (const [workflow, status, expected] of [
         ["companion_lines", "starting", ["30 seconds"]],
         ["companion_lines", "running", ["10 seconds"]],
+        ["prompt_check", "starting", ["20 seconds"]],
+        ["prompt_check", "running", ["5 seconds"]],
         ["avatar", "starting", ["3 seconds"]],
         ["fitness", "running", ["3 seconds"]],
     ] as const) {
@@ -90,7 +92,7 @@ test("a suggestion batch is first read 30 s after its start, then every 10 s; ot
         }, {}, database);
         assert.deepEqual(delays, expected, `${workflow} ${status}`);
     }
-    for (const [workflow, expected] of [["companion_lines", ["10 seconds"]], ["avatar", ["3 seconds"]]] as const) {
+    for (const [workflow, expected] of [["companion_lines", ["10 seconds"]], ["prompt_check", ["5 seconds"]], ["avatar", ["3 seconds"]]] as const) {
         const { database, delays } = pollDelayDatabase(record(workflow, "running"));
         const claimed = await claimAiRequestPoll(userId, requestId, limits, database, "reconciler");
         assert.equal(claimed.shouldPoll, true);

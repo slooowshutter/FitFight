@@ -30,14 +30,15 @@ test("snake scores need a signed-in player and a score the board and the time al
 test("the record is the highest score, a kept game carries its player and length, and a refused one is a 429", async () => {
     const queries: { text: string; values: unknown[] }[] = [];
     let saved = true;
-    const database = (async (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const database = Object.assign(async (strings: TemplateStringsArray, ...values: unknown[]) => {
         queries.push({ text: strings.join("?"), values });
         return [{ record: 40, saved }];
-    }) as unknown as Sql;
+    }, { begin: async (callback: (sql: unknown) => Promise<unknown>) => callback(database) }) as unknown as Sql;
     assert.deepEqual(await readSnakeRecord(database), { record: 40 });
     assert.deepEqual(await recordSnakeScore("user-1", { score: 17, duration_ms: 4000 }, database), { record: 40 });
-    assert.match(queries[1].text, /insert into private\.snake_scores/);
-    assert.deepEqual(queries[1].values.slice(0, 3), ["user-1", 17, 4000]);
+    assert.match(queries[1].text, /pg_advisory_xact_lock/);
+    assert.match(queries[2].text, /insert into private\.snake_scores/);
+    assert.deepEqual(queries[2].values.slice(0, 3), ["user-1", 17, 4000]);
     saved = false;
     await assert.rejects(
         recordSnakeScore("user-1", { score: 5, duration_ms: 4000 }, database),

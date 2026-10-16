@@ -447,8 +447,9 @@ three rewrites. The owner buys with their own words or a rewrite.
 
 - **Free, no character needed.** `creditPrice` is 0 and `resource_id` is null.
   The row stays in `private.ai_requests`, like every AI request.
-- **Own limits.** Checks count separately from drawing: 3 a minute and 30 a day
-  per person, so checking ideas never uses up the 20 drawings a day. Like name
+- **Own limits.** Checks count separately from drawing: 3 a minute, 30 a day and
+  2 running at once per person, and their own 20 running at once overall, so
+  checking ideas never uses up drawings or their concurrency. Like name
   suggestions, a check neither waits for nor blocks the owner's other runs.
 - **Slow.** A run takes about 45 to 60 seconds, sometimes 2 to 3 minutes when
   several run at once. Its first read waits 20 s, then one every 5 s. The app
@@ -469,7 +470,8 @@ with `{ score, duration_ms }` saves a game and returns the record including it.
 Both need a signed-in player. A basic guard, Marc's request: the snake moves at
 most once every 80 ms, so a game needs at least 80 ms of play per point (API and
 table check), and a player's next score waits at least that game's length and
-5 s after their last one (429 `snake_too_soon`). Scores still come from the app,
+5 s after their last one (429 `snake_too_soon`), under a per-player lock so two
+posts at once cannot both pass. Scores still come from the app,
 so a patient tampered client could reach 222 in about 18 s of claimed play.
 Rows go only when their player deletes their account (`on delete cascade`).
 

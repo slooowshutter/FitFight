@@ -98,6 +98,7 @@ export const aiAdmissionCountsSchema = z.object({
     first_minute_start: z.coerce.date().nullable(),
     unresolved_count: z.number().int(),
     user_unresolved_id: z.string().uuid().nullable(),
+    user_checks_unresolved: z.number().int(),
 });
 
 export const aiCallerWindowSchema = z.object({

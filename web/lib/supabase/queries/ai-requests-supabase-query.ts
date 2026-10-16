@@ -247,10 +247,13 @@ export async function reserveAiRequest(
                     and created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC')::int as day_count,
                 min(created_at) filter (where user_id = ${userId} and (workflow = 'prompt_check') = ${checking}
                     and created_at >= clock_timestamp() - interval '1 minute') as first_minute_start,
-                count(*) filter (where status in ('starting', 'pending', 'running', 'start_unconfirmed'))::int as unresolved_count,
+                count(*) filter (where status in ('starting', 'pending', 'running', 'start_unconfirmed')
+                    and (workflow = 'prompt_check') = ${checking})::int as unresolved_count,
                 (array_agg(id) filter (where user_id = ${userId} and status in ('starting', 'pending', 'running', 'start_unconfirmed')
                     and workflow not in ('companion_lines', 'prompt_check')
-                    and (${input.resourceId}::uuid is null or resource_id is distinct from ${input.resourceId}::uuid)))[1] as user_unresolved_id
+                    and (${input.resourceId}::uuid is null or resource_id is distinct from ${input.resourceId}::uuid)))[1] as user_unresolved_id,
+                count(*) filter (where user_id = ${userId} and workflow = 'prompt_check'
+                    and status in ('starting', 'pending', 'running', 'start_unconfirmed'))::int as user_checks_unresolved
             from private.ai_requests
             where created_at >= least(date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC', clock_timestamp() - interval '1 minute')
                 or status in ('starting', 'pending', 'running', 'start_unconfirmed')
@@ -312,7 +315,8 @@ export async function reserveAiRequest(
                     },
                 );
             }
-            if (counts.unresolved_count >= limits.globalConcurrentRuns) {
+            // Prompt checks never take a drawing's place: they count only against each other, two per person.
+            if (counts.unresolved_count >= limits.globalConcurrentRuns || (checking && counts.user_checks_unresolved >= 2)) {
                 return new ApiError(
                     503,
                     "ai_busy",

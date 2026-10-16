@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "The top of Fights now shows how many of your live fights you lead, and New states the rule: Steps, highest total wins."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "Trophies now count every round each player has won in a fight, not only rounds won in a row. Everyone who has won a round shows a trophy, with ×N for more than one."
         ),
         ReleaseNote(

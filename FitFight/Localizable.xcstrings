@@ -3752,26 +3752,6 @@
                 }
             }
         },
-        "A good excuse to walk.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Une bonne excuse pour marcher."
-                    }
-                }
-            }
-        },
-        "A little further.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Un peu plus loin."
-                    }
-                }
-            }
-        },
         "A little unstoppable.": {
             "localizations": {
                 "fr": {
@@ -3948,16 +3928,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Chèvre"
-                    }
-                }
-            }
-        },
-        "Good company.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Bien accompagné."
                     }
                 }
             }
@@ -4178,16 +4148,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Pas du jour indisponibles"
-                    }
-                }
-            }
-        },
-        "Together.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ensemble."
                     }
                 }
             }
@@ -16591,6 +16551,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "De nouvelles idées pour créer votre compagnon, chacune en une courte phrase : un orang-outan hippie des années 70, un perroquet pirate, un flamant rose diva, un cochon cow-boy et un chihuahua furieux."
+                    }
+                }
+            }
+        },
+        "The top of Fights now shows how many of your live fights you lead, and New states the rule: Steps, highest total wins.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le haut de Défis indique maintenant combien de vos défis en cours vous menez, et Nouveau rappelle la règle : les pas, le total le plus élevé gagne."
                     }
                 }
             }

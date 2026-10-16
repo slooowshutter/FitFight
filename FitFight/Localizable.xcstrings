@@ -3872,16 +3872,6 @@
                 }
             }
         },
-        "Count me in!": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Compte sur moi !"
-                    }
-                }
-            }
-        },
         "Display state": {
             "localizations": {
                 "fr": {
@@ -12243,22 +12233,6 @@
                 }
             }
         },
-        "See you on Sunday! Let's take the longer route by the river.": {
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "See you on Sunday! Let's take the longer route by the river."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "À dimanche ! Prenons le chemin le plus long au bord de la rivière."
-                    }
-                }
-            }
-        },
         "Created by": {
             "extractionState": "manual",
             "localizations": {
@@ -16948,6 +16922,36 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "À l’ouverture, FitFight peut maintenant afficher un court conseil, par exemple pour lancer votre premier défi ou créer votre propre personnage. Touchez le bouton pour essayer, ou Pas maintenant pour le fermer."
+                    }
+                }
+            }
+        },
+        "Create, join, or post?": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer, rejoindre ou publier ?"
+                    }
+                }
+            }
+        },
+        "Start a new fight, join one that's already going, or post to the Feed.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Lance un nouveau défi, rejoins-en un déjà en cours ou publie dans le Fil."
+                    }
+                }
+            }
+        },
+        "The heading of New is now in French when your phone is in French.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le titre de Nouveau est maintenant en français quand ton téléphone est en français."
                     }
                 }
             }

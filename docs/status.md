@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **15 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **16 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
 
@@ -46,7 +46,7 @@ everyone is invited to keep the 24-hour deadline; the owner can change it.
   summaries frozen earlier keep their forfeits, "incomplete" labels and all-missing draws.
 - The final-sync push names a deadline only when the fight has one.
 
-**App (1.1.3 release note):** a finalized row without final Steps says "Didn’t sync in
+**App (1.2.0 release note):** a finalized row without final Steps says "Didn’t sync in
 time", or "Last sync counted" for first place (the only case a fight can close early
 without someone). While pending, Tentative lead/loss/Tied and the rank numbers count
 missing members' last synced totals. A fight without a deadline shows no "left to sync"
@@ -101,6 +101,36 @@ check on one open fight of each kind; `test:legacy-113`; `db lint`; destructive-
 native API boundary checks. `npm run build` fails on `app/api/admin/notifications/route.ts`
 route types, the same on an untouched develop checkout. Not compiled for iOS here
 (AGENTS.md); the PR's simulator build does that. Not on staging or TestFlight.
+## App Store 1.2.0: version, website sample data and screenshots, prepared 16 Oct 2026
+
+Marc asked to start 1.2.0 for the App Store, with screenshots and listing that match the
+fitfight.app redesign of 15 Oct.
+
+**Version:** `MARKETING_VERSION`, the TestFlight and App Store workflows and the docs say
+1.2.0 (the 15 Oct `version-1.2.0` commit, replayed on develop). Every Versions row added
+since 1.1.3 (226) says 1.2.0; rows shipped in 226 keep 1.1.3. The 16 Oct release note got its
+missing French, which had turned develop's Screenshots and simulator checks red. New's
+"Create, join, or post?" heading and its line had no French entry at all (the localization
+check only covers `String(appLocalized:)` keys); both are translated, with a release note.
+
+**Sample data:** Companion preview now uses the website's cast: Alex (you, Tiger), Leo
+(Silverback), Nina (Capybara), Sam (Hedgehog), Theo (Panda); fights Walk Wars, Eat it and
+Step it Up with the website's gaps and time left; the website's three Feed posts. Change
+`FitFight/CompanionPreview.swift` and `web/components/landing/landing-copy.ts` together.
+Preview only; no production code path or API contract changed.
+
+**Screenshots:** the Screenshots workflow now captures six real-simulator screens per language
+on an iPhone 17 Pro Max (1320 x 2868), replacing the five ImageRenderer JPEGs, which showed no
+steps, initials instead of companions and a broken search field. The set is in
+`docs/app-store/2026-10-16/`, which `scripts/app-store-release-audit.rb prepare` now uploads. Listing copy (promotional text, description, What's new) is in
+`docs/app-store/metadata.md`, from the website's English and French.
+
+**Not done:** nothing is uploaded to App Store Connect. 1.1.3 (226) is still in review
+(`/api/app-release`, 16 Oct), so no 1.2.0 version can be created yet. No 1.2.0 build exists;
+the first one uploads when this reaches `preview`.
+
+---
+
 ## In-app alerts, prepared 15 Oct 2026
 
 Marc asked for messages inside the app that reach the right people: news for a
@@ -134,6 +164,8 @@ query, responses, permissions, and account-deletion cascade against a disposable
 local database with every migration; all 333 pgTAP checks; the native contract
 test; an iOS simulator build; the dialog rendered by the screenshot export. Not
 yet: a staging deploy, or the dialog on a signed-in phone.
+
+---
 
 ## Admin dashboard: audit fixes, prepared 15 Oct 2026
 

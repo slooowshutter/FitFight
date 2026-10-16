@@ -34,7 +34,7 @@ jobs:
     shots:
         name: Render screens
         runs-on: macos-26
-        timeout-minutes: 30
+        timeout-minutes: 45
         permissions:
             contents: read
         steps:
@@ -154,6 +154,32 @@ jobs:
                   test -n "$(find shots/fr -maxdepth 1 -type f -print -quit)" || (echo "no French screenshots written"; exit 1)
                   ls -la shots
 
+            # The running app in Companion preview, with the website's sample people and fights.
+            # The iPhone 17 Pro Max simulator captures the 6.9-inch App Store size directly.
+            - name: Capture App Store screenshots
+              run: |
+                  set -euo pipefail
+                  RUNTIME=$(xcrun simctl list runtimes --json | python3 -c "import json,sys;rs=[r for r in json.load(sys.stdin)['runtimes'] if r['isAvailable'] and 'iOS' in r['name']];print(sorted(rs,key=lambda r:r['version'])[-1]['identifier'])")
+                  DEVICE_TYPE=$(xcrun simctl list devicetypes --json | python3 -c "import json,sys;print([d for d in json.load(sys.stdin)['devicetypes'] if d['name']=='iPhone 17 Pro Max'][0]['identifier'])")
+                  UDID=$(xcrun simctl create ff-app-store "$DEVICE_TYPE" "$RUNTIME")
+                  xcrun simctl boot "$UDID"
+                  xcrun simctl bootstatus "$UDID" -b
+                  xcrun simctl status_bar "$UDID" override --time 9:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+                  xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/FitFight.app
+                  for LANGUAGE in en fr; do
+                      LOCALE=$([ "$LANGUAGE" = en ] && echo en_US || echo fr_FR)
+                      mkdir -p "app-store/$LANGUAGE"
+                      INDEX=1
+                      for SHOT in fights fight new invitation you feed; do
+                          SIMCTL_CHILD_FF_COMPANION_PREVIEW=1 SIMCTL_CHILD_FF_SHOOT=1 SIMCTL_CHILD_FF_SHOT="$SHOT" \
+                            xcrun simctl launch "$UDID" com.fitfight.mvp -AppleLanguages "($LANGUAGE)" -AppleLocale "$LOCALE"
+                          sleep 8
+                          xcrun simctl io "$UDID" screenshot --type=jpeg "app-store/$LANGUAGE/0$INDEX-$SHOT.jpg"
+                          xcrun simctl terminate "$UDID" com.fitfight.mvp
+                          INDEX=$((INDEX + 1))
+                      done
+                  done
+
             - name: Compare against the design mocks
               run: |
                   set -euo pipefail
@@ -169,9 +195,9 @@ jobs:
                   from PIL import Image
 
                   for language in ("en", "fr"):
-                      paths = sorted(Path("shots", language).glob("appstore-*.jpg"))
-                      if len(paths) != 5:
-                          raise SystemExit(f"Expected 5 {language} App Store screenshots, found {len(paths)}")
+                      paths = sorted(Path("app-store", language).glob("*.jpg"))
+                      if len(paths) != 6:
+                          raise SystemExit(f"Expected 6 {language} App Store screenshots, found {len(paths)}")
                       for path in paths:
                           with Image.open(path) as image:
                               if image.size != (1320, 2868):
@@ -199,12 +225,12 @@ jobs:
               if: always()
               with:
                   name: app-store-screenshots
-                  path: shots/en/appstore-*.jpg
+                  path: app-store/en/*.jpg
                   retention-days: 30
 
             - uses: actions/upload-artifact@v4
               if: always()
               with:
                   name: app-store-screenshots-fr
-                  path: shots/fr/appstore-*.jpg
+                  path: app-store/fr/*.jpg
                   retention-days: 30

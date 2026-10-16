@@ -78,6 +78,8 @@ struct DayScore: Codable, Identifiable, Hashable {
 struct FightDay: Codable, Identifiable, Hashable {
     var label: String
     var scores: [DayScore]
+    /// The civil day, yyyy-MM-dd, so History can find the best day and week across rounds.
+    var day: String? = nil
 
     var id: String { label }
 }
@@ -1537,7 +1539,7 @@ final class AppModel: ObservableObject {
                 return DayScore(person: row.person, value: Double(value))
             }
             let date = formatter.date(from: day) ?? Date()
-            return FightDay(label: label.string(from: date), scores: scores)
+            return FightDay(label: label.string(from: date), scores: scores, day: day)
         }
     }
 

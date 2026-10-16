@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "Repeating fights: History now opens with the rounds, racers, steps walked together and your place in each round, in gold, silver and bronze when you made the podium; tap one to see that round. Then an all-time leaderboard of wins, podiums and steps, and records showing who holds the best day and best round, with your own best under each, plus the closest finish and biggest win. Each past round shows the top 3 and you, with Show all for everyone."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "The top of Fights now shows how many of your live fights you lead, and New states the rule: Steps, highest total wins."
         ),
         ReleaseNote(

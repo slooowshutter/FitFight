@@ -16564,6 +16564,333 @@
                     }
                 }
             }
+        },
+        "All time": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Depuis le début"
+                    }
+                }
+            }
+        },
+        "Records": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Records"
+                    }
+                }
+            }
+        },
+        "Best round": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleure manche"
+                    }
+                }
+            }
+        },
+        "Closest finish": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Arrivée la plus serrée"
+                    }
+                }
+            }
+        },
+        "Biggest win": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Plus large victoire"
+                    }
+                }
+            }
+        },
+        "Show less": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Afficher moins"
+                    }
+                }
+            }
+        },
+        "series.rounds": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld round"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld rounds"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld manche"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld manches"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "series.over": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ over %2$@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%1$@ devant %2$@"
+                    }
+                }
+            }
+        },
+        "series.show-all": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Show all %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tout afficher (%lld)"
+                    }
+                }
+            }
+        },
+        "Podiums": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Podiums"
+                    }
+                }
+            }
+        },
+        "series.your-best": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your best: %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre record : %@"
+                    }
+                }
+            }
+        },
+        "series.racers": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld racer"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld racers"
+                                }
+                            }
+                        }
+                    }
+                },
+                "fr": {
+                    "variations": {
+                        "plural": {
+                            "one": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld participant"
+                                }
+                            },
+                            "other": {
+                                "stringUnit": {
+                                    "state": "translated",
+                                    "value": "%lld participants"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "series.since": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "since %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "depuis le %@"
+                    }
+                }
+            }
+        },
+        "steps together": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "pas faits ensemble"
+                    }
+                }
+            }
+        },
+        "Your place each round": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre place à chaque manche"
+                    }
+                }
+            }
+        },
+        "Your place, last 10 rounds": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre place, 10 dernières manches"
+                    }
+                }
+            }
+        },
+        "series.place-of": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Your place: %lld of %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre place : %lld sur %lld"
+                    }
+                }
+            }
+        },
+        "Racers": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Participants"
+                    }
+                }
+            }
+        },
+        "Steps together": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas ensemble"
+                    }
+                }
+            }
+        },
+        "Won by": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gagné de"
+                    }
+                }
+            }
+        },
+        "Your steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vos pas"
+                    }
+                }
+            }
+        },
+        "Repeating fights: History now opens with the rounds, racers, steps walked together and your place in each round, in gold, silver and bronze when you made the podium; tap one to see that round. Then an all-time leaderboard of wins, podiums and steps, and records showing who holds the best day and best round, with your own best under each, plus the closest finish and biggest win. Each past round shows the top 3 and you, with Show all for everyone.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Défis qui se répètent : l’Historique commence par les manches, les participants, les pas faits ensemble et votre place à chaque manche, en or, argent et bronze quand vous êtes sur le podium ; touchez-en une pour voir la manche. Puis un classement depuis le début (victoires, podiums et pas), et les records avec qui détient le meilleur jour et la meilleure manche, avec votre propre record sous chacun, plus l’arrivée la plus serrée et la plus large victoire. Chaque manche passée montre le top 3 et vous, avec Tout afficher pour voir tout le monde."
+                    }
+                }
+            }
+        },
+        "When Apple Health wakes FitFight in the background, your fights now refresh as soon as you open the app, instead of showing standings from the wake.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quand Apple Santé réveille FitFight en arrière-plan, vos défis se mettent maintenant à jour dès que vous ouvrez l’app, au lieu d’afficher le classement de ce réveil."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

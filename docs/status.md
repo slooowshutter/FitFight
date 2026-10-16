@@ -50,7 +50,7 @@ Plan and evidence: [companion plan, Stage 5](design/companion-implementation-pla
 **When it draws:** a running or upcoming fight with 2 or more accepted runners
 gets an image an hour after it is created, someone joins, or a runner changes
 companion; changes inside that hour fold into one image. At most 2 per fight
-per rolling 24 hours, 200 a day and 30 at once app-wide. The check needs every
+per rolling 24 hours; app-wide, 1,000 a week and 30 at once. The check needs every
 runner drawn once (trail) or every featured runner present (race start) and
 nobody facing left, with up to 3 tries. A failed image keeps the previous one
 and waits for the next change of runners; a failure before Blend judged a run
@@ -65,7 +65,7 @@ build shows the image instead of the four-companion preview, and keeps the
 roster when there is none. Rollout: apply `20261016160000_fight_group_images.sql`
 (table plus the private `fight-group-references` storage bucket), deploy the
 backend, then distribute the app. Turning it on draws images for every active
-fight with 2+ runners over the first days, within the daily cap.
+fight with 2+ runners in its first hours, within the weekly cap.
 
 **Verified locally (16 Oct, on develop):** web typecheck and build, all unit
 tests and 13 new ones; the queue, daily allowance, cancel, retry, snapshot and

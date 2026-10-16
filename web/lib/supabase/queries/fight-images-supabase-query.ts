@@ -69,13 +69,13 @@ export async function claimNextFightImage(
     return database.begin(async (sql) => {
         const [limits] = await sql`
             select count(*) filter (where status = 'running')::int as running,
-                count(*) filter (where started_at > now() - interval '24 hours')::int as started
+                count(*) filter (where started_at > now() - interval '7 days')::int as started
             from private.fight_group_images
-            where status = 'running' or started_at > now() - interval '24 hours'
+            where status = 'running' or started_at > now() - interval '7 days'
         `;
         if (
             limits.running >= fightImageConfiguration.maxRunning ||
-            limits.started >= fightImageConfiguration.globalPerDay
+            limits.started >= fightImageConfiguration.globalPerWeek
         )
             return null;
         for (;;) {

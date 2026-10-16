@@ -14,8 +14,8 @@ export const fightImageConfiguration = {
     perFightPerDay: 2,
     /** Blend runs per image before it is marked failed; each retry is a new run with the same inputs. */
     maxAttempts: 3,
-    /** Images started across the whole app in any rolling 24 hours, a cost ceiling. */
-    globalPerDay: 200,
+    /** Images started across the whole app in any rolling 7 days, a cost ceiling Marc set on 16 Oct 2026. */
+    globalPerWeek: 1000,
     /** Images running at once across the app. */
     maxRunning: 30,
     /** From this many runners the race start replaces the straight trail. */

@@ -130,6 +130,7 @@ Marc's follow-up decisions (15 Oct 2026):
 
 - **Free for now.** FitFight absorbs the cost. Marc will stop it or add payment if the cost grows too much.
 - **At most two generations per fight per day.** A change after the second one waits until the limit allows another generation.
+- **At most 1,000 images a week across the app** (16 Oct 2026), up to 30 drawing at once. Images over the cap wait until it frees.
 - **One-hour batch.** The first change opens a one-hour window; joins and companion changes inside it are folded into one generation that uses the cast at the end of the window.
 - **Reference grid.** The model receives the cast as a grid image of companion references, at most 4 × 4 (16) per grid. A larger cast adds another grid image.
 - **Descriptions for every companion.** The prompt includes each character's description: the written description for a stock companion, the Special's description, or the user's custom description. The grid images are sent as references alongside that prompt.

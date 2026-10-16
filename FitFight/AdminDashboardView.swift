@@ -78,7 +78,7 @@ struct AdminDashboardView: View {
             FFGroupedRows {
                 FFGroupedRow(
                     title: "Founder fights",
-                    subtitle: "Everyone fighting Marc, and his record.",
+                    subtitle: "Everyone fighting Marc on \(AppVersion.backend == "prod" ? "Production" : "Staging"), and his record.",
                     subtitleTone: .neutral,
                     trailing: AnyView(FFChevron()),
                     action: { showingFounderFights = true }
@@ -323,22 +323,23 @@ struct AdminDashboardView: View {
         }
     }
 
-    /// "+12% (+3)", or "+2.5 pts" on a percent card. Moss is good news and ember bad, by the
-    /// card's direction; a neutral card or no change stays secondary.
+    /// "+12% (+3)", "+3 from 0", or "+2.5 pts" on a percent card, and no line without a previous
+    /// number. Moss is good news and ember bad, by the card's direction; a neutral card or no
+    /// change stays secondary.
     private func changeLine(_ card: FitFightAdminDashboard.Card) -> (text: String, color: Color)? {
         guard let value = card.value, let previous = card.previous else { return nil }
         let delta = value - previous
         let deltaSign = delta > 0 ? "+" : ""
         let text: String
         if card.unit == "percent" {
-            text = "\(deltaSign)\(adminTenths(delta)) pts"
+            text = "\(deltaSign)\(adminNumber(delta)) pts"
         } else if previous == 0 {
-            guard value > 0 else { return (text: "No change", color: theme.textSecondary) }
-            text = "New"
+            guard delta != 0 else { return (text: "No change", color: theme.textSecondary) }
+            text = "\(deltaSign)\(adminValue(delta, unit: card.unit)) from 0"
         } else {
             let percent = delta / abs(previous) * 100
             let percentSign = percent > 0 ? "+" : ""
-            text = "\(percentSign)\(adminTenths(percent))% (\(deltaSign)\(adminValue(delta, unit: card.unit)))"
+            text = "\(percentSign)\(adminNumber(percent))% (\(deltaSign)\(adminValue(delta, unit: card.unit)))"
         }
         guard let better = card.higherIsBetter, delta != 0 else {
             return (text: text, color: theme.textSecondary)
@@ -1096,13 +1097,13 @@ private func adminBucketLabel(_ day: Date, unit: Calendar.Component) -> String {
     }
 }
 
-/// Marc's rule: round down, never up. 999,999 is "999K" and 1,099,999 is "1M".
+/// Marc's rule: round down, never up. 999,999 is "999K", 1,099,999 is "1M" and 2.68 is "2.6".
 private func adminNumber(_ value: Double) -> String {
     let magnitude = abs(value)
     let tier = [(1e15, "Q"), (1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")].first { magnitude >= $0.0 }
     let scaled = magnitude / (tier?.0 ?? 1)
     let digits: String
-    if tier != nil, scaled < 100 {
+    if scaled < (tier == nil ? 10 : 100) {
         // The epsilon stops floating error from truncating 1.1M to 1M.
         let tenths = Int((scaled * 10 + 1e-9).rounded(.down))
         digits = tenths % 10 == 0 ? "\(tenths / 10)" : "\(tenths / 10).\(tenths % 10)"
@@ -1111,14 +1112,6 @@ private func adminNumber(_ value: Double) -> String {
     }
     let sign = value < 0 && digits != "0" ? "-" : ""
     return sign + digits + (tier?.1 ?? "")
-}
-
-/// Truncated toward zero with one decimal under 10 ("4.5", "4"), a smart number from 10 up.
-private func adminTenths(_ value: Double) -> String {
-    guard abs(value) < 10 else { return adminNumber(value) }
-    let tenths = Int((abs(value) * 10 + 1e-9).rounded(.down))
-    let digits = tenths % 10 == 0 ? "\(tenths / 10)" : "\(tenths / 10).\(tenths % 10)"
-    return value < 0 && tenths != 0 ? "-" + digits : digits
 }
 
 /// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead, whole for steps.
@@ -1135,5 +1128,5 @@ private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> S
     if exact {
         return value.formatted(.number.precision(.fractionLength(unit == "steps" ? 0...0 : 0...1))) + suffix
     }
-    return (unit == "percent" ? adminTenths(value) : adminNumber(value)) + suffix
+    return adminNumber(value) + suffix
 }

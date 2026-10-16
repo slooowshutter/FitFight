@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.1.3",
             year: 2026,
             month: 10,
+            day: 16,
+            notes: "When Apple Health wakes FitFight in the background, your fights now refresh as soon as you open the app, instead of showing standings from the wake."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
             day: 15,
             notes: "Friends: you now have a Steps fight with each friend that runs the whole calendar month and starts again on the 1st. Tap Friends at the top of Fights to see them, answer requests, and add friends."
         ),

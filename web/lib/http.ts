@@ -194,14 +194,15 @@ export function apiRoute<
     ) => Promise<Response>,
     operation?: RequestOperation,
 ) {
-    return async (request: Request, context: { params: Promise<P> }) => {
+    return async (request: Request, context: { params?: Promise<P> }) => {
         const started = performance.now();
         const timing: RequestTiming = { phases: {} };
         let response: Response;
         let params = {} as P;
         let caught: unknown;
         try {
-            params = await context.params;
+            // NOTE: Next passes no params to static routes, and the 5xx log needs an object.
+            params = (await context.params) ?? params;
             response = await handler(request, { params, timing });
         } catch (error) {
             caught = error;

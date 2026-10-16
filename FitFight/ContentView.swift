@@ -299,6 +299,30 @@ struct ContentView: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { model.tabBarHeight = $0 }
             }
         }
+        .task(id: scenePhase == .background) {
+            guard scenePhase != .background, !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
+            await model.loadInAppAlerts(session: session)
+        }
+        // Waits behind the check-in, the notification question, and the companion picker.
+        .overlay {
+            if let alert = model.inAppAlert,
+               model.dailyStatusRecap == nil, !push.showPrePrompt, !companions.showingPicker {
+                InAppAlertView(inAppAlert: alert) { choice in
+                    if let url = model.chooseInAppAlert(choice, session: session) { openURL(url) }
+                } onDismiss: {
+                    model.dismissInAppAlert(session: session)
+                }
+                .id(alert.id)
+                .transition(.opacity)
+                .onAppear { model.answerInAppAlert(alert, response: "shown", session: session) }
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: model.inAppAlert)
+        .sheet(isPresented: $model.showingPaidCharacter) {
+            PaidCharacterView(initialDescription: "")
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
     }
 
     /// Everyone on the beta sees it. The admin also sees it on the App Store version, both with the

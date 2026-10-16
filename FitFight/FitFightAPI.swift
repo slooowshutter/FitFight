@@ -1222,6 +1222,21 @@ struct FitFightAPI {
         try await get(path: "me/preferences", accessToken: accessToken)
     }
 
+    func inAppAlerts(accessToken: String) async throws -> [InAppAlert] {
+        let list: InAppAlertList = try await get(
+            path: "alerts?language=\(AppLocalization.languageCode)",
+            accessToken: accessToken
+        )
+        return list.alerts
+    }
+
+    /// `response` is `shown`, `tapped` (with the button's action), or `dismissed`.
+    func answerInAppAlert(id: String, response: String, action: String? = nil, accessToken: String) async throws {
+        var body = ["response": response]
+        body["action"] = action
+        let _: DiscardBody = try await post(path: "alerts/\(id)/responses", accessToken: accessToken, body: body)
+    }
+
     func updateAccountPreferences(
         _ preferences: AccountPreferencesUpdate,
         accessToken: String

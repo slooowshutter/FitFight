@@ -33,6 +33,7 @@ struct Palette {
 
     var bg: Color { value(for: "bg") }
     var overlay: Color { value(for: "overlay") }
+    var scrim: Color { value(for: "scrim") }
     var card: Color { value(for: "card") }
     var control: Color { value(for: "control") }
 

@@ -16891,6 +16891,16 @@
                     }
                 }
             }
+        },
+        "When you open FitFight, it can now show a short tip, like how to start your first fight or make your own character. Tap the button to try it, or Not now to close it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À l’ouverture, FitFight peut maintenant afficher un court conseil, par exemple pour lancer votre premier défi ou créer votre propre personnage. Touchez le bouton pour essayer, ou Pas maintenant pour le fermer."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

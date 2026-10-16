@@ -293,6 +293,25 @@ enum ScreenshotExport {
             Shot(name: "05-notifications") { store, model in
                 sheet(NotificationSettingsView(), themeStore: store, model: model)
             },
+            Shot(name: "05-in-app-alert") { store, model in
+                let alert = InAppAlert(
+                    id: "start-first-fight",
+                    title: "Start your first fight",
+                    body: "Add a friend by username, pick 3 days to a month, and see who walks more. You can also set what the loser has to do.",
+                    imageURL: nil,
+                    buttons: [
+                        .init(title: "New fight", action: "new_fight", url: nil, primary: true),
+                        .init(title: "Not now", action: "dismiss", url: nil, primary: false),
+                    ]
+                )
+                return AnyView(
+                    frame(FightsListView(), tab: .fights, themeStore: store, model: model)
+                        .overlay {
+                            InAppAlertView(inAppAlert: alert, onChoose: { _ in }, onDismiss: {})
+                                .environment(\.ffTheme, store.theme)
+                        }
+                )
+            },
             Shot(name: "05-notifications-large-text") { store, model in
                 sheet(NotificationSettingsView().environment(\.dynamicTypeSize, .accessibility2), themeStore: store, model: model)
             },

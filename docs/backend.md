@@ -895,3 +895,73 @@ app. Let older backend instances drain first, because their schemas list only
 the previous companion IDs. Existing API contracts are unchanged; the Specials
 endpoints are additive. Older apps show their photo or initials fallback for
 `limited-*` IDs they do not bundle. No app-facing RPC is introduced.
+
+## In-app alerts (prepared 15 Oct 2026)
+
+When the app opens, `GET /api/v1/alerts?language=en|fr` returns up to three alerts
+for the signed-in account, highest priority first. The app shows them one at a
+time in a dialog over the dimmed app; tapping outside closes it.
+`POST /api/v1/alerts/{id}/responses` with
+`{ "response": "shown" | "tapped" | "dismissed", "action"?: ... }` records what
+the person did. An alert stops showing once it was tapped or closed; seeing it
+does not count. Closing or "Not now" shows the next alert; a button that opens
+something (update, character, new fight) leaves the rest for the next open. The
+app sends its version in `X-FitFight-Version`, which the rules can read.
+
+Alerts are code, not rows: `web/lib/alerts/in-app-alerts.ts`, reviewed in a PR.
+Responses are rows in `private.alert_responses` (RLS on, no client grants),
+removed only with the account. Builds without this code never call the endpoints
+and keep only the update toast.
+
+**Adding an alert (agents):**
+
+1. Add an entry to `inAppAlerts` at its priority. The `id` is permanent:
+   lowercase letters, digits, hyphens. Never reuse or rename one.
+2. Write `who` with the facts in `AlertFacts`
+   (`web/lib/types/alerts/in-app-alert.ts`): `appVersion`, `latestRelease`,
+   `daysSinceSignup`, `fights`, `customCharacters`, `purchases`, `friends`,
+   `stepsLast7Days`, `answered`. Compare versions with `versionAtLeast`, never
+   with `<` on strings.
+3. Write the title, body, and one or two buttons in English and French. The
+   first button is the primary one. No en or em dashes; the test fails on them.
+4. Button actions: `update` (the App Store, or TestFlight on staging; the alert
+   waits while Apple's list is unavailable), `open_character`, `new_fight`,
+   `dismiss`. A new action needs app code: gate its alert with
+   `versionAtLeast(facts.appVersion, "<first build with it>")`. Older builds
+   close the alert on an action they do not know.
+5. Optional `image`: a file under `web/public`, e.g.
+   `/landing/companion-alpaca-1.webp`.
+6. Run `npm test` in `web/`. Merging to `develop` puts it on staging; it reaches
+   App Store users with the normal promotion to `main`. No app build is needed.
+
+A new fact goes in `readAlertFacts`, `alertFactsRowSchema`, and `AlertFacts`,
+with a check in `alerts.integration.ts`.
+
+An update pitch and its follow-up for a feature that ships in 1.3.0:
+
+```ts
+{
+    id: "update-1-3-0-photos",
+    who: (facts) =>
+        !versionAtLeast(facts.appVersion, "1.3.0") &&
+        facts.latestRelease !== null &&
+        versionAtLeast(facts.latestRelease.version, "1.3.0"),
+    // title, body, then buttons: action "update", then "dismiss"
+},
+{
+    id: "new-in-1-3-0-photos",
+    who: (facts) => versionAtLeast(facts.appVersion, "1.3.0"),
+    // the same feature, with a button that opens it
+},
+```
+
+The pitch turns on by itself once the App Store offers 1.3.0 and stops once the
+person updates; the follow-up then shows. On production, `latestRelease` comes
+from Apple's public App Store lookup (`itunes.apple.com/lookup`, no key, reused
+for 5 minutes), so it changes when people can actually tap Update. Staging has
+no public TestFlight lookup and reads `releases.json`, which the GitHub release
+job rewrites every few hours.
+
+Apply `20261016120000_alert_responses.sql`, then deploy the backend, then
+distribute the app. Both endpoints are new; no existing contract changes. The
+shared response fixture is `contracts/fixtures/in-app-alerts.json`.

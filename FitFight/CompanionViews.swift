@@ -628,9 +628,13 @@ struct CompanionIntroduction: View {
             if surface == .fights {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Fights")
-                            .ffType(.title)
-                            .foregroundStyle(theme.text)
+                        HStack(spacing: 10) {
+                            Text("Fights")
+                                .ffType(.title)
+                                .foregroundStyle(theme.text)
+                            TenKStreakBadge()
+                        }
+                        .frame(minHeight: 44)
                         let live = model.fights.filter { $0.status == .live && !$0.isUpcoming }
                         if !live.isEmpty {
                             let leading = live.filter { $0.rank == 1 }.count

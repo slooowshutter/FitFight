@@ -28,7 +28,7 @@ struct YouView: View {
     @State private var showingBroadcastCompose = false
     @State private var showingHealthDetails = false
     @State private var showingCompanionPreviewControls = false
-    private static let profileCachePrefix = "fitfight.you."
+    static let profileCachePrefix = "fitfight.you."
 
     var body: some View {
         FFScreen(top: AnyView(VersionBanner(onTap: versionBannerTap)), refresh: fightsRefresh) {

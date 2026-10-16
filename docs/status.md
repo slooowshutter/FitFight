@@ -6,6 +6,37 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Player card profile and 10K streak, prepared 16 Oct 2026
+
+Built from the designs Marc approved in PR #389 (`docs/design/source/kit/fights-profile-prototype.html`).
+
+**App:**
+- Another person's Profile is the Player card: companion, @username, their 10K streak
+  (friends only, tap for the explanation), companion line, member since, and one
+  friend button (Add friend, Requested, Friends; an Accept/Decline card when they asked).
+  Below: their record and win rate, their shared average and best day, **Against you**
+  (wins-draws-losses and the last 10 results) with **Compare steps** since you became
+  friends, their last shared days as bars with activity levels, and **Fights together**
+  (5 rows, then Show all; live rows show your lead). Block is removed from the app;
+  Report stays. The Challenge button is gone, as Marc said.
+- Tapping your own name anywhere opens the Profile tab.
+- A flame badge next to the Fights title shows your 10K streak; it opens a drawer with
+  today's progress, the last two weeks, and your current and best streak with dates.
+
+**Privacy:** step data still follows each person's Share Steps setting. A friend sees
+the streak and the since-friends totals only when that person shares Steps with friends.
+Edit profile says so. Head-to-head and Fights together use only Fights both people are
+still members of, the same rule as before.
+
+**Contract (additive, `/api/v1`):** `GET /profiles/{id}` gains optional `member_since`,
+`head_to_head` (1v1 and group Fights, group places compared), `ten_k_streak` (owner gets
+`best` and the 13 `recent` days; friends get `current` only) and `friend_comparison`.
+Shared history rows gain optional `viewer_placement` and `head_to_head`. Older apps
+ignore them; the new app handles their absence. No migration. The legacy `rivalry`
+field is unchanged.
+
+---
+
 ## Last sync counts, final-sync deadline as a fight setting: prepared 16 Oct 2026
 
 Marc's decisions (15-16 Oct 2026, brainstormed in chat): a winner who forgets to open

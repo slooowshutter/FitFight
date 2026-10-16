@@ -37,5 +37,35 @@ export const profileStepStatisticsSchema = z.object({
     })).length(5),
 });
 
+/** Owners also get their best run and the 13 days before today; friends get only the current run. */
+export const tenKStreakSchema = z.object({
+    goal: z.number().int().positive(),
+    current: z.number().int().nonnegative(),
+    today_counted: z.boolean(),
+    best: z.object({ days: z.number().int().positive(), from: daySchema, through: daySchema }).nullable(),
+    recent: z.array(z.object({ day: daySchema, steps: z.number().nonnegative().nullable() })).length(13).nullable(),
+});
+
+export const stepTotalsSchema = z.object({
+    recorded_days: z.number().int().nonnegative(),
+    total_steps: z.number().nonnegative(),
+    average_steps: z.number().nonnegative().nullable(),
+    best_day_steps: z.number().nonnegative().nullable(),
+    ten_k_days: z.number().int().nonnegative(),
+});
+
+/** Complete days from the day two people became friends through yesterday; `days` is 0 on that first day. */
+export const friendComparisonSchema = z.object({
+    since: daySchema,
+    days: z.number().int().nonnegative(),
+    you: stepTotalsSchema,
+    them: stepTotalsSchema,
+});
+
+export const profileStartDaysRowSchema = z.object({ member_since: daySchema, friends_since: daySchema.nullable() });
+
 export type ProfileStatisticsContext = z.infer<typeof profileStatisticsContextSchema>;
 export type ProfileStepStatistics = z.infer<typeof profileStepStatisticsSchema>;
+export type TenKStreak = z.infer<typeof tenKStreakSchema>;
+export type StepTotals = z.infer<typeof stepTotalsSchema>;
+export type FriendComparison = z.infer<typeof friendComparisonSchema>;

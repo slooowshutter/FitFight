@@ -181,7 +181,8 @@ test("apiRoute persists 5xx failures on static routes, where Next passes no para
         });
         const response = await route(
             new Request("https://fitfight.app/api/v1/provider-uploads/context"),
-            { params: undefined },
+            // NOTE: Next's route type says params is always a Promise, but static routes get none at runtime.
+            { params: undefined } as unknown as { params: Promise<Record<string, never>> },
         );
         assert.equal(response.status, 500);
         assert.equal(writes.length, 1);

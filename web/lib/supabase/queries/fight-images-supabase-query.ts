@@ -165,8 +165,10 @@ export async function readRunningFightImages(database: Sql = createDatabaseClien
 }
 
 /**
- * Closes one attempt. A pass makes the image ready; otherwise another attempt starts with runId, or, when no
- * attempt is left (runId null), the image fails and the fight keeps its previous image.
+ * Closes the attempt of run runId. A pass makes the image ready; otherwise another attempt continues with
+ * nextRunId, or the image fails and the fight keeps its previous image. A failure that never reached a judged
+ * run (requeue) forgets its runners so the next pass queues the fight again. Only the cron that still sees
+ * runId as the current run wins, so overlapping crons cannot close one attempt twice.
  */
 export async function finishFightImageAttempt(
     id: string,
@@ -177,6 +179,7 @@ export async function finishFightImageAttempt(
         problems: string[];
         pass: boolean;
         nextRunId?: string | null;
+        requeue?: boolean;
     },
     database: Sql = createDatabaseClient(),
 ) {
@@ -186,21 +189,22 @@ export async function finishFightImageAttempt(
             update private.fight_group_images
             set status = 'ready', image_url = ${attempt.imageUrl}, finished_at = now(),
                 attempt_log = attempt_log || ${database.json([log])}::jsonb
-            where id = ${id} and status = 'running'
+            where id = ${id} and status = 'running' and run_id is not distinct from ${attempt.runId}
         `;
     } else if (attempt.nextRunId) {
         await database`
             update private.fight_group_images
             set attempts = attempts + 1, run_id = ${attempt.nextRunId},
                 attempt_log = attempt_log || ${database.json([log])}::jsonb
-            where id = ${id} and status = 'running'
+            where id = ${id} and status = 'running' and run_id is not distinct from ${attempt.runId}
         `;
     } else {
         await database`
             update private.fight_group_images
             set status = 'failed', finished_at = now(), error = ${attempt.problems.join("; ").slice(0, 2000)},
+                cast_key = case when ${attempt.requeue === true} then null else cast_key end,
                 attempt_log = attempt_log || ${database.json([log])}::jsonb
-            where id = ${id} and status = 'running'
+            where id = ${id} and status = 'running' and run_id is not distinct from ${attempt.runId}
         `;
     }
 }

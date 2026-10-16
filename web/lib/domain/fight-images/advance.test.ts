@@ -81,7 +81,7 @@ test("a due image renders one sheet and starts the trail workflow with the roste
             return { job: { ...running(1), layout: null, run_id: null, workflow_id: null, inputs: null, runners: null }, cast };
         },
     });
-    const summary = await advanceFightGroupImages(performance.now() + 10_000, deps);
+    const summary = await advanceFightGroupImages(performance.now() + 60_000, deps);
     assert.equal(summary.started, 1);
     assert.equal(starts[0].workflowId, fightImageConfiguration.trail.workflowId);
     assert.match(String(starts[0].inputs.cast_roster), /^Total characters: 2\nBadger: /);
@@ -91,7 +91,7 @@ test("a due image renders one sheet and starts the trail workflow with the roste
 
 test("a passing check makes the image ready", async () => {
     const { deps, finished } = harness({ running: async () => [running(1)] });
-    const summary = await advanceFightGroupImages(performance.now() + 10_000, deps);
+    const summary = await advanceFightGroupImages(performance.now() + 60_000, deps);
     assert.equal(summary.ready, 1);
     assert.equal(finished[0].pass, true);
     assert.equal(finished[0].imageUrl, image);
@@ -99,12 +99,12 @@ test("a passing check makes the image ready", async () => {
 
 test("a runner facing left retries with the same inputs until the third attempt fails", async () => {
     const retry = harness({ running: async () => [running(1)], read: async () => completed(leftCheck) });
-    assert.equal((await advanceFightGroupImages(performance.now() + 10_000, retry.deps)).retried, 1);
+    assert.equal((await advanceFightGroupImages(performance.now() + 60_000, retry.deps)).retried, 1);
     assert.deepEqual(retry.starts[0].inputs, { cast_roster: "Total characters: 2" });
     assert.equal(retry.finished[0].nextRunId, "run-new-1");
 
     const last = harness({ running: async () => [running(fightImageConfiguration.maxAttempts)], read: async () => completed(leftCheck) });
-    assert.equal((await advanceFightGroupImages(performance.now() + 10_000, last.deps)).failed, 1);
+    assert.equal((await advanceFightGroupImages(performance.now() + 60_000, last.deps)).failed, 1);
     assert.equal(last.starts.length, 0);
     assert.deepEqual(last.finished[0].problems, ["facing left: 1"]);
 });
@@ -112,12 +112,30 @@ test("a runner facing left retries with the same inputs until the third attempt 
 test("an unfinished run waits, then counts as a failed attempt after the timeout", async () => {
     const pending = { data: { id: "run", status: "running" as const, output: null }, rateLimit: {} };
     const fresh = harness({ running: async () => [running(1)], read: async () => pending });
-    assert.deepEqual(await advanceFightGroupImages(performance.now() + 10_000, fresh.deps), {
+    assert.deepEqual(await advanceFightGroupImages(performance.now() + 60_000, fresh.deps), {
         queued: 0, ready: 0, retried: 0, failed: 0, started: 0,
     });
     const old = new Date(Date.now() - (fightImageConfiguration.runTimeoutMinutes + 1) * 60_000);
     const stale = harness({ running: async () => [running(1, old)], read: async () => pending });
-    assert.equal((await advanceFightGroupImages(performance.now() + 10_000, stale.deps)).retried, 1);
+    assert.equal((await advanceFightGroupImages(performance.now() + 60_000, stale.deps)).retried, 1);
+});
+
+test("an unreadable run waits like an unfinished one and does not stop the other images", async () => {
+    const other = { ...running(1), id: "55555555-5555-4555-8555-555555555555", run_id: "run-other" };
+    const { deps, finished } = harness({
+        running: async () => [running(1), other],
+        read: async (_workflowId, runId) => {
+            if (runId === "run-1") throw new Error("Blend 502");
+            return completed(passCheck);
+        },
+    });
+    const summary = await advanceFightGroupImages(performance.now() + 60_000, deps);
+    assert.equal(summary.ready, 1);
+    assert.equal(finished.length, 1);
+    const old = new Date(Date.now() - (fightImageConfiguration.runTimeoutMinutes + 1) * 60_000);
+    const stale = harness({ running: async () => [running(1, old)], read: async () => Promise.reject(new Error("Blend 502")) });
+    await advanceFightGroupImages(performance.now() + 60_000, stale.deps);
+    assert.deepEqual(stale.finished[0].problems, ["run unreadable"]);
 });
 
 test("a start that throws fails that image without stopping the pass", async () => {
@@ -128,7 +146,8 @@ test("a start that throws fails that image without stopping the pass", async () 
             throw new Error("storage down");
         },
     });
-    const summary = await advanceFightGroupImages(performance.now() + 10_000, deps);
+    const summary = await advanceFightGroupImages(performance.now() + 60_000, deps);
     assert.equal(summary.failed, 1);
     assert.match(finished[0].problems[0], /storage down/);
+    assert.equal(finished[0].requeue, true, "an infrastructure failure lets the fight queue again");
 });

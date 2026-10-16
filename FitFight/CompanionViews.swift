@@ -977,6 +977,7 @@ struct CompanionFightSummary: View {
                     .padding(.horizontal, 12 - theme.space.screenPadding)
                     .accessibilityElement()
                     .accessibilityLabel(String(appLocalized: "Everyone in this fight running together"))
+                    .accessibilityAddTraits(.isImage)
             } else if CompanionPreview.isEnabled && racing.count == 4 {
                 CompanionScene()
                     .frame(height: 220)

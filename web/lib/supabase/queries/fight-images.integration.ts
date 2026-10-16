@@ -3,7 +3,12 @@ import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import postgres from "postgres";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
-import { claimNextFightImage, enqueueChangedFightImages, finishFightImageAttempt } from "./fight-images-supabase-query";
+import {
+    claimNextFightImage,
+    enqueueChangedFightImages,
+    finishFightImageAttempt,
+    saveFightImageRun,
+} from "./fight-images-supabase-query";
 import { readFightSnapshot } from "./fight-snapshot-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
@@ -64,6 +69,7 @@ test("a fight image waits for two runners, folds changes, respects the daily all
         claimed.cast.map((row) => [row.user_id, row.is_owner, row.companion_id]),
         [[owner, true, null], [peer, false, "fox"]],
     );
+    await saveFightImageRun(claimed.job.id, { layout: "trail", runners: [], workflowId: "workflow", inputs: {}, runId: "run-1" }, database);
     await finishFightImageAttempt(claimed.job.id, { runId: "run-1", imageUrl: image, check: "{}", problems: [], pass: true }, database);
 
     const member = await readFightSnapshot(peer, "UTC", database);
@@ -89,7 +95,12 @@ test("a fight image waits for two runners, folds changes, respects the daily all
     await database`update private.fight_group_images set due_at = now() - interval '1 second' where fight_id = ${fight} and status = 'waiting'`;
     const second = await claimNextFightImage(database);
     assert.ok(second);
-    await finishFightImageAttempt(second.job.id, { runId: "run-2", imageUrl: null, check: null, problems: ["facing left: 1"], pass: false }, database);
+    await database`update private.fight_group_images set run_id = 'run-2' where id = ${second.job.id}`;
+    const failure = { imageUrl: null, check: null, problems: ["facing left: 1"], pass: false };
+    await finishFightImageAttempt(second.job.id, { ...failure, runId: "run-older" }, database);
+    const [stillRunning] = await database`select status from private.fight_group_images where id = ${second.job.id}`;
+    assert.equal(stillRunning.status, "running", "a cron holding an older run cannot close the current attempt");
+    await finishFightImageAttempt(second.job.id, { ...failure, runId: "run-2" }, database);
 
     await database`update public.profiles set companion_id = 'fox' where id = ${owner}`;
     await enqueueChangedFightImages(database);
@@ -115,4 +126,46 @@ test("a fight image waits for two runners, folds changes, respects the daily all
         ["ready", "failed", "cancelled"],
         "a fight that ended cancels its waiting image and keeps every row",
     );
+});
+
+test("a fight whose image could not start queues again; a judged failure waits for a new change", async (t) => {
+    const [owner, peer] = [randomUUID(), randomUUID()];
+    const fight = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fight}`;
+        await database`delete from auth.users where id in (${owner}, ${peer})`;
+    });
+    await database`insert into auth.users (id) values (${owner}), (${peer})`;
+    await database`
+        insert into public.fights (id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fight}, ${owner}, 'Group image retry', 'scheduled', now() + interval '1 day', now() + interval '8 days',
+            'UTC', 'highest_total', 'shared')
+    `;
+    await database`
+        insert into public.fight_members (fight_id, user_id, state, accepted_at)
+        values (${fight}, ${owner}, 'accepted', now() - interval '2 minutes'), (${fight}, ${peer}, 'accepted', now())
+    `;
+    const open = async () => {
+        await enqueueChangedFightImages(database);
+        const [row] = await database`
+            select count(*)::int as n from private.fight_group_images where fight_id = ${fight} and status = 'waiting'
+        `;
+        return row.n;
+    };
+    const claimAndFail = async (requeue: boolean) => {
+        await database`update private.fight_group_images set due_at = now() - interval '1 second' where fight_id = ${fight} and status = 'waiting'`;
+        const claimed = await claimNextFightImage(database);
+        assert.equal(claimed?.job.fight_id, fight);
+        await finishFightImageAttempt(
+            claimed.job.id,
+            { runId: null, imageUrl: null, check: null, problems: ["start failed: Blend 502"], pass: false, requeue },
+            database,
+        );
+    };
+
+    assert.equal(await open(), 1);
+    await claimAndFail(true);
+    assert.equal(await open(), 1, "a start that never reached Blend tries again");
+    await claimAndFail(false);
+    assert.equal(await open(), 0, "a judged failure keeps the previous image until the runners change");
 });

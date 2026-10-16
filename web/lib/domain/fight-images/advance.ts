@@ -38,16 +38,16 @@ export const fightImageDependencies = {
  */
 export async function advanceFightGroupImages(deadline: number, deps = fightImageDependencies) {
     const summary = { queued: 0, ready: 0, retried: 0, failed: 0, started: 0 };
-    if (!fightImageConfiguration.enabled) return summary;
-    summary.queued = await deps.enqueue();
-
     for (const job of await deps.running()) {
         if (performance.now() >= deadline) return summary;
         const outcome = await settleRun(job, deps);
         if (outcome) summary[outcome]++;
     }
+    if (!fightImageConfiguration.enabled) return summary;
+    summary.queued = await deps.enqueue();
 
-    while (performance.now() < deadline) {
+    // NOTE: one start renders, uploads and calls Blend (up to ~15 s); leave room so maxDuration never cuts it off.
+    while (performance.now() < deadline - 20_000) {
         const claimed = await deps.claim();
         if (!claimed) break;
         const { job, cast } = claimed;
@@ -82,13 +82,14 @@ export async function advanceFightGroupImages(deadline: number, deps = fightImag
             await deps.save(job.id, { layout: plan.layout, runners, workflowId, inputs, runId: started.data.runId });
             summary.started++;
         } catch (error) {
-            // One fight that cannot start must not hold the others; it fails and keeps its previous image.
+            // One fight that cannot start must not hold the others; it fails, keeps its previous image and queues again.
             await deps.finish(job.id, {
                 runId: null,
                 imageUrl: null,
                 check: null,
                 problems: [`start failed: ${error instanceof Error ? error.message : String(error)}`.slice(0, 500)],
                 pass: false,
+                requeue: true,
             });
             summary.failed++;
         }
@@ -104,16 +105,27 @@ async function settleRun(
     if (!job.run_id || !job.workflow_id || !job.inputs || !job.layout || !job.runners) {
         // The start was interrupted before Blend confirmed a run; give it the timeout to finish recording.
         if (!stale) return null;
-        await deps.finish(job.id, { runId: null, imageUrl: null, check: null, problems: ["start interrupted"], pass: false });
+        await deps.finish(job.id, {
+            runId: null,
+            imageUrl: null,
+            check: null,
+            problems: ["start interrupted"],
+            pass: false,
+            requeue: true,
+        });
         return "failed";
     }
-    const run = (await deps.read(job.workflow_id, job.run_id)).data;
+    // An unreadable run (Blend down, bad output) waits like an unfinished one instead of stopping every other image.
+    const run = await deps.read(job.workflow_id, job.run_id).then(
+        (result) => result.data,
+        () => null,
+    );
     let imageUrl: string | null = null;
     let check: string | null = null;
     let problems: string[];
-    if (run.status === "pending" || run.status === "running") {
+    if (!run || run.status === "pending" || run.status === "running") {
         if (!stale) return null;
-        problems = ["run timed out"];
+        problems = [run ? "run timed out" : "run unreadable"];
     } else if (run.status !== "completed") {
         problems = [`run ${run.status}`];
     } else {

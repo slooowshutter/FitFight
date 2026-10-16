@@ -52,8 +52,9 @@ gets an image an hour after it is created, someone joins, or a runner changes
 companion; changes inside that hour fold into one image. At most 2 per fight
 per rolling 24 hours, 200 a day and 6 at once app-wide. The check needs every
 runner drawn once (trail) or every featured runner present (race start) and
-nobody facing left, with up to 3 tries. A failed image keeps the previous one.
-Every image and attempt stays in `private.fight_group_images`. FitFight pays
+nobody facing left, with up to 3 tries. A failed image keeps the previous one
+and waits for the next change of runners; a failure before Blend judged a run
+(Blend or storage down) queues the fight again. Every image and attempt stays in `private.fight_group_images`. FitFight pays
 (about $0.12 to $0.17 an image). Settings are code in
 `web/lib/types/fight-images/fight-image.ts`; it runs inside the existing
 `/api/internal/ai/reconcile` cron, so no new cron or secret.
@@ -66,13 +67,13 @@ roster when there is none. Rollout: apply `20261016160000_fight_group_images.sql
 backend, then distribute the app. Turning it on draws images for every active
 fight with 2+ runners over the first days, within the daily cap.
 
-**Verified locally (16 Oct, on develop):** web typecheck, all unit tests and 12
-new ones; the queue, daily allowance, cancel, snapshot and permissions test
-against a disposable local database with every migration; schema lint; all 333
-pgTAP checks; the native contract test; an iOS simulator build; reference sheets
-rendered by the production code; one end-to-end run of each published workflow
-(5 runners passed first try, 30 runners passed on the retry after one runner
-faced left). Not yet: a staging deploy, or the image on a signed-in phone.
+**Verified locally (16 Oct, on develop):** web typecheck and build, all unit
+tests and 13 new ones; the queue, daily allowance, cancel, retry, snapshot and
+permissions tests against a disposable local database with every migration;
+schema lint; all 333 pgTAP checks; the native contract test; an iOS simulator
+build; reference sheets rendered by the production code; one end-to-end run of
+each published workflow (5 runners passed first try, 30 runners passed on the
+retry after one runner faced left). Not yet: a staging deploy, or the image on a signed-in phone.
 
 ---
 

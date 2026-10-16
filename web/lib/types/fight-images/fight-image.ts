@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Fight group images, approved by Marc on 16 Oct 2026. Not secrets, so they live here, not in the environment.
- * Set enabled to false to stop starting new images; running ones still finish.
+ * Set enabled to false to stop queuing and starting images; running ones still finish.
  */
 export const fightImageConfiguration = {
     enabled: true,

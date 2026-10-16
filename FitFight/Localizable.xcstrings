@@ -10302,12 +10302,22 @@
                 }
             }
         },
-        "Did not sync · forfeited": {
+        "Didn’t sync in time": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Pas synchronisé · forfait"
+                        "value": "Pas synchronisé à temps"
+                    }
+                }
+            }
+        },
+        "Last sync counted": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière synchro comptée"
                     }
                 }
             }
@@ -15727,6 +15737,46 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "FitFight s’ouvre directement sur les combats que tu as vus la dernière fois, même sans internet, et les met à jour en arrière-plan. S’il ne peut pas les mettre à jour, il le dit."
+                    }
+                }
+            }
+        },
+        "If someone hasn’t synced when a fight ends, their last synced steps now count instead of a forfeit, and the fight ends as soon as nobody missing can change the result. Fights you make and friend fights wait for everyone’s final steps; fights everyone is invited to and Fight Marc close 24 hours after the end. Owners can change this in Edit fight, except for fights everyone is invited to and Fight Marc.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Si quelqu’un n’a pas synchronisé à la fin d’un défi, ses derniers pas synchronisés comptent désormais au lieu d’un forfait, et le défi se termine dès que les absents ne peuvent plus changer le résultat. Les défis que vous créez et les défis entre amis attendent les derniers pas de tout le monde ; les défis où tout le monde est invité et Affronte Marc se terminent 24 heures après la fin. Le créateur peut changer ça dans Modifier le défi, sauf pour les défis où tout le monde est invité et Affronte Marc."
+                    }
+                }
+            }
+        },
+        "Close 24 hours after the end": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Clôturer 24 heures après la fin"
+                    }
+                }
+            }
+        },
+        "Anyone not synced by then keeps their last sync": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Qui n’a pas synchronisé d’ici là garde sa dernière synchro"
+                    }
+                }
+            }
+        },
+        "Waits for everyone’s final steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Attend les derniers pas de tout le monde"
                     }
                 }
             }

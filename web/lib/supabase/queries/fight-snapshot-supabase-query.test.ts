@@ -343,8 +343,10 @@ test("ordinary maintenance uses one database query and never scans unrelated ser
         strings: TemplateStringsArray,
         ...values: unknown[]
     ) => {
-        statements++;
         const query = strings.join("?");
+        // A nested fragment runs inside the statement that embeds it.
+        if (query.trimStart().startsWith("case")) return [];
+        statements++;
         if (query.includes("coalesce((")) {
             assert.ok(values.includes(userId));
             return [

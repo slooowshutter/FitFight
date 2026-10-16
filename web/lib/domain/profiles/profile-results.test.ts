@@ -43,12 +43,32 @@ test("shared first and no complete final data award no wins", () => {
     }
 });
 
-test("a missing final sync preserves the actual forfeit without calling it quitting", () => {
+test("a missing final sync is ranked by its last synced total", () => {
     const partial = { ...fight, members: [fight.members[0], { ...fight.members[1], complete: false }] };
     assert.equal(classifyFightResult(partial, first).result, "win");
-    assert.equal(classifyFightResult(partial, second).result, "incomplete");
+    assert.equal(classifyFightResult(partial, second).result, "loss");
     assert.equal(profileRecord([partial], second).losses, 1);
     assert.equal(rivalryRecord([partial], second, first, new Set([fight.id])).losses, 1);
+    const ahead = { ...fight, members: [{ ...fight.members[0], complete: false }, fight.members[1]] };
+    assert.equal(classifyFightResult(ahead, first).result, "win");
+    assert.equal(profileRecord([ahead], first).wins, 1);
+});
+
+test("summaries frozen before 15 Oct 2026 keep their forfeits and all-missing draws", () => {
+    const summary = { field_size: 2, complete_finishers: 0, first_place_finishers: 0, verified: true };
+    const allMissing = { ...fight, summary, members: fight.members.map((member) => ({ ...member, rank: 1, complete: false })) };
+    assert.equal(classifyFightResult(allMissing, first).result, "draw");
+    const forfeited = {
+        ...fight, summary: { ...summary, complete_finishers: 1, first_place_finishers: 1 },
+        members: [fight.members[0], { ...fight.members[1], complete: false }],
+    };
+    assert.equal(classifyFightResult(forfeited, first).result, "win");
+    assert.equal(classifyFightResult(forfeited, second).result, "incomplete");
+    const current = {
+        ...fight, summary: { ...summary, complete_finishers: 1, rank_one_finishers: 1 },
+        members: [{ ...fight.members[0], complete: false }, fight.members[1]],
+    };
+    assert.equal(classifyFightResult(current, first).result, "win");
 });
 
 test("withdrawals after starting remain in the denominator; pre-start withdrawals and removal do not", () => {

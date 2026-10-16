@@ -11,7 +11,7 @@ export const notificationDeliveryRowSchema = pendingNotificationIntentSchema.ext
     fight_name: z.string(),
     owner_handle: z.string().nullable(),
     ends_at: z.coerce.date(),
-    sync_deadline: z.coerce.date(),
+    sync_deadline: z.coerce.date().nullable(),
     time_zone: z.string(),
     member_state: z.string().nullable(),
     final_steps_complete: z.boolean().nullable(),

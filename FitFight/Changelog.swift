@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "If someone hasn’t synced when a fight ends, their last synced steps now count instead of a forfeit, and the fight ends as soon as nobody missing can change the result. Fights you make and friend fights wait for everyone’s final steps; fights everyone is invited to and Fight Marc close 24 hours after the end. Owners can change this in Edit fight, except for fights everyone is invited to and Fight Marc."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "When you open FitFight, it can now show a short tip, like how to start your first fight or make your own character. Tap the button to try it, or Not now to close it."
         ),
         ReleaseNote(

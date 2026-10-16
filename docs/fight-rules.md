@@ -302,7 +302,7 @@ The existing examples already cover highest total, last one or last N losing, to
 4. **Data requirements.** A final weekly total cannot prove that someone exercised on five different days or reached a particular intensity during one workout.
 5. **Defined exceptions.** Ties, incomplete data, zero total, no qualifiers, partial days, and lineup changes affect the agreement itself.
 
-Source check: the native creation flow in [`AppModel.swift`](../FitFight/AppModel.swift) selects Steps, `highest_total`, and an optional action. [`score-fight.ts`](../web/lib/scoring/score-fight.ts) also contains older `proportional` and `hit_your_goal` branches and informational amount calculations. Their presence does not make them current app options or a complete money model. In particular, its finalization filters incomplete members before calculating the pot; a future Stake agreement must explicitly decide whether a forfeiting member still owes their contribution. These are repository observations, not a new live-deployment audit.
+Source check: the native creation flow in [`AppModel.swift`](../FitFight/AppModel.swift) selects Steps, `highest_total`, and an optional action. [`score-fight.ts`](../web/lib/scoring/score-fight.ts) also contains older `proportional` and `hit_your_goal` branches and informational amount calculations. Their presence does not make them current app options or a complete money model. In particular, its finalization scores incomplete members on their last synced totals; a future Stake agreement must explicitly decide what a member without final data owes. These are repository observations, not a new live-deployment audit.
 
 ### Five questions, plus the Fight context
 
@@ -597,7 +597,7 @@ For example, if only two members remain eligible and do not tie, they receive EU
 
 **Targets and qualification:** personal targets stay locked and visible as already defined in the architecture. Ranking people by percentage of a freely chosen target rewards choosing an easy target. Use personal targets for success/failure unless a separate baseline/handicap policy makes competitive comparison meaningful. A qualification condition, such as “at least three valid workouts to be eligible for the podium,” is separate from the Score used to rank qualifiers.
 
-**Existing finalization:** current source forfeits incomplete members and makes an all-incomplete Fight a draw. It does not implement a universal missing-data rule for ceilings, group goals, daily wins, or money. Preserve existing Steps behavior until a separately approved change and compatibility rollout.
+**Existing finalization:** since 15 Oct 2026, current source ranks incomplete members by their last synced totals and finalizes early once no missing final sync can change a rank; the 24-hour final-sync deadline is a per-fight setting, off by default for fights people make and friend rounds. It does not implement a universal missing-data rule for ceilings, group goals, daily wins, or money. Preserve existing Steps behavior until a separately approved change and compatibility rollout.
 
 ### Stress tests before a preset is implemented
 

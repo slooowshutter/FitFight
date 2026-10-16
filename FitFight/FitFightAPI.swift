@@ -299,6 +299,8 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var joinCode: String? = nil
     var inviteHandles: [String]?
     var removeUserIds: [UUID]?
+    /// On: the fight closes 24 hours after the end with last synced totals. Off: it waits for everyone.
+    var closesAfterGrace: Bool? = nil
 }
 
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {

@@ -29,6 +29,8 @@ export const updateFightRequestSchema = z
             .optional(),
         inviteHandles: z.array(z.string()).optional(),
         removeUserIds: z.array(z.string().uuid()).optional(),
+        /** On: close 24 hours after the end with last synced totals. Off: wait for everyone's final Steps. */
+        closesAfterGrace: z.boolean().optional(),
     })
     .superRefine((value, ctx) => {
         const hasField =
@@ -40,6 +42,7 @@ export const updateFightRequestSchema = z
             value.endsAt !== undefined ||
             value.timeZone !== undefined ||
             value.joinCode !== undefined ||
+            value.closesAfterGrace !== undefined ||
             (value.inviteHandles !== undefined &&
                 value.inviteHandles.length > 0) ||
             (value.removeUserIds !== undefined &&

@@ -19,7 +19,7 @@ function clock(
         startsAtMs: starts,
         endsAtMs: ends,
         graceEndsMs: grace,
-        allSourcesCompleteThroughEnd: false,
+        resultSettled: false,
         ...extra,
     });
 }
@@ -36,13 +36,23 @@ test("fight state follows its exact clock boundaries", () => {
     );
     assert.equal(
         clock("awaiting_final_sync", ends + hour, {
-            allSourcesCompleteThroughEnd: true,
+            resultSettled: true,
         }),
         "final",
     );
     assert.equal(clock("awaiting_final_sync", grace - 1), "awaiting_final_sync");
     assert.equal(clock("awaiting_final_sync", grace), "final");
     assert.equal(clock("final", grace + hour), "final");
+});
+
+test("a fight without a deadline waits until its result is settled", () => {
+    const later = ends + 365 * day;
+    assert.equal(clock("live", later, { graceEndsMs: null }), "awaiting_final_sync");
+    assert.equal(clock("awaiting_final_sync", later, { graceEndsMs: null }), "awaiting_final_sync");
+    assert.equal(
+        clock("awaiting_final_sync", later, { graceEndsMs: null, resultSettled: true }),
+        "final",
+    );
 });
 
 test("closer only ticks fights that can change", () => {

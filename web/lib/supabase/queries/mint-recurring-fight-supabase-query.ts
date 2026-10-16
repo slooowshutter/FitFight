@@ -38,9 +38,11 @@ export async function mintNextRecurringFight(
         if (series.current_fight_id !== previous.id) return null;
         const [inserted] = await sql`
             insert into public.fights(owner_id, name, state, starts_at, ends_at, time_zone, metric,
-                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id, friends)
+                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id, friends,
+                closes_after_grace)
             select owner_id, name, 'live', ${window.startsAt}, ${window.endsAt}, time_zone, 'steps',
-                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id, friends
+                outcome_rule, goal_policy, default_goal_value, stake_kind, stake_minor, currency, action_text, series_id, host_id, friends,
+                closes_after_grace
             from public.fights where id = ${previous.id} returning id
         `;
         const nextId = recurringRoundSchema.shape.id.parse(inserted.id);

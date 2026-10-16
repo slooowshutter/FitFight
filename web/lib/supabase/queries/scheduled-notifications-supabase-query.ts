@@ -64,6 +64,30 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
         on conflict (idempotency_key) do nothing
     `;
 
+    // A friend round waiting on someone who stopped syncing never finalizes, and the results push
+    // waits for a person's last round. A day after the month, anyone with a finished round gets it.
+    await database`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key
+        )
+        select distinct on (member.user_id, month.key)
+            member.user_id || ':friends_results:' || month.key,
+            member.user_id, fight.id, 'friends_results', 'final',
+            ${at}::timestamptz, ${at}::timestamptz + interval '24 hours',
+            '/fights/' || fight.id || '?friends=1', 'friends_results'
+        from public.fights fight
+        cross join lateral (
+            select to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM') as key
+        ) month
+        join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+        where fight.friends and fight.state = 'final'
+            and fight.ends_at <= ${at}::timestamptz - interval '1 day'
+            and fight.ends_at > ${at}::timestamptz - interval '8 days'
+        order by member.user_id, month.key, fight.id
+        on conflict (idempotency_key) do nothing
+    `;
+
     const candidates = digestCandidateSchema.array().parse(await database`
         select user_id, digest_on::text
         from private.notification_intents

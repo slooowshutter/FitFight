@@ -132,6 +132,13 @@ gh run list --branch <branch> --workflow Screenshots --limit 1
 gh run download <run-id> -n screens -D /tmp/shots
 ```
 
+The same workflow captures the App Store set: six screens per language (Fights, a live
+fight, New, an invitation, Profile and Feed) from the running app on an iPhone 17 Pro Max
+simulator in Companion preview, as 1320 x 2868 JPEGs in the `app-store-screenshots` and
+`app-store-screenshots-fr` artifacts. Companion preview uses the website's sample people and
+fights, so change `FitFight/CompanionPreview.swift` and
+`web/components/landing/landing-copy.ts` together.
+
 That is the fidelity loop: measure `docs/design/source/screenshots/app/*.png`, change the
 SwiftUI, push, download `screens`, compare the same numbers. Don't ask Marc to eyeball it.
 

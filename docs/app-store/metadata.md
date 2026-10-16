@@ -2,9 +2,7 @@
 
 English (U.S.) and French (France) App Store copy. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change.
 
-**Deferred to the next normal app release, 17 Sep 2026:** Marc chose to keep these descriptions saved instead of shipping a separate update for them. Release PR #270 is closed. No preview/main promotion, new build upload, or review submission should proceed for this standalone update. The descriptions and automatic-publication setting remain saved in the 1.1.2 draft; use them when Marc authorizes the next app release.
-
-Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French translation. Marc authorized creating the 1.1.2 App Store draft, submitting the update, and automatic publication after approval for every future release. Both descriptions and the required localized release notes below are saved in that draft. Apple blocks review submission because no 1.1.2 build is available. The public version remains 1.1.1 (202); these descriptions are not live. The branch prepares the 1.1.2 native and CI versions and automatic-release defaults. [Cloud configuration](https://github.com/slooowshutter/FitFight/actions/runs/35168925860) confirmed the live 1.1.2 draft has `releaseType: AFTER_APPROVAL` and no selected build. Other fields below remain the 1.1.1 reference metadata; promotional text is blank in the new draft.
+**1.2.0, prepared 16 Oct 2026:** Marc asked for the 1.2.0 listing to match the fitfight.app redesign of 15 Oct. The promotional text, description, What's new and screenshots below use the website's copy and sample people. 1.1.3 (226) is still in App Review, so App Store Connect cannot hold a 1.2.0 version yet; save this copy and the screenshots when the 1.2.0 version is created. Keywords and the fields in App information are unchanged.
 
 ## App information
 
@@ -28,54 +26,69 @@ Description refresh saved 17 Sep 2026 from Marc's supplied copy, with a French t
 
 ## Promotional text
 
-> Challenge friends to private Steps fights, compare Apple Health totals, and see who finishes on top. Free, with no ads or tracking.
+> Join or start a step challenge with friends, let Apple Health keep score, and find out who really walks the most. Free, with no ads or tracking.
 
 ## Description
 
-> YOUR STEP COMPETITION SCOREKEEPER
+> STEP CHALLENGES WITH FRIENDS
 >
 > Let friendly competition move you.
 >
-> Connect Apple Health, start a private group challenge, and see who records the most steps.
+> FitFight is a step challenge between you and your friends. Decide on challenge length, agree on what the winner gets or the loser does, then get some steps.
 >
 > HOW IT WORKS
 >
 > Three steps to start. One winner to finish.
 >
 > 01
-> Add your friends
-> Search by username and add to any fight.
+> Start or join a fight
+> Pick how long it lasts, type what the loser has to do or what the champion receives, and share the link with others.
 >
 > 02
 > Move to win
-> Apple Health securely keeps the score while you live your day.
+> Apple Health keeps the score while you live your day. The standings update as you walk.
 >
 > 03
 > Claim the win
-> Watch the standings, close the gap, and finish on top.
+> When time is up, the highest total wins. The loser does what you agreed.
+>
+> EVERY FIGHT AT A GLANCE
+>
+> Ahead in green, behind in orange.
+> Live standings: Apple Health totals, updated as you walk.
+> A Feed for every fight: photos, posts and very serious trash talk.
+>
+> YOUR COMPANION
+>
+> Your companion stands in for you in fights, standings and the Feed. It changes pose as your steps add up during the day. Change it any time, unlock a Special, or describe any animal and get your own.
+>
+> Free, with no ads. Specials and custom companions are optional in-app purchases.
 
 ## Keywords
 
 `step challenge,walking,fitness,friends,competition,pedometer,health`
 
-## What is new in 1.1.2
+## What is new in 1.2.0
 
-> A refreshed App Store description explaining how to start a private step challenge and follow the standings.
+> Friends: a Steps fight with each friend that runs the whole month and starts again on the 1st. Tap Friends at the top of Fights.
+> Fight Marc: when you sign up, start a 30-day Steps fight against FitFight's founder.
+> New post: send it to everyone, or choose your friends and the fights that see it.
+> Name your companion: pick a name and a line, and see your friends' companions on their profiles.
+> Change your fight's code in Edit. A repeating fight shows your last round's result when it starts again.
+> FitFight opens on your last fights, even offline, and refreshes faster.
 
 ## Screenshot set
 
-Use screenshots generated from the final release commit, showing `prod` in the version line and fictional usernames and Steps. The refresh package contains these six screens as 1320 × 2868 JPEGs for the highest-resolution 6.9-inch iPhone set; App Store Connect scales that set down for smaller iPhone displays:
+Six 1320 x 2868 JPEGs per language for the 6.9-inch iPhone set; App Store Connect scales them down for smaller iPhones. The Screenshots workflow captures them from the running app on an iPhone 17 Pro Max simulator in Companion preview, which uses the website's sample people and fights: Alex (you, Tiger), Leo (Silverback), Nina (Capybara), Sam (Hedgehog) and Theo (Panda), in Walk Wars, Eat it and Step it Up, with 8,432 steps today. Download the `app-store-screenshots` and `app-store-screenshots-fr` artifacts from a run on the release commit.
 
-1. Fights list with live private Steps Fights.
-2. Accepted Fight with totals, daily progress, and standings.
-3. New Fight setup with Steps, duration, username, and action fields.
-4. Incoming invitation with Accept and Decline.
-5. You with the companion, Apple Health, and Settings.
-6. Feed with fictional posts and photos.
+1. Fights with Walk Wars (+860), Eat it (-1,260) and Step it Up (+2,840).
+2. Eat it, a live 1v1 against Theo with totals and standings.
+3. New with the Tiger: Create, Join or Post, and two suggested fights.
+4. An invitation from Sam with Accept and Decline.
+5. Profile with Alex, the Tiger, statistics and friends.
+6. Feed with the website's three posts from Leo, Nina and Sam.
 
-The [interactive gallery](2026-09-15/index.html) contains both languages and the exact icon PNG. Refresh the visible version/build labels from the final production candidate before submission.
-
-Do not submit old design-source screenshots: they contain removed Requests, money, unsupported metrics, and mock data. Do not use real names or real Health data in marketing assets.
+The Profile capture shows the version line of the simulator build (`1.2.0 · build 1 · prod`). Do not use real names or real Health data in marketing assets.
 
 ## French (France) localization
 
@@ -91,38 +104,55 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 ### Promotional text
 
-> Lancez des défis de pas privés à vos amis, comparez vos totaux Santé d’Apple et découvrez qui termine en tête. Gratuit, sans publicité ni suivi.
+> Rejoignez ou lancez un défi de pas entre amis, laissez Santé d’Apple compter les pas et découvrez qui marche vraiment le plus. Gratuit, sans pub ni suivi.
 
 ### Description
 
-> LE COMPTEUR DE VOS DÉFIS DE PAS
+> DÉFIS DE PAS ENTRE AMIS
 >
 > Bougez plus grâce aux défis entre amis.
 >
-> Connectez Santé d’Apple, lancez un défi privé en groupe et découvrez qui fait le plus de pas.
+> FitFight est un défi de pas entre vous et vos amis. Choisissez la durée du défi, mettez-vous d’accord sur ce que gagne le vainqueur ou sur le gage du perdant, puis cumulez les pas.
 >
 > COMMENT ÇA MARCHE
 >
 > Trois étapes pour se lancer. Un seul gagnant à l’arrivée.
 >
 > 01
-> Ajoutez vos amis
-> Recherchez-les par nom d’utilisateur et invitez-les à un défi.
+> Lancez ou rejoignez un défi
+> Choisissez sa durée, écrivez le gage du perdant ou ce que remporte le champion, et partagez le lien avec les autres.
 >
 > 02
 > Bougez pour gagner
-> Santé d’Apple comptabilise vos pas en toute sécurité pendant que vous vivez votre journée.
+> Santé d’Apple compte les pas pendant que vous vivez votre journée. Le classement se met à jour à chaque pas.
 >
 > 03
 > Décrochez la victoire
-> Suivez le classement, réduisez l’écart et terminez en tête.
+> À la fin, le total le plus élevé gagne. Le perdant fait le gage convenu.
+>
+> TOUS VOS DÉFIS D’UN COUP D’ŒIL
+>
+> En avance en vert, en retard en orange.
+> Classement en direct : les totaux de Santé d’Apple, mis à jour pendant que vous marchez.
+> Un fil pour chaque défi : photos, messages et chambrage très sérieux.
+>
+> VOTRE COMPAGNON
+>
+> Votre compagnon vous représente dans les défis, le classement et le fil. Il change de pose à mesure que vos pas s’accumulent dans la journée. Changez-en quand vous voulez, débloquez un Spécial ou décrivez n’importe quel animal pour avoir le vôtre.
+>
+> Gratuit, sans pub. Les Spéciaux et les compagnons personnalisés sont des achats intégrés facultatifs.
 
 ### Keywords
 
 `défi de pas,marche,fitness,amis,compétition,podomètre,santé`
 
-### Nouveautés de la version 1.1.2
+### Nouveautés de la version 1.2.0
 
-> Une description App Store actualisée pour découvrir comment lancer un défi de pas privé et suivre le classement.
+> Amis : un défi de pas avec chaque ami, sur tout le mois, qui recommence le 1er. Touchez Amis en haut de Défis.
+> Affrontez Marc : à l’inscription, lancez un défi de pas de 30 jours contre le fondateur de FitFight.
+> Nouvelle publication : envoyez-la à tout le monde, ou choisissez les amis et les défis qui la voient.
+> Nommez votre compagnon : choisissez un nom et une phrase, et découvrez les compagnons de vos amis sur leur profil.
+> Changez le code de votre défi dans Modifier. Un défi récurrent affiche le résultat de votre dernière manche quand il recommence.
+> FitFight s’ouvre sur vos derniers défis, même hors ligne, et se met à jour plus vite.
 
-Use the same six screenshot subjects as English, rendered with the app language set to French and fictional usernames and Health data.
+Use the same six screenshot subjects as English, from the `app-store-screenshots-fr` artifact.

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ProfileActivityDay } from "@/lib/types/profiles/shared-profile";
-import { profileStepStatisticsSchema } from "@/lib/types/profiles/profile-step-statistics";
-import { profileStepStatistics } from "./profile-step-statistics";
+import { friendComparisonSchema, profileStepStatisticsSchema, tenKStreakSchema } from "@/lib/types/profiles/profile-step-statistics";
+import { friendComparison, profileStepStatistics, tenKStreak } from "./profile-step-statistics";
 
 function day(date: string, steps: number, finalized = true, timeZone: string | null = "Europe/Paris"): ProfileActivityDay {
     return { day: date, steps, finalized, time_zone: timeZone, updated_at: `${date}T23:00:00Z` };
@@ -96,4 +96,44 @@ test("civil dates stay consecutive across daylight saving, leap days, and year b
         assert.equal(stats.levels[4].current_streak, 2);
         assert.equal(stats.unknown_days, 0);
     }
+});
+
+test("the 10K streak counts today once it passes 10,000 and keeps its best run's dates for the owner", () => {
+    const values = [
+        day("2026-09-01", 12_000), day("2026-09-02", 10_000), day("2026-09-03", 11_000), day("2026-09-04", 9_999),
+        day("2026-09-14", 10_500), day("2026-09-15", 10_100), day("2026-09-16", 10_200), day("2026-09-17", 4_000, false),
+    ];
+    const owner = tenKStreak(values, "2026-09-17", true);
+    assert.equal(owner.current, 3);
+    assert.equal(owner.today_counted, false);
+    assert.deepEqual(owner.best, { days: 3, from: "2026-09-01", through: "2026-09-03" });
+    assert.equal(owner.recent?.length, 13);
+    assert.deepEqual(owner.recent?.at(-1), { day: "2026-09-16", steps: 10_200 });
+    assert.deepEqual(owner.recent?.slice(0, 2), [{ day: "2026-09-04", steps: 9_999 }, { day: "2026-09-05", steps: null }]);
+    assert.deepEqual(tenKStreakSchema.parse(owner), owner);
+    const today = tenKStreak([...values.slice(0, -1), day("2026-09-17", 10_400, false)], "2026-09-17", false);
+    assert.deepEqual(today, { goal: 10_000, current: 4, today_counted: true, best: null, recent: null });
+});
+
+test("the 10K streak waits for yesterday's final sync but ends on a final day under 10,000 or a gap", () => {
+    const run = [day("2026-09-14", 10_500), day("2026-09-15", 10_100)];
+    assert.equal(tenKStreak(run, "2026-09-17", false).current, 2);
+    assert.equal(tenKStreak([...run, day("2026-09-16", 3_000, false)], "2026-09-17", false).current, 2);
+    assert.equal(tenKStreak([...run, day("2026-09-16", 3_000)], "2026-09-17", false).current, 0);
+    assert.equal(tenKStreak(run, "2026-09-18", false).current, 0);
+});
+
+test("friends compare finalized days from the friendship through yesterday", () => {
+    const comparison = friendComparison(
+        [day("2026-09-13", 50_000), day("2026-09-14", 12_000), day("2026-09-15", 6_000), day("2026-09-16", 3_000, false)],
+        [day("2026-09-14", 8_000), day("2026-09-16", 10_000), day("2026-09-17", 20_000, false)],
+        "2026-09-14", "2026-09-17",
+    );
+    assert.deepEqual(comparison, {
+        since: "2026-09-14", days: 3,
+        you: { recorded_days: 2, total_steps: 18_000, average_steps: 9_000, best_day_steps: 12_000, ten_k_days: 1 },
+        them: { recorded_days: 2, total_steps: 18_000, average_steps: 9_000, best_day_steps: 10_000, ten_k_days: 1 },
+    });
+    assert.deepEqual(friendComparisonSchema.parse(comparison), comparison);
+    assert.equal(friendComparison([], [], "2026-09-17", "2026-09-17").days, 0);
 });

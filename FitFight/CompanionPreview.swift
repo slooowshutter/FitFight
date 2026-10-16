@@ -311,3 +311,44 @@ extension CompanionPreview {
     }
 }
 #endif
+
+#if DEBUG && targetEnvironment(simulator)
+/// The character creation screen in one state, from `FF_CHARACTER`: describe, checking, review, portraits, choosing, poses or done.
+extension CompanionPreview {
+    static var characterState: String? { isEnabled ? ProcessInfo.processInfo.environment["FF_CHARACTER"] : nil }
+
+    static let characterPromptCheck = CharacterPromptCheck(
+        note: "What colour is the hat? A colour or two makes the portraits closer to what you imagine.",
+        variations: [
+            "A cowboy pig with a chunky tan hat, a shiny silver sheriff star on a red vest and a confident grin.",
+            "A cowboy pig with a wide black hat, a blue bandana and a lasso over one shoulder, looking determined.",
+            "A tiny cowboy pig in huge boots and a sand-coloured hat, with a gold sheriff star and rosy cheeks.",
+        ]
+    )
+
+    static func characterSnapshot(_ state: String) -> CustomCharacterStoreSnapshot? {
+        // The public repo's sample portrait, so the Simulator loads a real image.
+        let pig = "\"https://raw.githubusercontent.com/slooowshutter/FitFight/develop/FitFight/Assets.xcassets/CharacterIdea-pig.imageset/image.png\""
+        func candidate(_ slot: Int, _ status: String) -> String {
+            #"{"id":"44444444-4444-4444-8444-44444444444\#(slot)","slot":\#(slot),"status":"\#(status)","image_url":\#(status == "completed" ? pig : "null"),"selected":false}"#
+        }
+        let suggestions = #"[{"name":"Sheriff Snout","line":"Rounds up steps before breakfast."},{"name":"Hambone","line":"Slow draw. Fast feet."},{"name":"Dusty","line":"Leaves a dust cloud on every walk."},{"name":"Boots","line":"Born to walk the frontier."}]"#
+        let character: String? = switch state {
+        case "portraits":
+            #"{"phase":"portraits","status":"generating","stage":"portrait","portrait_url":null,"candidates":[\#(candidate(1, "completed")),\#(candidate(2, "pending")),\#(candidate(3, "pending"))],"suggestions":[]}"#
+        case "choosing":
+            #"{"phase":"choosing","status":"generating","stage":"portrait","portrait_url":null,"candidates":[\#(candidate(1, "completed")),\#(candidate(2, "completed")),\#(candidate(3, "completed"))],"suggestions":[]}"#
+        case "poses":
+            #"{"phase":"poses","status":"generating","stage":"fitness","portrait_url":\#(pig),"candidates":[\#(candidate(1, "completed"))],"suggestions":\#(suggestions),"more_suggestions_left":2}"#
+        case "done":
+            #"{"phase":"complete","status":"complete","stage":"fitness","portrait_url":\#(pig),"candidates":[\#(candidate(1, "completed"))],"suggestions":\#(suggestions),"more_suggestions_left":2}"#
+        default: nil
+        }
+        let characters = character.map {
+            "[" + $0.replacingOccurrences(of: "{\"phase\"", with: #"{"id":"22222222-2222-4222-8222-222222222222","description":"A cowboy pig with a big hat and a sheriff star.","request_id":"33333333-3333-4333-8333-333333333333","poll_after_seconds":3,"phase""#) + "]"
+        } ?? "[]"
+        let json = #"{"app_account_token":"11111111-1111-4111-8111-111111111111","environment":"Sandbox","purchases_enabled":true,"product_id":"com.fitfight.mvp.custom_character","free_characters":0,"characters":\#(characters)}"#
+        return try? JSONDecoder().decode(CustomCharacterStoreSnapshot.self, from: Data(json.utf8))
+    }
+}
+#endif

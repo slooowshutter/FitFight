@@ -4,7 +4,6 @@ import { after, test } from "node:test";
 import postgres from "postgres";
 import { ApiError } from "@/lib/http";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
-import { aiWorkflowValues } from "@/lib/types/ai/workflow";
 import { aiImageStageValues } from "@/lib/types/ai/library";
 import { closeDatabaseClientForTests } from "@/lib/supabase/postgres";
 import {
@@ -74,8 +73,8 @@ test("completion saves Blend URLs atomically without media copies, preserves own
     };
     const version = { workflowId: "test", versionId: "test" };
     const ids: string[] = [];
-    // Companion lines are text and never enter the library.
-    for (const workflow of aiWorkflowValues.filter((value) => value !== "companion_lines")) {
+    // Text workflows (name suggestions, prompt checks) never enter the library.
+    for (const workflow of ["avatar", "fitness", "group_photo"] as const) {
         const admitted = await reserveAiRequest(
             owner,
             {

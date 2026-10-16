@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "A new way to create your own companion, all on one page: describe it, pick the words, pick a portrait, name it. After you describe your animal, we suggest three richer versions or ask about a missing detail. While it draws, play Snake and try to beat the record of every player, or tap Notify me and close the app; the notification opens your character. Paying now shows a single loader."
+        ),
+        ReleaseNote(
+            version: "1.1.3",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "When you open FitFight, it can now show a short tip, like how to start your first fight or make your own character. Tap the button to try it, or Not now to close it."
         ),
         ReleaseNote(

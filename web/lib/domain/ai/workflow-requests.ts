@@ -18,6 +18,7 @@ import {
     blendAvatarOutputSchema,
     blendCompanionLinesOutputSchema,
     blendFitnessOutputSchema,
+    blendPromptCheckOutputSchema,
     blendGroupPhotoOutputSchema,
     legacyAvatarVersionId,
     type AiRunResponse,
@@ -108,7 +109,7 @@ export async function startAiRun(
             version: config?.version ?? null,
             creditPrice: config?.creditPrice ?? null,
             sourceRequestIds:
-                input.workflow === "avatar"
+                input.workflow === "avatar" || input.workflow === "prompt_check"
                     ? []
                     : input.workflow === "group_photo"
                       ? input.parameters.characters.map(
@@ -173,6 +174,8 @@ export async function startAiRun(
                               .map((option) => `${option.name}: ${option.line}`)
                               .join("\n"),
                       }
+                    : input.workflow === "prompt_check"
+                      ? { description: input.parameters.description, language: input.parameters.language }
                     : {
                         character_portraits: portraits,
                         scene: input.parameters.scene,
@@ -381,7 +384,9 @@ export async function readAiRun(
                   ? blendFitnessOutputSchema
                   : request.workflow === "companion_lines"
                     ? blendCompanionLinesOutputSchema
-                    : blendGroupPhotoOutputSchema;
+                    : request.workflow === "prompt_check"
+                      ? blendPromptCheckOutputSchema
+                      : blendGroupPhotoOutputSchema;
         const output = schema.safeParse(run.output);
         if (output.success) {
             update.result = output.data;

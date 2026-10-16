@@ -188,26 +188,6 @@
                 }
             }
         },
-        "Portraits": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Portraits"
-                    }
-                }
-            }
-        },
-        "Poses": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Poses"
-                    }
-                }
-            }
-        },
         "Redraw the failed portraits": {
             "localizations": {
                 "fr": {
@@ -324,16 +304,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Contacter le support"
-                    }
-                }
-            }
-        },
-        "You can close the app. We will send a notification when your character is ready.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Vous pouvez fermer l’app. Nous vous enverrons une notification quand votre personnage sera prêt."
                     }
                 }
             }
@@ -645,26 +615,6 @@
                 }
             }
         },
-        "Creating five fitness images…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Création des cinq images de forme…"
-                    }
-                }
-            }
-        },
-        "Creating your portrait…": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Création de votre portrait…"
-                    }
-                }
-            }
-        },
         "Animal cards in the picker are all the same size now, whatever the name length.": {
             "localizations": {
                 "fr": {
@@ -751,16 +701,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Vos personnages achetés sont liés à ce compte FitFight."
-                    }
-                }
-            }
-        },
-        "Your characters": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Vos personnages"
                     }
                 }
             }
@@ -10292,12 +10232,22 @@
                 }
             }
         },
-        "Did not sync · forfeited": {
+        "Didn’t sync in time": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Pas synchronisé · forfait"
+                        "value": "Pas synchronisé à temps"
+                    }
+                }
+            }
+        },
+        "Last sync counted": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dernière synchro comptée"
                     }
                 }
             }
@@ -15705,6 +15655,46 @@
                 }
             }
         },
+        "If someone hasn’t synced when a fight ends, their last synced steps now count instead of a forfeit, and the fight ends as soon as nobody missing can change the result. Fights you make and friend fights wait for everyone’s final steps; fights everyone is invited to and Fight Marc close 24 hours after the end. Owners can change this in Edit fight, except for fights everyone is invited to and Fight Marc.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Si quelqu’un n’a pas synchronisé à la fin d’un défi, ses derniers pas synchronisés comptent désormais au lieu d’un forfait, et le défi se termine dès que les absents ne peuvent plus changer le résultat. Les défis que vous créez et les défis entre amis attendent les derniers pas de tout le monde ; les défis où tout le monde est invité et Affronte Marc se terminent 24 heures après la fin. Le créateur peut changer ça dans Modifier le défi, sauf pour les défis où tout le monde est invité et Affronte Marc."
+                    }
+                }
+            }
+        },
+        "Close 24 hours after the end": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Clôturer 24 heures après la fin"
+                    }
+                }
+            }
+        },
+        "Anyone not synced by then keeps their last sync": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Qui n’a pas synchronisé d’ici là garde sa dernière synchro"
+                    }
+                }
+            }
+        },
+        "Waits for everyone’s final steps": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Attend les derniers pas de tout le monde"
+                    }
+                }
+            }
+        },
         "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it.": {
             "localizations": {
                 "fr": {
@@ -15775,16 +15765,6 @@
                 }
             }
         },
-        "Each character draws three portraits. Pick your favourite, then we create five fitness images from it that change with your daily Steps.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Chaque personnage commence par trois portraits. Choisissez votre préféré, puis nous en créons cinq images de forme qui changent avec vos Pas du jour."
-                    }
-                }
-            }
-        },
         "character.free-count": {
             "extractionState": "manual",
             "localizations": {
@@ -15832,26 +15812,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Créer gratuitement"
-                    }
-                }
-            }
-        },
-        "Ideas": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Idées"
-                    }
-                }
-            }
-        },
-        "Real portraits drawn from these words. Tap one to start from it.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "De vrais portraits dessinés à partir de ces mots. Touchez-en un pour partir de là."
                     }
                 }
             }
@@ -16872,6 +16832,334 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "À l’ouverture, FitFight peut maintenant afficher un court conseil, par exemple pour lancer votre premier défi ou créer votre propre personnage. Touchez le bouton pour essayer, ou Pas maintenant pour le fermer."
+                    }
+                }
+            }
+        },
+        "New companion": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouveau compagnon"
+                    }
+                }
+            }
+        },
+        "Your words": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton texte"
+                    }
+                }
+            }
+        },
+        "character.idea-number": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Idea %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Idée %lld"
+                    }
+                }
+            }
+        },
+        "Making five fitness poses. This takes a few minutes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "On crée cinq poses fitness. Ça prend quelques minutes."
+                    }
+                }
+            }
+        },
+        "Three portraits in about a minute. You pick your favourite.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Trois portraits en une minute environ. Tu choisis ton préféré."
+                    }
+                }
+            }
+        },
+        "Notify me when it’s ready": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Préviens-moi quand c’est prêt"
+                    }
+                }
+            }
+        },
+        "Notifications are off. The Fights tab shows when it is ready.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les notifications sont coupées. L’onglet Défis indique quand c’est prêt."
+                    }
+                }
+            }
+        },
+        "You can close the app. We keep drawing.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu peux fermer l’app. On continue de dessiner."
+                    }
+                }
+            }
+        },
+        "Create another": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En créer un autre"
+                    }
+                }
+            }
+        },
+        "Play Snake while you wait": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Joue à Snake en attendant"
+                    }
+                }
+            }
+        },
+        "We could not check your idea. You can still create it as you wrote it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de vérifier ton idée. Tu peux quand même la créer telle quelle."
+                    }
+                }
+            }
+        },
+        "snake.score": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Score %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Score %lld"
+                    }
+                }
+            }
+        },
+        "Play again": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Rejouer"
+                    }
+                }
+            }
+        },
+        "Tap to play, swipe to turn": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touche pour jouer, glisse pour tourner"
+                    }
+                }
+            }
+        },
+        "Tap to continue": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touche pour continuer"
+                    }
+                }
+            }
+        },
+        "Snake game": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jeu Snake"
+                    }
+                }
+            }
+        },
+        "Better versions show up here in about a minute. You can also create it now with your words.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Des versions plus détaillées arrivent ici dans une minute environ. Tu peux aussi le créer tout de suite avec ton texte."
+                    }
+                }
+            }
+        },
+        "Reading your idea": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "On lit ton idée"
+                    }
+                }
+            }
+        },
+        "snake.record": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Record %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Record %lld"
+                    }
+                }
+            }
+        },
+        "Describe your animal": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Décris ton animal"
+                    }
+                }
+            }
+        },
+        "Pick the words we draw": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis le texte à dessiner"
+                    }
+                }
+            }
+        },
+        "After you write, we suggest richer versions.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Après ta description, on te propose des versions plus détaillées."
+                    }
+                }
+            }
+        },
+        "Pick a portrait": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis un portrait"
+                    }
+                }
+            }
+        },
+        "Drawn after you pay. About a minute.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dessinés après le paiement. Une minute environ."
+                    }
+                }
+            }
+        },
+        "Portrait chosen": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Portrait choisi"
+                    }
+                }
+            }
+        },
+        "Name it": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Donne-lui un nom"
+                    }
+                }
+            }
+        },
+        "Five fitness poses, then a name.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cinq poses fitness, puis un nom."
+                    }
+                }
+            }
+        },
+        "Now": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En cours"
+                    }
+                }
+            }
+        },
+        "Change my words": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifier mon texte"
+                    }
+                }
+            }
+        },
+        "Need an idea? Tap one.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Besoin d’une idée ? Touche-en une."
+                    }
+                }
+            }
+        },
+        "A new way to create your own companion, all on one page: describe it, pick the words, pick a portrait, name it. After you describe your animal, we suggest three richer versions or ask about a missing detail. While it draws, play Snake and try to beat the record of every player, or tap Notify me and close the app; the notification opens your character. Paying now shows a single loader.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une nouvelle façon de créer ton compagnon, tout sur une page : décris-le, choisis le texte, choisis un portrait, donne-lui un nom. Après ta description, on te propose trois versions plus détaillées ou on te pose une question sur un détail manquant. Pendant le dessin, joue à Snake pour battre le record de tous les joueurs, ou touche Préviens-moi et ferme l’app ; la notification ouvre ton personnage. Le paiement n’affiche plus qu’un seul chargement."
                     }
                 }
             }

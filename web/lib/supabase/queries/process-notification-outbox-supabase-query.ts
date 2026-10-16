@@ -124,7 +124,10 @@ export async function processNotificationOutbox(
             fight.host_id as fight_host_id, fight.friends as fight_friends,
             member.final_steps_complete, member.state::text as member_state,
             coalesce(fight.name, '') as fight_name, owner.handle as owner_handle,
-            fight.ends_at, fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' as sync_deadline,
+            fight.ends_at,
+            -- null: the Fight waits for everyone's final Steps.
+            case when fight.closes_after_grace
+                then fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' end as sync_deadline,
             -- The fight's Details screen shows its end in this zone; profiles rarely store one.
             coalesce(fight.time_zone, 'UTC') as time_zone,
             to_jsonb(prefs) as preferences

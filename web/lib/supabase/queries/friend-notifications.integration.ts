@@ -219,3 +219,53 @@ test("the friend sync reminder waits for 09:00 local on the 1st and skips anyone
         new Map([[west, ["skipped", "already_complete"]], [east, ["pending", null]]]),
     );
 });
+
+test("a friend round stuck on someone who stopped syncing does not hold back the results push", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [me, alice, sam] = users;
+    const sources: Record<string, string> = Object.fromEntries(users.map((user) => [user, randomUUID()]));
+    const [withAlice, withSam] = [randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database([withAlice, withSam])}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const user of users) {
+        await database`insert into auth.users (id) values (${user})`;
+        await database`
+            insert into public.data_sources (id, user_id, provider, source_label, connection_route)
+            values (${sources[user]}, ${user}, 'apple_health', 'Apple Health', 'healthkit')
+        `;
+    }
+    for (const [fightId, opponent] of [[withAlice, alice], [withSam, sam]] as const) {
+        await database`
+            insert into public.fights (
+                id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, friends, closes_after_grace
+            ) values (${fightId}, ${me}, 'Friends', 'live', ${startsAt}, ${endsAt}, 'UTC', 'highest_total', 'shared', true, false)
+        `;
+        for (const user of [me, opponent]) {
+            await database`
+                insert into public.fight_members (fight_id, user_id, state, selected_source_id)
+                values (${fightId}, ${user}, 'accepted', ${sources[user]})
+            `;
+        }
+    }
+    // Sam stopped syncing behind me, so that round waits for him.
+    for (const [fightId, user, value] of [[withAlice, me, 5_000], [withAlice, alice, 3_000], [withSam, me, 5_000]] as const) {
+        await database`
+            insert into private.fight_score_snapshots (
+                fight_id, user_id, source_id, cutoff_at, value, input_hash, calculation_version
+            ) values (${fightId}, ${user}, ${sources[user]}, ${endsAt}, ${value}, repeat('a', 64), 1)
+        `;
+    }
+    const results = async () => (await database<{ user_id: string }[]>`
+        select user_id from private.notification_intents
+        where kind = 'friends_results' and user_id in ${database(users)} order by user_id
+    `).map((row) => row.user_id);
+    for (const fightId of [withAlice, withSam]) await recalculateFight(fightId, new Date("2026-11-01T01:00:00Z"), database);
+    assert.deepEqual(await results(), [alice], "my results wait for my last round");
+    await enqueueScheduledNotifications(database, new Date("2026-11-01T23:00:00Z"));
+    assert.deepEqual(await results(), [alice], "not before a day has passed");
+    for (const _ of [1, 2]) await enqueueScheduledNotifications(database, new Date("2026-11-02T01:00:00Z"));
+    assert.deepEqual(await results(), [me, alice].sort(), "a day after the month, once each, never for the round still open");
+});
+

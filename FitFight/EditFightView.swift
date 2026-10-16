@@ -21,6 +21,7 @@ struct EditFightView: View {
     @State private var timeZone: TimeZone
     @State private var joinCode: String
     @State private var people: [FightComposerPerson]
+    @State private var closesAfterGrace: Bool
     @State private var username = ""
     @State private var usernameError: String?
     @State private var confirmDelete = false
@@ -35,6 +36,7 @@ struct EditFightView: View {
         _fightTitle = State(initialValue: stored == "Steps Fight" || stored == "Défi de pas" ? "" : stored)
         _actionText = State(initialValue: fight.actionText)
         _joinCode = State(initialValue: fight.joinCode ?? "")
+        _closesAfterGrace = State(initialValue: fight.graceEndsAt != nil)
         _visibilityJoinable = State(initialValue: fight.visibility == "joinable")
         _recurring = State(initialValue: fight.recurring)
         let days = max(1, Int((fight.windowEnd.timeIntervalSince(fight.windowStart) / 86_400).rounded()))
@@ -144,6 +146,7 @@ struct EditFightView: View {
                 submitLabel: .done,
                 onSubmit: { actionFocused = false }
             )
+            deadlineRow
         } else {
             composerStep
         }
@@ -207,6 +210,25 @@ struct EditFightView: View {
             if fight.joinCode != nil {
                 codeField
             }
+            deadlineRow
+        }
+    }
+
+    private var deadlineRow: some View {
+        FFGroupedRows {
+            FFGroupedRow(
+                title: String(appLocalized: "Close 24 hours after the end"),
+                subtitle: closesAfterGrace
+                    ? String(appLocalized: "Anyone not synced by then keeps their last sync")
+                    : String(appLocalized: "Waits for everyone’s final steps"),
+                systemImage: "clock",
+                subtitleTone: closesAfterGrace ? .moss : .neutral,
+                trailing: AnyView(
+                    Toggle(String(appLocalized: "Close 24 hours after the end"), isOn: $closesAfterGrace)
+                        .labelsHidden()
+                        .tint(theme.mossFill)
+                )
+            )
         }
     }
 
@@ -351,7 +373,8 @@ struct EditFightView: View {
                 timeZone: canEditStart && timeZone.identifier != fight.timeZone ? timeZone.identifier : nil,
                 joinCode: fight.joinCode != nil && joinCode != fight.joinCode ? joinCode : nil,
                 inviteHandles: inviteHandles,
-                removeUserIds: Array(removeUserIds)
+                removeUserIds: Array(removeUserIds),
+                closesAfterGrace: closesAfterGrace != (fight.graceEndsAt != nil) ? closesAfterGrace : nil
             )
             if saved {
                 dismiss()

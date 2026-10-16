@@ -391,7 +391,7 @@ export async function dueCustomCharacterPurchases(database: Sql = createDatabase
             (
                 not exists (select 1 from private.ai_requests request
                     where request.user_id = account.user_id and request.resource_id is distinct from purchase.id
-                        and request.workflow <> 'companion_lines'
+                        and request.workflow not in ('companion_lines', 'prompt_check')
                         and request.status in ('starting', 'pending', 'running', 'start_unconfirmed'))
                 and not exists (select 1 from private.ai_requests request
                     where request.resource_id = purchase.id and request.workflow = 'fitness')
@@ -399,7 +399,7 @@ export async function dueCustomCharacterPurchases(database: Sql = createDatabase
                     (
                         not exists (select 1 from private.custom_character_portraits portrait where portrait.purchase_id = purchase.id)
                         and not exists (select 1 from private.ai_requests request
-                            where request.user_id = account.user_id and request.workflow <> 'companion_lines'
+                            where request.user_id = account.user_id and request.workflow not in ('companion_lines', 'prompt_check')
                                 and request.status in ('starting', 'pending', 'running', 'start_unconfirmed'))
                         and (not exists (select 1 from private.ai_requests request where request.resource_id = purchase.id)
                             or exists (select 1 from private.ai_requests request

@@ -128,7 +128,7 @@ export async function readNotificationContent(
 
     const deadline = new Intl.DateTimeFormat(fr ? "fr-FR" : "en-GB", {
         timeZone: row.time_zone, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-    }).format(row.kind === "final_sync" ? row.sync_deadline : row.ends_at);
+    }).format(row.kind === "final_sync" ? (row.sync_deadline ?? row.ends_at) : row.ends_at);
     let alert = notificationAlert(row.copy_key, locale);
     switch (row.kind) {
         case "fight_invite":
@@ -143,9 +143,11 @@ export async function readNotificationContent(
                 + (fr ? ` Fin : ${deadline}.` : ` Ends ${deadline}.`) };
             break;
         case "final_sync":
-            alert = { title: row.fight_name, body: fr
-                ? `Défi terminé. Ouvre FitFight avant le ${deadline} pour envoyer tes derniers pas.`
-                : `Fight ended. Open FitFight before ${deadline} to submit your final steps.` };
+            alert = { title: row.fight_name, body: row.sync_deadline === null
+                ? (fr ? "Défi terminé. Ouvre FitFight pour envoyer tes derniers pas." : "Fight ended. Open FitFight to submit your final steps.")
+                : fr
+                    ? `Défi terminé. Ouvre FitFight avant le ${deadline} pour envoyer tes derniers pas.`
+                    : `Fight ended. Open FitFight before ${deadline} to submit your final steps.` };
             break;
         case "fight_ended":
             alert = { title: row.fight_name, body: fr ? "Défi terminé. Les résultats sont en attente des derniers pas." : "Fight ended. Results are waiting for the final steps." };

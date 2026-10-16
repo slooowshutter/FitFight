@@ -159,12 +159,55 @@ test("either friend changes only the action of a friend round; the app's other f
         ["/rest/v1/fights", { name: "Friends", action_text: "Buy the coffee" }],
         ["/rest/v1/fight_series", { name: "Friends", action_text: "Buy the coffee" }],
     ]);
+    patches.length = 0;
+    await updateFight(other, fightId, { closesAfterGrace: true }, admin, new Date("2026-09-15T12:00:00Z"));
+    assert.deepEqual(patches, [["/rest/v1/fights", { closes_after_grace: true }]]);
 
     member = null;
     await assert.rejects(
         updateFight(other, fightId, { actionText: "Nope" }, admin, new Date("2026-09-15T12:00:00Z")),
         (error: unknown) => error instanceof ApiError && error.status === 403,
     );
+});
+
+test("the owner switches the final-sync deadline, but never off for Fight Marc or a fight everyone is in", async () => {
+    const fight = {
+        id: fightId, owner_id: owner, name: "Fight Marc", state: "live", starts_at: startsAt, ends_at: endsAt,
+        action_text: null, series_id: seriesId, time_zone: "UTC", host_id: other as string | null, friends: false,
+    };
+    const series = { suggested: false, join_code: "PGG7" };
+    const patches: Array<[string, unknown]> = [];
+    const admin = createClient("https://update-fight.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: async (input, init) => {
+            const request = new Request(input, init);
+            if (request.method === "GET" && new URL(request.url).pathname === "/rest/v1/fight_series") {
+                return Response.json(series);
+            }
+            if (request.method === "GET") return Response.json([fight]);
+            patches.push([new URL(request.url).pathname, await request.json()]);
+            return new Response(null, { status: 204 });
+        } },
+    });
+    const { updateFight } = await import("./update-fight-supabase-query");
+    const now = new Date("2026-09-15T12:00:00Z");
+    await assert.rejects(
+        updateFight(owner, fightId, { closesAfterGrace: false }, admin, now),
+        (error: unknown) => error instanceof ApiError && error.status === 403,
+    );
+    assert.deepEqual(patches, []);
+    fight.host_id = null;
+    for (const shared of [{ suggested: false, join_code: "PGG7" }, { suggested: true, join_code: "K7M2" }]) {
+        Object.assign(series, shared);
+        await assert.rejects(
+            updateFight(owner, fightId, { closesAfterGrace: false }, admin, now),
+            (error: unknown) => error instanceof ApiError && error.status === 403,
+        );
+    }
+    assert.deepEqual(patches, []);
+    Object.assign(series, { suggested: false, join_code: "K7M2" });
+    await updateFight(owner, fightId, { closesAfterGrace: false }, admin, now);
+    assert.deepEqual(patches, [["/rest/v1/fights", { closes_after_grace: false }]]);
 });
 
 test("owner can rename a live fight without touching membership", async (t) => {

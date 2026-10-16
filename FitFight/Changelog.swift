@@ -43,6 +43,20 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "If someone hasn’t synced when a fight ends, their last synced steps now count instead of a forfeit, and the fight ends as soon as nobody missing can change the result. Fights you make and friend fights wait for everyone’s final steps; fights everyone is invited to and Fight Marc close 24 hours after the end. Owners can change this in Edit fight, except for fights everyone is invited to and Fight Marc."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 16,
+            notes: "A new way to create your own companion, all on one page: describe it, pick the words, pick a portrait, name it. After you describe your animal, we suggest three richer versions or ask about a missing detail. While it draws, play Snake and try to beat the record of every player, or tap Notify me and close the app; the notification opens your character. Paying now shows a single loader."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "When you open FitFight, it can now show a short tip, like how to start your first fight or make your own character. Tap the button to try it, or Not now to close it."
         ),
         ReleaseNote(

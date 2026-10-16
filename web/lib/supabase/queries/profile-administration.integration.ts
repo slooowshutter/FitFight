@@ -43,8 +43,8 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     await assert.rejects(readProfileMeasurements(outsider, database));
     await database`insert into public.fight_series(id, owner_id, visibility, recurring, duration_seconds, name, time_zone, join_code)
         values (${seriesId}, ${owner}, 'invite_only', true, 259200, 'Ordinary public fight', 'UTC', ${randomJoinCode()})`;
-    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, series_id)
-        values (${fightId}, ${owner}, 'Ordinary public fight', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared', ${seriesId})`;
+    await database`insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, series_id, closes_after_grace)
+        values (${fightId}, ${owner}, 'Ordinary public fight', 'live', now() - interval '1 hour', now() + interval '1 hour', 'UTC', 'highest_total', 'shared', ${seriesId}, false)`;
     await database`update public.fight_series set current_fight_id = ${fightId} where id = ${seriesId}`;
     await database`insert into public.fight_members(fight_id, user_id, state, accepted_at) values (${fightId}, ${owner}, 'accepted', now())`;
     await database`insert into public.fight_series_members(series_id, user_id, state) values (${seriesId}, ${owner}, 'accepted')`;
@@ -52,6 +52,8 @@ test("suggestions serialize privacy, joining, stopping and recurring roster chan
     await administerFight(owner, fightId, { visibility: "joinable" }, database);
     await setFightSuggested(owner, fightId, true, database);
     await setFightSuggested(owner, fightId, true, database);
+    const [suggestedRound] = await database`select closes_after_grace from public.fights where id = ${fightId}`;
+    assert.equal(suggestedRound.closes_after_grace, true, "everyone is invited, so the round closes 24 hours after the end");
     for (const id of [guest, outsider]) {
         const [member] = await database`select state::text from public.fight_members where fight_id = ${fightId} and user_id = ${id}`;
         const [seriesMember] = await database`select state::text from public.fight_series_members where series_id = ${seriesId} and user_id = ${id}`;

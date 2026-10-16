@@ -148,6 +148,27 @@ struct CustomCharacterAdvanceBody: Encodable {
     }
 }
 
+/// The AI's review of a description: an optional question or warning, and three rewrites to pick from.
+struct CharacterPromptCheck: Decodable {
+    let note: String?
+    let variations: [String]
+}
+
+/// A Blend prompt check on `ai/runs`. It takes about a minute: poll while `pending` or `running`.
+struct CharacterPromptCheckRun: Decodable {
+    let requestID: UUID
+    let status: String
+    let pollAfterSeconds: Int?
+    let check: CharacterPromptCheck?
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case requestID = "request_id"
+        case pollAfterSeconds = "poll_after_seconds"
+        case check = "data"
+    }
+}
+
 @MainActor
 final class CustomCharacterPurchases: ObservableObject {
     @Published private(set) var snapshot: CustomCharacterStoreSnapshot?
@@ -190,6 +211,13 @@ final class CustomCharacterPurchases: ObservableObject {
     }
     private func pendingKey(_ userID: UUID) -> String { "ff.character.pending.\(userID.uuidString)" }
     private func pendingSinceKey(_ userID: UUID) -> String { "ff.character.pending.since.\(userID.uuidString)" }
+
+    #if DEBUG && targetEnvironment(simulator)
+    /// Simulator preview only: shows one fixed state without a backend.
+    func showPreview(_ snapshot: CustomCharacterStoreSnapshot) {
+        self.snapshot = snapshot
+    }
+    #endif
 
     func observe(session: SessionStore) async {
         ownerID = session.profile?.userId

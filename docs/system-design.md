@@ -741,15 +741,15 @@ Respect provider response rate-limit headers. User pull-to-refresh requests a sy
 
 ### Fight close
 
-Default final-sync grace: **24 hours**, visible before acceptance.
+Final-sync grace: **24 hours**, a per-fight setting the owner can change. It starts on for the Everybody fight, Suggested Fights and founder rounds, and off for fights people make and friend rounds, which wait for everyone (Marc, 16 Oct 2026).
 
 At `ends_at`:
 
 1. Move the Fight to `awaiting_final_sync`; stop counting event times outside the window.
 2. Immediately notify every accepted member that the Fight ended and ask device-source members to open FitFight for a final HealthKit sync.
 3. Continue accepting late-arriving provider records whose event times are inside the window.
-4. Finalize early only when every accepted member's source is complete through `ends_at`.
-5. Send one reminder to members whose source is still incomplete, then finalize when the grace expires using the disclosed incomplete-data rule.
+4. Finalize early when no missing final sync can change a rank: every accepted member's source is complete through `ends_at`, or the only incomplete member is already ahead of everyone else.
+5. Send one reminder to members whose source is still incomplete, then finalize when the grace expires, ranking incomplete members by their last verified totals.
 6. Store the final input revision and scoring engine version atomically with results.
 
 The default incomplete-data rule should be “score only verified data received by the deadline and clearly mark it incomplete,” not invent activity. Money-stake Fights should remain informal until disputes and the legal payment model are designed.
@@ -1080,7 +1080,7 @@ Provider integrations require sandbox fixtures and a replay harness. Never make 
 - A Fight may start immediately without waiting or be scheduled. Invitations created before start remain joinable during `live`; late members receive the common full window from accessible history, and their acceptance recomputes lineup-dependent ranks, Proportional shares, and informational stakes. New invitations cannot be created after start.
 - Personal targets lock when an accepted membership or Fight locks; a late member selects and locks theirs at acceptance. Another person never sets a member's final target.
 - Result rules are Highest, Last loses, Ranking zones, Proportional, and Reach. Production still ships only Highest. The current Steps-only API represents Highest as `highest_total` and Hit Your Goal as `hit_your_goal` for backward compatibility. Last loses, ranking zones, and optional `highest.count` stay in [`fight-rules.md`](fight-rules.md) until product moves them up.
-- Final-sync grace is 24 hours, with immediate/end reminders, early completion when all sources are complete, and verified-data-plus-incomplete fallback.
+- Final-sync grace is a per-fight 24-hour setting (on by default for the Everybody fight, Suggested Fights and founder rounds, off for fights people make and friend rounds), with immediate/end reminders, early completion when no missing sync can change a rank, and verified-data-plus-incomplete fallback.
 - Health/activity history lives in `private`; shared Fight products live in RLS-protected `public`. Canonical history has no automatic age-based deletion.
 - The monorepo uses Apache-2.0, with FitFight identity protected separately by trademark.
 - One bundle ID is used; TestFlight always targets staging, while the App Store flow targets production.

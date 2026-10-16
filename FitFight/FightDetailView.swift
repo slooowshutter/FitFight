@@ -820,9 +820,10 @@ struct FightDetailView: View {
     }
 
     private var settlementTitleColor: Color {
-        guard you?.finalStepsComplete == true else { return theme.emberText }
-        let submitted = fight.standings.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
-        return submitted.first?.person.isYou == true ? theme.mossText : theme.emberText
+        guard let you, you.finalStepsComplete == true else { return theme.emberText }
+        let racers = fight.standings.filter { !$0.invited && !$0.deferred && $0.person.id != you.person.id }
+        if racers.contains(where: { $0.score > you.score }) { return theme.emberText }
+        return racers.contains { $0.score == you.score } ? theme.text : theme.mossText
     }
 
     private var deferredHero: some View {
@@ -1019,10 +1020,10 @@ struct FightDetailView: View {
 
     private func pendingStandingRow(_ row: Standing, contextFight: Fight, radius: CGFloat) -> some View {
         let needsSync = row.finalStepsComplete != true
-        let submitted = contextFight.standings.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
-        let rank = submitted.firstIndex { $0.id == row.id }.map { $0 + 1 }
+        // A missing final sync keeps its last synced total, so it counts toward every rank.
+        let rank = contextFight.standings.filter { !$0.invited && !$0.deferred && $0.score > row.score }.count + 1
         return HStack(spacing: 13) {
-            Text(needsSync ? "-" : "\(rank ?? 0)")
+            Text(needsSync ? "-" : "\(rank)")
                 .ffType(.button)
                 .foregroundStyle(needsSync ? theme.textFaint : (rank == 1 ? theme.gold : theme.textTertiary))
                 .frame(width: 22)

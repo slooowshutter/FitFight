@@ -43,6 +43,7 @@ type PairRound = {
     visibility: string;
     recurring: boolean;
     current_fight_id: string | null;
+    closes_after_grace: boolean;
     id: string;
     state: string;
     starts_at: string;
@@ -86,7 +87,7 @@ async function pairRounds(userA: string, userB: string) {
             series.current_fight_id, fight.id, fight.state::text as state,
             to_char(fight.starts_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as starts_at,
             to_char(fight.ends_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ends_at,
-            fight.time_zone, fight.name, fight.friends, fight.host_id,
+            fight.time_zone, fight.name, fight.friends, fight.host_id, fight.closes_after_grace,
             (select count(*)::int from public.fight_members as member
                 where member.fight_id = fight.id and member.state = 'accepted') as accepted,
             (select count(*)::int from public.fight_members as member
@@ -150,6 +151,7 @@ test("accepting a friend starts one round from the 1st, scored from Steps alread
         [requester, FRIEND_FIGHT_NAME, "invite_only", true, false, round.id],
     );
     assert.deepEqual([round.accepted, round.sourced], [2, 1], "a friend who never synced joins without a source");
+    assert.equal(round.closes_after_grace, false, "friend rounds wait for everyone's final Steps");
     const [made] = await database<{ sources: number }[]>`
         select count(*)::int as sources from public.data_sources where user_id = ${recipient}
     `;
@@ -295,6 +297,7 @@ test("the next friend round runs to the end of the next calendar month", async (
         [next.starts_at, next.ends_at, next.friends, next.name, next.accepted, next.sourced, next.current_fight_id],
         [round.ends_at, following.endsAt, true, FRIEND_FIGHT_NAME, 2, 0, nextId],
     );
+    assert.equal(next.closes_after_grace, false, "the next month keeps the round's final-sync setting");
     const [made] = await database<{ sources: number }[]>`
         select count(*)::int as sources from public.data_sources where user_id = any(${database.array(users)}::uuid[])
     `;
@@ -315,6 +318,25 @@ test("a friend's own app open closes their ended round and starts the next month
     assert.deepEqual(rounds.map((item) => [item.id === round.id, item.state]),
         [[true, "awaiting_final_sync"], [false, "live"]]);
     assert.equal(rounds[1].starts_at, new Date(endedAt).toISOString());
+});
+
+test("a friend with no Steps on the last date completes once a later date is stored", async (t) => {
+    const users = await createUsers(2);
+    const [walker, resting] = users;
+    t.after(() => removeUsers(users));
+    await befriend(walker, resting);
+    const [round] = await pairRounds(walker, resting);
+    const day = (offset: number) => civilDayStamp(new Date(Date.now() - offset * 86_400_000), FRIEND_FIGHT_TIME_ZONE);
+    await database`
+        update public.fights set starts_at = ${civilDayBounds(day(3), FRIEND_FIGHT_TIME_ZONE).startsAt.toISOString()},
+            ends_at = ${civilDayBounds(day(2), FRIEND_FIGHT_TIME_ZONE).endsAt.toISOString()}, state = 'awaiting_final_sync'
+        where id = ${round.id}
+    `;
+    await uploadSteps(walker, { [day(3)]: 3_000 }, FRIEND_FIGHT_TIME_ZONE);
+    assert.deepEqual(await memberScore(round.id, walker), { value: 3_000, complete: false }, "the last date may still come");
+    await uploadSteps(resting, { [day(3)]: 4_000, [day(1)]: 500 }, FRIEND_FIGHT_TIME_ZONE);
+    assert.deepEqual(await memberScore(round.id, resting), { value: 4_000, complete: true },
+        "no Steps on the last date: the next stored date shows it ended");
 });
 
 test("each friend is scored by their own local days and completes once their last day is", async (t) => {

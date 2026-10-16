@@ -30,6 +30,7 @@ export const ERROR_CODES = {
     character_portrait_not_ready: "character_portrait_not_ready",
     character_retry_limit: "character_retry_limit",
     suggestions_limit: "suggestions_limit",
+    snake_too_soon: "snake_too_soon",
     no_free_characters: "no_free_characters",
     already_member: "already_member",
     fight_not_joinable: "fight_not_joinable",

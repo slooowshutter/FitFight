@@ -100,10 +100,10 @@ export async function ensureFriendFights(database: Sql, userId: string, friendId
                 : await sql<{ id: string }[]>`
                     insert into public.fights (
                         owner_id, name, state, starts_at, ends_at, time_zone, metric,
-                        outcome_rule, goal_policy, stake_kind, action_text, series_id, friends
+                        outcome_rule, goal_policy, stake_kind, action_text, series_id, friends, closes_after_grace
                     )
                     select owner_id, ${FRIEND_FIGHT_NAME}, 'live', ${month.startsAt}, ${month.endsAt},
-                        ${FRIEND_FIGHT_TIME_ZONE}, 'steps', 'highest_total', 'shared', 'action', action_text, id, true
+                        ${FRIEND_FIGHT_TIME_ZONE}, 'steps', 'highest_total', 'shared', 'action', action_text, id, true, false
                     from public.fight_series where id = ${series.id}
                     on conflict (series_id, starts_at) where series_id is not null
                     do update set state = case when fights.state = 'cancelled' then 'live' else fights.state end

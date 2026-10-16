@@ -41,7 +41,7 @@ export const fightSnapshotSchema = z.object({
             starts_at: timestampSchema,
             ends_at: timestampSchema,
             time_zone: z.string().optional(),
-            grace_ends_at: timestampSchema,
+            grace_ends_at: timestampSchema.nullable(),
             action_text: z.string().nullable(),
             series_id: z.string().uuid().nullable(),
             /** Always sent by current servers; absent from older responses. */

@@ -299,6 +299,8 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var joinCode: String? = nil
     var inviteHandles: [String]?
     var removeUserIds: [UUID]?
+    /// On: the fight closes 24 hours after the end with last synced totals. Off: it waits for everyone.
+    var closesAfterGrace: Bool? = nil
 }
 
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
@@ -932,6 +934,35 @@ struct FitFightAPI {
     func claimFreeCustomCharacter(description: String, idempotencyKey: UUID, accessToken: String) async throws -> CustomCharacterClaim {
         try await post(path: "me/custom-characters/free", accessToken: accessToken, body: ["description": description],
                        idempotencyKey: idempotencyKey.uuidString.lowercased())
+    }
+
+    func snakeRecord(accessToken: String) async throws -> SnakeRecord {
+        try await get(path: "snake/scores", accessToken: accessToken, expected: [200])
+    }
+
+    /// Keeps a finished Snake game and returns the record, this game included.
+    func recordSnakeScore(_ score: Int, milliseconds: Int, accessToken: String) async throws -> SnakeRecord {
+        try await post(path: "snake/scores", accessToken: accessToken, body: ["score": score, "duration_ms": milliseconds])
+    }
+
+    /// Starts the Blend review of a description before it is bought. `language` is `en` or `fr`.
+    func startPromptCheck(description: String, language: String, idempotencyKey: UUID, accessToken: String) async throws -> CharacterPromptCheckRun {
+        try await post(path: "ai/runs", accessToken: accessToken,
+                       body: PromptCheckRequest(parameters: .init(description: description, language: language)),
+                       idempotencyKey: idempotencyKey.uuidString.lowercased(), expected: [200, 202])
+    }
+
+    func promptCheck(requestID: UUID, accessToken: String) async throws -> CharacterPromptCheckRun {
+        try await get(path: "ai/runs/\(requestID.uuidString.lowercased())", accessToken: accessToken, expected: [200])
+    }
+
+    private struct PromptCheckRequest: Encodable {
+        struct Parameters: Encodable {
+            let description: String
+            let language: String
+        }
+        let workflow = "prompt_check"
+        let parameters: Parameters
     }
 
     func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {

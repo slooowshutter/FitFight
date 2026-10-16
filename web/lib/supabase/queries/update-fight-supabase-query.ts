@@ -68,6 +68,32 @@ export async function updateFight(
         }
     }
 
+    if (fight.host_id && input.closesAfterGrace === false) {
+        // Marc hosts every founder round: one waiting forever would stay on his Fights.
+        throw new ApiError(
+            403,
+            ERROR_CODES.forbidden,
+            "Fight Marc rounds always close 24 hours after the end",
+        );
+    }
+    if (input.closesAfterGrace === false && fight.series_id) {
+        // Everyone is invited to these, so one person who never syncs would hold the whole fight.
+        const { data: series, error } = await admin
+            .from("fight_series")
+            .select("suggested, join_code")
+            .eq("id", fight.series_id)
+            .maybeSingle();
+        if (error) {
+            throw new ApiError(500, ERROR_CODES.db_error, "Could not load fight");
+        }
+        if (series?.suggested === true || series?.join_code === APP_WIDE_JOIN_CODE) {
+            throw new ApiError(
+                403,
+                ERROR_CODES.forbidden,
+                "Fights everyone is invited to always close 24 hours after the end",
+            );
+        }
+    }
     if (fight.host_id) {
         // A founder fight keeps its schedule and stays private. Edit screens send these on every save.
         input = {
@@ -80,8 +106,9 @@ export async function updateFight(
         };
     }
     if (fight.friends) {
-        // A friend round keeps its name, month, repetition, privacy and pair. Only the action changes.
-        input = { actionText: input.actionText };
+        // A friend round keeps its name, month, repetition, privacy and pair. Only the action and the
+        // final-sync deadline change.
+        input = { actionText: input.actionText, closesAfterGrace: input.closesAfterGrace };
     }
 
     const removeIds = [...new Set(input.removeUserIds ?? [])];
@@ -209,6 +236,9 @@ export async function updateFight(
     }
     if (input.timeZone !== undefined) {
         fightPatch.time_zone = input.timeZone;
+    }
+    if (input.closesAfterGrace !== undefined) {
+        fightPatch.closes_after_grace = input.closesAfterGrace;
     }
     if (Object.keys(fightPatch).length > 0) {
         const { error } = await admin

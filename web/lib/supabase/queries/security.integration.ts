@@ -6,6 +6,7 @@ import postgres from "postgres";
 import { deleteAccount } from "./delete-account-supabase-query";
 import { declineMembership } from "./decline-membership-supabase-query";
 import { syncHealthKitAggregates } from "./healthkit-aggregates-supabase-query";
+import { getProviderUploadContext } from "./provider-uploads-supabase-query";
 import { processActivity } from "./activity-pipeline-supabase-query";
 import { saveHealthKitDiagnosticSnapshot } from "./healthkit-diagnostics-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
@@ -164,12 +165,87 @@ test("a source watermark cannot finalize a fight without exact end snapshots", a
     );
     assert.deepEqual(
         finalized.map((row) => row.rank),
-        [1, 1],
+        [1, 2],
+        "missing final syncs rank by their last synced totals",
     );
     assert.ok(
         finalized.every(
             (row) => !row.final_steps_complete && row.finalized_at !== null,
         ),
+    );
+});
+
+test("a leader without a final sync wins at once on the last synced total", async (t) => {
+    const f = await fixture(t);
+    // The fixture accepts after the end; profile results only count members who entered in time.
+    await database`
+        update private.fight_participation_records set entered_at = ${f.startsAt} where fight_id = ${f.fightId}
+    `;
+    for (const [userId, steps, cutoff] of [
+        [f.owner, 900, new Date(Date.parse(f.endsAt) - 60_000).toISOString()],
+        [f.peer, 500, f.endsAt],
+    ] as const) {
+        await syncHealthKitAggregates(
+            userId,
+            {
+                complete_through: cutoff,
+                time_zone: "UTC",
+                merged_days: [],
+                fight_aggregates: [
+                    { fight_id: f.fightId, starts_at: f.startsAt, ends_at: f.endsAt, cutoff_at: cutoff, steps },
+                ],
+            },
+            database,
+        );
+    }
+    await recalculateFight(f.fightId, f.now, database);
+    const [fight] = await database`select state from public.fights where id = ${f.fightId}`;
+    assert.equal(fight.state, "final", "the missing leader can only add Steps");
+    const members = await database`
+        select user_id, final_value::text, rank, final_steps_complete
+        from public.fight_members where fight_id = ${f.fightId} order by rank
+    `;
+    assert.deepEqual(
+        members.map((row) => [row.user_id, row.final_value, row.rank, row.final_steps_complete]),
+        [[f.owner, "900", 1, false], [f.peer, "500", 2, true]],
+    );
+    const [context] = await database`
+        select result_summary from private.fight_record_contexts where fight_id = ${f.fightId}
+    `;
+    assert.equal(context.result_summary.rank_one_finishers, 1);
+    assert.equal(context.result_summary.first_place_finishers, 0);
+});
+
+test("a fight waiting for someone else leaves a member's upload a week after its end", async (t) => {
+    const f = await fixture(t);
+    const waiting = randomUUID();
+    await database`
+        insert into public.fights (
+            id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, closes_after_grace
+        ) values (${waiting}, ${f.owner}, 'Waiting', 'awaiting_final_sync', now() - interval '10 days',
+            now() - interval '8 days', 'UTC', 'highest_total', 'shared', false)
+    `;
+    for (const [index, userId] of f.users.entries()) {
+        await database`
+            insert into public.fight_members (fight_id, user_id, state, selected_source_id, final_steps_complete)
+            values (${waiting}, ${userId}, 'accepted', ${f.sourceIds[index]}, ${userId === f.owner})
+        `;
+    }
+    const windows = async (userId: string) =>
+        (await getProviderUploadContext(userId, database)).fight_windows.map((window) => window.fight_id).sort();
+    assert.deepEqual(await windows(f.owner), [f.fightId], "settled final Steps are not read again");
+    assert.deepEqual(await windows(f.peer), [f.fightId, waiting].sort(), "the missing member can still send theirs");
+    await syncHealthKitAggregates(
+        f.owner,
+        {
+            complete_through: f.now.toISOString(),
+            time_zone: "UTC",
+            merged_days: [],
+            fight_aggregates: [
+                { fight_id: f.fightId, starts_at: f.startsAt, ends_at: f.endsAt, cutoff_at: f.endsAt, steps: 10 },
+            ],
+        },
+        database,
     );
 });
 

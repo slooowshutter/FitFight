@@ -36,6 +36,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 16,
+            notes: "Each fight now has its own picture at the top: everyone's companions running together, drawn for your fight. A new picture comes about an hour after someone joins or changes their companion."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 16,
             notes: "If someone hasn’t synced when a fight ends, their last synced steps now count instead of a forfeit, and the fight ends as soon as nobody missing can change the result. Fights you make and friend fights wait for everyone’s final steps; fights everyone is invited to and Fight Marc close 24 hours after the end. Owners can change this in Edit fight, except for fights everyone is invited to and Fight Marc."
         ),
         ReleaseNote(

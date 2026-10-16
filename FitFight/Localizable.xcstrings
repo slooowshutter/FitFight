@@ -17174,6 +17174,26 @@
                 }
             }
         },
+        "Each fight now has its own picture at the top: everyone's companions running together, drawn for your fight. A new picture comes about an hour after someone joins or changes their companion.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chaque défi a maintenant sa propre image en haut : les compagnons de tout le monde courent ensemble, dessinés pour votre défi. Une nouvelle image arrive environ une heure après qu’une personne rejoint le défi ou change de compagnon."
+                    }
+                }
+            }
+        },
+        "Everyone in this fight running together": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tous les participants de ce défi courent ensemble"
+                    }
+                }
+            }
+        },
         "Start a new fight, join one that's already going, or post to the Feed.": {
             "localizations": {
                 "fr": {

@@ -3466,6 +3466,10 @@ components:
                             friends:
                                 type: boolean
                                 description: True for a monthly friend round. Always sent by current servers; absent from older responses.
+                            group_image_url:
+                                type: [string, "null"]
+                                format: uri
+                                description: The fight's newest group image, a transparent PNG of every runner's companion on supabase.tryblend.ai. Null until one is ready; absent from older responses.
                 members:
                     type: array
                     items:

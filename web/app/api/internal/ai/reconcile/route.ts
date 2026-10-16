@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { ApiError, apiRoute, json } from "@/lib/http";
 import { reconcileAiRuns } from "@/lib/domain/ai/reconciliation";
+import { advanceFightGroupImages } from "@/lib/domain/fight-images/advance";
 import { observeAiHttp } from "@/lib/observability/ai-request-log";
 
 export const runtime = "nodejs";
@@ -23,7 +24,12 @@ export const GET = observeAiHttp(
         ) {
             throw new ApiError(401, "unauthorized", "Unauthorized");
         }
-        return json(await reconcileAiRuns());
+        const started = performance.now();
+        const runs = await reconcileAiRuns();
+        // Fight group images share this cron, which already runs every minute in production and every five
+        // minutes on staging. They get what is left of the 60-second budget after the paid runs.
+        const fightImages = await advanceFightGroupImages(started + 52_000);
+        return json({ ...runs, fight_images: fightImages });
     }),
     "reconcile",
     "reconciler",

@@ -11,7 +11,8 @@
             "grace_ends_at": "2026-11-02T00:00:00Z",
             "action_text": "Loser buys coffee",
             "series_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-            "friends": true
+            "friends": true,
+            "group_image_url": "https://supabase.tryblend.ai/storage/v1/object/public/generated/e3fdfc29-0e4d-40c7-99db-84a9b7a0d197/6585a85a-8911-458d-9da6-cb1131b23900"
         }
     ],
     "members": [

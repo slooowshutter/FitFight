@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { aiCompanionLinesResultSchema, aiWorkflowSchema } from "@/lib/types/ai/workflow";
+import { aiCompanionLinesResultSchema, aiPromptCheckResultSchema, aiWorkflowSchema } from "@/lib/types/ai/workflow";
 import { aiCreditStateValues } from "@/lib/types/ai/credits";
 import { aiErrorCodeSchema } from "@/lib/types/ai/error";
 import {
@@ -73,7 +73,7 @@ export const aiPollRecordSchema = aiRequestRecordSchema.extend({
 export const aiRequestUpdateSchema = z.object({
     status: z.enum(aiRequestStateValues).exclude(["starting"]),
     runHandle: blendRunHandleSchema.nullable(),
-    result: z.union([z.record(z.string()), aiCompanionLinesResultSchema]).nullable(),
+    result: z.union([z.record(z.string()), aiCompanionLinesResultSchema, aiPromptCheckResultSchema]).nullable(),
     errorCode: aiErrorCodeSchema.nullable(),
     providerCompletedAt: z.string().datetime({ offset: true }).nullish(),
     /** Blend's raw run envelope, kept on the row when a run fails, is cancelled, or returns unreadable output. */
@@ -98,6 +98,7 @@ export const aiAdmissionCountsSchema = z.object({
     first_minute_start: z.coerce.date().nullable(),
     unresolved_count: z.number().int(),
     user_unresolved_id: z.string().uuid().nullable(),
+    user_checks_unresolved: z.number().int(),
 });
 
 export const aiCallerWindowSchema = z.object({

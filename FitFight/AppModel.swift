@@ -267,6 +267,9 @@ final class AppModel: ObservableObject {
     @Published private(set) var friendRounds: [Fight] = []
     /// The Friends screen, under any open fight in the Fights stack.
     @Published var showingFriends = false
+    /// The custom character screen over Fights, on `characterRouteID` when a push named one.
+    @Published var showingCharacter = false
+    var characterRouteID: UUID?
     @Published private(set) var joinableFights: [FitFightJoinableFight] = []
     @Published private(set) var suggestedFights: [FitFightJoinableFight] = []
     @Published private(set) var isLoadingDiscovery = false
@@ -1635,6 +1638,16 @@ final class AppModel: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.pendingDailyStatusKey)
         guard let components = URLComponents(string: route) else { return }
         let parts = components.path.split(separator: "/").map(String.init)
+        // A character push opens that character's screen over Fights.
+        if parts.count == 2, parts[0] == "characters", let id = UUID(uuidString: parts[1]) {
+            tab = .fights
+            openFightID = nil
+            showingHosted = false
+            showingFriends = false
+            characterRouteID = id
+            Task { @MainActor in self.showingCharacter = true }
+            return
+        }
         guard parts.count == 2, parts[0] == "fights", UUID(uuidString: parts[1]) != nil else { return }
         if components.queryItems?.contains(where: { $0.name == "activity" && $0.value == "1" }) == true {
             tab = .you

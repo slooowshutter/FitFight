@@ -92,6 +92,12 @@ struct FitFightApp: App {
                 default: break
                 }
             }
+            if let state = CompanionPreview.characterState {
+                let characters = CustomCharacterPurchases()
+                if let snapshot = CompanionPreview.characterSnapshot(state) { characters.showPreview(snapshot) }
+                _customCharacterPurchases = StateObject(wrappedValue: characters)
+                model.showingCharacter = true
+            }
             let feed = FeedStore()
             feed.posts = CompanionPreview.posts()
             let mode: Mode = ProcessInfo.processInfo.environment["FF_COMPANION_THEME"] == "day" ? .day : .night

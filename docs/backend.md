@@ -434,6 +434,47 @@ including a null active prompt for stock animals. Reusing a description still us
 the existing custom-companion PATCH. Libraries are isolated by user and cascade
 away when the account is deleted. This stores descriptions, not generated artwork.
 
+## Character prompt check (prepared 16 Oct 2026)
+
+Before buying, the app sends the description to Blend's FitFight Prompt Check
+workflow through the existing runs API: `POST /api/v1/ai/runs` with
+`{ "workflow": "prompt_check", "parameters": { "description", "language" } }`
+and an `Idempotency-Key`, then `GET /api/v1/ai/runs/{request_id}` until it
+completes. The result is `{ note, variations }`: an optional one-sentence
+question or warning (real people, brands and existing characters get "we draw
+original animals"; clothes get "everyone wears the FitFight kit"), and exactly
+three rewrites. The owner buys with their own words or a rewrite.
+
+- **Free, no character needed.** `creditPrice` is 0 and `resource_id` is null.
+  The row stays in `private.ai_requests`, like every AI request.
+- **Own limits.** Checks count separately from drawing: 3 a minute, 30 a day and
+  2 running at once per person, and their own 20 running at once overall, so
+  checking ideas never uses up drawings or their concurrency. Like name
+  suggestions, a check neither waits for nor blocks the owner's other runs.
+- **Slow.** A run takes about 45 to 60 seconds, sometimes 2 to 3 minutes when
+  several run at once. Its first read waits 20 s, then one every 5 s. The app
+  never blocks on it: "Your idea" opens at once with the owner's words, and the
+  rewrites appear when the run ends.
+- **Unreadable output** (not JSON, not exactly three rewrites) fails the run as
+  `ai_invalid_result` and keeps Blend's raw response on the row.
+
+See [Blend workflows](blend-workflows.md#configuration-and-rollout).
+
+## Snake record (prepared 16 Oct 2026)
+
+The Snake game shown while a custom character is drawn keeps every finished game
+in `private.snake_scores` (`user_id`, `score` 0 to 222, `duration_ms`; a 15 by
+15 board holds at most 222 points). `GET /api/v1/snake/scores` returns
+`{ record }`, the highest score across all players; `POST /api/v1/snake/scores`
+with `{ score, duration_ms }` saves a game and returns the record including it.
+Both need a signed-in player. A basic guard, Marc's request: the snake moves at
+most once every 80 ms, so a game needs at least 80 ms of play per point (API and
+table check), and a player's next score waits at least that game's length and
+5 s after their last one (429 `snake_too_soon`), under a per-player lock so two
+posts at once cannot both pass. Scores still come from the app,
+so a patient tampered client could reach 222 in about 18 s of claimed play.
+Rows go only when their player deletes their account (`on delete cascade`).
+
 ## Companion names and lines (prepared 15 Oct 2026)
 
 A custom character can have a name (1 to 24 characters) and a line (1 to 60),

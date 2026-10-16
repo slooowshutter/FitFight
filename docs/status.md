@@ -36,6 +36,41 @@ the first one uploads when this reaches `preview`.
 
 ---
 
+## Create your own companion: new drawer, prepared 16 Oct 2026
+
+Marc and his wife found the drawer confusing, and paying showed two spinners (the buy button and
+Restore purchases shared one busy flag) while the drawing section appeared under them. Marc picked
+the One page layout from `docs/design/source/kit/character-creator-proposals.html`: the drawer is
+one page of four parts (Describe your animal, Pick the words we draw, Pick a portrait, Name it).
+The open part has a gold border and a Now tag, finished parts fold to one line, and later parts
+are dashed with one line about what comes. One main button sits at the bottom. Restore purchases
+is a small link with its own spinner on the first part only. The "Your characters" gallery left
+the drawer; Yours already lists them, and a long press on a finished one opens its name editor.
+
+- **Prompt check (Blend):** "Next" opens "Your idea" at once and starts the new Blend workflow
+  FitFight Prompt Check through `POST /ai/runs` with workflow `prompt_check`
+  ([backend](backend.md#character-prompt-check-prepared-16-oct-2026)). A run takes about a
+  minute, so people can buy their own words right away; a question and three richer rewrites
+  appear when it ends. If the check fails, they still buy their own words. The app never says
+  "AI" ("Reading your idea"). Words can change until paying; portraits are never redone.
+- **Portraits:** tiles are portrait-shaped and show the whole figure, feet included. The chosen
+  one has a thin green border and a check.
+- **Snake record:** the board shows the record across all players
+  ([backend](backend.md#snake-record-prepared-16-oct-2026)); every finished game is saved in the
+  new `private.snake_scores` table with its playing time. A basic guard refuses scores faster
+  than the snake can move and games sent before they could have been played. The migration runs
+  with the usual preview and main merges.
+- **While it draws:** a Snake board (swipe to turn, edges wrap, the record of all players) and
+  "Notify me when it's ready", which asks for notification permission if never asked, then closes.
+  The character push (`/characters/{id}`) now opens that character's screen over Fights; before,
+  the app dropped the route.
+- **Not verified:** a real purchase, a prompt check through a deployed backend (the workflow
+  itself ran 5 times in Blend: 44 s to 2 min 52 s), the new admission and Snake SQL against a
+  database (`snake-scores.integration.ts` runs in CI),
+  and swiping in Snake on a device (the loop, wrap and drawing were checked in the Simulator).
+- One new table (`private.snake_scores`). `/ai/runs` accepts one more workflow; older builds never send it. Deploy the
+  backend before the app: an old backend instance rejects a `prompt_check` row while it drains.
+
 ## In-app alerts, prepared 15 Oct 2026
 
 Marc asked for messages inside the app that reach the right people: news for a

@@ -1196,6 +1196,8 @@ struct CompanionPicker: View {
     @State private var loadingEditions = false
     @State private var editionsError = ""
     @State private var showingGeneration = false
+    /// The character the creation screen opens on; nil with "Create your own" starts a new one.
+    @State private var generationCharacterID: UUID?
     @State private var showingGrid = false
 
     private let startWithCustom: Bool
@@ -1393,6 +1395,7 @@ struct CompanionPicker: View {
                             if character.status == .complete, let entry {
                                 Task { await equip(entry) }
                             } else {
+                                generationCharacterID = character.id
                                 showingGeneration = true
                             }
                         } label: {
@@ -1421,10 +1424,19 @@ struct CompanionPicker: View {
                         .buttonStyle(FFHapticPlainStyle())
                         .disabled(isSaving)
                         .accessibilityAddTraits(equipped ? .isSelected : [])
+                        .contextMenu {
+                            if character.status == .complete && character.suggestions != nil {
+                                Button(String(appLocalized: "Name your companion"), systemImage: "pencil") {
+                                    generationCharacterID = character.id
+                                    showingGeneration = true
+                                }
+                            }
+                        }
                     }
                     // Paid characters stay hidden while sales are off, except for an account that already bought one.
                     if CompanionPreview.isEnabled || characterPurchases.snapshot.map({ $0.purchasesEnabled || !$0.characters.isEmpty }) == true {
                         Button {
+                            generationCharacterID = nil
                             showingGeneration = true
                         } label: {
                             collectionTile(
@@ -1496,7 +1508,8 @@ struct CompanionPicker: View {
         }
         .interactiveDismissDisabled(session.needsCompanionSelection || isSaving || purchases.isBusy)
         .sheet(isPresented: $showingGeneration) {
-            PaidCharacterView(initialDescription: customPrompt)
+            PaidCharacterView(initialDescription: customPrompt, characterID: generationCharacterID,
+                              startNew: generationCharacterID == nil)
         }
         .onAppear {
             if customPrompt.isEmpty { customPrompt = companions.customPrompt }

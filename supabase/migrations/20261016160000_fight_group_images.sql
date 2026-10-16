@@ -3,7 +3,8 @@ set local lock_timeout = '5s';
 
 -- One row per group image the backend makes for a fight (web/lib/domain/fight-images). A row waits an
 -- hour after the fight's runners or companions change, runs on Blend, and ends ready, failed or cancelled.
--- Rows are kept forever; the app shows the newest ready image of each fight.
+-- A new round of a repeating fight with the same runners and companions gets a ready row reusing the last
+-- image at once (attempt_log names the source). Rows are kept forever; the app shows the newest ready image.
 create table private.fight_group_images (
     id uuid primary key default gen_random_uuid(),
     fight_id uuid not null references public.fights (id) on delete cascade,

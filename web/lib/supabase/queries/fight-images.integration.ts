@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import postgres from "postgres";
+import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import {
     claimNextFightImage,
@@ -168,4 +169,59 @@ test("a fight whose image could not start queues again; a judged failure waits f
     assert.equal(await open(), 1, "a start that never reached Blend tries again");
     await claimAndFail(false);
     assert.equal(await open(), 0, "a judged failure keeps the previous image until the runners change");
+});
+
+test("a new round of a repeating fight reuses the last image at once until its runners change", async (t) => {
+    const [owner, peer, newcomer] = [randomUUID(), randomUUID(), randomUUID()];
+    const [series, first, second, third] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from public.fights where series_id = ${series}`;
+        await database`delete from public.fight_series where id = ${series}`;
+        await database`delete from auth.users where id in (${owner}, ${peer}, ${newcomer})`;
+    });
+    await database`insert into auth.users (id) values (${owner}), (${peer}), (${newcomer})`;
+    await database`
+        insert into public.fight_series (id, owner_id, name, visibility, recurring, duration_seconds, time_zone, join_code)
+        values (${series}, ${owner}, 'Weekly', 'invite_only', true, 604800, 'UTC', ${randomJoinCode()})
+    `;
+    await database`
+        insert into public.fights (id, owner_id, name, series_id, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values
+            (${first}, ${owner}, 'Weekly', ${series}, 'live', now() - interval '6 days', now() + interval '1 hour', 'UTC', 'highest_total', 'shared'),
+            (${second}, ${owner}, 'Weekly', ${series}, 'scheduled', now() + interval '1 hour', now() + interval '8 days', 'UTC', 'highest_total', 'shared')
+    `;
+    await database`
+        insert into public.fight_members (fight_id, user_id, state, accepted_at) values
+            (${first}, ${owner}, 'accepted', now()), (${first}, ${peer}, 'accepted', now())
+    `;
+    await enqueueChangedFightImages(database);
+    await database`update private.fight_group_images set due_at = now() - interval '1 second' where fight_id = ${first}`;
+    const claimed = await claimNextFightImage(database);
+    assert.equal(claimed?.job.fight_id, first);
+    await saveFightImageRun(claimed.job.id, { layout: "trail", runners: [], workflowId: "workflow", inputs: {}, runId: "run-1" }, database);
+    await finishFightImageAttempt(claimed.job.id, { runId: "run-1", imageUrl: image, check: "{}", problems: [], pass: true }, database);
+
+    await database`
+        insert into public.fight_members (fight_id, user_id, state, accepted_at) values
+            (${second}, ${owner}, 'accepted', now()), (${second}, ${peer}, 'accepted', now())
+    `;
+    await enqueueChangedFightImages(database);
+    const reused = await database`select status, image_url, started_at from private.fight_group_images where fight_id = ${second}`;
+    assert.deepEqual(
+        reused.map((row) => [row.status, row.image_url, row.started_at]),
+        [["ready", image, null]],
+        "the same runners keep the picture with no wait and no new drawing",
+    );
+
+    await database`
+        insert into public.fights (id, owner_id, name, series_id, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${third}, ${owner}, 'Weekly', ${series}, 'scheduled', now() + interval '8 days', now() + interval '15 days', 'UTC', 'highest_total', 'shared')
+    `;
+    await database`
+        insert into public.fight_members (fight_id, user_id, state, accepted_at) values
+            (${third}, ${owner}, 'accepted', now()), (${third}, ${peer}, 'accepted', now()), (${third}, ${newcomer}, 'accepted', now())
+    `;
+    await enqueueChangedFightImages(database);
+    const drawn = await database`select status from private.fight_group_images where fight_id = ${third}`;
+    assert.deepEqual(drawn.map((row) => row.status), ["waiting"], "a new runner gets a new picture");
 });

@@ -29,9 +29,27 @@ function castKey(sql: Sql, fightId: Fragment | string) {
 /**
  * Opens a waiting image, due in an hour, for every running or upcoming fight with at least two runners whose
  * runners or companions differ from its last finished image. A fight already waiting or running is left alone,
- * so changes inside the hour fold into the one image.
+ * so changes inside the hour fold into the one image. A new round of a repeating fight first reuses, at once,
+ * the series' last ready image when its runners and companions are the same.
  */
 export async function enqueueChangedFightImages(database: Sql = createDatabaseClient()) {
+    await database`
+        insert into private.fight_group_images (fight_id, status, due_at, finished_at, cast_key, layout, runners, image_url, attempt_log)
+        select fight.id, 'ready', now(), now(), previous.cast_key, previous.layout, previous.runners, previous.image_url,
+            jsonb_build_array(jsonb_build_object('reused_from', previous.id))
+        from public.fights as fight
+        join lateral (
+            select image.id, image.cast_key, image.layout, image.runners, image.image_url
+            from private.fight_group_images as image
+            join public.fights as round on round.id = image.fight_id
+            where round.series_id = fight.series_id and round.id <> fight.id and image.status = 'ready'
+            order by image.finished_at desc, image.id desc
+            limit 1
+        ) as previous on true
+        where fight.series_id is not null and fight.state::text = any(${activeFightStates}) and fight.ends_at > now()
+            and not exists (select 1 from private.fight_group_images as own where own.fight_id = fight.id)
+            and ${castKey(database, database`fight.id`)} = previous.cast_key
+    `;
     const rows = await database`
         insert into private.fight_group_images (fight_id, due_at)
         select fight.id, now() + ${fightImageConfiguration.waitMinutes} * interval '1 minute'

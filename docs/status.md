@@ -54,7 +54,9 @@ per rolling 24 hours; app-wide, 1,000 a week and 30 at once. The check needs eve
 runner drawn once (trail) or every featured runner present (race start) and
 nobody facing left, with up to 3 tries. A failed image keeps the previous one
 and waits for the next change of runners; a failure before Blend judged a run
-(Blend or storage down) queues the fight again. Every image and attempt stays in `private.fight_group_images`. FitFight pays
+(Blend or storage down) queues the fight again. A new round of a repeating fight
+(including Fight Marc and friend fights) reuses the last picture at once while
+its runners and companions are the same. Every image and attempt stays in `private.fight_group_images`. FitFight pays
 (about $0.12 to $0.17 an image). Settings are code in
 `web/lib/types/fight-images/fight-image.ts`; it runs inside the existing
 `/api/internal/ai/reconcile` cron, so no new cron or secret.

@@ -7,6 +7,7 @@ import {
 } from "./membership-decision";
 import { fightVisibilityValues } from "./fight-visibility";
 import { fightStepCheckpointSchema } from "./fight-step-checkpoint";
+import { friendRoundLengthSchema } from "./friend-fight";
 
 const timestampSchema = z.string().datetime({ offset: true });
 
@@ -26,7 +27,7 @@ export const fightSnapshotRequestSchema = z
             }, "invalid time zone"),
         /** Only the caller's current hosted rounds, such as a founder's challengers. */
         hosted: z.boolean().optional(),
-        /** Only the caller's current friend rounds where both friends still race. */
+        /** Only the caller's friend rounds with current friends: the live ones and every ended one. */
         friends: z.boolean().optional(),
     })
     .strict();
@@ -83,6 +84,8 @@ export const fightSnapshotSchema = z.object({
             visibility: z.enum(fightVisibilityValues),
             recurring: z.boolean(),
             suggested: z.boolean(),
+            /** A friend pair's round length; null for every other series, absent from older responses. */
+            friend_round_length: friendRoundLengthSchema.nullable().optional(),
         }),
     ),
     step_days: z.array(

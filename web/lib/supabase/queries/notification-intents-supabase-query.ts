@@ -142,7 +142,7 @@ export async function enqueueFightFinalizedNotifications(
     await insertNotificationIntents(sql, rows);
 }
 
-/** One reminder per person and month, however many friend rounds they are behind in. */
+/** One reminder per person and round end, however many friend rounds ending then they are behind in. */
 export async function enqueueFriendsSyncNotifications(
     sql: Sql,
     fightId: string,
@@ -152,10 +152,10 @@ export async function enqueueFriendsSyncNotifications(
             idempotency_key, user_id, fight_id, kind, slot,
             not_before, expires_at, route, copy_key
         )
-        select member.user_id || ':friends_sync:' || to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM'),
+        select member.user_id || ':friends_sync:' || to_char(fight.ends_at at time zone fight.time_zone, 'YYYY-MM-DD'),
             member.user_id, fight.id, 'friends_sync', 't0',
-            -- West of the round's zone the last local day is not over at ends_at. 09:00 local on the 1st
-            -- avoids night pushes and stays inside the 24h grace down to UTC-12.
+            -- West of the round's zone the last local day is not over at ends_at. 09:00 local on the end
+            -- date avoids night pushes and stays inside the 24h grace down to UTC-12.
             greatest(
                 fight.ends_at,
                 ((fight.ends_at at time zone fight.time_zone)::date + time '09:00')
@@ -171,7 +171,10 @@ export async function enqueueFriendsSyncNotifications(
     `;
 }
 
-/** Each member's results push waits for the last of their friend rounds that month to finalize. */
+/**
+ * Each member's results push waits for the month to be over and the last of their friend rounds
+ * that started in it to finalize. Weekly rounds finalize inside the month; only the last one counts.
+ */
 export async function enqueueFriendsResultsNotifications(
     sql: Sql,
     fightId: string,
@@ -199,6 +202,7 @@ export async function enqueueFriendsResultsNotifications(
         ) month
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
         where fight.id = ${fightId} and fight.friends
+            and month.key < to_char(${now.toISOString()}::timestamptz at time zone fight.time_zone, 'YYYY-MM')
             and not exists (
                 select 1 from public.fights round
                 join public.fight_members mine on mine.fight_id = round.id

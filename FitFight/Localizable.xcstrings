@@ -15665,36 +15665,6 @@
                 }
             }
         },
-        "Close 24 hours after the end": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Clôturer 24 heures après la fin"
-                    }
-                }
-            }
-        },
-        "Anyone not synced by then keeps their last sync": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Qui n’a pas synchronisé d’ici là garde sa dernière synchro"
-                    }
-                }
-            }
-        },
-        "Waits for everyone’s final steps": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Attend les derniers pas de tout le monde"
-                    }
-                }
-            }
-        },
         "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it.": {
             "localizations": {
                 "fr": {
@@ -16147,26 +16117,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Amis : tu as maintenant un défi de pas avec chaque ami, qui dure tout le mois et recommence le 1er. Touche Amis en haut de Défis pour les voir, répondre aux demandes et ajouter des amis."
-                    }
-                }
-            }
-        },
-        "This month": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ce mois-ci"
-                    }
-                }
-            }
-        },
-        "Last month": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Le mois dernier"
                     }
                 }
             }
@@ -18075,6 +18025,93 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Créer ton propre compagnon est plus sobre : l’étape en cours utilise la carte habituelle, sans bordure jaune."
+                    }
+                }
+            }
+        },
+        "Length": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Durée"
+                    }
+                }
+            }
+        },
+        "Each round lasts 7 days.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chaque manche dure 7 jours."
+                    }
+                }
+            }
+        },
+        "Each round runs to the end of the month.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chaque manche dure jusqu’à la fin du mois."
+                    }
+                }
+            }
+        },
+        "friends.length-ends": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This round will end on %@."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette manche se terminera le %@."
+                    }
+                }
+            }
+        },
+        "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis : un bouton Ajouter des amis en haut, les manches passées dans l’Historique de chaque défi, et un défi entre amis peut maintenant durer 1 semaine au lieu d’un mois."
+                    }
+                }
+            }
+        },
+        "Results 24 hours after the end": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Résultats 24 heures après la fin"
+                    }
+                }
+            }
+        },
+        "Anyone who hasn’t synced by then keeps the steps they last synced.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Qui n’a pas synchronisé d’ici là garde les pas de sa dernière synchro."
+                    }
+                }
+            }
+        },
+        "Off: results wait until everyone has synced, however long that takes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Désactivé : les résultats attendent que tout le monde ait synchronisé, aussi longtemps qu’il le faut."
                     }
                 }
             }

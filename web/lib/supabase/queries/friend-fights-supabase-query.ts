@@ -4,8 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
     FRIEND_FIGHT_NAME,
     FRIEND_FIGHT_TIME_ZONE,
+    FRIEND_FIGHT_WEEK_SECONDS,
     friendFightMemberSchema,
     friendFightPairSchema,
+    type FriendRoundLength,
 } from "@/lib/types/fights/friend-fight";
 import { publishCivilDayScores } from "./activity-pipeline-supabase-query";
 import { allocateJoinCode } from "./create-fight-supabase-query";
@@ -23,17 +25,35 @@ export function calendarMonthWindow(at: Date, timeZone: string): { startsAt: str
 }
 
 /**
+ * Where a live friend round ends once its pair switches length; its start never moves. Weekly: the
+ * first 7-day mark from the start that is still ahead, never later than its current end. Monthly:
+ * the end of the current month.
+ */
+export function switchedFriendRoundEnd(
+    length: FriendRoundLength,
+    round: { starts_at: string; ends_at: string; time_zone: string },
+    now: Date,
+): string {
+    if (length === "month") return calendarMonthWindow(now, round.time_zone).endsAt;
+    const week = FRIEND_FIGHT_WEEK_SECONDS * 1000;
+    const weeks = Math.floor((now.getTime() - Date.parse(round.starts_at)) / week) + 1;
+    return new Date(Math.min(Date.parse(round.starts_at) + weeks * week, Date.parse(round.ends_at))).toISOString();
+}
+
+/**
  * Gives every accepted friendship of `userId`, or only its pair with `friendId`, a round for this
  * month. A series paused after the friendship was accepted (a leave or a block) stays paused; one
  * paused before it (the pair unfriended, then refriended) resumes with the round it had.
  */
 export async function ensureFriendFights(database: Sql, userId: string, friendId?: string): Promise<void> {
-    const month = calendarMonthWindow(new Date(), FRIEND_FIGHT_TIME_ZONE);
+    const now = new Date();
+    const month = calendarMonthWindow(now, FRIEND_FIGHT_TIME_ZONE);
     // Run once to skip pairs that need nothing, then again per pair after locking its rows, so a
     // concurrent remove, block or leave is never undone.
     const findPairs = async (sql: Sql, friend: string | null) => friendFightPairSchema.array().parse(await sql`
         select friendship.user_low, friendship.user_high, friendship.requester_id,
-            series.id as series_id, live.id as live_fight_id
+            series.id as series_id, live.id as live_fight_id, series.duration_seconds,
+            (select max(round.ends_at) from public.fights as round where round.series_id = series.id) as last_ends_at
         from private.profile_friendships as friendship
         join public.profiles as low on low.id = friendship.user_low and low.deleted_at is null
         join public.profiles as high on high.id = friendship.user_high and high.deleted_at is null
@@ -94,7 +114,15 @@ export async function ensureFriendFights(database: Sql, userId: string, friendId
                     do update set paused_at = null
                     returning id
                 `;
-            // A round cancelled by unfriending this month comes back when the pair refriends.
+            // A weekly pair stays on its 7-day grid: the week holding now, counted from its last round's
+            // end, so a refriend or a refresh before the mint never lays a month over its weeks.
+            const week = FRIEND_FIGHT_WEEK_SECONDS * 1000;
+            const anchor = current.last_ends_at?.getTime() ?? 0;
+            const weekStart = anchor + Math.floor((now.getTime() - anchor) / week) * week;
+            const window = current.duration_seconds === FRIEND_FIGHT_WEEK_SECONDS && current.last_ends_at
+                ? { startsAt: new Date(weekStart).toISOString(), endsAt: new Date(weekStart + week).toISOString() }
+                : month;
+            // A round cancelled by unfriending this month (or week) comes back when the pair refriends.
             const [round] = current.live_fight_id
                 ? [{ id: current.live_fight_id }]
                 : await sql<{ id: string }[]>`
@@ -102,7 +130,7 @@ export async function ensureFriendFights(database: Sql, userId: string, friendId
                         owner_id, name, state, starts_at, ends_at, time_zone, metric,
                         outcome_rule, goal_policy, stake_kind, action_text, series_id, friends, closes_after_grace
                     )
-                    select owner_id, ${FRIEND_FIGHT_NAME}, 'live', ${month.startsAt}, ${month.endsAt},
+                    select owner_id, ${FRIEND_FIGHT_NAME}, 'live', ${window.startsAt}, ${window.endsAt},
                         ${FRIEND_FIGHT_TIME_ZONE}, 'steps', 'highest_total', 'shared', 'action', action_text, id, true, false
                     from public.fight_series where id = ${series.id}
                     on conflict (series_id, starts_at) where series_id is not null
@@ -136,7 +164,7 @@ export async function ensureFriendFights(database: Sql, userId: string, friendId
                 select user_id, selected_source_id from public.fight_members
                 where fight_id = ${round.id} and state = 'accepted' and selected_source_id is not null
             `);
-            // Score both from Steps already stored for this month, so the card is not 0 until the next sync.
+            // Score both from Steps already stored for this round, so the card is not 0 until the next sync.
             for (const member of members) {
                 await publishCivilDayScores(sql, member.user_id, member.selected_source_id, round.id);
             }

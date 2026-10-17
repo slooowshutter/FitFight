@@ -29,6 +29,13 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 17,
+            notes: "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
             notes: "Opening FitFight no longer sometimes freezes on a blank Fights screen."
         ),
         ReleaseNote(

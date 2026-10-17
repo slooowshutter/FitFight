@@ -1642,7 +1642,7 @@ paths:
                                     description: Return only the caller's current hosted rounds, such as a founder's challengers, in the same shape. Without it, hosted rounds are left out.
                                 friends:
                                     type: boolean
-                                    description: Return only the caller's friend rounds, in the same shape. That is this month's live rounds (ends_at after now) plus, for 7 days after it ends, each pair's most recent ended round that was not cancelled (ends_at at or before now), so on the 1st a friend appears in both. Only pairs that are still accepted friends and where both members are still accepted. Without it, friend rounds are left out for everyone, so older builds never see them. /fights/refresh accepts the same flag.
+                                    description: Return only the caller's friend rounds, in the same shape. That is every round that was not cancelled, live (ends_at after now) or ended (ends_at at or before now), for the fight's History. Only pairs that are still accepted friends and where both members are still accepted in that round. Without it, friend rounds are left out for everyone, so older builds never see them. /fights/refresh accepts the same flag.
             responses:
                 "200":
                     description: One confirmed snapshot under the authenticated User's current access.
@@ -3640,6 +3640,10 @@ components:
                                 { type: string, enum: [invite_only, joinable] }
                             recurring: { type: boolean }
                             suggested: { type: boolean }
+                            friend_round_length:
+                                type: [string, "null"]
+                                enum: [month, week, null]
+                                description: A friend pair's round length, which either friend can change. null for every other series. Absent from servers before 17 Oct 2026.
                 step_days:
                     type: array
                     items:

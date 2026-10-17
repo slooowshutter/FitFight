@@ -301,6 +301,8 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var removeUserIds: [UUID]?
     /// On: the fight closes 24 hours after the end with last synced totals. Off: it waits for everyone.
     var closesAfterGrace: Bool? = nil
+    /// Friend rounds only: "month" or "week", starting with the live round.
+    var friendRoundLength: String? = nil
 }
 
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {

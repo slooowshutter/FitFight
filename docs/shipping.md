@@ -157,6 +157,22 @@ API to attach Google to an existing account with the same verified email, includ
 an Apple identity email. Hide My Email addresses do not match a Google inbox. The
 artifact installs only in Simulator, not on an iPhone or through TestFlight.
 
+To run the real app on this Mac, use `scripts/run-simulator.sh`. Each workspace gets its own
+Simulator ("FitFight <workspace>"), because workspaces install their own builds:
+
+- `scripts/run-simulator.sh`: this workspace's `npm run dev` in `web/` (port 3000) on the staging database.
+- `scripts/run-simulator.sh staging`: staging.fitfight.app.
+- `scripts/run-simulator.sh local-db [reset|stop]`: this workspace's own Supabase in Docker, with every
+  migration on the branch applied, its own Next.js server, and fake accounts @alex, @leo, @nina and
+  @sam in two fights (`scripts/local-db-seed.py`). The app signs in as @alex. Use this to test a
+  schema change before it reaches staging. `reset` wipes that database and replays every migration;
+  `stop` stops it and its server (the data stays). Ports come from `$CONDUCTOR_PORT` + 5 to 8. That
+  server leaves Notion, Cursor and push keys blank but keeps Blend, so AI requests spend real credits.
+  `GET /api/v1/environment` answers 503 there, as the integration tests expect.
+
+The script builds with the same ad-hoc signing and sets the URLs in that Simulator until it reboots.
+`scripts/run-companion-preview.sh` uses fixtures and never calls a server.
+
 ## GitHub secrets (already set)
 
 Names only. Never print values. Never ask Marc to paste the `.p8` into chat.

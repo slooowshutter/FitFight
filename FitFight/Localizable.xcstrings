@@ -17194,6 +17194,16 @@
                 }
             }
         },
+        "Opening FitFight no longer sometimes freezes on a blank Fights screen.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight ne se fige plus parfois sur un écran Défis vide à l’ouverture."
+                    }
+                }
+            }
+        },
         "The heading of New is now in French when your phone is in French.": {
             "localizations": {
                 "fr": {

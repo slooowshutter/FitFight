@@ -1,8 +1,126 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **17 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
+
+---
+
+## User feedback: username search, required title, longer loser action, Feed count, prepared 17 Oct 2026
+
+From the production Feedback tab (@fabi and @claire). Marc picked option B in
+`docs/design/source/kit/feed-unread-proposals.html`.
+
+**App:**
+- The Feed tab shows an Ember count (1-9, then 9+) of posts by other people newer than
+  the last time you opened Feed on this phone. It checks the newest feed page (10 posts)
+  when the app comes to the foreground, after the in-app alerts load, and clears when you open or leave Feed. The first
+  launch of this build starts counting from then, so nobody sees old posts as new. The
+  time is kept per account on the phone only; no server change.
+- New fight and Edit fight, People step: matching usernames show under the box as you
+  type (from 2 characters, after a 150 ms pause, at most 8, people already added hidden).
+  Typing more narrows the last results on the phone at once, and skips the server when
+  that list was under 8. Tap one to add it. With no match it says "No one has the
+  username @x.". Add refuses a username the search didn't find: tapped early, it waits
+  for the answer; if the search can't load, Add works as before and saving the fight
+  still rejects unknown usernames. Your own username keeps "Add someone else's username.".
+- The loser action takes 240 characters (was 120). Title and loser action boxes start
+  as one line and grow up to 6 lines as you type; Return still moves on or closes the
+  keyboard. The web app's New fight uses a growing text area for the loser action.
+- A fight needs a title now (Marc, 17 Oct); the loser action stays optional. New fight's
+  Next on the title step and Start, and the web app's Start, stay off until a title is
+  typed. Edit fight asks for one before Save when the fight has none; a friend round keeps
+  its name. The fight name is the title, so it never takes the loser action's 240. The
+  home page demo asks for a title too.
+
+**Contract (additive, `/api/v1`):** new `GET /profiles/search?q=` (signed in; `q` is a
+username prefix, 2-30 of `a-z 0-9 _`, a leading `@` is ignored) returns
+`{ people: [{ user_id, handle, display_name, companion_id, avatar_url }] }`: never the
+caller, deleted accounts, or anyone either side blocked; exact match first. Unlike the
+exact lookup it has no hourly cap. Create and update accept `actionText` up to 240
+characters; older apps still stop at 120. `name` stays optional, so older apps can still
+create a fight without a title; the server names it after their loser action (120 at
+most). No migration. Deploy the backend before distributing the app; on an older backend
+the search fails quietly and Add behaves as before.
+
+**Checks:** web typecheck and `npm test` pass (549 tests); the search SQL ran read-only
+on staging; simulator build succeeded; localization check passed. Typecheck, `npm test`,
+the localization checks, and the simulator build were rerun after the required title.
+Not yet seen on a device.
+
+---
+
+## Friends screen: Add friends button, History, weekly rounds, prepared 17 Oct 2026
+
+Marc picked option B from `docs/design/source/kit/friends-group-add-proposals.html` and asked
+that past friend rounds live in each fight's History instead of a "Last month" section, and
+that a friend fight can be switched from a month to 7 days.
+
+**App:** the Friends screen shows requests, then one card per friend (headed "Current" only
+when requests are above). An **Add friends** button in the header opens a sheet with the
+username search and "People you've fought with"; closing it reloads the screen. With nobody
+yet, one large Add friends button replaces it. "Last month" is gone. A friend fight's History
+tab and "Last round" banner now read friend rounds (`AppModel.seriesHistory`). Edit on a
+friend round adds **Length: 1 month / 1 week** with a line saying when this round will end.
+The 24-hour switch is now "Results 24 hours after the end", saying what happens either way:
+on, anyone not synced keeps the steps they last synced; off, results wait for everyone.
+Release note 1.2.0, English and French.
+
+**Backend:**
+- Friends snapshot (`friends: true`) returns every round with each current friend that was not
+  cancelled, instead of the live one plus the last ended one for 7 days. Series rows gain
+  `friend_round_length` (`month`, `week`, null for other series).
+- `PATCH /fights/{id}` accepts `friendRoundLength` on friend rounds, from either friend.
+  `fight_series.duration_seconds = 604800` means weekly; any other value means monthly
+  (switching back stores 30 days). Switching keeps the live round's start and moves its end:
+  weekly to the next 7-day mark from its start, never later than its current end; monthly to
+  the end of the current month. A round whose end has passed answers 409. `endsAt` from edit
+  screens is still ignored for friend rounds. No migration.
+- Mint: a weekly series' next round runs 7 days; a monthly one to the end of the next month.
+- Pushes: `friends_sync` is keyed by round end date (was start month), so weekly rounds get a
+  reminder each and monthly rounds still batch into one. `friends_results` waits for the month
+  to be over; the catch-up also waits until all that person's rounds started that month
+  ended a day ago, within 9 days of the month's end. October's results count every round
+  that started in October.
+
+**Contract:** additive. Old builds never send the new field; the snapshot only adds
+`friend_round_length` and more ended rounds. Staging builds with "Last month" keep showing the
+latest ended round per friend, now all month instead of 7 days. Old fixtures unchanged; new
+fixture `fight-snapshot-friends-history.json`. A weekly pair that becomes friends again, or
+gets a refresh before the mint, stays on its 7-day grid. Known gaps: the results push still
+opens the Friends screen, where each friend's fight shows the last round and History; the
+friends snapshot carries every ended round (about 52 a year for a weekly pair), unpaged.
+
+**Deployment order:** backend, then the app (no migration). Friend fights are on `preview`
+(staging), not production.
+
+**Verification (local, 17 Oct, on develop at 5f36e5e7):** web typecheck clean, 545 of 545
+unit tests. On a private disposable Supabase from every migration: build 113 compatibility 1
+of 1, `test:database` 143 of 144 (new: weekly switch, refriend grid, weekly pushes, full
+friend history); the one failure is the admin "fixed spans" clock-skew check, which passes
+alone. With direct access closed, before the review fixes: 139 passed, 3 skipped and the
+same one failure.
+iOS simulator build succeeded; API contract, localization, native boundary, trophy, past
+rounds and series stats checks passed. The real app ran against that database: Friends
+screen, Add friends sheet, History and the Edit length row. One review pass; its four
+findings are fixed. Not deployed; no staging or production check.
+
+---
+
+## Leaving the Everybody fight sticks, prepared 17 Oct 2026
+
+Feedback from @c_cool_la_vie (29 Sep): they could not leave "Everybody on the app". They
+left on 6 Oct, but the auto-invite on `/fights/refresh` and `/fights/snapshot` only checked
+the current round's membership, so each new round invited them again, with a push.
+
+**Fix:** the auto-invite and the invite-everyone step when a fight is marked Suggested now
+skip anyone whose series membership is `withdrawn` (they left or the owner removed them).
+Joining by code sets it back to `accepted`, so they can still come back. Declining a
+single round's invite is unchanged.
+
+**Contract:** no API or schema change, no migration. Only who gets an `invited` row and
+an invite push changes. **Checks:** invite unit tests (new regression for a leaver) and
+`npm run typecheck`. Not deployed.
 
 ---
 
@@ -59,7 +177,7 @@ everyone is invited to keep the 24-hour deadline; the owner can change it.
   broadcasts or timestamps, while PostgREST still reloads its schema; it also sends
   `notify pgrst, 'reload schema'`). Older backends ignore the column and keep the 24-hour
   rule.
-- Edit fight has a "Close 24 hours after the end" switch (owner, or either friend in a
+- Edit fight has a "Results 24 hours after the end" switch (named "Close 24 hours after the end" until 17 Oct; owner, or either friend in a
   friend round, until the fight ends): `closesAfterGrace` on `PATCH /api/v1/fights/{id}`.
   Fight Marc rounds, the Everybody fight and Suggested fights refuse switching it off
   (`403` with a reason the app shows as is, in English, since it cannot tell those
@@ -239,6 +357,21 @@ schema lint; all 333 pgTAP checks; the native contract test; an iOS simulator
 build; reference sheets rendered by the production code; one end-to-end run of
 each published workflow (5 runners passed first try, 30 runners passed on the
 retry after one runner faced left). Not yet: a staging deploy, or the image on a signed-in phone.
+
+**WebP copy and prefetch, prepared 17 Oct:** opening a fight took over 5 seconds
+on a phone because Blend's PNGs are 1.7 to 3 MB, served `no-cache`, and only
+downloaded on open. Each pass of the same cron now copies every ready image
+without one (newest first, old ones included) to a 1200-pixel WebP at quality
+90, about 300 KB, into the public `fight-group-images` bucket with a one-year
+cache, and stores it in `webp_url`. `image_url` keeps Blend's PNG. The snapshot
+serves `coalesce(webp_url, image_url)` in the same `group_image_url` field, so
+the contract and every installed build are unchanged (iOS 17 decodes WebP).
+The app downloads and decodes every fight's picture at launch and on each
+refresh, so a fight opens with it already on screen. Rollout: apply
+`20261017120000_fight_group_image_webp.sql`, deploy the backend, then the app.
+Verified locally: unit, database and build checks; one cron pass turned a real
+2.7 MB staging PNG into a 303 KB `image/webp` with `max-age=31536000` in 1.5 s;
+in the Simulator, the first frame of an opened fight already shows the picture.
 
 ---
 

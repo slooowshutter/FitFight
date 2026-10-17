@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { FRIEND_FIGHT_TIME_ZONE } from "@/lib/types/fights/friend-fight";
-import { calendarMonthWindow } from "./friend-fights-supabase-query";
+import { calendarMonthWindow, switchedFriendRoundEnd } from "./friend-fights-supabase-query";
 
 test("a friend round runs from the 1st to the next 1st in UTC", () => {
     assert.equal(FRIEND_FIGHT_TIME_ZONE, "UTC");
@@ -51,4 +51,20 @@ test("another zone keeps local midnight across daylight saving", () => {
         startsAt: "2026-12-31T15:00:00.000Z",
         endsAt: "2027-01-31T15:00:00.000Z",
     }, "already January in Tokyo");
+});
+
+test("switching length keeps the round's start and ends it at the next mark still ahead", () => {
+    const october = { starts_at: "2026-10-01T00:00:00.000Z", ends_at: "2026-11-01T00:00:00.000Z", time_zone: "UTC" };
+    assert.equal(switchedFriendRoundEnd("week", october, new Date("2026-10-03T12:00:00Z")), "2026-10-08T00:00:00.000Z");
+    assert.equal(switchedFriendRoundEnd("week", october, new Date("2026-10-17T09:00:00Z")), "2026-10-22T00:00:00.000Z",
+        "past the first week: the 3rd week mark");
+    assert.equal(switchedFriendRoundEnd("week", october, new Date("2026-10-08T00:00:00Z")), "2026-10-15T00:00:00.000Z",
+        "exactly on a mark: the next one, never now");
+    assert.equal(switchedFriendRoundEnd("week", october, new Date("2026-10-30T09:00:00Z")), "2026-11-01T00:00:00.000Z",
+        "switching to weekly never makes the round longer");
+    const weekly = { starts_at: "2026-10-29T00:00:00.000Z", ends_at: "2026-11-05T00:00:00.000Z", time_zone: "UTC" };
+    assert.equal(switchedFriendRoundEnd("month", weekly, new Date("2026-10-30T10:00:00Z")), "2026-11-01T00:00:00.000Z",
+        "back to months: the end of this month");
+    assert.equal(switchedFriendRoundEnd("month", weekly, new Date("2026-11-02T10:00:00Z")), "2026-12-01T00:00:00.000Z",
+        "a weekly round that crossed into November runs to the end of November");
 });

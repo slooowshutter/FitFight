@@ -288,7 +288,7 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                FFTabBar(tab: $model.tab, onReselect: {
+                FFTabBar(tab: $model.tab, feedBadge: model.feedUnread, onReselect: {
                     if model.tab == .feedback {
                         model.feedbackRequestFilter = RequestFilter()
                     }
@@ -302,6 +302,10 @@ struct ContentView: View {
         .task(id: scenePhase == .background) {
             guard scenePhase != .background, !CompanionPreview.isEnabled, !ScreenshotExport.isEnabled else { return }
             await model.loadInAppAlerts(session: session)
+            await model.refreshFeedUnread(session: session)
+        }
+        .onChange(of: model.tab) { old, new in
+            if old == .feed || new == .feed { model.markFeedSeen(session: session) }
         }
         // Waits behind the check-in, the notification question, and the companion picker.
         .overlay {

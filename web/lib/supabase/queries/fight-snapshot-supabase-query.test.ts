@@ -113,7 +113,7 @@ test("the friend rounds fixture carries the Friends summary and marks every roun
     assert.ok(fixture.members.every((member) => member.state === "accepted"));
 });
 
-test("on the 1st a friend appears in this month and last month, and only this month is counted", () => {
+test("an ended round comes with the live one, and only the live one is counted", () => {
     const raw = JSON.parse(
         readFileSync(
             new URL(
@@ -131,6 +131,30 @@ test("on the 1st a friend appears in this month and last month, and only this mo
     assert.ok(Date.parse(last.ends_at) <= now && last.state === "awaiting_final_sync");
     assert.ok(Date.parse(current.ends_at) > now && current.state === "live");
     assert.deepEqual(fixture.friends, { rounds: 1, leading: 1, requests: 0 });
+});
+
+test("every ended round of a weekly pair comes for History, with the series' round length", () => {
+    const raw = JSON.parse(
+        readFileSync(
+            new URL(
+                "../../../../contracts/fixtures/fight-snapshot-friends-history.json",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+    );
+    const fixture = fightSnapshotSchema.parse(raw);
+    assert.deepEqual(fixture, raw);
+    assert.deepEqual(fixture.series.map((series) => series.friend_round_length), ["week"]);
+    assert.ok(fixture.fights.every((fight) => fight.series_id === fixture.series[0].id));
+    assert.deepEqual(fixture.fights.map((fight) => fight.state), ["final", "final", "live"]);
+    assert.deepEqual(fixture.friends, { rounds: 1, leading: 1, requests: 0 }, "only the live round is counted");
+    for (const name of ["fight-snapshot", "fight-snapshot-friends"]) {
+        const older = fightSnapshotSchema.parse(JSON.parse(
+            readFileSync(new URL(`../../../../contracts/fixtures/${name}.json`, import.meta.url), "utf8"),
+        ));
+        assert.ok(older.series.every((series) => !("friend_round_length" in series)), "older responses still parse");
+    }
 });
 
 test("older snapshot responses without friend fields still parse unchanged", () => {
@@ -272,11 +296,9 @@ test("the friends and hosted flags each select only their own rounds", async () 
     await readFightSnapshot(userId, "UTC", database as never, false, true);
     await readFightSnapshot(userId, "UTC", database as never, true);
     assert.equal(filters.length, 2);
-    assert.match(filters[0], /^fight\.friends\s+and fight\.id in \(\s*select fight_id from public\.fight_members where user_id = \? and state = 'accepted'/);
+    assert.match(filters[0], /^fight\.friends and fight\.state in \('live', 'awaiting_final_sync', 'final'\)\s+and fight\.id in \(\s*select fight_id from public\.fight_members where user_id = \? and state = 'accepted'/);
     assert.match(filters[0], /friend\.user_id = any\(\?::uuid\[\]\)/);
-    assert.match(filters[0], /\(fight\.state = 'live' and fight\.ends_at > now\(\)\)/);
-    assert.match(filters[0], /last\.ends_at > now\(\) - interval '7 days'/);
-    assert.match(filters[0], /last\.state in \('live', 'awaiting_final_sync', 'final'\)/);
+    assert.doesNotMatch(filters[0], /now\(\)/, "ended rounds stay for the fight's History");
     assert.doesNotMatch(filters[0], /host_id/);
     assert.match(filters[1], /^fight\.host_id = \?/);
     assert.doesNotMatch(filters[1], /friends/);

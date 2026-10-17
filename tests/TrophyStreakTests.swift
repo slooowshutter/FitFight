@@ -4,6 +4,7 @@ import Foundation
 
 @MainActor final class AppModel {
     var fights: [Fight] = []
+    var friendRounds: [Fight] = []
 
     // PRODUCTION_METHODS
 }

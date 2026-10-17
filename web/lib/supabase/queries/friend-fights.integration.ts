@@ -416,6 +416,80 @@ test(
     },
 );
 
+test(
+    "switching to weekly ends the live round at its next 7-day mark and makes the next rounds 7 days; back to monthly runs to the month's end",
+    { skip: env.SUPABASE_CLIENT_ACCESS_CLOSED && "service-role fight updates fail with direct access closed" },
+    async (t) => {
+        const users = await createUsers(2);
+        const [owner, friend] = users;
+        t.after(() => removeUsers(users));
+        await befriend(owner, friend);
+        const [round] = await pairRounds(owner, friend);
+        const week = 7 * 86_400_000;
+        const seriesSeconds = async () => (await database<{ duration_seconds: number }[]>`
+            select duration_seconds from public.fight_series where id = ${round.series_id}
+        `)[0].duration_seconds;
+
+        // Day 11 of this month's round: it now ends at the end of its second week.
+        const now = new Date(Date.parse(round.starts_at) + 10 * 86_400_000 + 3_600_000);
+        await updateFight(friend, round.id, { friendRoundLength: "week" }, admin, now, database);
+        const [weekly] = await pairRounds(owner, friend);
+        assert.deepEqual([weekly.starts_at, weekly.ends_at],
+            [round.starts_at, new Date(Date.parse(round.starts_at) + 2 * week).toISOString()]);
+        assert.equal(await seriesSeconds(), 7 * 86_400);
+
+        await updateFight(owner, round.id, { friendRoundLength: "week", actionText: "Buy the coffee" }, admin, now, database);
+        assert.equal((await pairRounds(owner, friend))[0].ends_at, weekly.ends_at, "choosing the same length moves nothing");
+
+        const nextId = await mintNextRecurringFight(round.id, new Date(Date.parse(weekly.ends_at) + 1_000), database);
+        const next = (await pairRounds(owner, friend)).find((item) => item.id === nextId);
+        assert.ok(next);
+        assert.deepEqual([next.starts_at, Date.parse(next.ends_at) - Date.parse(next.starts_at)], [weekly.ends_at, week]);
+
+        const later = new Date(Date.parse(next.starts_at) + 3_600_000);
+        await updateFight(owner, next.id, { friendRoundLength: "month" }, admin, later, database);
+        const back = (await pairRounds(owner, friend)).find((item) => item.id === nextId);
+        assert.equal(back?.ends_at, round.ends_at, "the end of the month the pair started in");
+        assert.notEqual(await seriesSeconds(), 7 * 86_400, "the series is monthly again");
+
+        const lastDay = new Date(Date.parse(round.ends_at) - 3_600_000);
+        await updateFight(owner, next.id, { friendRoundLength: "week" }, admin, lastDay, database);
+        assert.equal((await pairRounds(owner, friend)).find((item) => item.id === nextId)?.ends_at, round.ends_at,
+            "on the last day the round keeps its end");
+        assert.equal(await seriesSeconds(), 7 * 86_400, "and the next rounds are weekly anyway");
+
+        await database`update public.fights set ends_at = ${new Date(Date.now() - 60_000)} where id = ${next.id}`;
+        await assert.rejects(updateFight(owner, next.id, { friendRoundLength: "month" }, admin, new Date(), database),
+            /This round has ended/);
+    },
+);
+
+test(
+    "a weekly pair that becomes friends again stays on its 7-day grid",
+    { skip: env.SUPABASE_CLIENT_ACCESS_CLOSED && "service-role fight updates fail with direct access closed" },
+    async (t) => {
+        const users = await createUsers(2);
+        const [owner, friend] = users;
+        t.after(() => removeUsers(users));
+        await befriend(owner, friend);
+        const [round] = await pairRounds(owner, friend);
+        await updateFight(owner, round.id, { friendRoundLength: "week" }, admin, new Date(), database);
+        const [weekly] = await pairRounds(owner, friend);
+
+        await changeFriendship(owner, friend, "remove", database);
+        await befriend(friend, owner);
+        const rounds = await pairRounds(owner, friend);
+        const live = rounds.filter((item) => item.state === "live");
+        assert.equal(live.length, 1);
+        assert.deepEqual(
+            [Date.parse(live[0].ends_at) - Date.parse(live[0].starts_at), live[0].ends_at],
+            [7 * 86_400_000, weekly.ends_at],
+            "the week holding now on the old grid, not a calendar month over earlier weeks",
+        );
+        assert.ok(Date.parse(live[0].starts_at) <= Date.now() && Date.now() < Date.parse(live[0].ends_at));
+    },
+);
+
 test("deleting an account cancels each friend round and keeps the series the friend owns", async (t) => {
     const users = await createUsers(3);
     const [leaving, staying, invited] = users;

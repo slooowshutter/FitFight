@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PersonAvatar } from "@/components/web-app/person-avatar";
 import { isJoinCode } from "@/lib/domain/fights/join-code";
@@ -204,7 +205,7 @@ function CreateFightCard() {
             ? [startsAt, endsAt]
             : presetWindow(Date.now());
         const body: z.input<typeof createFightSchema> = {
-            name: name || loser || "Steps Fight",
+            name,
             startsAt: new Date(from).toISOString(),
             endsAt: new Date(to).toISOString(),
             timeZone,
@@ -465,6 +466,7 @@ function CreateFightCard() {
                             placeholder: "Weekend walk-off",
                             value: title,
                             set: setTitle,
+                            max: 120,
                         },
                         {
                             id: "action",
@@ -472,29 +474,49 @@ function CreateFightCard() {
                             placeholder: "Cook dinner",
                             value: action,
                             set: setAction,
+                            max: 240,
                         },
                     ].map((field) => (
                         <Field key={field.id}>
                             <FieldLabel htmlFor={field.id}>
                                 {field.label}
                             </FieldLabel>
-                            <Input
-                                id={field.id}
-                                placeholder={field.placeholder}
-                                maxLength={120}
-                                value={field.value}
-                                onChange={(event) =>
-                                    field.set(event.target.value)
-                                }
-                            />
+                            {field.id === "title" ? (
+                                <Input
+                                    id={field.id}
+                                    placeholder={field.placeholder}
+                                    maxLength={field.max}
+                                    value={field.value}
+                                    onChange={(event) =>
+                                        field.set(event.target.value)
+                                    }
+                                />
+                            ) : (
+                                <Textarea
+                                    id={field.id}
+                                    placeholder={field.placeholder}
+                                    maxLength={field.max}
+                                    rows={1}
+                                    className="min-h-0 resize-none"
+                                    value={field.value}
+                                    onChange={(event) =>
+                                        field.set(
+                                            event.target.value.replace(
+                                                /\n/g,
+                                                "",
+                                            ),
+                                        )
+                                    }
+                                />
+                            )}
                             <FieldDescription className="flex justify-between gap-4">
                                 <span>
                                     {field.id === "title"
-                                        ? "Optional. If you skip a title, the action is the name of the fight."
+                                        ? "Required."
                                         : "Optional."}
                                 </span>
                                 <span className="tabular-nums">
-                                    {field.value.length}/120
+                                    {field.value.length}/{field.max}
                                 </span>
                             </FieldDescription>
                         </Field>
@@ -547,7 +569,9 @@ function CreateFightCard() {
                 <Button
                     size="lg"
                     className="w-full"
-                    disabled={creating || scheduleError !== null}
+                    disabled={
+                        creating || scheduleError !== null || !title.trim()
+                    }
                     onClick={startFight}
                 >
                     {creating ? (

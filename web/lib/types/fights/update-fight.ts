@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isJoinCode, normalizeJoinCode } from "@/lib/domain/fights/join-code";
+import { friendRoundLengthSchema } from "./friend-fight";
 import { fightVisibilitySchema } from "./joinable-fight";
 import { timeZoneSchema } from "@/lib/types/time/time-zone";
 
@@ -13,7 +14,7 @@ const dateTime = z
 export const updateFightRequestSchema = z
     .object({
         name: z.string().trim().max(120).optional(),
-        actionText: z.string().trim().max(120).optional(),
+        actionText: z.string().trim().max(240).optional(),
         visibility: fightVisibilitySchema.optional(),
         recurring: z.boolean().optional(),
         startsAt: dateTime.optional(),
@@ -31,6 +32,8 @@ export const updateFightRequestSchema = z
         removeUserIds: z.array(z.string().uuid()).optional(),
         /** On: close 24 hours after the end with last synced totals. Off: wait for everyone's final Steps. */
         closesAfterGrace: z.boolean().optional(),
+        /** Friend rounds only: switches the pair to monthly or weekly rounds, starting with the live one. */
+        friendRoundLength: friendRoundLengthSchema.optional(),
     })
     .superRefine((value, ctx) => {
         const hasField =
@@ -43,6 +46,7 @@ export const updateFightRequestSchema = z
             value.timeZone !== undefined ||
             value.joinCode !== undefined ||
             value.closesAfterGrace !== undefined ||
+            value.friendRoundLength !== undefined ||
             (value.inviteHandles !== undefined &&
                 value.inviteHandles.length > 0) ||
             (value.removeUserIds !== undefined &&

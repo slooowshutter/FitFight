@@ -77,9 +77,16 @@ export const fightImageCastRowSchema = z.object({
     companion_prompt: z.string().nullable(),
 });
 
+/** A ready image whose Blend PNG has no WebP copy yet. */
+export const fightImageWebpSourceRowSchema = z.object({
+    id: z.string().uuid(),
+    image_url: z.string().url(),
+});
+
 export type FightImageLayout = z.infer<typeof fightImageLayoutSchema>;
 export type CompanionKind = z.infer<typeof companionKindSchema>;
 export type FightImageRunner = z.infer<typeof fightImageRunnerSchema>;
 export type FightImageCheck = z.infer<typeof fightImageCheckSchema>;
 export type FightImageJobRow = z.infer<typeof fightImageJobRowSchema>;
 export type FightImageCastRow = z.infer<typeof fightImageCastRowSchema>;
+export type FightImageWebpSourceRow = z.infer<typeof fightImageWebpSourceRowSchema>;

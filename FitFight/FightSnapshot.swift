@@ -22,7 +22,7 @@ struct FitFightSnapshot: Decodable {
         let leading: Int
     }
 
-    /// The Friends card: one monthly 1v1 per accepted friend. nil from servers before
+    /// The Friends card: one 1v1 per accepted friend, monthly unless the pair chose weekly. nil from servers before
     /// 15 Oct 2026, which hides the card.
     struct Friends: Decodable {
         /// Current friend rounds.
@@ -47,6 +47,8 @@ struct SeriesRow: Decodable {
     let visibility: String
     let recurring: Bool
     let suggested: Bool
+    /// "month" or "week" for a friend pair, nil for other series and from servers before 17 Oct 2026.
+    let friendRoundLength: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -54,6 +56,7 @@ struct SeriesRow: Decodable {
         case visibility
         case recurring
         case suggested
+        case friendRoundLength = "friend_round_length"
     }
 
     init(from decoder: Decoder) throws {
@@ -63,6 +66,7 @@ struct SeriesRow: Decodable {
         visibility = try container.decode(String.self, forKey: .visibility)
         recurring = try container.decode(Bool.self, forKey: .recurring)
         suggested = try container.decodeIfPresent(Bool.self, forKey: .suggested) ?? false
+        friendRoundLength = try container.decodeIfPresent(String.self, forKey: .friendRoundLength)
     }
 }
 

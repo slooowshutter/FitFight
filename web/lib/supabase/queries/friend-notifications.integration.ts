@@ -85,7 +85,7 @@ test("friend rounds batch their round-end pushes while a normal fight keeps its 
     const syncs = await intents(friendRounds);
     assert.deepEqual(
         syncs.map((row) => [row.user_id, row.kind, row.idempotency_key]),
-        [[me, "friends_sync", `${me}:friends_sync:2026-10`]],
+        [[me, "friends_sync", `${me}:friends_sync:2026-11-01`]],
         "one sync push for the only person behind, and no per-fight pushes",
     );
     assert.ok(friendRounds.includes(syncs[0].fight_id));
@@ -269,3 +269,73 @@ test("a friend round stuck on someone who stopped syncing does not hold back the
     assert.deepEqual(await results(), [me, alice].sort(), "a day after the month, once each, never for the round still open");
 });
 
+
+test("weekly friend rounds get a sync reminder each, and the results push waits for the month and its last round", async (t) => {
+    delete process.env.APNS_KEY_ID;
+    delete process.env.APNS_PRIVATE_KEY;
+    delete process.env.APNS_TOKEN_ENCRYPTION_KEY;
+    const users = [randomUUID(), randomUUID()];
+    const [me, alice] = users;
+    const sources: Record<string, string> = Object.fromEntries(users.map((user) => [user, randomUUID()]));
+    const weeks = [
+        { id: randomUUID(), startsAt: "2026-10-01T00:00:00.000Z", endsAt: "2026-10-08T00:00:00.000Z" },
+        { id: randomUUID(), startsAt: "2026-10-08T00:00:00.000Z", endsAt: "2026-10-15T00:00:00.000Z" },
+        { id: randomUUID(), startsAt: "2026-10-29T00:00:00.000Z", endsAt: "2026-11-05T00:00:00.000Z" },
+    ];
+    t.after(async () => {
+        await database`delete from public.fights where id in ${database(weeks.map((week) => week.id))}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const user of users) {
+        await database`insert into auth.users (id) values (${user})`;
+        await database`
+            insert into public.data_sources (id, user_id, provider, source_label, connection_route)
+            values (${sources[user]}, ${user}, 'apple_health', 'Apple Health', 'healthkit')
+        `;
+    }
+    const keys = async (kind: string) => (await database<{ idempotency_key: string }[]>`
+        select idempotency_key from private.notification_intents
+        where kind = ${kind} and user_id in ${database(users)} order by idempotency_key
+    `).map((row) => row.idempotency_key);
+    for (const week of weeks) {
+        if (week === weeks[2]) {
+            await enqueueScheduledNotifications(database, new Date("2026-10-17T01:00:00Z"));
+            assert.deepEqual(await keys("friends_results"), [], "no October results while October is still going");
+        }
+        await database`
+            insert into public.fights (
+                id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy, friends, closes_after_grace
+            ) values (${week.id}, ${me}, 'Friends', 'live', ${week.startsAt}, ${week.endsAt}, 'UTC', 'highest_total', 'shared', true, false)
+        `;
+        for (const user of users) {
+            await database`
+                insert into public.fight_members (fight_id, user_id, state, selected_source_id)
+                values (${week.id}, ${user}, 'accepted', ${sources[user]})
+            `;
+        }
+        // Alice synced at once; I am behind until the next morning.
+        const steps = async (user: string, value: number) => database`
+            insert into private.fight_score_snapshots (
+                fight_id, user_id, source_id, cutoff_at, value, input_hash, calculation_version
+            ) values (${week.id}, ${user}, ${sources[user]}, ${week.endsAt}, ${value}, repeat('a', 64), 1)
+        `;
+        await steps(alice, 30_000);
+        await recalculateFight(week.id, new Date(Date.parse(week.endsAt) + 3_600_000), database);
+        // I stop syncing before the last October round, which then waits for me forever.
+        if (week === weeks[2]) continue;
+        await steps(me, 40_000);
+        await recalculateFight(week.id, new Date(Date.parse(week.endsAt) + 2 * 3_600_000), database);
+        const [{ state }] = await database`select state::text from public.fights where id = ${week.id}`;
+        assert.equal(state, "final");
+    }
+    assert.deepEqual(
+        await keys("friends_sync"),
+        ["2026-10-08", "2026-10-15", "2026-11-05"].map((day) => `${me}:friends_sync:${day}`),
+        "one reminder per round end, not one per month",
+    );
+    await enqueueScheduledNotifications(database, new Date("2026-11-05T12:00:00Z"));
+    assert.deepEqual(await keys("friends_results"), [], "not before a day after October's last round ended");
+    await enqueueScheduledNotifications(database, new Date("2026-11-06T01:00:00Z"));
+    assert.deepEqual(await keys("friends_results"), [alice, me].sort().map((user) => `${user}:friends_results:2026-10`),
+        "then October's results, even with that round stuck and its other rounds over a week old");
+});

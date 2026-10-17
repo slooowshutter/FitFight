@@ -104,6 +104,28 @@ async function inviteUserToOpenFight(
         }
     }
 
+    let seriesMember: Pick<FightMemberRow, "state"> | null = null;
+    if (fight.series_id) {
+        const { data, error: seriesLookupError } = await admin
+            .from("fight_series_members")
+            .select("series_id, user_id, state")
+            .eq("series_id", fight.series_id)
+            .eq("user_id", userId)
+            .maybeSingle();
+        if (seriesLookupError) {
+            throw new ApiError(
+                500,
+                ERROR_CODES.db_error,
+                "Could not load series membership",
+            );
+        }
+        seriesMember = data as Pick<FightMemberRow, "state"> | null;
+        // Someone who left or was removed is not invited to later rounds; joining by code brings them back.
+        if (seriesMember?.state === "withdrawn") {
+            return "already";
+        }
+    }
+
     const { error: insertMemberError } = await admin
         .from("fight_members")
         .insert({
@@ -122,35 +144,20 @@ async function inviteUserToOpenFight(
         );
     }
 
-    if (fight.series_id) {
-        const { data: seriesMember, error: seriesLookupError } = await admin
+    if (fight.series_id && !seriesMember) {
+        const { error: seriesMemberError } = await admin
             .from("fight_series_members")
-            .select("series_id, user_id, state")
-            .eq("series_id", fight.series_id)
-            .eq("user_id", userId)
-            .maybeSingle();
-        if (seriesLookupError) {
+            .insert({
+                series_id: fight.series_id,
+                user_id: userId,
+                state: "invited",
+            });
+        if (seriesMemberError && !isUniqueViolation(seriesMemberError)) {
             throw new ApiError(
                 500,
                 ERROR_CODES.db_error,
-                "Could not load series membership",
+                "Could not create membership",
             );
-        }
-        if (!seriesMember) {
-            const { error: seriesMemberError } = await admin
-                .from("fight_series_members")
-                .insert({
-                    series_id: fight.series_id,
-                    user_id: userId,
-                    state: "invited",
-                });
-            if (seriesMemberError && !isUniqueViolation(seriesMemberError)) {
-                throw new ApiError(
-                    500,
-                    ERROR_CODES.db_error,
-                    "Could not create membership",
-                );
-            }
         }
     }
 
@@ -276,6 +283,13 @@ export async function inviteEveryoneToOpenFight(
                 from public.fight_members as member
                 where member.fight_id = ${fight.id}
                     and member.user_id = profile.id
+            )
+            and not exists (
+                select 1
+                from public.fight_series_members as series_member
+                where series_member.series_id = ${series.id}
+                    and series_member.user_id = profile.id
+                    and series_member.state = 'withdrawn'
             )
         on conflict (fight_id, user_id) do nothing
         returning user_id

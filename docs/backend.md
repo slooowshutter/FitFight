@@ -587,7 +587,7 @@ upload, and in the 15-minute `close-fights` sweep. See
 
 A cloud agent writes SQL in `supabase/migrations` and tests in `supabase/tests`, then opens a PR **into `develop` only when Marc explicitly asks for a PR**. Marc merges that. The persistent Supabase branch `develop` picks it up. TestFlight is a later merge to `preview`. Production only changes when Marc merges `preview` → `main`. Agents do not get the database password or `sb_secret_...` key, and they do not merge unless Marc asked.
 
-GitHub-hosted **Ubuntu** starts disposable Supabase Postgres, Auth, Realtime, and the Data API, lints the schema, runs pgTAP and TypeScript transaction tests, and rejects `DROP TABLE` / `TRUNCATE` / `DROP COLUMN` unless the **first line** of the file is exactly `-- allow-destructive`. The same backend tests run again after applying the deferred client-permission cutoff, including real signed-in Data API denials and signup. Agents do not run this stack on Marc's Mac or a hosted project.
+GitHub-hosted **Ubuntu** starts disposable Supabase Postgres, Auth, Realtime, and the Data API, lints the schema, runs pgTAP and TypeScript transaction tests, and rejects `DROP TABLE` / `TRUNCATE` / `DROP COLUMN` unless the **first line** of the file is exactly `-- allow-destructive`. The same backend tests run again after applying the deferred client-permission cutoff, including real signed-in Data API denials and signup. Agents never run it against a hosted project. On Marc's Mac, `scripts/run-simulator.sh local-db` runs one stack per workspace for Simulator testing (Marc approved this on 17 Oct 2026); see [shipping](shipping.md).
 
 iOS TestFlight is unchanged and still ignores this folder. iOS simulator and screenshot jobs skip when the PR does not touch the app.
 

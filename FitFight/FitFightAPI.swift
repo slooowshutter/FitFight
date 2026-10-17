@@ -301,6 +301,8 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var removeUserIds: [UUID]?
     /// On: the fight closes 24 hours after the end with last synced totals. Off: it waits for everyone.
     var closesAfterGrace: Bool? = nil
+    /// Friend rounds only: "month" or "week", starting with the live round.
+    var friendRoundLength: String? = nil
 }
 
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
@@ -859,6 +861,13 @@ struct FitFightAPI {
     /// People who shared a fight with you and are not friends or requested yet, at most 10.
     func friendSuggestions(accessToken: String) async throws -> FriendSuggestionList {
         try await get(path: "friends/suggestions", accessToken: accessToken)
+    }
+
+    /// Up to 8 people whose username starts with `query`, exact match first.
+    func searchProfiles(query: String, accessToken: String) async throws -> ProfileSearchList {
+        var items = URLComponents()
+        items.queryItems = [URLQueryItem(name: "q", value: query)]
+        return try await get(path: "profiles/search?\(items.percentEncodedQuery ?? "")", accessToken: accessToken)
     }
 
     func lookupProfile(handle: String, accessToken: String) async throws -> SharedProfileIdentity {

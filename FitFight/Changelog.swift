@@ -28,6 +28,55 @@ enum Changelog {
             version: "1.2.0",
             year: 2026,
             month: 10,
+            day: 17,
+            notes: "The Feed tab shows how many new posts people sent since you last opened it."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "Adding people to a fight: matching usernames show as you type. Tap one to add it, or see right away when no one has that username."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "Fight pictures now open instantly instead of loading for several seconds."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "Opening FitFight no longer sometimes freezes on a blank Fights screen."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 16,
+            notes: "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
             day: 16,
             notes: "Tap someone's name to open their Player card: your record against them in every Fight, 1v1 or group, your steps compared since you became friends, and your Fights together. Block is gone; Report stays. The flame next to Fights is your 10K streak, the days in a row you walked 10,000 steps."
         ),

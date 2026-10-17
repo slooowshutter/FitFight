@@ -166,6 +166,50 @@ test("existing members and invitees are not invited again", async () => {
     }
 });
 
+test("someone who left the series is not invited to its next round", async () => {
+    const writes: string[] = [];
+    const admin = createClient("https://pgg7.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+            fetch: async (input, init) => {
+                const request = new Request(input, init);
+                const url = new URL(request.url);
+                if (url.pathname.endsWith("/fight_series")) {
+                    return seriesResponse(url, [liveSeries], [liveSeries]);
+                }
+                if (url.pathname.endsWith("/fights")) {
+                    return json([liveFight]);
+                }
+                if (
+                    request.method === "GET" &&
+                    url.pathname.endsWith("/fight_members")
+                ) {
+                    return json([]);
+                }
+                if (
+                    request.method === "GET" &&
+                    url.pathname.endsWith("/fight_series_members")
+                ) {
+                    return json([
+                        {
+                            series_id: seriesId,
+                            user_id: "user",
+                            state: "withdrawn",
+                        },
+                    ]);
+                }
+                writes.push(`${request.method} ${url.pathname}`);
+                throw new Error(`Unexpected resource ${url.pathname}`);
+            },
+        },
+    });
+    assert.equal(
+        await ensureAppWideFightInvite(randomUUID(), admin, now),
+        "already",
+    );
+    assert.deepEqual(writes, []);
+});
+
 test("the series owner is not invited to their own fight", async () => {
     const writes: string[] = [];
     const admin = createClient("https://pgg7.example", "test-only-key", {
@@ -307,6 +351,9 @@ test("a concurrent invite insert is treated as already invited", async () => {
                 if (url.pathname.endsWith("/fights")) {
                     return json([liveFight]);
                 }
+                if (url.pathname.endsWith("/fight_series_members")) {
+                    return json([]);
+                }
                 if (url.pathname.endsWith("/fight_members")) {
                     if (request.method === "GET") return json([]);
                     return json(
@@ -358,5 +405,14 @@ test("suggesting a fight invites every eligible profile once", async () => {
     assert.equal(
         statements.some((query) => query.includes("fight_invites")),
         true,
+    );
+    assert.equal(
+        statements.some(
+            (query) =>
+                query.includes("insert into public.fight_members") &&
+                query.includes("series_member.state = 'withdrawn'"),
+        ),
+        true,
+        "people who left the series are not invited again",
     );
 });

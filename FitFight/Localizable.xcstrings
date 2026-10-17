@@ -1,6 +1,97 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "feed.unread-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "New posts: %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouvelles publications : %lld"
+                    }
+                }
+            }
+        },
+        "The Feed tab shows how many new posts people sent since you last opened it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Fil affiche combien de nouvelles publications ont été envoyées depuis votre dernière visite."
+                    }
+                }
+            }
+        },
+        "fight.no-such-handle": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No one has the username @%@."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Personne n’a le nom d’utilisateur @%@."
+                    }
+                }
+            }
+        },
+        "fight.add-handle": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Add @%@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajouter @%@"
+                    }
+                }
+            }
+        },
+        "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un défi a maintenant besoin d’un titre. Le gage reste facultatif, peut maintenant faire 240 caractères, et sa case s’agrandit pendant que vous écrivez pour tout relire. La case du titre aussi."
+                    }
+                }
+            }
+        },
+        "Adding people to a fight: matching usernames show as you type. Tap one to add it, or see right away when no one has that username.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajouter des personnes à un défi : les noms d’utilisateur correspondants s’affichent pendant que vous tapez. Touchez-en un pour l’ajouter, ou voyez tout de suite quand personne n’a ce nom d’utilisateur."
+                    }
+                }
+            }
+        },
+        "Fight pictures now open instantly instead of loading for several seconds.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les images des défis s’affichent maintenant tout de suite au lieu de charger plusieurs secondes."
+                    }
+                }
+            }
+        },
         "Name your companion": {
             "localizations": {
                 "fr": {
@@ -6484,12 +6575,12 @@
                 }
             }
         },
-        "Keep the action to 120 characters.": {
+        "Keep the action to 240 characters.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Limitez le gage à 120 caractères."
+                        "value": "Limitez le gage à 240 caractères."
                     }
                 }
             }
@@ -9995,12 +10086,22 @@
                 }
             }
         },
-        "Both are optional. If you skip a title, the action is the name of the fight.": {
+        "Give the fight a title. The loser action is optional.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les deux sont facultatifs. Sans titre, le gage devient le nom du défi."
+                        "value": "Donnez un titre au défi. Le gage est facultatif."
+                    }
+                }
+            }
+        },
+        "Add a title.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajoutez un titre."
                     }
                 }
             }
@@ -10021,16 +10122,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Aucun"
-                    }
-                }
-            }
-        },
-        "Uses the action": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Utilise le gage"
                     }
                 }
             }
@@ -15665,36 +15756,6 @@
                 }
             }
         },
-        "Close 24 hours after the end": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Clôturer 24 heures après la fin"
-                    }
-                }
-            }
-        },
-        "Anyone not synced by then keeps their last sync": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Qui n’a pas synchronisé d’ici là garde sa dernière synchro"
-                    }
-                }
-            }
-        },
-        "Waits for everyone’s final steps": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Attend les derniers pas de tout le monde"
-                    }
-                }
-            }
-        },
         "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it.": {
             "localizations": {
                 "fr": {
@@ -16147,26 +16208,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Amis : tu as maintenant un défi de pas avec chaque ami, qui dure tout le mois et recommence le 1er. Touche Amis en haut de Défis pour les voir, répondre aux demandes et ajouter des amis."
-                    }
-                }
-            }
-        },
-        "This month": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ce mois-ci"
-                    }
-                }
-            }
-        },
-        "Last month": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Le mois dernier"
                     }
                 }
             }
@@ -17124,16 +17165,6 @@
                 }
             }
         },
-        "Now": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "En cours"
-                    }
-                }
-            }
-        },
         "Change my words": {
             "localizations": {
                 "fr": {
@@ -17200,6 +17231,16 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Lance un nouveau défi, rejoins-en un déjà en cours ou publie dans le Fil."
+                    }
+                }
+            }
+        },
+        "Opening FitFight no longer sometimes freezes on a blank Fights screen.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight ne se fige plus parfois sur un écran Défis vide à l’ouverture."
                     }
                 }
             }
@@ -18065,6 +18106,103 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Touchez le nom de quelqu’un pour ouvrir sa carte de joueur : votre bilan face à lui dans chaque Fight, en 1 contre 1 ou en groupe, vos pas comparés depuis que vous êtes amis, et vos Fights en commun. Le bouton Bloquer disparaît, Signaler reste. La flamme à côté de Fights est votre série 10K, le nombre de jours d’affilée à 10 000 pas."
+                    }
+                }
+            }
+        },
+        "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Créer ton propre compagnon est plus sobre : l’étape en cours utilise la carte habituelle, sans bordure jaune."
+                    }
+                }
+            }
+        },
+        "Length": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Durée"
+                    }
+                }
+            }
+        },
+        "Each round lasts 7 days.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chaque manche dure 7 jours."
+                    }
+                }
+            }
+        },
+        "Each round runs to the end of the month.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Chaque manche dure jusqu’à la fin du mois."
+                    }
+                }
+            }
+        },
+        "friends.length-ends": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "This round will end on %@."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette manche se terminera le %@."
+                    }
+                }
+            }
+        },
+        "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis : un bouton Ajouter des amis en haut, les manches passées dans l’Historique de chaque défi, et un défi entre amis peut maintenant durer 1 semaine au lieu d’un mois."
+                    }
+                }
+            }
+        },
+        "Results 24 hours after the end": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Résultats 24 heures après la fin"
+                    }
+                }
+            }
+        },
+        "Anyone who hasn’t synced by then keeps the steps they last synced.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Qui n’a pas synchronisé d’ici là garde les pas de sa dernière synchro."
+                    }
+                }
+            }
+        },
+        "Off: results wait until everyone has synced, however long that takes.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Désactivé : les résultats attendent que tout le monde ait synchronisé, aussi longtemps qu’il le faut."
                     }
                 }
             }

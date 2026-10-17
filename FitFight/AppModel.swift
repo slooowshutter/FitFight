@@ -114,8 +114,10 @@ struct Fight: Codable, Identifiable, Hashable {
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
     var timeZone: String? = nil
-    /// A monthly friend round. Optional so cached Fights from earlier builds still decode.
+    /// A friend round. Optional so cached Fights from earlier builds still decode.
     var friends: Bool? = nil
+    /// A friend round's length, "month" or "week". Optional for the same reason.
+    var friendRoundLength: String? = nil
     /// Everyone's companions running together, drawn by the server. Optional for the same reason.
     var groupImageURL: URL? = nil
 
@@ -223,6 +225,8 @@ final class AppModel: ObservableObject {
     @Published var openPost: FeedPostLink?
     @Published var showingActivity = false
     @Published var feedRevision = 0
+    /// Posts by other people since Feed was last opened on this phone, from the newest page (at most 10).
+    @Published var feedUnread = 0
     @Published var dailyStatusRecap: DailyStatusRecap?
     /// The in-app alert on screen. The rest of this open's alerts wait in `queuedInAppAlerts`.
     @Published var inAppAlert: InAppAlert?
@@ -389,7 +393,8 @@ final class AppModel: ObservableObject {
 
     func seriesHistory(for fight: Fight) -> [Fight] {
         guard let seriesId = fight.seriesId else { return [] }
-        return fights
+        // Friend rounds come in their own snapshot, never in the Fights list.
+        return (fight.friends == true ? friendRounds : fights)
             .filter { $0.seriesId == seriesId && $0.id != fight.id }
             .sorted { $0.windowStart > $1.windowStart }
     }
@@ -569,6 +574,8 @@ final class AppModel: ObservableObject {
             return
         }
         fights = cached
+        // Downloaded and decoded at launch, so a fight opens with its picture already there.
+        RemoteImageLoader.shared.prefetch(cached.compactMap(\.groupImageURL), kind: .photo)
     }
 
     func refreshFights(
@@ -791,6 +798,11 @@ final class AppModel: ObservableObject {
     }
 
     private func mapSnapshot(_ snapshot: FitFightSnapshot, userId: UUID) -> [Fight] {
+        // Every refresh, including returning to the app, puts any new or evicted fight picture back in memory.
+        RemoteImageLoader.shared.prefetch(
+            snapshot.fights.compactMap { $0.groupImageUrl.flatMap(URL.init(string:)) },
+            kind: .photo
+        )
         let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
         let members = Dictionary(grouping: snapshot.members, by: \.fightId)
         let mine = Dictionary(
@@ -867,12 +879,16 @@ final class AppModel: ObservableObject {
         }
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else {
+            createError = String(appLocalized: "Add a title.")
+            return
+        }
         guard title.count <= 120 else {
             createError = String(appLocalized: "Keep the title to 120 characters.")
             return
         }
-        guard action.count <= 120 else {
-            createError = String(appLocalized: "Keep the action to 120 characters.")
+        guard action.count <= 240 else {
+            createError = String(appLocalized: "Keep the action to 240 characters.")
             return
         }
         guard endsAt > startsAt else {
@@ -883,10 +899,6 @@ final class AppModel: ObservableObject {
             createError = String(appLocalized: "Choose a start time in the future.")
             return
         }
-        let storedName = title.isEmpty
-            ? (action.isEmpty ? String(appLocalized: "Steps Fight") : action)
-            : title
-
         let handles = inviteHandles.reduce(into: [String]()) { result, raw in
             let handle = SessionStore.strippedHandle(raw)
             if SessionStore.isValidHandle(handle), !result.contains(handle) {
@@ -894,7 +906,7 @@ final class AppModel: ObservableObject {
             }
         }
         let payload = FitFightCreateFight(
-            name: storedName,
+            name: title,
             startsAt: startsAt,
             endsAt: endsAt,
             timeZone: timeZone.identifier,
@@ -939,7 +951,8 @@ final class AppModel: ObservableObject {
         joinCode: String?,
         inviteHandles: [String],
         removeUserIds: [String],
-        closesAfterGrace: Bool?
+        closesAfterGrace: Bool?,
+        friendRoundLength: String? = nil
     ) async -> Bool {
         guard !CompanionPreview.isEnabled else {
             createError = CompanionPreview.writeUnavailable
@@ -963,8 +976,8 @@ final class AppModel: ObservableObject {
             createError = String(appLocalized: "Keep the title to 120 characters.")
             return false
         }
-        guard action.count <= 120 else {
-            createError = String(appLocalized: "Keep the action to 120 characters.")
+        guard action.count <= 240 else {
+            createError = String(appLocalized: "Keep the action to 240 characters.")
             return false
         }
         if let startsAt, startsAt <= Date() {
@@ -1000,7 +1013,8 @@ final class AppModel: ObservableObject {
                     joinCode: joinCode,
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals,
-                    closesAfterGrace: closesAfterGrace
+                    closesAfterGrace: closesAfterGrace,
+                    friendRoundLength: friendRoundLength
                 ),
                 accessToken: try await session.freshAccessToken()
             )
@@ -1589,6 +1603,30 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func refreshFeedUnread(session: SessionStore) async {
+        guard let userID = session.authSession?.user.id, api.isConfigured else { return }
+        guard tab != .feed, UserDefaults.standard.object(forKey: Self.feedSeenKey(userID)) is Date else {
+            // Already looking at Feed, or the first launch of this build: count from now, not every old post.
+            markFeedSeen(session: session)
+            return
+        }
+        // Checked again after the request: opening Feed while it loads clears the count and moves the time.
+        guard let page = try? await api.feed(cursor: nil, accessToken: try await session.freshAccessToken()),
+              session.authSession?.user.id == userID, tab != .feed,
+              let seen = UserDefaults.standard.object(forKey: Self.feedSeenKey(userID)) as? Date else { return }
+        feedUnread = page.posts.filter { !$0.mine && (parseServerDate($0.createdAt) ?? .distantPast) > seen }.count
+    }
+
+    func markFeedSeen(session: SessionStore) {
+        feedUnread = 0
+        guard let userID = session.authSession?.user.id else { return }
+        UserDefaults.standard.set(Date(), forKey: Self.feedSeenKey(userID))
+    }
+
+    private static func feedSeenKey(_ userID: UUID) -> String {
+        "feed.seen-at.\(userID.uuidString.lowercased())"
+    }
+
     /// Each time the app opens: the backend picks up to three alerts, shown one after another.
     func loadInAppAlerts(session: SessionStore) async {
         guard session.authSession != nil, api.isConfigured, inAppAlert == nil else { return }
@@ -1794,6 +1832,7 @@ final class AppModel: ObservableObject {
                 && mine?.state == "invited",
             timeZone: row.timeZone,
             friends: row.friends,
+            friendRoundLength: series?.friendRoundLength,
             groupImageURL: row.groupImageUrl.flatMap(URL.init(string:))
         )
         localizeFight(&fight, formatScore: formatScore)

@@ -10,6 +10,7 @@ For Cursor cloud agents and anyone picking up this repo cold.
 | [backend.md](backend.md)                                                            | Empty Supabase platform: CLI, CI, what Marc creates once                                      |
 | [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) | Product list (FitFight rows). Marc talks, agent adds a row there                              |
 | [design/](design/README.md)                                                         | Where the look lives (`source/` is the approved kit)                                          |
+| [design/app-mirror.md](design/app-mirror.md)                                        | The whole app in one tappable HTML page; where every UI change starts                         |
 | [shipping.md](shipping.md)                                                          | CI, secrets **names**, how a build reaches TestFlight                                         |
 | [history.md](history.md)                                                            | What already shipped and the traps we hit                                                     |
 | [research/pending-final-sync-plan.md](research/pending-final-sync-plan.md)          | Pending **P**, tentative result, 24h forfeit (10 Sep 2026)                                    |

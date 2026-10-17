@@ -1,7 +1,7 @@
 #!/bin/bash
 # Puts the real app and the HTML app mirror side by side, for every screen the app can be launched straight into.
 #   scripts/app-mirror-check.sh            builds the app, then captures
-#   scripts/app-mirror-check.sh --no-build reuses the last build in .context/DerivedData
+#   scripts/app-mirror-check.sh --no-build reuses the last build
 # Writes .context/mirror-check/<theme>-<screen>.png: the Simulator on the left, docs/design/source/kit/app.html on
 # the right, at 1x. Both use the Companion preview people and fights (FitFight/CompanionPreview.swift).
 set -euo pipefail
@@ -18,13 +18,15 @@ simulator_id="$(xcrun simctl list devices available | grep -F "FitFight $workspa
     com.apple.CoreSimulator.SimDeviceType.iPhone-17 com.apple.CoreSimulator.SimRuntime.iOS-26-5)"
 xcrun simctl boot "$simulator_id" 2> /dev/null || true
 xcrun simctl bootstatus "$simulator_id" -b > /dev/null
+# Builds stay out of .context: Conductor keeps .context forever after archiving a workspace.
+derived="$HOME/Library/Developer/Xcode/DerivedData/FitFight-$workspace"
 if [[ "${1:-}" != --no-build ]]; then
     xcodebuild -project FitFight.xcodeproj -scheme FitFight -configuration Debug \
         -destination "platform=iOS Simulator,id=$simulator_id" \
-        -derivedDataPath .context/DerivedData -clonedSourcePackagesDirPath .context/SourcePackages \
+        -derivedDataPath "$derived" \
         CODE_SIGNING_ALLOWED=NO build > .context/mirror-check-build.log 2>&1 || { tail -30 .context/mirror-check-build.log; exit 1; }
 fi
-xcrun simctl install "$simulator_id" .context/DerivedData/Build/Products/Debug-iphonesimulator/FitFight.app
+xcrun simctl install "$simulator_id" "$derived"/Build/Products/Debug-iphonesimulator/FitFight.app
 xcrun simctl status_bar "$simulator_id" override --time 9:41 --dataNetwork wifi --wifiMode active --wifiBars 3 \
     --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 

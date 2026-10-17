@@ -6,6 +6,63 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Friends screen: Add friends button, History, weekly rounds, prepared 17 Oct 2026
+
+Marc picked option B from `docs/design/source/kit/friends-group-add-proposals.html` and asked
+that past friend rounds live in each fight's History instead of a "Last month" section, and
+that a friend fight can be switched from a month to 7 days.
+
+**App:** the Friends screen shows requests, then one card per friend (headed "Current" only
+when requests are above). An **Add friends** button in the header opens a sheet with the
+username search and "People you've fought with"; closing it reloads the screen. With nobody
+yet, one large Add friends button replaces it. "Last month" is gone. A friend fight's History
+tab and "Last round" banner now read friend rounds (`AppModel.seriesHistory`). Edit on a
+friend round adds **Length: 1 month / 1 week** with a line saying when this round will end.
+The 24-hour switch is now "Results 24 hours after the end", saying what happens either way:
+on, anyone not synced keeps the steps they last synced; off, results wait for everyone.
+Release note 1.2.0, English and French.
+
+**Backend:**
+- Friends snapshot (`friends: true`) returns every round with each current friend that was not
+  cancelled, instead of the live one plus the last ended one for 7 days. Series rows gain
+  `friend_round_length` (`month`, `week`, null for other series).
+- `PATCH /fights/{id}` accepts `friendRoundLength` on friend rounds, from either friend.
+  `fight_series.duration_seconds = 604800` means weekly; any other value means monthly
+  (switching back stores 30 days). Switching keeps the live round's start and moves its end:
+  weekly to the next 7-day mark from its start, never later than its current end; monthly to
+  the end of the current month. A round whose end has passed answers 409. `endsAt` from edit
+  screens is still ignored for friend rounds. No migration.
+- Mint: a weekly series' next round runs 7 days; a monthly one to the end of the next month.
+- Pushes: `friends_sync` is keyed by round end date (was start month), so weekly rounds get a
+  reminder each and monthly rounds still batch into one. `friends_results` waits for the month
+  to be over; the catch-up also waits until all that person's rounds started that month
+  ended a day ago, within 9 days of the month's end. October's results count every round
+  that started in October.
+
+**Contract:** additive. Old builds never send the new field; the snapshot only adds
+`friend_round_length` and more ended rounds. Staging builds with "Last month" keep showing the
+latest ended round per friend, now all month instead of 7 days. Old fixtures unchanged; new
+fixture `fight-snapshot-friends-history.json`. A weekly pair that becomes friends again, or
+gets a refresh before the mint, stays on its 7-day grid. Known gaps: the results push still
+opens the Friends screen, where each friend's fight shows the last round and History; the
+friends snapshot carries every ended round (about 52 a year for a weekly pair), unpaged.
+
+**Deployment order:** backend, then the app (no migration). Friend fights are on `preview`
+(staging), not production.
+
+**Verification (local, 17 Oct, on develop at 5f36e5e7):** web typecheck clean, 545 of 545
+unit tests. On a private disposable Supabase from every migration: build 113 compatibility 1
+of 1, `test:database` 143 of 144 (new: weekly switch, refriend grid, weekly pushes, full
+friend history); the one failure is the admin "fixed spans" clock-skew check, which passes
+alone. With direct access closed, before the review fixes: 139 passed, 3 skipped and the
+same one failure.
+iOS simulator build succeeded; API contract, localization, native boundary, trophy, past
+rounds and series stats checks passed. The real app ran against that database: Friends
+screen, Add friends sheet, History and the Edit length row. One review pass; its four
+findings are fixed. Not deployed; no staging or production check.
+
+---
+
 ## Leaving the Everybody fight sticks, prepared 17 Oct 2026
 
 Feedback from @c_cool_la_vie (29 Sep): they could not leave "Everybody on the app". They
@@ -76,7 +133,7 @@ everyone is invited to keep the 24-hour deadline; the owner can change it.
   broadcasts or timestamps, while PostgREST still reloads its schema; it also sends
   `notify pgrst, 'reload schema'`). Older backends ignore the column and keep the 24-hour
   rule.
-- Edit fight has a "Close 24 hours after the end" switch (owner, or either friend in a
+- Edit fight has a "Results 24 hours after the end" switch (named "Close 24 hours after the end" until 17 Oct; owner, or either friend in a
   friend round, until the fight ends): `closesAfterGrace` on `PATCH /api/v1/fights/{id}`.
   Fight Marc rounds, the Everybody fight and Suggested fights refuse switching it off
   (`403` with a reason the app shows as is, in English, since it cannot tell those

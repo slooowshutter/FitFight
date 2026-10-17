@@ -8,7 +8,9 @@ import { departFightMemberships } from "./membership-departure-supabase-query";
 import type { UpdateFightRequest } from "@/lib/types/fights/update-fight";
 import { storedFightIdentity } from "./create-fight-supabase-query";
 import { createInvite } from "./create-invite-supabase-query";
-import { fightSummary, loadFight } from "./fight-access-supabase-query";
+import { FRIEND_FIGHT_WEEK_SECONDS } from "@/lib/types/fights/friend-fight";
+import { fightSummary, loadFight, loadSeries } from "./fight-access-supabase-query";
+import { switchedFriendRoundEnd } from "./friend-fights-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
 const OPEN_STATES: FightState[] = [
@@ -105,10 +107,22 @@ export async function updateFight(
             timeZone: undefined,
         };
     }
+    // How long the series' next rounds last, when the pair switches between monthly and weekly.
+    let friendRoundSeconds: number | undefined;
     if (fight.friends) {
-        // A friend round keeps its name, month, repetition, privacy and pair. Only the action and the
-        // final-sync deadline change.
+        // A friend round keeps its name, start, repetition, privacy and pair. Only the action, the
+        // final-sync deadline and the length change. Edit screens send endsAt on every save, so it is dropped.
+        const length = input.friendRoundLength;
         input = { actionText: input.actionText, closesAfterGrace: input.closesAfterGrace };
+        const series = length && fight.series_id ? await loadSeries(fight.series_id, admin) : null;
+        if (length && series && (series.duration_seconds === FRIEND_FIGHT_WEEK_SECONDS) !== (length === "week")) {
+            if (Date.parse(fight.ends_at) <= now.getTime()) {
+                throw new ApiError(409, ERROR_CODES.conflict, "This round has ended");
+            }
+            // Any value but a week means calendar months; 30 days keeps a 7-day monthly round from reading as weekly.
+            friendRoundSeconds = length === "week" ? FRIEND_FIGHT_WEEK_SECONDS : 30 * 86_400;
+            input.endsAt = switchedFriendRoundEnd(length, fight, now);
+        }
     }
 
     const removeIds = [...new Set(input.removeUserIds ?? [])];
@@ -273,6 +287,10 @@ export async function updateFight(
             seriesPatch.duration_seconds = Math.round(
                 (nextEnds.getTime() - nextStarts.getTime()) / 1000,
             );
+        }
+        // Even when the live round's end stays, as on its last day.
+        if (friendRoundSeconds !== undefined) {
+            seriesPatch.duration_seconds = friendRoundSeconds;
         }
         if (Object.keys(seriesPatch).length > 0) {
             const { error } = await admin

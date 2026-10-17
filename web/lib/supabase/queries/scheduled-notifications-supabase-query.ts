@@ -65,7 +65,9 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
     `;
 
     // A friend round waiting on someone who stopped syncing never finalizes, and the results push
-    // waits for a person's last round. A day after the month, anyone with a finished round gets it.
+    // waits for a person's last round. Once the month is over and the last of their rounds that
+    // started in it ended a day ago, anyone with a finished round from it gets it. A weekly round
+    // can end a week after the month, so the window counts from the month's end.
     await database`
         insert into private.notification_intents (
             idempotency_key, user_id, fight_id, kind, slot,
@@ -78,12 +80,22 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
             '/fights/' || fight.id || '?friends=1', 'friends_results'
         from public.fights fight
         cross join lateral (
-            select to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM') as key
+            select to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM') as key,
+                (date_trunc('month', fight.starts_at at time zone fight.time_zone) + interval '1 month')
+                    at time zone fight.time_zone as ends_at
         ) month
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
         where fight.friends and fight.state = 'final'
-            and fight.ends_at <= ${at}::timestamptz - interval '1 day'
-            and fight.ends_at > ${at}::timestamptz - interval '8 days'
+            and month.ends_at <= ${at}::timestamptz
+            and month.ends_at > ${at}::timestamptz - interval '9 days'
+            and not exists (
+                select 1 from public.fights round
+                join public.fight_members mine on mine.fight_id = round.id
+                    and mine.user_id = member.user_id and mine.state = 'accepted'
+                where round.friends and round.state <> 'cancelled'
+                    and to_char(round.starts_at at time zone round.time_zone, 'YYYY-MM') = month.key
+                    and round.ends_at > ${at}::timestamptz - interval '1 day'
+            )
         order by member.user_id, month.key, fight.id
         on conflict (idempotency_key) do nothing
     `;

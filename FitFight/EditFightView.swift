@@ -22,6 +22,8 @@ struct EditFightView: View {
     @State private var joinCode: String
     @State private var people: [FightComposerPerson]
     @State private var closesAfterGrace: Bool
+    /// A friend round's length: "month" or "week".
+    @State private var friendRoundLength: String
     @State private var username = ""
     @State private var usernameError: String?
     @State private var confirmDelete = false
@@ -37,6 +39,7 @@ struct EditFightView: View {
         _actionText = State(initialValue: fight.actionText)
         _joinCode = State(initialValue: fight.joinCode ?? "")
         _closesAfterGrace = State(initialValue: fight.graceEndsAt != nil)
+        _friendRoundLength = State(initialValue: fight.friendRoundLength ?? "month")
         _visibilityJoinable = State(initialValue: fight.visibility == "joinable")
         _recurring = State(initialValue: fight.recurring)
         let days = max(1, Int((fight.windowEnd.timeIntervalSince(fight.windowStart) / 86_400).rounded()))
@@ -136,7 +139,7 @@ struct EditFightView: View {
 
     @ViewBuilder
     private var currentStep: some View {
-        // A friend round runs for the calendar month: only its loser action can change.
+        // A friend round keeps its pair and start: only its loser action and length can change.
         if fight.friends == true {
             FightComposerLimitedField(
                 label: String(appLocalized: "Loser action"),
@@ -146,6 +149,7 @@ struct EditFightView: View {
                 submitLabel: .done,
                 onSubmit: { actionFocused = false }
             )
+            friendLengthRow
             deadlineRow
         } else {
             composerStep
@@ -214,17 +218,52 @@ struct EditFightView: View {
         }
     }
 
+    /// Switching moves this round's end, like the server: weekly to the next 7-day mark from its
+    /// start but never later, monthly to the end of this month.
+    private var friendLengthRow: some View {
+        let weekly = friendRoundLength == "week"
+        var note = weekly
+            ? String(appLocalized: "Each round lasts 7 days.")
+            : String(appLocalized: "Each round runs to the end of the month.")
+        if friendRoundLength != (fight.friendRoundLength ?? "month") {
+            let now = Date()
+            let week: TimeInterval = 7 * 86_400
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            let end = weekly
+                ? min(fight.windowStart.addingTimeInterval(((now.timeIntervalSince(fight.windowStart) / week).rounded(.down) + 1) * week), fight.windowEnd)
+                : calendar.dateInterval(of: .month, for: now)?.end ?? fight.windowEnd
+            let day = end.formatted(.dateTime.day().month(.wide).locale(AppLocalization.locale))
+            note += " " + String(appLocalized: "friends.length-ends", defaultValue: "This round will end on \(day).")
+        }
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(String(appLocalized: "Length"))
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                Spacer(minLength: 8)
+                FFSegmented(items: ["month", "week"], selection: $friendRoundLength) { item in
+                    item == "week" ? String(appLocalized: "1 week") : String(appLocalized: "1 month")
+                }
+            }
+            Text(note)
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var deadlineRow: some View {
         FFGroupedRows {
             FFGroupedRow(
-                title: String(appLocalized: "Close 24 hours after the end"),
+                title: String(appLocalized: "Results 24 hours after the end"),
                 subtitle: closesAfterGrace
-                    ? String(appLocalized: "Anyone not synced by then keeps their last sync")
-                    : String(appLocalized: "Waits for everyone’s final steps"),
+                    ? String(appLocalized: "Anyone who hasn’t synced by then keeps the steps they last synced.")
+                    : String(appLocalized: "Off: results wait until everyone has synced, however long that takes."),
                 systemImage: "clock",
                 subtitleTone: closesAfterGrace ? .moss : .neutral,
                 trailing: AnyView(
-                    Toggle(String(appLocalized: "Close 24 hours after the end"), isOn: $closesAfterGrace)
+                    Toggle(String(appLocalized: "Results 24 hours after the end"), isOn: $closesAfterGrace)
                         .labelsHidden()
                         .tint(theme.mossFill)
                 )
@@ -374,7 +413,8 @@ struct EditFightView: View {
                 joinCode: fight.joinCode != nil && joinCode != fight.joinCode ? joinCode : nil,
                 inviteHandles: inviteHandles,
                 removeUserIds: Array(removeUserIds),
-                closesAfterGrace: closesAfterGrace != (fight.graceEndsAt != nil) ? closesAfterGrace : nil
+                closesAfterGrace: closesAfterGrace != (fight.graceEndsAt != nil) ? closesAfterGrace : nil,
+                friendRoundLength: friendRoundLength != (fight.friendRoundLength ?? "month") ? friendRoundLength : nil
             )
             if saved {
                 dismiss()

@@ -82,7 +82,7 @@ async function seedFight(fight: {
     return id;
 }
 
-test("friends mode returns this month's rounds and, for a week, each pair's last round, only for current friends", async (t) => {
+test("friends mode returns every round with each current friend that was not cancelled, for History", async (t) => {
     const users = await seedUsers(t, 10);
     const [me, ana, ben, dana, cleo, stranger, requester, invitee, blockedRequester, gone] = users;
     for (const friend of [ana, ben, dana]) await seedFriendship(friend, me, "accepted");
@@ -105,13 +105,13 @@ test("friends mode returns this month's rounds and, for a week, each pair's last
         members: [[me, "accepted", 9_000], [ana, "accepted", 1_000]],
     });
     await seedFight({ owner: me, friends: true, seriesId: anaSeries, state: "cancelled", endsAt: new Date(now - hour), members: [[me, "accepted"], [ana, "accepted"]] });
-    await seedFight({ owner: me, friends: true, seriesId: anaSeries, state: "final", endsAt: new Date(now - 31 * day), members: [[me, "accepted"], [ana, "accepted"]] });
+    const anaOld = await seedFight({ owner: me, friends: true, seriesId: anaSeries, state: "final", endsAt: new Date(now - 31 * day), members: [[me, "accepted"], [ana, "accepted"]] });
     const benNow = await seedFight({ owner: ben, friends: true, seriesId: benSeries, members: [[me, "accepted", 1_000], [ben, "accepted", 2_000]] });
     const benLast = await seedFight({
         owner: ben, friends: true, seriesId: benSeries, state: "final", endsAt: new Date(now - 6 * day - 20 * hour),
         members: [[me, "accepted"], [ben, "accepted"]],
     });
-    await seedFight({
+    const danaLast = await seedFight({
         owner: dana, friends: true, seriesId: danaSeries, state: "final", endsAt: new Date(now - 7 * day - hour),
         members: [[me, "accepted"], [dana, "accepted"]],
     });
@@ -135,15 +135,17 @@ test("friends mode returns this month's rounds and, for a week, each pair's last
     assert.deepEqual(hosted.fights, [], "the hosted flag never returns friend rounds");
 
     const friends = await readFightSnapshot(me, "UTC", database, false, true);
-    assert.deepEqual(friends.fights.map((fight) => fight.id).sort(), [anaNow, anaLast, benNow, benLast].sort(),
-        "one current and at most one last round per pair: no cancelled, older, week-old or unfriended rounds");
+    assert.deepEqual(friends.fights.map((fight) => fight.id).sort(), [anaNow, anaLast, anaOld, benNow, benLast, danaLast].sort(),
+        "every ended round stays for History; no cancelled or unfriended rounds");
     assert.ok(friends.fights.every((fight) => fight.friends === true));
     assert.deepEqual(
         friends.fights.filter((fight) => Date.parse(fight.ends_at) > now).map((fight) => fight.id).sort(),
         [anaNow, benNow].sort(),
-        "on the 1st each friend appears once in this month and once in last month",
+        "only the live round with each friend is current",
     );
-    assert.deepEqual(new Set(friends.members.map((member) => member.fight_id)), new Set([anaNow, anaLast, benNow, benLast]));
+    assert.deepEqual(new Set(friends.members.map((member) => member.fight_id)),
+        new Set([anaNow, anaLast, anaOld, benNow, benLast, danaLast]));
+    assert.deepEqual(friends.series.map((series) => series.friend_round_length), ["month", "month", "month"]);
     assert.deepEqual(friends.friends, home.friends);
 
     const anaHome = await readFightSnapshot(ana, "UTC", database);
@@ -152,14 +154,14 @@ test("friends mode returns this month's rounds and, for a week, each pair's last
 
     await database`update public.fight_members set state = 'withdrawn' where fight_id = ${benNow} and user_id = ${ben}`;
     const afterLeaving = await readFightSnapshot(me, "UTC", database, false, true);
-    assert.deepEqual(afterLeaving.fights.map((fight) => fight.id).sort(), [anaNow, anaLast, benLast].sort(),
+    assert.deepEqual(afterLeaving.fights.map((fight) => fight.id).sort(), [anaNow, anaLast, anaOld, benLast, danaLast].sort(),
         "a round where one friend no longer races is not current");
     assert.deepEqual(afterLeaving.friends, { rounds: 1, leading: 1, requests: 1 });
 
     const [low, high] = [me, ana].sort();
     await database`delete from private.profile_friendships where user_low = ${low} and user_high = ${high}`;
     const afterUnfriending = await readFightSnapshot(me, "UTC", database, false, true);
-    assert.deepEqual(afterUnfriending.fights.map((fight) => fight.id), [benLast],
+    assert.deepEqual(afterUnfriending.fights.map((fight) => fight.id).sort(), [benLast, danaLast].sort(),
         "an unfriended pair's rounds disappear at once, even before they are cancelled");
     assert.deepEqual(afterUnfriending.friends, { rounds: 0, leading: 0, requests: 1 });
 

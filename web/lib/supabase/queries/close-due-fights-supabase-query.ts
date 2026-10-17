@@ -81,7 +81,7 @@ export async function closeDueFights(
     now: Date = new Date(),
     database: Sql = createDatabaseClient(),
 ): Promise<CloseDueResult> {
-    // Every friend round ends at the same moment, so keep closing batches until none is due or the
+    // Every monthly friend round ends at the same moment, so keep closing batches until none is due or the
     // budget runs out. A fight already tried this run is not picked again, even if it stayed due.
     const startedAt = Date.now();
     const fightIds: string[] = [];

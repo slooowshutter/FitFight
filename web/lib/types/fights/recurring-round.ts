@@ -7,6 +7,7 @@ export const recurringRoundSchema = z.object({
 });
 export const recurringSeriesSchema = z.object({
     recurring: z.boolean(), paused_at: z.coerce.date().nullable(), current_fight_id: z.string().uuid().nullable(),
+    duration_seconds: z.number().int(),
 });
 export type RecurringRound = z.infer<typeof recurringRoundSchema>;
 export type RecurringSeries = z.infer<typeof recurringSeriesSchema>;

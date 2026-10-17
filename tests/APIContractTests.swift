@@ -222,6 +222,13 @@ struct APIContractTests {
             from: JSONSerialization.data(withJSONObject: unflagged))
         precondition(withoutFriends.friends == nil && withoutFriends.fights[0].friends == nil,
                      "A snapshot without the friends summary or flag hides the Friends card")
+        precondition(friendRounds.series[0].friendRoundLength == nil, "Servers before round lengths remain decodable")
+        let history = try decoder.decode(FitFightSnapshot.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("fight-snapshot-friends-history.json")))
+        precondition(history.series[0].friendRoundLength == "week")
+        precondition(history.fights.map(\.state) == ["final", "final", "live"]
+                     && Set(history.fights.map(\.seriesId)).count == 1,
+                     "Every ended round of a friend pair comes with the live one, for History")
 
         // Same date handling as FitFightAPI.decoder: generated_at carries milliseconds.
         let serverDecoder = JSONDecoder()

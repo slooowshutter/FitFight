@@ -114,8 +114,10 @@ struct Fight: Codable, Identifiable, Hashable {
     var pendingJoin: Bool = false
     var offersJoinNext: Bool = false
     var timeZone: String? = nil
-    /// A monthly friend round. Optional so cached Fights from earlier builds still decode.
+    /// A friend round. Optional so cached Fights from earlier builds still decode.
     var friends: Bool? = nil
+    /// A friend round's length, "month" or "week". Optional for the same reason.
+    var friendRoundLength: String? = nil
     /// Everyone's companions running together, drawn by the server. Optional for the same reason.
     var groupImageURL: URL? = nil
 
@@ -389,7 +391,8 @@ final class AppModel: ObservableObject {
 
     func seriesHistory(for fight: Fight) -> [Fight] {
         guard let seriesId = fight.seriesId else { return [] }
-        return fights
+        // Friend rounds come in their own snapshot, never in the Fights list.
+        return (fight.friends == true ? friendRounds : fights)
             .filter { $0.seriesId == seriesId && $0.id != fight.id }
             .sorted { $0.windowStart > $1.windowStart }
     }
@@ -939,7 +942,8 @@ final class AppModel: ObservableObject {
         joinCode: String?,
         inviteHandles: [String],
         removeUserIds: [String],
-        closesAfterGrace: Bool?
+        closesAfterGrace: Bool?,
+        friendRoundLength: String? = nil
     ) async -> Bool {
         guard !CompanionPreview.isEnabled else {
             createError = CompanionPreview.writeUnavailable
@@ -1000,7 +1004,8 @@ final class AppModel: ObservableObject {
                     joinCode: joinCode,
                     inviteHandles: handles.isEmpty ? nil : handles,
                     removeUserIds: removals.isEmpty ? nil : removals,
-                    closesAfterGrace: closesAfterGrace
+                    closesAfterGrace: closesAfterGrace,
+                    friendRoundLength: friendRoundLength
                 ),
                 accessToken: try await session.freshAccessToken()
             )
@@ -1794,6 +1799,7 @@ final class AppModel: ObservableObject {
                 && mine?.state == "invited",
             timeZone: row.timeZone,
             friends: row.friends,
+            friendRoundLength: series?.friendRoundLength,
             groupImageURL: row.groupImageUrl.flatMap(URL.init(string:))
         )
         localizeFight(&fight, formatScore: formatScore)

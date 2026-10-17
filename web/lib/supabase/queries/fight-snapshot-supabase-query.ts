@@ -9,6 +9,7 @@ import {
     type FightSnapshot,
 } from "@/lib/types/fights/fight-snapshot";
 import { companionIdSchema } from "@/lib/types/companions/companion";
+import { FRIEND_FIGHT_WEEK_SECONDS } from "@/lib/types/fights/friend-fight";
 import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 
 const snapshotRowSchema = fightSnapshotSchema.extend({
@@ -86,9 +87,11 @@ export async function readFightSnapshot(
                                 and racer.state = 'accepted'
                         ) = 2`
                     : friends
-                    // This month's live rounds plus, for a week, each pair's last finished round, so
-                    // results stay visible after the month turns. Only pairs that are still friends.
-                    ? sql`fight.friends
+                    // Every round with each current friend that was not cancelled: the live one, and
+                    // the ended ones for the fight's History.
+                    // ponytail: the whole history in one payload, about 52 rounds a year for a weekly
+                    // pair; page ended rounds by date if a payload gets heavy.
+                    ? sql`fight.friends and fight.state in ('live', 'awaiting_final_sync', 'final')
                         and fight.id in (
                             select fight_id from public.fight_members where user_id = ${userId} and state = 'accepted'
                         )
@@ -96,17 +99,6 @@ export async function readFightSnapshot(
                             select 1 from public.fight_members as friend
                             where friend.fight_id = fight.id and friend.state = 'accepted'
                                 and friend.user_id = any(${sql.array(friendships.friend_ids)}::uuid[])
-                        )
-                        and (
-                            (fight.state = 'live' and fight.ends_at > now())
-                            or fight.id = (
-                                select last.id from public.fights as last
-                                where last.series_id = fight.series_id and last.friends
-                                    and last.ends_at <= now() and last.ends_at > now() - interval '7 days'
-                                    and last.state in ('live', 'awaiting_final_sync', 'final')
-                                order by last.ends_at desc, last.id desc
-                                limit 1
-                            )
                         )`
                     : sql`not fight.friends and fight.host_id is distinct from ${userId}
                         and fight.id in (
@@ -137,7 +129,10 @@ export async function readFightSnapshot(
                     select user_id from visible_members union select owner_id from visible_fights
                 )
             ), visible_series as (
-                select id, join_code, visibility, recurring, suggested
+                select id, join_code, visibility, recurring, suggested,
+                    case when friend_low is null then null
+                        when duration_seconds = ${FRIEND_FIGHT_WEEK_SECONDS} then 'week' else 'month' end
+                        as friend_round_length
                 from public.fight_series
                 where id in (select series_id from visible_fights)
             ), chart_bounds as (

@@ -4,6 +4,7 @@ import { rollingWindow } from "@/lib/domain/fights/join-code";
 import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
+import { FRIEND_FIGHT_WEEK_SECONDS } from "@/lib/types/fights/friend-fight";
 import { recurringRoundSchema, recurringSeriesSchema } from "@/lib/types/fights/recurring-round";
 import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import { calendarMonthWindow } from "./friend-fights-supabase-query";
@@ -20,13 +21,19 @@ export async function mintNextRecurringFight(
         if (!row) return null;
         const previous = recurringRoundSchema.parse(row);
         if (!previous.series_id || Date.parse(previous.ends_at) > now.getTime() || previous.state === "cancelled") return null;
-        const [seriesRow] = await sql`select recurring, paused_at, current_fight_id from public.fight_series where id = ${previous.series_id}`;
+        const [seriesRow] = await sql`select recurring, paused_at, current_fight_id, duration_seconds from public.fight_series where id = ${previous.series_id}`;
         const series = recurringSeriesSchema.parse(seriesRow);
         if (!series.recurring || series.paused_at) return null;
-        // A friend round always runs to the end of the next calendar month, whatever the last one's length.
-        const window = previous.friends
-            ? { startsAt: previous.ends_at, endsAt: calendarMonthWindow(new Date(previous.ends_at), previous.time_zone).endsAt }
-            : rollingWindow(previous.starts_at, previous.ends_at);
+        // A friend round runs 7 days on a weekly series, otherwise to the end of the next calendar
+        // month, whatever the last one's length.
+        const window = !previous.friends
+            ? rollingWindow(previous.starts_at, previous.ends_at)
+            : series.duration_seconds === FRIEND_FIGHT_WEEK_SECONDS
+                ? {
+                    startsAt: previous.ends_at,
+                    endsAt: new Date(Date.parse(previous.ends_at) + FRIEND_FIGHT_WEEK_SECONDS * 1000).toISOString(),
+                }
+                : { startsAt: previous.ends_at, endsAt: calendarMonthWindow(new Date(previous.ends_at), previous.time_zone).endsAt };
         const [existing] = await sql`select id from public.fights where series_id = ${previous.series_id} and starts_at = ${window.startsAt}`;
         if (existing) {
             const existingId = recurringRoundSchema.shape.id.parse(existing.id);

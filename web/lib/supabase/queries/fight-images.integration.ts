@@ -8,6 +8,7 @@ import {
     claimNextFightImage,
     enqueueChangedFightImages,
     finishFightImageAttempt,
+    readUnconvertedFightImages,
     saveFightImageRun,
 } from "./fight-images-supabase-query";
 import { readFightSnapshot } from "./fight-snapshot-supabase-query";
@@ -17,6 +18,7 @@ const database = postgres(env.DATABASE_URL, { max: 2 });
 after(() => database.end());
 
 const image = "https://supabase.tryblend.ai/storage/v1/object/public/generated/a/group.png";
+const webp = "http://127.0.0.1:54321/storage/v1/object/public/fight-group-images/group.webp";
 
 test("a fight image waits for two runners, folds changes, respects the daily allowance and shows only to members", async (t) => {
     const [owner, peer, outsider] = [randomUUID(), randomUUID(), randomUUID()];
@@ -73,8 +75,16 @@ test("a fight image waits for two runners, folds changes, respects the daily all
     await saveFightImageRun(claimed.job.id, { layout: "trail", runners: [], workflowId: "workflow", inputs: {}, runId: "run-1" }, database);
     await finishFightImageAttempt(claimed.job.id, { runId: "run-1", imageUrl: image, check: "{}", problems: [], pass: true }, database);
 
+    assert.equal(
+        (await readFightSnapshot(peer, "UTC", database)).fights.find((item) => item.id === fight)?.group_image_url,
+        image,
+        "Blend's PNG shows until the WebP copy exists",
+    );
+    assert.ok((await readUnconvertedFightImages(database)).some((row) => row.id === claimed.job.id));
+    await database`update private.fight_group_images set webp_url = ${webp} where id = ${claimed.job.id}`;
+    assert.ok(!(await readUnconvertedFightImages(database)).some((row) => row.id === claimed.job.id));
     const member = await readFightSnapshot(peer, "UTC", database);
-    assert.equal(member.fights.find((item) => item.id === fight)?.group_image_url, image);
+    assert.equal(member.fights.find((item) => item.id === fight)?.group_image_url, webp, "the WebP copy is served once it exists");
     for (const role of ["anon", "authenticated"]) {
         await assert.rejects(database.begin(async (sql) => {
             await sql`set local role ${sql(role)}`;
@@ -200,16 +210,17 @@ test("a new round of a repeating fight reuses the last image at once until its r
     assert.equal(claimed?.job.fight_id, first);
     await saveFightImageRun(claimed.job.id, { layout: "trail", runners: [], workflowId: "workflow", inputs: {}, runId: "run-1" }, database);
     await finishFightImageAttempt(claimed.job.id, { runId: "run-1", imageUrl: image, check: "{}", problems: [], pass: true }, database);
+    await database`update private.fight_group_images set webp_url = ${webp} where id = ${claimed.job.id}`;
 
     await database`
         insert into public.fight_members (fight_id, user_id, state, accepted_at) values
             (${second}, ${owner}, 'accepted', now()), (${second}, ${peer}, 'accepted', now())
     `;
     await enqueueChangedFightImages(database);
-    const reused = await database`select status, image_url, started_at from private.fight_group_images where fight_id = ${second}`;
+    const reused = await database`select status, image_url, webp_url, started_at from private.fight_group_images where fight_id = ${second}`;
     assert.deepEqual(
-        reused.map((row) => [row.status, row.image_url, row.started_at]),
-        [["ready", image, null]],
+        reused.map((row) => [row.status, row.image_url, row.webp_url, row.started_at]),
+        [["ready", image, webp, null]],
         "the same runners keep the picture with no wait and no new drawing",
     );
 

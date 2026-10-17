@@ -314,6 +314,21 @@ build; reference sheets rendered by the production code; one end-to-end run of
 each published workflow (5 runners passed first try, 30 runners passed on the
 retry after one runner faced left). Not yet: a staging deploy, or the image on a signed-in phone.
 
+**WebP copy and prefetch, prepared 17 Oct:** opening a fight took over 5 seconds
+on a phone because Blend's PNGs are 1.7 to 3 MB, served `no-cache`, and only
+downloaded on open. Each pass of the same cron now copies every ready image
+without one (newest first, old ones included) to a 1200-pixel WebP at quality
+90, about 300 KB, into the public `fight-group-images` bucket with a one-year
+cache, and stores it in `webp_url`. `image_url` keeps Blend's PNG. The snapshot
+serves `coalesce(webp_url, image_url)` in the same `group_image_url` field, so
+the contract and every installed build are unchanged (iOS 17 decodes WebP).
+The app downloads and decodes every fight's picture at launch and on each
+refresh, so a fight opens with it already on screen. Rollout: apply
+`20261017120000_fight_group_image_webp.sql`, deploy the backend, then the app.
+Verified locally: unit, database and build checks; one cron pass turned a real
+2.7 MB staging PNG into a 303 KB `image/webp` with `max-age=31536000` in 1.5 s;
+in the Simulator, the first frame of an opened fight already shows the picture.
+
 ---
 
 ## In-app alerts, prepared 15 Oct 2026

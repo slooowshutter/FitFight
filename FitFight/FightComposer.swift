@@ -212,8 +212,27 @@ struct FightComposerPeoplePage: View {
     var createMode: Bool
     var onAdd: () -> Void
 
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
+    @State private var results: [SharedProfileIdentity] = []
+    /// The username the results belong to, so stale results never show for newer typing.
+    @State private var searchedQuery: String?
+    @State private var checking = false
+
+    private var query: String { SessionStore.strippedHandle(username) }
+
+    /// Earlier results narrowed to what is typed now, shown at once while the server answers.
+    private var shown: [SharedProfileIdentity] {
+        guard let searchedQuery, SessionStore.isValidHandle(query), query.hasPrefix(searchedQuery) else { return [] }
+        return results.filter { $0.handle.lowercased().hasPrefix(query) }
+    }
+
+    /// The server returns at most 8, so fewer than 8 for a shorter prefix already holds every match.
+    private var complete: Bool {
+        guard let searchedQuery, SessionStore.isValidHandle(query), query.hasPrefix(searchedQuery) else { return false }
+        return searchedQuery == query || results.count < 8
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -274,7 +293,7 @@ struct FightComposerPeoplePage: View {
                                 .autocorrectionDisabled()
                                 .submitLabel(.done)
                                 .onSubmit {
-                                    onAdd()
+                                    add()
                                     usernameFocused.wrappedValue = false
                                 }
                         }
@@ -287,9 +306,10 @@ struct FightComposerPeoplePage: View {
                     FFButton(
                         title: String(appLocalized: "Add"),
                         size: .small,
-                        enabled: !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        enabled: !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                        busy: checking
                     ) {
-                        onAdd()
+                        add()
                     }
                 }
 
@@ -297,7 +317,61 @@ struct FightComposerPeoplePage: View {
                     Text(usernameError)
                         .ffType(.caption)
                         .foregroundStyle(theme.emberText)
+                } else if complete && shown.isEmpty && query != session.profile?.handle {
+                    Text(noOneMessage)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
                 }
+
+                let added = Set(people.map { $0.handle.lowercased() })
+                let matches = shown.filter { !added.contains($0.handle.lowercased()) }
+                if !matches.isEmpty {
+                    FFGroupedRows {
+                        ForEach(Array(matches.enumerated()), id: \.element.id) { index, person in
+                            if index > 0 { FFDivider() }
+                            Button {
+                                username = person.handle
+                                onAdd()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    CompanionAvatar(
+                                        personID: person.userId.uuidString, companionID: person.companionId, isYou: false,
+                                        monogram: person.initials, photoURL: person.avatarUrl, size: 36
+                                    )
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(verbatim: person.displayName)
+                                            .ffType(.rowTitle)
+                                            .foregroundStyle(theme.text)
+                                        Text(verbatim: "@\(person.handle)")
+                                            .ffType(.caption)
+                                            .foregroundStyle(theme.textSecondary)
+                                    }
+                                    Spacer(minLength: 8)
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(theme.mossText)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 7)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(FFHapticPlainStyle())
+                            .accessibilityLabel(
+                                String(
+                                    appLocalized: "fight.add-handle",
+                                    defaultValue: "Add @\(person.handle)"
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+            .task(id: query) {
+                // Search as you type, after a short pause so each keystroke doesn't call the server.
+                guard !staticRender, SessionStore.isValidHandle(query), !complete else { return }
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                await search(query)
             }
 
             if !people.isEmpty {
@@ -347,6 +421,39 @@ struct FightComposerPeoplePage: View {
             }
         }
     }
+
+    private var noOneMessage: String {
+        String(appLocalized: "fight.no-such-handle", defaultValue: "No one has the username @\(query).")
+    }
+
+    private func search(_ handle: String) async {
+        guard let token = try? await session.freshAccessToken(),
+              let found = try? await FitFightAPI().searchProfiles(query: handle, accessToken: token),
+              handle == query else { return }
+        results = found.people
+        searchedQuery = handle
+    }
+
+    /// A username the search didn't find is refused. Tapping Add before it answers waits for it.
+    private func add() {
+        let handle = query
+        // The search never returns you, so your own username gets the usual message from `onAdd`.
+        guard SessionStore.isValidHandle(handle), handle != session.profile?.handle else { return onAdd() }
+        Task {
+            if !complete {
+                checking = true
+                await search(handle)
+                checking = false
+            }
+            guard handle == query else { return }
+            // No answer (older backend, offline): add as before. Saving the fight still rejects unknown usernames.
+            if !complete || shown.contains(where: { $0.handle.lowercased() == handle }) {
+                onAdd()
+            } else {
+                usernameError = noOneMessage
+            }
+        }
+    }
 }
 
 struct FightComposerDetailsPage: View {
@@ -363,7 +470,7 @@ struct FightComposerDetailsPage: View {
                 Text("Title and action")
                     .ffType(.heading)
                     .foregroundStyle(theme.text)
-                Text("Both are optional. If you skip a title, the action is the name of the fight.")
+                Text("Give the fight a title. The loser action is optional.")
                     .ffType(.body)
                     .foregroundStyle(theme.textSecondary)
                     .lineSpacing(2)
@@ -383,7 +490,8 @@ struct FightComposerDetailsPage: View {
                 text: $actionText,
                 focus: actionFocused,
                 submitLabel: .done,
-                onSubmit: { actionFocused.wrappedValue = false }
+                onSubmit: { actionFocused.wrappedValue = false },
+                limit: 240
             )
         }
     }
@@ -396,6 +504,7 @@ struct FightComposerLimitedField: View {
     var focus: FocusState<Bool>.Binding
     var submitLabel: SubmitLabel
     var onSubmit: () -> Void
+    var limit = 120
 
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
@@ -411,14 +520,19 @@ struct FightComposerLimitedField: View {
                         .foregroundStyle(text.isEmpty ? theme.textFaint : theme.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    TextField(placeholder, text: $text)
+                    // Starts as one line and grows as the text wraps.
+                    TextField(placeholder, text: $text, axis: .vertical)
+                        .lineLimit(1...6)
                         .focused(focus)
                         .foregroundStyle(theme.text)
                         .submitLabel(submitLabel)
-                        .onSubmit(onSubmit)
                         .onChange(of: text) { _, value in
-                            if value.count > 120 {
-                                text = String(value.prefix(120))
+                            // NOTE: a vertical field types Return as a newline instead of submitting.
+                            if value.contains("\n") {
+                                text = value.replacingOccurrences(of: "\n", with: "")
+                                onSubmit()
+                            } else if value.count > limit {
+                                text = String(value.prefix(limit))
                             }
                         }
                 }
@@ -429,7 +543,7 @@ struct FightComposerLimitedField: View {
             .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
             .ffBorder(theme.line, radius: theme.radius.field)
 
-            Text(verbatim: "\(text.count)/120")
+            Text(verbatim: "\(text.count)/\(limit)")
                 .ffType(.caption)
                 .foregroundStyle(theme.textFaint)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -523,11 +637,9 @@ struct FightComposerReviewPage: View {
                 FFDivider()
                 FFGroupedRow(
                     title: String(appLocalized: "Title"),
-                    subtitle: title.isEmpty
-                        ? (action.isEmpty ? String(appLocalized: "None") : String(appLocalized: "Uses the action"))
-                        : title,
+                    subtitle: title.isEmpty ? String(appLocalized: "Add a title.") : title,
                     systemImage: "textformat",
-                    subtitleTone: .neutral,
+                    subtitleTone: title.isEmpty ? .ember : .neutral,
                     trailing: AnyView(Text("Change").ffType(.caption).foregroundStyle(theme.mossText)),
                     action: { onChange(.details) }
                 )

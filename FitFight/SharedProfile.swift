@@ -260,6 +260,7 @@ struct ProfileFriendshipResponse: Decodable { let friendship: String }
 /// `GET /api/v1/friends/suggestions`, most shared fights first. Each person also carries
 /// `shared_fights`, which the app does not show.
 struct FriendSuggestionList: Decodable { let people: [SharedProfileIdentity] }
+struct ProfileSearchList: Decodable { let people: [SharedProfileIdentity] }
 
 struct ProfileChallengeDraft: Equatable {
     let handle: String

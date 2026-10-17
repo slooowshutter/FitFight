@@ -1,6 +1,87 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "feed.unread-count": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "New posts: %lld"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouvelles publications : %lld"
+                    }
+                }
+            }
+        },
+        "The Feed tab shows how many new posts people sent since you last opened it.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "L’onglet Fil affiche combien de nouvelles publications ont été envoyées depuis votre dernière visite."
+                    }
+                }
+            }
+        },
+        "fight.no-such-handle": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "No one has the username @%@."
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Personne n’a le nom d’utilisateur @%@."
+                    }
+                }
+            }
+        },
+        "fight.add-handle": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Add @%@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajouter @%@"
+                    }
+                }
+            }
+        },
+        "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Un défi a maintenant besoin d’un titre. Le gage reste facultatif, peut maintenant faire 240 caractères, et sa case s’agrandit pendant que vous écrivez pour tout relire. La case du titre aussi."
+                    }
+                }
+            }
+        },
+        "Adding people to a fight: matching usernames show as you type. Tap one to add it, or see right away when no one has that username.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajouter des personnes à un défi : les noms d’utilisateur correspondants s’affichent pendant que vous tapez. Touchez-en un pour l’ajouter, ou voyez tout de suite quand personne n’a ce nom d’utilisateur."
+                    }
+                }
+            }
+        },
         "Fight pictures now open instantly instead of loading for several seconds.": {
             "localizations": {
                 "fr": {
@@ -6494,12 +6575,12 @@
                 }
             }
         },
-        "Keep the action to 120 characters.": {
+        "Keep the action to 240 characters.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Limitez le gage à 120 caractères."
+                        "value": "Limitez le gage à 240 caractères."
                     }
                 }
             }
@@ -10005,12 +10086,22 @@
                 }
             }
         },
-        "Both are optional. If you skip a title, the action is the name of the fight.": {
+        "Give the fight a title. The loser action is optional.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Les deux sont facultatifs. Sans titre, le gage devient le nom du défi."
+                        "value": "Donnez un titre au défi. Le gage est facultatif."
+                    }
+                }
+            }
+        },
+        "Add a title.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ajoutez un titre."
                     }
                 }
             }
@@ -10031,16 +10122,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Aucun"
-                    }
-                }
-            }
-        },
-        "Uses the action": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Utilise le gage"
                     }
                 }
             }

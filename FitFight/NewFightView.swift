@@ -86,8 +86,9 @@ struct NewFightView: View {
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         return session.isSignedIn
             && (steps.hasAsked || CompanionPreview.isEnabled)
+            && !title.isEmpty
             && title.count <= 120
-            && action.count <= 120
+            && action.count <= 240
             && scheduleError == nil
             && !model.isCreatingFight
     }
@@ -179,7 +180,13 @@ struct NewFightView: View {
                 FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
             }
         } else {
-            FFButton(title: String(appLocalized: "Next"), size: .large, enabled: step != 1 || scheduleError == nil, fullWidth: true) {
+            FFButton(
+                title: String(appLocalized: "Next"),
+                size: .large,
+                enabled: (step != 1 || scheduleError == nil)
+                    && (step != 3 || !fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
+                fullWidth: true
+            ) {
                 step += 1
             }
         }

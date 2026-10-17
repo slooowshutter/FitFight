@@ -21,7 +21,7 @@ export const createFightSchema = z
         stakeKind: z.enum(["bragging", "money", "action"]),
         stakeMinor: z.number().int().min(0).optional(),
         currency: z.string().default("USD"),
-        actionText: z.string().trim().max(120).optional(),
+        actionText: z.string().trim().max(240).optional(),
         inviteHandles: z.array(z.string()).optional(),
         start: z.enum(["now", "scheduled"]).default("now"),
         metric: z.literal("steps").optional(),

@@ -14,7 +14,7 @@ const dateTime = z
 export const updateFightRequestSchema = z
     .object({
         name: z.string().trim().max(120).optional(),
-        actionText: z.string().trim().max(120).optional(),
+        actionText: z.string().trim().max(240).optional(),
         visibility: fightVisibilitySchema.optional(),
         recurring: z.boolean().optional(),
         startsAt: dateTime.optional(),

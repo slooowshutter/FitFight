@@ -2284,6 +2284,11 @@ body:has(.lp) {
     font-weight: 800;
 }
 
+.lp-cp-button:disabled {
+    background: var(--control);
+    color: var(--faint);
+}
+
 .lp-cp-secondary {
     background: var(--control);
     color: var(--text);

@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.2.0",
             year: 2026,
             month: 10,
+            day: 17,
+            notes: "Opening FitFight no longer sometimes freezes on a blank Fights screen."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
             day: 16,
             notes: "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."
         ),

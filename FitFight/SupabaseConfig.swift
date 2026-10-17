@@ -16,10 +16,11 @@ enum SupabaseConfig {
     /// A local build has no `BuildEnv` — CI writes that file only before an archive.
     /// The fallback used to be production, which meant every simulator run was talking
     /// to live data. Debug now falls back to develop instead; only a Release build with
-    /// no injected value can reach production.
+    /// no injected value can reach production. `scripts/run-simulator.sh local-db` sets
+    /// `FFSupabaseURL` and `FFSupabasePublishableKey` in the Simulator for a local stack.
     private static var fallbackURL: URL {
         #if DEBUG
-        return stagingURL
+        return ProcessInfo.processInfo.environment["FFSupabaseURL"].flatMap(URL.init(string:)) ?? stagingURL
         #else
         return productionURL
         #endif
@@ -27,7 +28,7 @@ enum SupabaseConfig {
 
     private static var fallbackPublishableKey: String {
         #if DEBUG
-        return stagingPublishableKey
+        return ProcessInfo.processInfo.environment["FFSupabasePublishableKey"] ?? stagingPublishableKey
         #else
         return productionPublishableKey
         #endif

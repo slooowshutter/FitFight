@@ -115,7 +115,9 @@ struct FFScreen<Content: View>: View {
             body(content())
                 // Root screens are one viewport wide. Child HStacks can wrap or
                 // truncate, but can no longer widen the scroll view and rubber-band.
-                .containerRelativeFrame(.horizontal)
+                // The width the scroll view offers, not containerRelativeFrame: reading the live
+                // container width could feed back into its layout and freeze a cold launch.
+                .frame(minWidth: 0, maxWidth: .infinity)
                 .ffKeyboardDismissOnBackgroundTap()
                 .background(alignment: .top) {
                     if refresh != nil {

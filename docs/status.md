@@ -6,6 +6,23 @@ Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minu
 
 ---
 
+## Leaving the Everybody fight sticks, prepared 17 Oct 2026
+
+Feedback from @c_cool_la_vie (29 Sep): they could not leave "Everybody on the app". They
+left on 6 Oct, but the auto-invite on `/fights/refresh` and `/fights/snapshot` only checked
+the current round's membership, so each new round invited them again, with a push.
+
+**Fix:** the auto-invite and the invite-everyone step when a fight is marked Suggested now
+skip anyone whose series membership is `withdrawn` (they left or the owner removed them).
+Joining by code sets it back to `accepted`, so they can still come back. Declining a
+single round's invite is unchanged.
+
+**Contract:** no API or schema change, no migration. Only who gets an `invited` row and
+an invite push changes. **Checks:** invite unit tests (new regression for a leaver) and
+`npm run typecheck`. Not deployed.
+
+---
+
 ## Player card profile and 10K streak, prepared 16 Oct 2026
 
 Built from the designs Marc approved in PR #389 (`docs/design/source/kit/fights-profile-prototype.html`).

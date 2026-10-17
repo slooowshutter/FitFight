@@ -43,7 +43,7 @@ enum Stage { case session }
 }
 
 @MainActor final class RemoteImageLoader {
-    enum Kind { case avatar }
+    enum Kind { case avatar, photo }
     static let shared = RemoteImageLoader()
     func prefetch(_ urls: [URL], kind: Kind) {}
 }

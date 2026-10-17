@@ -43,7 +43,7 @@ create a fight without a title; the server names it after their loser action (12
 most). No migration. Deploy the backend before distributing the app; on an older backend
 the search fails quietly and Add behaves as before.
 
-**Checks:** web typecheck and `npm test` pass (545 tests); the search SQL ran read-only
+**Checks:** web typecheck and `npm test` pass (549 tests); the search SQL ran read-only
 on staging; simulator build succeeded; localization check passed. Typecheck, `npm test`,
 the localization checks, and the simulator build were rerun after the required title.
 Not yet seen on a device.

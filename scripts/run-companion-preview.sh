@@ -19,14 +19,15 @@ print(matches[0]["udid"])
 fi
 
 mkdir -p .context
+# Builds stay out of .context: Conductor keeps .context forever after archiving a workspace.
+derived="$HOME/Library/Developer/Xcode/DerivedData/FitFight-$(basename "$repo_root")"
 xcodebuild -project FitFight.xcodeproj -scheme FitFight -configuration Debug \
     -destination "platform=iOS Simulator,id=$simulator_id" \
-    -derivedDataPath .context/DerivedData \
-    -clonedSourcePackagesDirPath .context/SourcePackages \
+    -derivedDataPath "$derived" \
     CODE_SIGNING_ALLOWED=NO build > .context/companion-build.log 2>&1
 
 xcrun simctl bootstatus "$simulator_id" -b
-xcrun simctl install "$simulator_id" .context/DerivedData/Build/Products/Debug-iphonesimulator/FitFight.app
+xcrun simctl install "$simulator_id" "$derived"/Build/Products/Debug-iphonesimulator/FitFight.app
 SIMCTL_CHILD_FF_COMPANION_PREVIEW=1 xcrun simctl launch --terminate-running-process \
     "$simulator_id" com.fitfight.mvp --companion-preview
 open -a Simulator --args -CurrentDeviceUDID "$simulator_id"

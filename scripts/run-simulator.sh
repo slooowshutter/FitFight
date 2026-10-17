@@ -95,14 +95,15 @@ SQL
     *) echo "usage: $0 [local|staging|local-db [reset|stop]]" >&2; exit 1 ;;
 esac
 
+# Builds stay out of .context: Conductor keeps .context forever after archiving a workspace.
+derived="$HOME/Library/Developer/Xcode/DerivedData/FitFight-$workspace"
 # Ad-hoc signing embeds the simulator entitlements; without them sign-in cannot save to the Keychain.
 xcodebuild -project FitFight.xcodeproj -scheme FitFight -configuration Debug \
     -destination "platform=iOS Simulator,id=$simulator_id" \
-    -derivedDataPath .context/DerivedData \
-    -clonedSourcePackagesDirPath .context/SourcePackages \
+    -derivedDataPath "$derived" \
     CODE_SIGNING_ALLOWED=YES CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- \
     build > .context/simulator-build.log 2>&1 || { tail -30 .context/simulator-build.log; exit 1; }
 
-xcrun simctl install "$simulator_id" .context/DerivedData/Build/Products/Debug-iphonesimulator/FitFight.app
+xcrun simctl install "$simulator_id" "$derived"/Build/Products/Debug-iphonesimulator/FitFight.app
 xcrun simctl launch --terminate-running-process "$simulator_id" com.fitfight.mvp
 open -a Simulator --args -CurrentDeviceUDID "$simulator_id"

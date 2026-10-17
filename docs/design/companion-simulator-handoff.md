@@ -10,7 +10,7 @@ From the repository root:
 ./scripts/run-companion-preview.sh
 ```
 
-The script builds the actual `FitFight` scheme with signing disabled, uses workspace-local DerivedData and package checkouts, installs the app, and launches the marked preview. It selects the reviewed iPhone 17 / iOS 26.5 runtime. To choose another installed Simulator, pass its UDID:
+The script builds the actual `FitFight` scheme with signing disabled, builds into a per-workspace folder in `~/Library/Developer/Xcode/DerivedData` (not `.context`, which Conductor keeps after archiving), installs the app, and launches the marked preview. It selects the reviewed iPhone 17 / iOS 26.5 runtime. To choose another installed Simulator, pass its UDID:
 
 ```sh
 ./scripts/run-companion-preview.sh ACE4AD1B-1576-4FEF-B1C7-2ED50957D50B

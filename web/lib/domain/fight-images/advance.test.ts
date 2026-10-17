@@ -61,6 +61,9 @@ function harness(overrides: Partial<typeof fightImageDependencies>) {
         upload: async () => "https://example.supabase.co/storage/v1/object/sign/fight-group-references/sheet-1.png?token=t",
         render: async () => Buffer.from("png"),
         label: async () => ({}),
+        unconverted: async () => [],
+        saveWebp: async () => {},
+        toWebp: async () => Buffer.from("webp"),
         start: async (workflowId, inputs) => {
             starts.push({ workflowId, inputs });
             return { data: { workflowId, runId: `run-new-${starts.length}` }, rateLimit: {} };
@@ -113,7 +116,7 @@ test("an unfinished run waits, then counts as a failed attempt after the timeout
     const pending = { data: { id: "run", status: "running" as const, output: null }, rateLimit: {} };
     const fresh = harness({ running: async () => [running(1)], read: async () => pending });
     assert.deepEqual(await advanceFightGroupImages(performance.now() + 60_000, fresh.deps), {
-        queued: 0, ready: 0, retried: 0, failed: 0, started: 0,
+        queued: 0, ready: 0, retried: 0, failed: 0, converted: 0, started: 0,
     });
     const old = new Date(Date.now() - (fightImageConfiguration.runTimeoutMinutes + 1) * 60_000);
     const stale = harness({ running: async () => [running(1, old)], read: async () => pending });
@@ -150,4 +153,20 @@ test("a start that throws fails that image without stopping the pass", async () 
     assert.equal(summary.failed, 1);
     assert.match(finished[0].problems[0], /storage down/);
     assert.equal(finished[0].requeue, true, "an infrastructure failure lets the fight queue again");
+});
+
+test("ready images get a WebP copy, and one that cannot convert does not stop the others", async () => {
+    const broken = { id: "66666666-6666-4666-8666-666666666666", image_url: "https://supabase.tryblend.ai/gone.png" };
+    const saved: string[] = [];
+    const { deps } = harness({
+        unconverted: async () => [broken, { id: jobId, image_url: image }],
+        toWebp: async (url) => {
+            if (url === broken.image_url) throw new Error("image 404");
+            return Buffer.from("webp");
+        },
+        saveWebp: async (id) => void saved.push(id),
+    });
+    const summary = await advanceFightGroupImages(performance.now() + 60_000, deps);
+    assert.equal(summary.converted, 1);
+    assert.deepEqual(saved, [jobId]);
 });

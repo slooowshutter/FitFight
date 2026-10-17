@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Fight pictures now open instantly instead of loading for several seconds.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Les images des défis s’affichent maintenant tout de suite au lieu de charger plusieurs secondes."
+                    }
+                }
+            }
+        },
         "Name your companion": {
             "localizations": {
                 "fr": {

@@ -72,7 +72,7 @@ export async function readFightSnapshot(
                     case when closes_after_grace
                         then ends_at + final_sync_grace_seconds * interval '1 second' end as grace_ends_at,
                     (
-                        select image.image_url from private.fight_group_images as image
+                        select coalesce(image.webp_url, image.image_url) from private.fight_group_images as image
                         where image.fight_id = fight.id and image.status = 'ready'
                         order by image.finished_at desc
                         limit 1

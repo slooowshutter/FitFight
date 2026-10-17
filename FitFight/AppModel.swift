@@ -572,6 +572,8 @@ final class AppModel: ObservableObject {
             return
         }
         fights = cached
+        // Downloaded and decoded at launch, so a fight opens with its picture already there.
+        RemoteImageLoader.shared.prefetch(cached.compactMap(\.groupImageURL), kind: .photo)
     }
 
     func refreshFights(
@@ -794,6 +796,11 @@ final class AppModel: ObservableObject {
     }
 
     private func mapSnapshot(_ snapshot: FitFightSnapshot, userId: UUID) -> [Fight] {
+        // Every refresh, including returning to the app, puts any new or evicted fight picture back in memory.
+        RemoteImageLoader.shared.prefetch(
+            snapshot.fights.compactMap { $0.groupImageUrl.flatMap(URL.init(string:)) },
+            kind: .photo
+        )
         let profiles = Dictionary(snapshot.profiles.map { ($0.userId, $0) }, uniquingKeysWith: { _, last in last })
         let members = Dictionary(grouping: snapshot.members, by: \.fightId)
         let mine = Dictionary(

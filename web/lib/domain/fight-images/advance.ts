@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { readBlendWorkflowRun, startBlendWorkflow } from "@/lib/blend/client";
 import { fightImageRunners, judgeFightImage, planFightImage } from "@/lib/domain/fight-images/plan";
 import { renderReferenceSheet } from "@/lib/domain/fight-images/reference-sheet";
@@ -7,7 +8,9 @@ import {
     enqueueChangedFightImages,
     finishFightImageAttempt,
     readRunningFightImages,
+    readUnconvertedFightImages,
     saveFightImageRun,
+    saveFightImageWebp,
     uploadFightReferenceSheet,
 } from "@/lib/supabase/queries/fight-images-supabase-query";
 import type { CompanionLabelRow } from "@/lib/types/ai/custom-character";
@@ -26,6 +29,14 @@ export const fightImageDependencies = {
     upload: uploadFightReferenceSheet,
     render: renderReferenceSheet,
     label: readCompanionLabel,
+    unconverted: readUnconvertedFightImages,
+    saveWebp: saveFightImageWebp,
+    toWebp: async (pngUrl: string) => {
+        const response = await fetch(pngUrl, { signal: AbortSignal.timeout(15_000) });
+        if (!response.ok) throw new Error(`image ${response.status}`);
+        // 1200 px fills a phone at 3x; quality 90 looks the same as the PNG at about a ninth of the size.
+        return sharp(Buffer.from(await response.arrayBuffer())).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 90 }).toBuffer();
+    },
     start: (workflowId: string, inputs: Record<string, unknown>) => startBlendWorkflow({ workflowId }, inputs),
     read: (workflowId: string, runId: string) => readBlendWorkflowRun({ workflowId, runId }),
     now: () => Date.now(),
@@ -34,14 +45,26 @@ export const fightImageDependencies = {
 /**
  * One pass of fight group images, run by the reconcile cron: open images for fights whose runners changed,
  * settle finished Blend runs (checking every runner is drawn and faces right, retrying up to three times),
- * then start due images while time is left. Stops at deadline (a performance.now() value).
+ * copy ready images to WebP, then start due images while time is left. Stops at deadline (a performance.now() value).
  */
 export async function advanceFightGroupImages(deadline: number, deps = fightImageDependencies) {
-    const summary = { queued: 0, ready: 0, retried: 0, failed: 0, started: 0 };
+    const summary = { queued: 0, ready: 0, retried: 0, failed: 0, converted: 0, started: 0 };
     for (const job of await deps.running()) {
         if (performance.now() >= deadline) return summary;
         const outcome = await settleRun(job, deps);
         if (outcome) summary[outcome]++;
+    }
+    // Before new starts, so an image that just became ready is served as WebP within this pass.
+    // ponytail: shares the start budget; a large backfill delays starts a few passes, cap it per pass if that matters.
+    for (const source of await deps.unconverted()) {
+        if (performance.now() >= deadline - 20_000) break;
+        try {
+            await deps.saveWebp(source.id, await deps.toWebp(source.image_url));
+            summary.converted++;
+        } catch (error) {
+            // The PNG stays the served image and the next pass tries again; one bad image must not stop the rest.
+            console.error("fight image webp failed", source.id, error);
+        }
     }
     if (!fightImageConfiguration.enabled) return summary;
     summary.queued = await deps.enqueue();

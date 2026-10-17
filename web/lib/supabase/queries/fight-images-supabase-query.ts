@@ -5,11 +5,14 @@ import {
     fightImageCastRowSchema,
     fightImageConfiguration,
     fightImageJobRowSchema,
+    fightImageWebpSourceRowSchema,
     type FightImageCastRow,
     type FightImageJobRow,
+    type FightImageWebpSourceRow,
 } from "@/lib/types/fight-images/fight-image";
 
 const BUCKET = "fight-group-references";
+const WEBP_BUCKET = "fight-group-images";
 const SIGNED_SECONDS = 7 * 24 * 60 * 60;
 const activeFightStates = ["scheduled", "live"];
 
@@ -34,12 +37,12 @@ function castKey(sql: Sql, fightId: Fragment | string) {
  */
 export async function enqueueChangedFightImages(database: Sql = createDatabaseClient()) {
     await database`
-        insert into private.fight_group_images (fight_id, status, due_at, finished_at, cast_key, layout, runners, image_url, attempt_log)
+        insert into private.fight_group_images (fight_id, status, due_at, finished_at, cast_key, layout, runners, image_url, webp_url, attempt_log)
         select fight.id, 'ready', now(), now(), previous.cast_key, previous.layout, previous.runners, previous.image_url,
-            jsonb_build_array(jsonb_build_object('reused_from', previous.id))
+            previous.webp_url, jsonb_build_array(jsonb_build_object('reused_from', previous.id))
         from public.fights as fight
         join lateral (
-            select image.id, image.cast_key, image.layout, image.runners, image.image_url
+            select image.id, image.cast_key, image.layout, image.runners, image.image_url, image.webp_url
             from private.fight_group_images as image
             join public.fights as round on round.id = image.fight_id
             where round.series_id = fight.series_id and round.id <> fight.id and image.status = 'ready'
@@ -236,4 +239,24 @@ export async function uploadFightReferenceSheet(imageId: string, index: number, 
     const signed = await storage.createSignedUrl(path, SIGNED_SECONDS);
     if (signed.error || !signed.data) throw signed.error ?? new Error("reference sheet was not signed");
     return signed.data.signedUrl;
+}
+
+/** Ready images still served as Blend's PNG, newest first so a fresh image converts before old ones. */
+export async function readUnconvertedFightImages(database: Sql = createDatabaseClient()): Promise<FightImageWebpSourceRow[]> {
+    const rows = await database`
+        select id, image_url from private.fight_group_images
+        where status = 'ready' and image_url is not null and webp_url is null
+        order by finished_at desc, id
+    `;
+    return rows.map((row) => fightImageWebpSourceRowSchema.parse(row));
+}
+
+/** Stores an image's WebP copy publicly, cached for a year (its path never changes), and serves it from then on. */
+export async function saveFightImageWebp(imageId: string, webp: Buffer, database: Sql = createDatabaseClient()) {
+    const storage = createAdminClient().storage.from(WEBP_BUCKET);
+    const path = `${imageId}.webp`;
+    const uploaded = await storage.upload(path, webp, { contentType: "image/webp", cacheControl: "31536000", upsert: true });
+    if (uploaded.error) throw uploaded.error;
+    const url = storage.getPublicUrl(path).data.publicUrl;
+    await database`update private.fight_group_images set webp_url = ${url} where id = ${imageId}`;
 }

@@ -6962,10 +6962,12 @@
         return `<div class="pf-head">
                 <button type="button" class="pf-avatar-btn" aria-label="Edit profile" data-on="pfPresent:editProfile">${companion(me, 48)}<span class="badge">${icon("pencil")}</span></button>
                 <div class="vstack grow" style="gap:2px;min-width:0"><span class="t-title ellipsis">${esc(me.name)}</span><span class="t-caption c-2">${esc(me.handle)}</span></div>
+                ${V("medals-place") === "button" ? medalHeaderButton() : ""}
                 <button type="button" class="pf-round" aria-label="Dashboard" data-on="pfPush:dashboard"><span class="pf-bars3"><i style="height:8px"></i><i style="height:16px"></i><i style="height:12px"></i></span></button>
                 <button type="button" class="pf-round" aria-label="Settings" data-on="push:settings">${icon("gearshape")}</button>
             </div>
-            ${words ? `<div class="vstack" style="gap:2px"><span class="t-label c-text">${esc(words[0])}</span>${words[1] ? `<span class="t-caption c-2">${esc(words[1])}</span>` : ""}</div>` : ""}`;
+            ${words ? `<div class="vstack" style="gap:2px"><span class="t-label c-text">${esc(words[0])}</span>${words[1] ? `<span class="t-caption c-2">${esc(words[1])}</span>` : ""}</div>` : ""}
+            ${V("medals-place") === "row" ? medalStrip() : ""}`;
     }
     // YouStatsCard: today, then this week, record, 8-week average and best day.
     function statsCard() {
@@ -6991,6 +6993,7 @@
                     ${cell(average != null ? num(average) : "-", "daily average", "past 8 weeks")}
                     ${cell(best != null ? num(best) : "-", "best day", "past 8 weeks")}
                 </div>
+                ${V("medals-place") === "stat" ? medalStatLine() : ""}
             </div>`;
     }
     // Steps first, then each workout type, as YouActivityStore.sports.
@@ -7056,7 +7059,7 @@
         kind: "root",
         title: "Profile",
         render: (p, ui) => {
-            const body = [youHeader(), statsCard(), sportList(ui), rivals().map(rivalCard).join(""), friendsSection(ui)].join("");
+            const body = [youHeader(), statsCard(), V("medals-place") === "section" ? medalSection() : "", sportList(ui), rivals().map(rivalCard).join(""), friendsSection(ui)].join("");
             return FF.screen(body, { top: versionBanner(S.admin ? "present:debugMenu" : null) });
         },
     });
@@ -7495,6 +7498,7 @@
         if (profile.friendship === "self" || preview) html += ownContent(profile);
         else {
             html += playerCard(profile, ui);
+            if (V("medals-player") === "row" && profile.access !== "private") html += playerMedals(profile);
             if (profile.friendship === "incoming") {
                 html += FF.card(`<div class="vstack" style="gap:12px"><div class="vstack" style="gap:2px"><span class="t-heading">${esc(profile.identity.name)} wants to be friends</span><span class="t-caption c-2">Friends can see each other's shared steps and stats.</span></div><div class="hstack" style="gap:10px">${FF.button("Accept", { full: true, on: `pfFriend:accept|${profile.identity.id}` })}${FF.button("Decline", { kind: "secondary", full: true, on: `pfFriend:decline|${profile.identity.id}` })}</div></div>`, { fill: "var(--mossWash)", stroke: "var(--mossEdge)" });
             }
@@ -7772,6 +7776,439 @@
             return FF.screen(cards, { top, clearance: false, bodyStyle: "padding-top:0" });
         },
     });
+
+    // ─── Medals (proposal, not in the app) ──────────────────────────
+    // Marc, 17 Oct 2026: medals for fight places (a "Wall of Honor" request in Feedback, 19 Sep) and for step stats. Every
+    // medal can be earned again and again and shows ×N. Counts start the day you joined FitFight. Six design questions
+    // below; each option of one question is the same app with that one thing changed.
+    variant("medals-place", {
+        title: "Medals 1 · Where on Profile",
+        note: "Where your medals show on the Profile tab. Every option opens the same Medals page.",
+        options: [
+            { id: "today", name: "Today", when: "The app as it is now: no medals." },
+            { id: "row", name: "A row under your name", when: "Right if medals are part of who you are: the first thing friends and you see." },
+            { id: "stat", name: "A line in the stats card", when: "Right if medals are one more stat, next to steps and your record." },
+            { id: "button", name: "A button at the top", when: "Right if medals should stay out of the way: one tap, next to Dashboard and Settings." },
+            { id: "section", name: "A Medals section", when: "Right if medals deserve their own block you can scroll to." },
+        ],
+        links: [["Profile", "#you"], ["Medals page", "#you/medals"]],
+    });
+    variant("medals-page", {
+        title: "Medals 2 · The Medals page",
+        note: "What opens when you tap your medals.",
+        options: [
+            { id: "shelf", name: "Shelf", when: "Right if it should feel like a trophy cabinet: every medal at a glance, grey until earned." },
+            { id: "progress", name: "Next medal", when: "Right if it should push you: each medal shows how close the next one is." },
+            { id: "honor", name: "Wall of Honor", when: "Right if the story matters most: every medal you earned by date, the fight and your place. What the Feedback request asked for." },
+        ],
+        links: [["Medals page", "#you/medals"], ["1st place", "#you/medals/~medal?id=gold"], ["20K day, almost", "#you/medals/~medal?id=day20k"]],
+    });
+    variant("medals-look", {
+        title: "Medals 3 · How a medal looks",
+        note: "The drawing of one medal, everywhere it appears.",
+        options: [
+            { id: "coin", name: "Coin", when: "Right if medals should match the app's flat, round icons." },
+            { id: "ribbon", name: "Medal on a ribbon", when: "Right if it should read as a real medal at a glance." },
+            { id: "badge", name: "Badge", when: "Right if it should feel like a game achievement." },
+        ],
+        links: [["Medals page", "#you/medals"], ["1st place", "#you/medals/~medal?id=gold"]],
+    });
+    variant("medals-set", {
+        title: "Medals 4 · Which medals",
+        note: "Six to start, or all twelve ideas from the live numbers.",
+        options: [
+            { id: "six", name: "Six to start", when: "Right if it should be simple: 1st, 2nd, 3rd place, 10K day, 20K day, 10K week." },
+            { id: "all", name: "All twelve", when: "Adds Hat trick, Big fight, Beat Marc, 30K day, 70K week and Million." },
+        ],
+        links: [["Medals page", "#you/medals"], ["Profile", "#you"]],
+    });
+    variant("medals-new", {
+        title: "Medals 5 · When you earn one",
+        note: "What the app does the next time you open it after earning a medal.",
+        options: [
+            { id: "drawer", name: "Drawer", when: "Right if it should be a clear moment you close with one tap." },
+            { id: "cover", name: "Full screen", when: "Right if earning a medal should feel like an event, with your companion." },
+            { id: "toast", name: "Banner", when: "Right if it should stay light: a banner at the top that you can ignore." },
+        ],
+        links: [["New 10K day", "#fights/~medalNew?id=day10k"], ["New 1st place", "#fights/~medalNew?id=gold"]],
+    });
+    variant("medals-player", {
+        title: "Medals 6 · On someone's Player card",
+        note: "What you see when you open a friend.",
+        options: [
+            { id: "today", name: "Today", when: "The Player card as it is now." },
+            { id: "row", name: "Their medals", when: "Right if medals are for showing off: a row under their record. Tap one to see the count." },
+        ],
+        links: [["Theo's Player card", "#you/~profileSheet?id=theo"], ["Theo's 1st place", "#you/~profileSheet?id=theo/~medal?id=gold&who=theo"]],
+    });
+
+    // id, name, the rule, group, colour (podium medals use the medal tokens; Moss is winning; Gold is progress like
+    // the 10K flame), and what the medal shows: a number or a glyph.
+    const MEDAL_KINDS = [
+        { id: "gold", name: "1st place", rule: "Win a fight.", group: "Fights", tone: "first", mark: "1" },
+        { id: "silver", name: "2nd place", rule: "Finish 2nd in a fight of 3 or more people.", group: "Fights", tone: "second", mark: "2" },
+        { id: "bronze", name: "3rd place", rule: "Finish 3rd in a fight of 4 or more people.", group: "Fights", tone: "third", mark: "3" },
+        { id: "hattrick", name: "Hat trick", rule: "Win 3 fights in a row. 6 in a row earns two.", group: "Fights", tone: "moss", glyph: "crown" },
+        { id: "bigfight", name: "Big fight", rule: "Win a fight with 5 or more people.", group: "Fights", tone: "moss", glyph: "person.2" },
+        { id: "beatmarc", name: "Beat Marc", rule: "Finish ahead of Marc in a fight.", group: "Fights", tone: "moss", glyph: "star.fill" },
+        { id: "day10k", name: "10K day", rule: "Walk 10,000 steps in a day.", group: "Steps", tone: "steps", mark: "10K", goal: 10000 },
+        { id: "day20k", name: "20K day", rule: "Walk 20,000 steps in a day.", group: "Steps", tone: "steps", mark: "20K", goal: 20000 },
+        { id: "day30k", name: "30K day", rule: "Walk 30,000 steps in a day.", group: "Steps", tone: "steps", mark: "30K", goal: 30000 },
+        { id: "million", name: "Million", rule: "Every 1,000,000 steps since you joined.", group: "Steps", tone: "steps", mark: "1M" },
+        { id: "week10k", name: "10K week", rule: "Walk 10,000 steps 7 days in a row. 14 days in a row earns two.", group: "Streaks", tone: "streak", glyph: "flame.fill" },
+        { id: "week70k", name: "70K week", rule: "Walk 70,000 steps from Monday to Sunday.", group: "Streaks", tone: "streak", glyph: "calendar" },
+    ];
+    const STARTER_MEDALS = ["gold", "silver", "bronze", "day10k", "day20k", "week10k"];
+    const medalKinds = () => (V("medals-set") === "six" ? MEDAL_KINDS.filter((k) => STARTER_MEDALS.includes(k.id)) : MEDAL_KINDS);
+    const medalKind = (id) => MEDAL_KINDS.find((k) => k.id === id);
+    // Fight medals in groups of 3 or more that the 1v1 history doesn't hold.
+    const PODIUM_EVENTS = {
+        silver: [["Office league", 9, 6], ["Cousins cup", 23, 4], ["Team Tuesday", 44, 3]],
+        bronze: [["Everybody on the app", 16, 41]],
+    };
+    // Theo and Leo's counts for their Player cards; anyone else has none yet.
+    const OTHER_MEDALS = {
+        theo: { gold: 14, silver: 2, bronze: 0, hattrick: 3, bigfight: 1, beatmarc: 0, day10k: 31, day20k: 2, day30k: 0, million: 1, week10k: 2, week70k: 6 },
+        leo: { gold: 9, silver: 4, bronze: 2, hattrick: 1, bigfight: 0, beatmarc: 1, day10k: 22, day20k: 0, day30k: 0, million: 0, week10k: 1, week70k: 3 },
+    };
+
+    // What the server would send: every medal with its count, each time you earned it, and the progress to the next.
+    function medalsOf(id) {
+        const empty = S.scenario === "empty" || S.scenario === "loading";
+        if (id !== D().you) {
+            const counts = empty ? {} : OTHER_MEDALS[id] || {};
+            return Object.fromEntries(MEDAL_KINDS.map((k) => [k.id, { count: counts[k.id] || 0, events: null, progress: null }]));
+        }
+        const steps = empty ? [] : D().steps.slice(0, 30);
+        const day = (i) => dayOf(30 - steps.length + i).getTime();
+        const history = empty ? [] : [...D().profileHistory].reverse();
+        const ago = (days) => Date.now() - days * DAY;
+        const out = {};
+        const set = (kid, events, progress = null) => { out[kid] = { count: events.length, events: events.sort((a, b) => b.at - a.at), progress }; };
+        set("gold", history.filter((h) => h.result === "win").map((h) => ({ at: new Date(`${h.endsAt}T12:00:00`).getTime(), title: h.name, detail: `1st of ${h.fieldSize}` })));
+        set("silver", empty ? [] : PODIUM_EVENTS.silver.map(([name, daysAgo, size]) => ({ at: ago(daysAgo), title: name, detail: `2nd of ${size}` })));
+        set("bronze", empty ? [] : PODIUM_EVENTS.bronze.map(([name, daysAgo, size]) => ({ at: ago(daysAgo), title: name, detail: `3rd of ${size}` })));
+        const hats = [];
+        let run = 0;
+        for (const h of history) {
+            run = h.result === "win" ? run + 1 : 0;
+            if (run && run % 3 === 0) hats.push({ at: new Date(`${h.endsAt}T12:00:00`).getTime(), title: h.name, detail: `${run} wins in a row` });
+        }
+        set("hattrick", hats);
+        set("bigfight", [], { label: "Your biggest win", value: empty ? 0 : 4, goal: 5, unit: "people" });
+        set("beatmarc", empty ? [] : [{ at: ago(12), title: "Fight Marc", detail: "You 61,240 · Marc 58,910" }]);
+        const best = steps.length ? Math.max(...steps) : 0;
+        for (const k of MEDAL_KINDS.filter((x) => x.goal)) {
+            const hits = steps.map((v, i) => ({ v, i })).filter((x) => x.v >= k.goal);
+            set(k.id, hits.map((x) => ({ at: day(x.i), title: `${num(x.v)} steps`, detail: "" })), { label: "Best day", value: best, goal: k.goal, unit: "steps" });
+        }
+        const total = sum(steps);
+        set("million", [], { label: "Since you joined", value: total, goal: 1_000_000, unit: "steps" });
+        let streak = 0, longest = 0;
+        for (const v of steps) { streak = v >= 10000 ? streak + 1 : 0; longest = Math.max(longest, streak); }
+        set("week10k", [], { label: "Longest run", value: longest, goal: 7, unit: "days" });
+        const weeks = [];
+        for (let i = 0; i < steps.length; i++) {
+            const date = new Date(day(i));
+            if (date.getDay() !== 0 || i < 6) continue;
+            const week = sum(steps.slice(i - 6, i + 1));
+            if (week >= 70000) weeks.push({ at: date.getTime(), title: `${num(week)} steps`, detail: `Week of ${monthDay(day(i - 6))}` });
+        }
+        set("week70k", weeks, { label: "This week so far", value: sum(steps.slice(-3)), goal: 70000, unit: "steps" });
+        return out;
+    }
+    const earnedTotal = (medals) => medalKinds().reduce((n, k) => n + medals[k.id].count, 0);
+
+    // One medal drawing. `count` 0 draws it locked (grey, dashed).
+    function medalArt(kind, count, size = 56, o = {}) {
+        const look = V("medals-look");
+        const locked = !count;
+        const inner = kind.mark
+            ? `<text x="32" y="${look === "ribbon" ? 46 : 38.5}" text-anchor="middle" font-size="${kind.mark.length > 2 ? 13 : kind.mark.length > 1 ? 15 : 20}" font-weight="800" fill="currentColor">${esc(kind.mark)}</text>`
+            : `<g transform="translate(${look === "ribbon" ? "21 30" : "20 20"}) scale(${look === "ribbon" ? 0.92 : 1})" class="${kind.glyph.endsWith(".fill") ? "md-gf" : "md-gs"}">${ICONS[kind.glyph]}</g>`;
+        let shape;
+        if (look === "ribbon") {
+            shape = `<path class="md-tail" d="M19 2h11l6 21H25z"/><path class="md-tail b" d="M45 2H34l-6 21h11z"/><circle class="md-bg" cx="32" cy="41" r="19"/><circle class="md-ring" cx="32" cy="41" r="14"/>`;
+        } else if (look === "badge") {
+            shape = `<path class="md-bg" d="M32 3l25.1 14.5v29L32 61 6.9 46.5v-29z"/><path class="md-ring" d="M32 10.5l18.6 10.75v21.5L32 53.5 13.4 42.75v-21.5z"/>`;
+        } else {
+            shape = `<circle class="md-bg" cx="32" cy="32" r="28"/><circle class="md-ring" cx="32" cy="32" r="21.5"/>`;
+        }
+        const chip = o.chip !== false && count > 1 ? `<span class="md-x">×${count}</span>` : "";
+        return `<span class="md-art md-${locked ? "locked" : kind.tone}" style="width:${size}px;height:${size}px">${`<svg viewBox="0 0 64 64" aria-hidden="true">${shape}${inner}</svg>`}${chip}</span>`;
+    }
+    const countText = (n) => (n ? `×${n}` : "Not yet");
+    // The strongest medals first: podium, then everything earned, then the rest.
+    const earnedFirst = (medals) => [...medalKinds()].sort((a, b) => (medals[b.id].count > 0) - (medals[a.id].count > 0));
+
+    // ─── Where medals sit on Profile (medals-place) ─────────────────
+    function medalStrip() {
+        const medals = medalsOf(D().you);
+        const kinds = earnedFirst(medals);
+        const total = earnedTotal(medals);
+        return `<button type="button" class="md-strip ff-press" data-on="pfPush:medals">
+                <span class="hstack" style="gap:6px"><span class="t-eyebrow c-2 grow">Medals</span><span class="t-caption c-2">${esc(total ? `${total} earned` : "None yet")}</span><span class="c-faint" style="font-size:13px">${icon("chevron.right")}</span></span>
+                <span class="md-strip-row">${kinds.map((k) => medalArt(k, medals[k.id].count, 46)).join("")}</span>
+            </button>`;
+    }
+    function medalStatLine() {
+        const medals = medalsOf(D().you);
+        const total = earnedTotal(medals);
+        const top = earnedFirst(medals).filter((k) => medals[k.id].count).slice(0, 4);
+        return `<button type="button" class="md-statline" data-on="pfPush:medals">
+                <span class="vstack" style="gap:2px"><span class="pf-cell-value">${total}</span><span class="t-caption c-2">medals</span></span>
+                <span class="grow"></span>
+                <span class="hstack" style="gap:10px">${top.map((k) => `<span class="hstack" style="gap:3px">${medalArt(k, medals[k.id].count, 26, { chip: false })}<span class="t-micro c-2">×${medals[k.id].count}</span></span>`).join("")}</span>
+                <span class="c-faint" style="font-size:14px">${icon("chevron.right")}</span>
+            </button>`;
+    }
+    function medalHeaderButton() {
+        const total = earnedTotal(medalsOf(D().you));
+        return `<button type="button" class="pf-round md-round" aria-label="Medals" data-on="pfPush:medals">${icon("medal")}${total ? `<span class="md-dot">${total}</span>` : ""}</button>`;
+    }
+    function medalSection() {
+        const medals = medalsOf(D().you);
+        const kinds = earnedFirst(medals).slice(0, 6);
+        return `<div class="vstack" style="gap:12px;margin-top:16px">
+                <div class="hstack"><h3 class="t-heading grow">Medals</h3><button type="button" class="md-seeall" data-on="pfPush:medals">See all</button></div>
+                <div class="md-grid">${kinds.map((k) => medalTile(k, medals[k.id])).join("")}</div>
+            </div>`;
+    }
+    function medalTile(kind, m, who = null) {
+        return `<button type="button" class="md-tile ${m.count ? "" : "locked"}" data-on="present:medal?id=${kind.id}${who ? `&who=${who}` : ""}">
+                ${medalArt(kind, m.count, 58, { chip: false })}
+                <span class="t-label ellipsis" style="max-width:100%">${esc(kind.name)}</span>
+                <span class="t-micro ${m.count ? "c-2" : "c-faint"}">${esc(countText(m.count))}</span>
+            </button>`;
+    }
+
+    // ─── The Medals page (medals-page) ──────────────────────────────
+    function progressLine(p, o = {}) {
+        if (!p || !p.goal) return "";
+        const value = Math.min(p.value, p.goal);
+        const rest = p.goal - value;
+        const text = p.unit === "steps" ? `${num(p.value)} / ${num(p.goal)}` : `${p.value} / ${p.goal} ${p.unit}`;
+        return `<span class="vstack md-progress" style="gap:5px">
+                <span class="hstack t-micro c-2"><span class="grow">${esc(o.label || p.label)}</span><span>${esc(text)}</span></span>
+                <span class="fl-track md-track"><i style="width:${(value / p.goal) * 100}%"></i></span>
+                ${o.left && rest > 0 ? `<span class="t-micro c-faint">${esc(p.unit === "steps" ? `${num(rest)} steps to go` : `${rest} more ${rest === 1 ? { people: "person", days: "day" }[p.unit] : p.unit}`)}</span>` : ""}
+            </span>`;
+    }
+    function shelfPage(medals) {
+        const groups = [...new Set(medalKinds().map((k) => k.group))];
+        return groups.map((g) => FF.section(g, `<div class="md-grid">${medalKinds().filter((k) => k.group === g).map((k) => medalTile(k, medals[k.id])).join("")}</div>`)).join("");
+    }
+    function progressPage(medals) {
+        const groups = [...new Set(medalKinds().map((k) => k.group))];
+        const row = (k) => {
+            const m = medals[k.id];
+            // The next one: a step goal shows the best day against it; repeat medals show the next count.
+            const next = m.progress && (!m.count || k.goal === undefined) ? progressLine(m.progress, { left: true }) : "";
+            return `<button type="button" class="md-row ff-press" data-on="present:medal?id=${k.id}">
+                    ${medalArt(k, m.count, 48, { chip: false })}
+                    <span class="vstack grow" style="gap:3px;min-width:0"><span class="t-rowTitle">${esc(k.name)}</span><span class="t-caption c-2">${esc(k.rule)}</span>${next}</span>
+                    <span class="md-count ${m.count ? "" : "c-faint"}">${esc(m.count ? `×${m.count}` : "-")}</span>
+                </button>`;
+        };
+        return groups.map((g) => FF.section(g, `<div class="ff-grouped">${medalKinds().filter((k) => k.group === g).map(row).join('<div class="ff-divider"></div>')}</div>`)).join("");
+    }
+    function honorPage(medals) {
+        const earned = medalKinds().filter((k) => medals[k.id].count);
+        const events = earned.flatMap((k) => (medals[k.id].events || []).map((e) => ({ ...e, kind: k }))).sort((a, b) => b.at - a.at);
+        const months = [];
+        for (const e of events) {
+            const label = new Date(e.at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+            if (months[months.length - 1]?.label !== label) months.push({ label, items: [] });
+            months[months.length - 1].items.push(e);
+        }
+        const summary = `<div class="md-honor-sum">${earned.map((k) => `<button type="button" class="md-honor-chip" data-on="present:medal?id=${k.id}">${medalArt(k, medals[k.id].count, 30, { chip: false })}<span class="t-label">×${medals[k.id].count}</span></button>`).join("")}</div>`;
+        const item = (e) => `<button type="button" class="md-event ff-press" data-on="present:medal?id=${e.kind.id}">
+                <span class="md-event-date"><span class="t-label">${esc(new Date(e.at).getDate())}</span><span class="t-micro c-2">${esc(new Date(e.at).toLocaleDateString("en-US", { month: "short" }))}</span></span>
+                ${medalArt(e.kind, 1, 38)}
+                <span class="vstack grow" style="gap:2px;min-width:0"><span class="t-label ellipsis">${esc(e.kind.group === "Fights" ? e.title : e.kind.name)}</span><span class="t-caption c-2 ellipsis">${esc(e.kind.group === "Fights" ? `${e.kind.name} · ${e.detail}` : [e.title, e.detail].filter(Boolean).join(" · "))}</span></span>
+            </button>`;
+        const locked = medalKinds().filter((k) => !medals[k.id].count);
+        return (earned.length ? summary : "")
+            + (months.length ? months.map((m) => FF.section(m.label, `<div class="ff-grouped">${m.items.map(item).join('<div class="ff-divider"></div>')}</div>`)).join("") : `<p class="t-body c-2" style="margin-top:12px">Win a fight or walk 10,000 steps in a day to earn your first medal.</p>`)
+            + (locked.length ? FF.section("Still to earn", `<div class="md-grid">${locked.map((k) => medalTile(k, medals[k.id])).join("")}</div>`) : "");
+    }
+    screen("medals", {
+        kind: "push",
+        title: "Medals",
+        render: () => {
+            const medals = medalsOf(D().you);
+            const total = earnedTotal(medals);
+            const kinds = medalKinds().filter((k) => medals[k.id].count).length;
+            const page = V("medals-page");
+            const title = page === "honor" ? "Wall of Honor" : "Medals";
+            const lead = `<p class="t-body c-2">${esc(total ? `${total} medals, ${kinds} of ${medalKinds().length} kinds. Counted since you joined.` : "No medals yet. Counted since you joined.")}</p>`;
+            const body = page === "progress" ? progressPage(medals) : page === "honor" ? honorPage(medals) : shelfPage(medals);
+            return `<div class="pf-push">${FF.screen(largeTitle(title) + lead + body, { top: navBar(title) })}</div>`;
+        },
+    });
+
+    // ─── One medal (tap any medal) ──────────────────────────────────
+    screen("medal", {
+        kind: "drawer",
+        // Large only when there is a list of every time; otherwise it fits the medal.
+        get detent() { const e = S.modals[S.modals.length - 1]; return e?.id === "medal" && !e.p?.who && medalsOf(D().you)[e.p?.id]?.count ? "large" : ""; },
+        title: "Medal",
+        render: (p) => {
+            const kind = medalKind(p.id) || MEDAL_KINDS[0];
+            const who = p.who && person(p.who) ? p.who : D().you;
+            const mine = who === D().you;
+            const m = medalsOf(who)[kind.id];
+            const name = person(who).name;
+            const events = mine && m.events?.length ? FF.section("Every time", `<div class="ff-grouped">${m.events.map((e) => `<div class="md-erow"><span class="vstack grow" style="gap:2px;min-width:0"><span class="t-label ellipsis">${esc(e.title)}</span>${e.detail ? `<span class="t-caption c-2">${esc(e.detail)}</span>` : ""}</span><span class="t-caption c-2">${esc(monthDay(e.at))}</span></div>`).join('<div class="ff-divider"></div>')}</div>`) : "";
+            const progress = mine && m.progress && (!m.count || kind.goal === undefined) ? `<div style="margin-top:4px">${progressLine(m.progress, { left: true })}</div>` : "";
+            const headline = m.count ? (mine ? `You have ${m.count}` : `${name} has ${m.count}`) : mine ? "Not yet" : `${name} has none yet`;
+            return `<div class="fl-drawer md-drawer" data-scroll>
+                    <div class="vstack" style="align-items:center;gap:8px;text-align:center">
+                        ${medalArt(kind, m.count, 104, { chip: false })}
+                        <span class="t-title">${esc(kind.name)}</span>
+                        <span class="md-headline ${m.count ? "" : "c-2"}">${esc(headline)}</span>
+                        <span class="t-caption c-2">${esc(kind.rule)}</span>
+                    </div>
+                    ${progress}
+                    ${events}
+                    ${!mine ? `<p class="t-caption c-2">Only ${esc(name)} sees when each one was earned.</p>` : ""}
+                    ${FF.button("Got it", { kind: "secondary", full: true, on: "close" })}
+                </div>`;
+        },
+    });
+
+    // ─── When you earn one (medals-new) ─────────────────────────────
+    function newMedal(p) {
+        const kind = medalKind(p.id) || medalKind("day10k");
+        const m = medalsOf(D().you)[kind.id];
+        const count = m.count + 1;
+        const line = kind.group === "Fights" ? (kind.id === "gold" ? "You won Coffee is on you." : kind.rule) : kind.id === "day10k" ? "You walked 10,412 steps today." : kind.rule;
+        return { kind, count, title: count > 1 ? `${kind.name} ×${count}` : kind.name, line };
+    }
+    screen("medalNew", {
+        get kind() { return V("medals-new") === "drawer" ? "drawer" : "cover"; },
+        title: "New medal",
+        render: (p) => {
+            const n = newMedal(p);
+            const style = V("medals-new");
+            if (style === "toast") {
+                return `<div class="md-toast-host"><button type="button" class="md-toast" data-on="mdToastOpen:${n.kind.id}">
+                        ${medalArt(n.kind, n.count, 44, { chip: false })}
+                        <span class="vstack grow" style="gap:2px;min-width:0;text-align:left"><span class="t-label">New medal: ${esc(n.title)}</span><span class="t-caption c-2">${esc(n.line)}</span></span>
+                    </button></div>`;
+            }
+            if (style === "cover") {
+                return `<div class="md-cover md-${n.kind.tone}">
+                        <div class="md-confetti" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="left:${(i * 37) % 100}%;top:${(i * 53) % 46}%;transform:rotate(${i * 40}deg)"></i>`).join("")}</div>
+                        <span class="t-eyebrow c-2">New medal</span>
+                        <div class="md-cover-stage">${companionImg(you(), { w: 210, h: 210, cls: "md-cover-companion" })}<span class="md-cover-medal">${medalArt(n.kind, n.count, 112, { chip: false })}</span></div>
+                        <h1 class="md-cover-title">${esc(n.title)}</h1>
+                        <p class="t-body c-2">${esc(n.line)}</p>
+                        <span class="grow"></span>
+                        <div class="vstack" style="gap:10px;width:100%">${FF.cta("Nice", { on: "close" })}${FF.button("See your medals", { kind: "ghost", full: true, on: "mdSeeAll" })}</div>
+                    </div>`;
+            }
+            return `<div class="fl-drawer md-drawer" data-scroll>
+                    <div class="vstack" style="align-items:center;gap:8px;text-align:center;padding-top:8px">
+                        <span class="t-eyebrow c-2">New medal</span>
+                        ${medalArt(n.kind, n.count, 112, { chip: false })}
+                        <span class="t-title">${esc(n.title)}</span>
+                        <span class="t-body c-2">${esc(n.line)}</span>
+                    </div>
+                    <div class="vstack" style="gap:10px">${FF.button("Nice", { full: true, on: "close" })}${FF.button("See your medals", { kind: "secondary", full: true, on: "mdSeeAll" })}</div>
+                </div>`;
+        },
+    });
+    action("mdSeeAll", () => go("#you/medals"));
+    action("mdToastOpen", (id) => go(`#you/medals/~medal?id=${encodeURIComponent(id)}`));
+
+    // ─── On someone's Player card (medals-player) ───────────────────
+    function playerMedals(profile) {
+        const id = profile.identity.id;
+        const medals = medalsOf(id);
+        const total = earnedTotal(medals);
+        if (!total) return "";
+        const kinds = earnedFirst(medals).filter((k) => medals[k.id].count).slice(0, 5);
+        return FF.card(`<div class="vstack" style="gap:12px">
+                <div class="hstack"><span class="t-heading grow">Medals</span><span class="t-caption c-2">${total} earned</span></div>
+                <div class="md-prow">${kinds.map((k) => `<button type="button" class="md-pmedal" aria-label="${esc(k.name)}" data-on="present:medal?id=${k.id}&who=${id}">${medalArt(k, medals[k.id].count, 50)}</button>`).join("")}</div>
+            </div>`, { padding: 18 });
+    }
+
+    addCSS(`
+        .md-art { position: relative; display: inline-grid; place-items: center; flex: none; color: var(--md-ink); }
+        .md-art svg { width: 100%; height: 100%; overflow: visible; }
+        .md-art .md-bg { fill: var(--md-wash); stroke: var(--md-ink); stroke-width: 3; }
+        .md-art .md-ring { fill: none; stroke: var(--md-ink); stroke-width: 1.4; opacity: 0.4; }
+        .md-art .md-tail { fill: var(--md-ink); opacity: 0.55; }
+        .md-art .md-tail.b { opacity: 0.8; }
+        .md-art .md-gs { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+        .md-art .md-gf { fill: currentColor; stroke: none; }
+        .md-art text { font-family: Nunito, sans-serif; letter-spacing: -0.02em; }
+        .md-first { --md-ink: var(--medalGold); --md-wash: var(--medalGoldWash); }
+        .md-second { --md-ink: var(--medalSilver); --md-wash: var(--medalSilverWash); }
+        .md-third { --md-ink: var(--medalBronze); --md-wash: var(--medalBronzeWash); }
+        .md-moss { --md-ink: var(--mossText); --md-wash: var(--mossWash); }
+        .md-steps { --md-ink: var(--mossText); --md-wash: var(--mossWash); }
+        .md-streak { --md-ink: var(--medalGold); --md-wash: color-mix(in srgb, var(--gold) 14%, transparent); }
+        .md-locked { --md-ink: var(--textFaint); --md-wash: var(--chip); }
+        .md-locked .md-bg { stroke-dasharray: 4 4; stroke-width: 2; }
+        .md-locked .md-tail { opacity: 0.25; }
+        .md-x { position: absolute; right: -6px; bottom: -4px; min-width: 22px; padding: 1px 6px; border-radius: 999px; background: var(--md-ink); color: var(--bg); font-size: 11px; font-weight: 800; line-height: 16px; text-align: center; box-shadow: 0 0 0 2px var(--bg); }
+        .md-strip { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 14px; text-align: left; }
+        .md-strip-row { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; padding: 2px 8px 6px 0; }
+        .md-strip-row::-webkit-scrollbar { display: none; }
+        .md-statline { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 22px; border-top: 1px solid var(--hairline); text-align: left; }
+        .md-round { position: relative; }
+        .md-dot { position: absolute; top: -3px; right: -5px; min-width: 20px; padding: 0 5px; border-radius: 999px; background: var(--mossFill); color: var(--mossOn); font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--bg); }
+        .md-seeall { color: var(--mossText); font-size: 15px; font-weight: 800; min-height: 44px; }
+        .md-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .md-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 16px 8px 12px; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--hairline); text-align: center; }
+        .md-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; text-align: left; }
+        .md-count { font-size: 20px; font-weight: 800; color: var(--text); }
+        .md-progress { width: 100%; margin-top: 4px; }
+        .md-track { height: 6px; }
+        .md-honor-sum { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .md-honor-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 6px; border-radius: 999px; background: var(--card); box-shadow: inset 0 0 0 1px var(--hairline); }
+        .md-event { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; text-align: left; }
+        .md-event-date { display: flex; flex-direction: column; align-items: center; width: 30px; flex: none; }
+        .md-erow { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+        .md-drawer { gap: 16px; padding-top: 28px; padding-bottom: 28px; }
+        .md-headline { font-size: 18px; font-weight: 800; }
+        .md-prow { display: flex; gap: 12px; }
+        .md-pmedal { display: inline-grid; padding: 2px; }
+        .layer.sheet.cover:has(.md-toast-host) .scrim { background: transparent; }
+        .layer.sheet.cover:has(.md-toast-host) .sheet-card { background: transparent; pointer-events: none; }
+        .layer.enter:has(.md-toast-host) .sheet-card { animation: md-drop 0.4s var(--ease); }
+        @keyframes md-drop { from { transform: translateY(-40%); opacity: 0; } }
+        .md-toast-host { position: absolute; left: 14px; right: 14px; top: 58px; }
+        .md-toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px 12px 12px; border-radius: 26px; background: var(--overlay); box-shadow: 0 16px 40px rgba(0,0,0,0.3), inset 0 0 0 1px var(--overlayLine); }
+        .md-cover { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: calc(var(--safe-top) + 24px) 24px 40px; text-align: center; background: radial-gradient(120% 60% at 50% 30%, var(--md-wash), transparent 70%), var(--bg); overflow: hidden; }
+        .md-cover-stage { position: relative; width: 240px; height: 250px; margin-top: 12px; }
+        .md-cover-companion { position: absolute; left: 0; top: 0; }
+        .md-cover-medal { position: absolute; right: -8px; bottom: 0; filter: drop-shadow(0 10px 24px rgba(0,0,0,0.3)); }
+        .md-cover-title { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; margin-top: 6px; }
+        .md-confetti { position: absolute; inset: 70px 0 50% 0; pointer-events: none; }
+        .md-confetti i { position: absolute; width: 8px; height: 14px; border-radius: 3px; background: var(--md-ink); opacity: 0.7; }
+        .md-confetti i:nth-child(3n) { background: var(--gold); }
+        .md-confetti i:nth-child(3n+1) { background: var(--mossFill); }
+        @media (prefers-reduced-motion: reduce) { .layer.enter:has(.md-toast-host) .sheet-card { animation: none; } }
+    `);
+    links("Medals (proposal)", [
+        ["Medals page", "#you/medals"],
+        ["Medals page, new account", "#you/medals", { scenario: "empty" }],
+        ["1st place", "#you/medals/~medal?id=gold"],
+        ["2nd place", "#you/medals/~medal?id=silver"],
+        ["10K day", "#you/medals/~medal?id=day10k"],
+        ["20K day, not yet", "#you/medals/~medal?id=day20k"],
+        ["10K week, not yet", "#you/medals/~medal?id=week10k"],
+        ["Million, not yet", "#you/medals/~medal?id=million"],
+        ["New medal: 10K day", "#fights/~medalNew?id=day10k"],
+        ["New medal: 1st place", "#fights/~medalNew?id=gold"],
+        ["New medal: 10K week", "#fights/~medalNew?id=week10k"],
+        ["Theo's medals", "#you/~profileSheet?id=theo"],
+        ["Theo's 1st place", "#you/~profileSheet?id=theo/~medal?id=gold&who=theo"],
+    ]);
 
     // ─── Exports for other areas ────────────────────────────────────
     globalThis.PROFILE = {

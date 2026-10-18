@@ -18,3 +18,12 @@ export const fitFightAdminProfileSchema = z.object({
 });
 
 export type FitFightAdminProfile = z.infer<typeof fitFightAdminProfileSchema>;
+
+/**
+ * The web app's Production switch: each staging account that may open production, and the production account it opens.
+ * Account IDs, never usernames, because a username can change hands.
+ */
+export const productionAccountByStagingAccount: Record<string, string> = {
+    "87434630-dd64-4465-b79b-fd99e35368be":
+        "854ed9b9-5de9-4d85-b10e-e201deb999de",
+};

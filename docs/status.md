@@ -26,8 +26,9 @@ created). Every screen then calls production's own API through a
 same-origin rewrite, `/api/production/v1/*` to `https://fitfight.app/api/v1/*`
 (`web/next.config.ts`), so production code checks the production login and
 reads and writes its own database. Anything done in Production is real
-production data. Anyone else gets 403 and stays on Staging. The route needs
-`PRODUCTION_SUPABASE_SECRET_KEY` (see Setup). A production server shows no
+production data. Anyone else gets 403 and stays on Staging. The route answers
+only `next dev` on localhost (`isLocalDevRequest`), even if the key ever reaches
+a deployed server, and needs `PRODUCTION_SUPABASE_SECRET_KEY` (see Setup). A production server shows no
 switch. No release note (admin only, web only).
 
 **Setup:** the key is production's existing secret key; nothing new is created.

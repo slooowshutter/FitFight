@@ -6,14 +6,13 @@ import { authProjects } from "@/lib/supabase/auth-projects";
 export async function mintProductionSignInToken(
     productionUserId: string,
 ): Promise<string> {
-    // NOTE: Marc keeps this key only in his local web/.env.local (18 Oct 2026), never in Vercel, so a deployed staging
-    // server answers 503 and the switch works from localhost only.
+    // NOTE: Marc keeps this key only in his local web/.env.local (18 Oct 2026), never in Vercel.
     const key = process.env.PRODUCTION_SUPABASE_SECRET_KEY;
     if (!key) {
         throw new ApiError(
             503,
             ERROR_CODES.config,
-            "Production opens only from localhost. Signing you in to production needs production's secret key, which is only in web/.env.local on your Mac (PRODUCTION_SUPABASE_SECRET_KEY), never on staging.fitfight.app. The Admin page still shows production numbers here.",
+            "Add production's secret key to web/.env.local as PRODUCTION_SUPABASE_SECRET_KEY (supabase projects api-keys --project-ref pvqntpteehdvhqyctwum --reveal), then restart npm run dev.",
         );
     }
     const production = createClient(

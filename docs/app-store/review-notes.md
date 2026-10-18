@@ -1,6 +1,6 @@
 # App Review Notes
 
-Updated 18 Oct 2026 for 1.2.0: Connectors, Friends, Fight Marc and the required fight title, built on the approved 1.1.3 (226) notes. Only Steps leave the phone, AI daily status is off in production, and the text fits Apple's 4,000-character limit. `scripts/app-store-release-audit.rb draft` saves this block in App Store Connect. Test these instructions on the selected production candidate before pasting. This uses the normal two-person product flow, with no reviewer-only mode, bot, hidden username, or shared Apple credentials.
+Updated 18 Oct 2026 for 1.2.0, submitted unchanged as 1.2.1 on 19 Oct: Connectors, Friends, Fight Marc and the required fight title, built on the approved 1.1.3 (226) notes. Only Steps leave the phone, AI daily status is off in production, and the text fits Apple's 4,000-character limit. `scripts/app-store-release-audit.rb draft` saves this block in App Store Connect. Test these instructions on the selected production candidate before pasting. This uses the normal two-person product flow, with no reviewer-only mode, bot, hidden username, or shared Apple credentials.
 
 ## Paste into App Review Notes
 

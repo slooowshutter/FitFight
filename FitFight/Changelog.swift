@@ -25,217 +25,217 @@ enum Changelog {
     /// Newest first. Add a row here whenever we ship a user-facing change.
     static let releases: [ReleaseNote] = [
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 18,
             notes: "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 18,
             notes: "Settings now has Connectors: Apple Health, Garmin and WHOOP. Tap Apple Health to sync, review what FitFight can read, and choose which device’s steps count. Garmin and WHOOP show how to send your steps to Apple Health, where FitFight reads them. The sync details are no longer in Settings."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "New post: Photo or video shows Take Photo and Photo Library right under the button, so adding a photo no longer sometimes does nothing."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "The evening summary now says who posted and in which fight."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "The Feed tab shows how many new posts people sent since you last opened it."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "Adding people to a fight: matching usernames show as you type. Tap one to add it, or see right away when no one has that username."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "Fight pictures now open instantly instead of loading for several seconds."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 17,
             notes: "Opening FitFight no longer sometimes freezes on a blank Fights screen."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "Tap someone's name to open their Player card: your record against them in every Fight, 1v1 or group, your steps compared since you became friends, and your Fights together. Block is gone; Report stays. The flame next to Fights is your 10K streak, the days in a row you walked 10,000 steps."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "The heading of New is now in French when your phone is in French."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "Each fight now has its own picture at the top: everyone's companions running together, drawn for your fight. A new picture comes about an hour after someone joins or changes their companion."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "If someone hasn’t synced when a fight ends, their last synced steps now count instead of a forfeit, and the fight ends as soon as nobody missing can change the result. Fights you make and friend fights wait for everyone’s final steps; fights everyone is invited to and Fight Marc close 24 hours after the end. Owners can change this in Edit fight, except for fights everyone is invited to and Fight Marc."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "A new way to create your own companion, all on one page: describe it, pick the words, pick a portrait, name it. After you describe your animal, we suggest three richer versions or ask about a missing detail. While it draws, play Snake and try to beat the record of every player, or tap Notify me and close the app; the notification opens your character. Paying now shows a single loader."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "When you open FitFight, it can now show a short tip, like how to start your first fight or make your own character. Tap the button to try it, or Not now to close it."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "Repeating fights: History now opens with the rounds, racers, steps walked together and your place in each round, in gold, silver and bronze when you made the podium; tap one to see that round. Then an all-time leaderboard of wins, podiums and steps, and records showing who holds the best day and best round, with your own best under each, plus the closest finish and biggest win. Each past round shows the top 3 and you, with Show all for everyone."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "The top of Fights now shows how many of your live fights you lead, and New states the rule: Steps, highest total wins."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "Trophies now count every round each player has won in a fight, not only rounds won in a row. Everyone who has won a round shows a trophy, with ×N for more than one."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 16,
             notes: "When Apple Health wakes FitFight in the background, your fights now refresh as soon as you open the app, instead of showing standings from the wake."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "Friends: you now have a Steps fight with each friend that runs the whole calendar month and starts again on the 1st. Tap Friends at the top of Fights to see them, answer requests, and add friends."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "New ideas for your own companion, each in one short line: a 70s hippie orangutan, a pirate parrot, a diva flamingo, a cowboy pig and a furious chihuahua."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "Custom characters now stand on their own like every other character, at the same size, without a circle around them."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "Name your own companion: pick one of four name and line ideas written for your character, change it, or write your own, and ask for four more. Your companion’s name and line now show on your profile, and your friends’ companions show theirs on their profiles."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "You can now change your fight’s code in Edit. Pick 4 to 12 letters or numbers that no other fight uses."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "New post has Everyone or Choose. Everyone sends it to your friends and every fight you’re in. Choose lets you pick My friends and fights, so you can leave your work fight out. Friends see these posts on Feed, marked Friends."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "When a repeating fight starts a new round, the fight now shows your result from the last round at the top. Tap it to open History, or ✕ to hide it."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 15,
             notes: "FitFight opens straight to the fights you saw last time, even without internet, and updates them in the background. If it can’t update, it says so."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 14,
             notes: "On a slow connection, refreshing now gives up after 10 seconds instead of 30, so Try again shows sooner."
         ),
         ReleaseNote(
-            version: "1.2.0",
+            version: "1.2.1",
             year: 2026,
             month: 10,
             day: 14,

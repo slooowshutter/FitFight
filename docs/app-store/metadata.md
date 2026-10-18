@@ -2,7 +2,7 @@
 
 English (U.S.) and French (France) App Store copy. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change.
 
-**1.2.0, prepared 16 Oct 2026:** Marc asked for the 1.2.0 listing to match the fitfight.app redesign of 15 Oct. The promotional text, description, What's new and screenshots below use the website's copy and sample people. 1.1.3 (226) was approved and is live. On 18 Oct 2026 Marc asked to submit 1.2.0 right away; What's new was extended with the work merged from 16 to 18 Oct, and `scripts/app-store-release-audit.rb draft` saves this copy and the screenshots. Keywords and the fields in App information are unchanged.
+**1.2.0, prepared 16 Oct 2026:** Marc asked for the 1.2.0 listing to match the fitfight.app redesign of 15 Oct. The promotional text, description, What's new and screenshots below use the website's copy and sample people. 1.1.3 (226) was approved and is live. On 18 Oct 2026 Marc asked to submit 1.2.0 right away; What's new was extended with the work merged from 16 to 18 Oct, and `scripts/app-store-release-audit.rb draft` saves this copy and the screenshots. Keywords and the fields in App information are unchanged. On 19 Oct 2026 Marc named the version 1.2.1: the same App Store Connect version was pulled from review and renamed, so this listing, What's new and the screenshots carried over unchanged.
 
 ## App information
 
@@ -68,7 +68,7 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 
 `step challenge,walking,fitness,friends,competition,pedometer,health`
 
-## What is new in 1.2.0
+## What is new in 1.2.1
 
 > Friends: a Steps fight with each friend that runs the whole month and starts again on the 1st. Tap Friends at the top of Fights.
 > Fight Marc: when you sign up, start a 30-day Steps fight against FitFight's founder.
@@ -149,7 +149,7 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 `défi de pas,marche,fitness,amis,compétition,podomètre,santé`
 
-### Nouveautés de la version 1.2.0
+### Nouveautés de la version 1.2.1
 
 > Amis : un défi de pas avec chaque ami, sur tout le mois, qui recommence le 1er. Touchez Amis en haut de Défis.
 > Affrontez Marc : à l’inscription, lancez un défi de pas de 30 jours contre le fondateur de FitFight.

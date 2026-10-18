@@ -6,6 +6,21 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## App Store 1.2.1, 19 Oct 2026
+
+Marc asked on 19 Oct 2026 to merge `develop` → `preview` → `main` and submit the new App
+Store version as **1.2.1**, with full control. The code is the 1.2.0 (232) release plus
+`develop`'s documentation commits; only the marketing version changes.
+
+- **Version:** `MARKETING_VERSION`, the TestFlight, App Store and release-tools workflows,
+  every Versions row since 1.1.3 and the mirror say 1.2.1.
+- **App Store Connect plan:** cancel the 1.2.0 review submission, rename that same version
+  to 1.2.1 (listing, What's new, review notes, screenshots and `AFTER_APPROVAL` carry over),
+  select the production 1.2.1 build from `main`, submit, then admit it as `review` in
+  `/api/app-release`.
+
+---
+
 ## App Store 1.2.0 submitted for review, 18 Oct 2026
 
 Marc asked on 18 Oct 2026 to merge everything on `preview` into `main` and submit the

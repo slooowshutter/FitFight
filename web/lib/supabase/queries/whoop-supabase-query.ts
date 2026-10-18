@@ -25,17 +25,19 @@ export async function saveWhoopState(
     `;
 }
 
+/** True when this account started this sign-in less than ten minutes ago. Each state works once. */
 export async function claimWhoopState(
+    userId: string,
     state: string,
     database: Sql = createDatabaseClient(),
-): Promise<string | null> {
-    const [row] = await database<{ user_id: string }[]>`
+): Promise<boolean> {
+    const rows = await database`
         update private.whoop_connections
         set oauth_state = null, oauth_state_expires_at = null
-        where oauth_state = ${state} and oauth_state_expires_at > now()
-        returning user_id
+        where user_id = ${userId} and oauth_state = ${state} and oauth_state_expires_at > now()
+        returning id
     `;
-    return row?.user_id ?? null;
+    return rows.length === 1;
 }
 
 /**

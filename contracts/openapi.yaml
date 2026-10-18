@@ -1839,8 +1839,9 @@ paths:
             summary: Start WHOOP OAuth for the authenticated User. Empty body. Added 18 Oct 2026.
             description: >
                 Open the returned WHOOP sign-in URL in a browser session. WHOOP
-                redirects to /api/whoop/callback, which saves the connection and
-                redirects to fitfight://whoop?status=connected, denied, or error.
+                redirects to /api/whoop/callback, which redirects to
+                fitfight://whoop?code=...&state=... (or ?status=denied). The app then
+                posts code and state to /whoop/finish.
             security: [{ bearerAuth: [] }]
             parameters:
                 - { $ref: "#/components/parameters/AppVersion" }
@@ -1855,6 +1856,41 @@ paths:
                                 required: [url]
                                 properties:
                                     url: { type: string, format: uri }
+    /whoop/finish:
+        post:
+            operationId: finishWhoop
+            summary: Save the WHOOP connection for the authenticated User. Added 18 Oct 2026.
+            description: >
+                Exchanges the code from the WHOOP redirect. The state must be one this
+                User started with /whoop/connect in the last ten minutes, and works once.
+                The full WHOOP history is pulled after the response.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [code, state]
+                            properties:
+                                code: { type: string, minLength: 1, maxLength: 2048 }
+                                state: { type: string, minLength: 8, maxLength: 8 }
+            responses:
+                "200":
+                    description: Connected
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [connected]
+                                properties:
+                                    connected: { type: boolean }
+                "409":
+                    description: The sign-in expired, belongs to another account, or WHOOP refused the code
     /whoop/connection:
         get:
             operationId: getWhoopConnection

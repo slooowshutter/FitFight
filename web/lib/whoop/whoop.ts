@@ -98,20 +98,30 @@ export async function startWhoopConnection(userId: string): Promise<string> {
 }
 
 /**
- * Finishes the sign-in WHOOP redirected back with. Returns the FitFight user, or null when the state
- * is unknown or expired or WHOOP refuses the code.
+ * Finishes the sign-in WHOOP redirected back with: exchanges the code and saves the login on the
+ * account that started it.
  */
 export async function finishWhoopConnection(
+    userId: string,
     code: string,
     state: string,
-): Promise<string | null> {
-    const userId = await claimWhoopState(state);
-    if (!userId) {
-        return null;
+): Promise<void> {
+    // NOTE: the state must belong to the signed-in caller. Otherwise someone could send their own
+    // sign-in link to a friend and receive the friend's WHOOP data on their account.
+    if (!(await claimWhoopState(userId, state))) {
+        throw new ApiError(
+            409,
+            ERROR_CODES.conflict,
+            "This WHOOP sign-in expired. Try again.",
+        );
     }
     const tokens = await requestWhoopTokens({ code });
     if (!tokens) {
-        return null;
+        throw new ApiError(
+            409,
+            ERROR_CODES.conflict,
+            "WHOOP refused the sign-in. Try again.",
+        );
     }
     const profile = whoopProfileSchema.parse(
         await whoopGet("/v2/user/profile/basic", tokens.access_token),
@@ -122,7 +132,6 @@ export async function finishWhoopConnection(
         sealWhoopTokens(tokens),
         new Date(Date.now() + tokens.expires_in * 1000),
     );
-    return userId;
 }
 
 /**

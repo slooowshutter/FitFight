@@ -517,7 +517,8 @@ struct YouView: View {
         }
     }
 
-    /// Connecting opens WHOOP's sign-in, which ends on fitfight://whoop?status=..., then reloads the status.
+    /// Connecting opens WHOOP's sign-in, which ends on fitfight://whoop?code=...&state=...; the app then
+    /// finishes the link with its own sign-in and reloads the status.
     private func refreshWhoop(connect: Bool) async {
         guard !staticRender, !CompanionPreview.isEnabled, session.isSignedIn else { return }
         whoopBusy = true
@@ -529,8 +530,15 @@ struct YouView: View {
                 let callback = try await webAuthenticationSession.authenticate(
                     using: url, callbackURLScheme: "fitfight", preferredBrowserSession: .shared
                 )
-                whoopFailed = URLComponents(url: callback, resolvingAgainstBaseURL: false)?
-                    .queryItems?.first(where: { $0.name == "status" })?.value != "connected"
+                let items = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.queryItems ?? []
+                if let code = items.first(where: { $0.name == "code" })?.value,
+                   let state = items.first(where: { $0.name == "state" })?.value {
+                    try await FitFightAPI().finishWhoopConnection(
+                        code: code, state: state, accessToken: session.freshAccessToken()
+                    )
+                } else {
+                    whoopFailed = true
+                }
             } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
             } catch {
                 whoopFailed = true

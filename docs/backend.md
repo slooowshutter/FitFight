@@ -310,7 +310,10 @@ only from Apple Health. Code only, not deployed: see [status](status.md#whoop-co
 - **Routes:** `POST /api/v1/whoop/connect` (bearer, empty body) returns
   `{ "url" }`, the WHOOP sign-in page. `GET /api/v1/whoop/connection` returns
   `{ "connected", "last_synced_at", "history_synced_at" }`. `GET /api/whoop/callback`
-  is the OAuth redirect and sends the app to `fitfight://whoop?status=connected|denied|error`.
+  is the OAuth redirect: it only forwards WHOOP's code and state to the app at
+  `fitfight://whoop?code=...&state=...` (or `?status=denied`). The app posts them with its
+  own sign-in to `POST /api/v1/whoop/finish`, which accepts only a state that account
+  started, so a sign-in link sent to someone else connects nothing.
   `POST /api/whoop/webhook` takes WHOOP v2 webhooks, HMAC-SHA256 signed with the
   client secret. `GET|POST /api/internal/whoop/sync` is the hourly cron, behind the
   cron secret.

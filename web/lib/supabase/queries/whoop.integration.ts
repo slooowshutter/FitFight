@@ -30,10 +30,15 @@ test("a WHOOP sign-in connects one account, stores raw records, and stays out of
     await database`insert into auth.users (id) values (${first}), (${second})`;
 
     await saveWhoopState(first, "Ab12Cd34", database);
-    assert.equal(await claimWhoopState("Ab12Cd34", database), first);
     assert.equal(
-        await claimWhoopState("Ab12Cd34", database),
-        null,
+        await claimWhoopState(second, "Ab12Cd34", database),
+        false,
+        "a sign-in link only works for the account that started it",
+    );
+    assert.equal(await claimWhoopState(first, "Ab12Cd34", database), true);
+    assert.equal(
+        await claimWhoopState(first, "Ab12Cd34", database),
+        false,
         "a state works once",
     );
 
@@ -43,7 +48,7 @@ test("a WHOOP sign-in connects one account, stores raw records, and stays out of
 
     // The same WHOOP account signing in from another FitFight account moves there.
     await saveWhoopState(second, "Ef56Gh78", database);
-    await claimWhoopState("Ef56Gh78", database);
+    await claimWhoopState(second, "Ef56Gh78", database);
     await saveWhoopConnection(second, whoopUserId, sealed, expiresAt, database);
     assert.equal(await findWhoopUser(whoopUserId, database), second);
     assert.equal(

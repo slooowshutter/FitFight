@@ -1616,10 +1616,19 @@ struct FitFightAPI {
         try await get(path: "whoop/connection", accessToken: accessToken)
     }
 
-    /// WHOOP's sign-in page. It ends on fitfight://whoop?status=connected, denied or error.
+    /// WHOOP's sign-in page. It ends on fitfight://whoop?code=...&state=..., or ?status=denied.
     func startWhoopConnection(accessToken: String) async throws -> URL {
         let response: WhoopConnectResponse = try await post(path: "whoop/connect", accessToken: accessToken, body: EmptyJSON())
         return response.url
+    }
+
+    /// Links the WHOOP sign-in to this account. The server only accepts a state this account started.
+    func finishWhoopConnection(code: String, state: String, accessToken: String) async throws {
+        let _: DiscardBody = try await post(
+            path: "whoop/finish",
+            accessToken: accessToken,
+            body: WhoopFinishBody(code: code, state: state)
+        )
     }
 
     private func post<Body: Encodable, Response: Decodable>(
@@ -1808,6 +1817,11 @@ private struct EmptyJSON: Encodable {}
 
 private struct WhoopConnectResponse: Decodable {
     let url: URL
+}
+
+private struct WhoopFinishBody: Encodable {
+    let code: String
+    let state: String
 }
 
 /// `hosted` and `friends` are left out unless set: older servers reject unknown snapshot fields.

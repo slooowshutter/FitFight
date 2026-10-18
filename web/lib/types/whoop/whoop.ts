@@ -65,6 +65,14 @@ export const whoopConnectionRowSchema = z.object({
     history_synced_at: z.date().nullable(),
 });
 
+/** What WHOOP's redirect handed the app. The app posts it with its own sign-in, binding it to that account. */
+export const whoopFinishRequestSchema = z
+    .object({
+        code: z.string().min(1).max(2048),
+        state: z.string().length(8),
+    })
+    .strict();
+
 export const whoopConnectionResponseSchema = z.object({
     connected: z.boolean(),
     last_synced_at: z.string().datetime().nullable(),

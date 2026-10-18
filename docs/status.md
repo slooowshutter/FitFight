@@ -1,8 +1,38 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **16 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **17 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build WHOOP, Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
+
+---
+
+## Feed photo picker and named evening summary, prepared 17 Oct 2026
+
+From production feedback. @rad (13 Oct, build 210): adding a photo to a Feed post "doesn't
+work", then worked. Production had no upload row for the failed try, so it never left the
+phone: the composer opened the library only after its "Add media" dialog closed, behind a
+450 ms wait, and that sometimes showed nothing. @marc (19 Sep): "Fighter posted in the feed"
+did not say who or where.
+
+**App:** "Photo or video" is now a Menu (Take Photo, Photo Library). Menu actions run after
+the menu has closed, so they set the existing `.photosPicker` and camera cover directly, as
+Apple recommends; without a camera the button opens the library directly. The dialog, the
+wait and the "Add media" string are gone. Mirror updated; its shared menu now opens to the
+right of a left-side button instead of running off the screen.
+
+**Backend:** the evening summary names the posters and the fight: "@a and 2 others posted in
+Weekend Warriors." (several fights: "in 3 fights"), French too. It used to say "N new posts in
+your fights." Single-post pushes already named both since #300.
+
+**Contract:** no API, schema or migration change; only push text changes.
+**Deployment order:** backend and app are independent.
+
+**Verification (local, 17 Oct, on develop at 27871a51):** web typecheck clean, 546 of 546
+unit tests, localization check, Simulator compile (no Simulator runtime on this Mac, so the
+picker was not tapped). `test:database` on a private disposable Supabase: notification
+controls 2 of 2; whole suite 140 of 144, the 4 failures unrelated (three
+`complete_through cannot be in the future` clock checks, one realtime test with realtime not
+started). Not deployed.
 
 ---
 

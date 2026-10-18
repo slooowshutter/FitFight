@@ -7,10 +7,14 @@ on:
             - "scripts/app-store-release-audit.rb"
             - ".github/workflows/app-store-release-tools.yml"
 
+concurrency:
+    group: ios-distribution
+    cancel-in-progress: false
+
 jobs:
     audit:
         runs-on: ubuntu-latest
-        timeout-minutes: 10
+        timeout-minutes: 20
         permissions:
             contents: read
         steps:
@@ -21,7 +25,7 @@ jobs:
                   bundler-cache: true
             - name: Audit current release metadata and screenshots
               env:
-                  FITFIGHT_RELEASE_VERSION: "1.2.0"
+                  FITFIGHT_RELEASE_VERSION: "1.2.1"
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}

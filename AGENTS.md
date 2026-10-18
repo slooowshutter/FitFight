@@ -17,7 +17,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Never use em dashes (U+2014) or en dashes (U+2013). Use a comma, period, colon, or ASCII hyphen `-`. This applies to user-facing copy, docs, comments, and agent writing.
 - Version label shows at the **top of Profile** only (not the nav bar), e.g. `1.1.1 · build N · staging · 15 Sep`. Do not show it on Fights, New, Feed, or Feedback.
 - Permanent **Versions** button: under Profile → Settings. Keep the version label on Profile. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
-- Marketing version is **1.2.0**. Each new App Store version raises the **second** number and resets the third (1.1.3 → 1.2.0 → 1.3.0), as Marc asked on 15 Oct 2026. 1.1.3 (226) was submitted to App Review on 15 Oct 2026 with both in-app purchases; do not upload 1.1.3 or earlier. The TestFlight and App Store workflows' `FITFIGHT_RELEASE_VERSION` must equal 1.2.0. CI still increments the **build number**. Changelog rows reuse `1.2.0` until Marc asks for the next version.
+- Marketing version is **1.2.1**. Marc named 1.2.1 for the App Store version after 1.1.3 on 19 Oct 2026; 1.2.0 (232) was pulled from review and the same App Store Connect version renamed 1.2.1. Otherwise each new App Store version raises the **second** number and resets the third (1.2.1 → 1.3.0), as Marc asked on 15 Oct 2026, unless he names a number. Do not upload 1.2.0 or earlier. The TestFlight and App Store workflows' `FITFIGHT_RELEASE_VERSION` must equal 1.2.1. CI still increments the **build number**. Changelog rows reuse `1.2.1` until Marc asks for the next version.
 - Agents submit to the App Store for Marc. Before the next submission, update App Store Connect → App Privacy for PostHog analytics and session replay: see [privacy compliance](docs/app-store/privacy-compliance.md#app-privacy).
 - Every App Store version must **automatically release after Apple approves it** (`AFTER_APPROVAL`), as requested by Marc on 17 Sep 2026. Save that setting when preparing the version and verify it when submitting for review. Existing authorization requirements for PRs, merges, and review submission still apply.
 - **Never put a background behind a character.** Every character picture (stock animals, Specials, custom characters) is already a transparent PNG, so the app draws it straight on the screen: no circle, ring, disc, fill, border or tile in SwiftUI, the web app or the mirror. Custom characters included: they are art, not a profile photo. Only a real photo or initials fallback sits in the `FFAvatar` circle. Marc's rule, 18 Oct 2026, after asking many times.
@@ -45,7 +45,7 @@ Before changing an API, native API model, or database schema, read [API compatib
 Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-username Steps challenges, Apple Health aggregate sync, invitations, and standings work on staging.
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
-- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.2.0**. See `docs/status.md` for uploaded builds and availability.
+- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.2.1**. See `docs/status.md` for uploaded builds and availability.
 - Staging TestFlight only on push/merge to `preview` (optional manual `workflow_dispatch` on that branch). No daily cron. Feature branches and `develop` do not upload. `main` never uploads to TestFlight.
 - Simulator compile on every PR.
 - Approved design source remains in `docs/design/source/`. The app uses Night/Day and one fixed semantic palette.
@@ -89,7 +89,7 @@ Product ideas go in the [Notion Product Backlog](https://app.notion.com/p/3d3890
 
 1. Branch off `develop`. Only when Marc explicitly asks for a PR, open it **into `develop`**. Do not PR into `preview` or `main` unless Marc is cutting that release.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group). JSON in `DesignSystem/` must also be in the Resources build phase.
-3. If users will see it: update [the app mirror](docs/design/source/kit/app.html) to match, and append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.2.0`). Do **not** change `MARKETING_VERSION` in `project.pbxproj` unless Marc asks or Apple closed the train. CI bumps the build number.
+3. If users will see it: update [the app mirror](docs/design/source/kit/app.html) to match, and append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.2.1`). Do **not** change `MARKETING_VERSION` in `project.pbxproj` unless Marc asks or Apple closed the train. CI bumps the build number.
 4. Don’t ask Marc to open Xcode or his Mac. Feature-branch and `develop` pushes do not upload TestFlight. A staging build uploads when the change lands on `preview`. Then he opens TestFlight → Update. Do not ask him to Run workflow.
 5. Shipping to production is Marc merging `preview` → `main`. Agents do not do that unless he said so in that chat.
 6. Merged feature branches are deleted by CI. `main`, `develop`, `preview`, and `testflight-latest` stay. Do not enable GitHub’s “Automatically delete head branches.”
@@ -282,3 +282,50 @@ Before finishing work under `web/`:
 4. Check that every Supabase database query is in `web/lib/supabase/queries/`.
 5. Check that short single-use helpers were not added without a real reason.
 6. Run the relevant typecheck and tests, then report exactly what passed or why a check could not run.
+
+## Writing style: 80% ASD-STE100
+
+Write about 80% of the way to ASD-STE100 Simplified Technical English (STE). Follow the STE writing rules below. Use the plainest common word, but do not limit your words to the STE dictionary.
+
+Use this style for everything you write to me: answers, explanations, summaries, plans, reviews, and PR descriptions. Do not use it for code, code comments, commit messages, quoted text, or user-facing copy such as app UI text, release notes, App Store text, and fitfight.app pages. User-facing copy keeps its own voice.
+
+### Words
+
+- Choose the short, common word. Write "use", "start", and "because", not "utilize", "initiate", and "due to the fact that".
+- Use one word for one meaning. Use the same word for the same thing every time. For example, do not call a build a version.
+- Use a one-word verb for an action. Write "check" and "find", not "perform a check" and "figure out".
+- Do not use idioms or slang, such as "good to go", "under the hood", or "low-hanging fruit".
+- Do not use contractions. Write "do not" and "it is", not "don't" and "it's".
+- Be specific. Write "3 tests fail", not "some tests have issues".
+- Use technical names exactly, such as `preview`, `FitFightAPI`, and TestFlight. Put code, file names, and commands in backticks.
+
+### Sentences
+
+- Write short sentences. Use a maximum of 25 words in each sentence.
+- Write one idea in each sentence. Use "because", "so", "but", and "then" to connect related sentences.
+- Use the active voice. Say who or what does the action: "CI uploads the build", not "The build is uploaded".
+- Use simple verb forms: the simple present, the simple past, the future with "will", and commands. Write "I fixed the test", not "I have been fixing the test".
+- Do not use "-ing" forms when a simpler form works. Write "before you merge", not "before merging".
+- Do not remove "the", "a", or "is" to make a sentence shorter. Write "The fix is on staging", not "Fix on staging".
+- Do not put more than three nouns in a row. Write "a regression fixture for the API contract", not "API contract regression fixture".
+- Do not use semicolons. Write two sentences.
+
+### Instructions
+
+- Write each instruction as a command, with a maximum of 20 words. Write "Tap Update in TestFlight", not "You will want to update the app".
+- Write one instruction in each sentence, unless the actions occur at the same time.
+- Put a condition before the command, with a comma after it: "If TestFlight shows no update, wait 10 minutes."
+- Put a warning before the step it applies to. Give the command first, then the risk: "Warning: Do not run `supabase db reset` against production. It deletes all the data."
+
+### Paragraphs and lists
+
+- Start with the most important information: the result, the answer, or the decision. Then give the details.
+- Write one topic in each paragraph. Use a maximum of six sentences in each paragraph.
+- Use a vertical list for steps, options, or other complex text. Number the items when the order is important.
+
+### Examples
+
+- Wrong: "I've gone ahead and fixed the standings bug and it's looking good on staging, but since the response shape changed a bit we'll probably want to double-check older builds before this goes to prod."
+- Right: "I fixed the standings bug. It works on staging. The response shape changed, so older builds can fail. Before the production release, I will test the supported builds against the new API."
+- Wrong: "Once the build's done processing, you'll want to hop into TestFlight and grab the update."
+- Right: "When the build is ready, open TestFlight. Tap Update."

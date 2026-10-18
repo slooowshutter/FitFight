@@ -1,32 +1,52 @@
 {
     "sourceLanguage": "en",
     "strings": {
-        "Connect WHOOP in Settings. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour.": {
+        "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour.": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Connectez WHOOP dans Réglages. FitFight conserve votre sommeil, votre récupération, votre effort et vos entraînements WHOOP, mis à jour toutes les heures."
+                        "value": "Connecte ton compte WHOOP dans Réglages → Connexions → WHOOP. FitFight garde ton sommeil, ta récupération, ton effort et tes entraînements WHOOP, mis à jour toutes les heures."
                     }
                 }
             }
         },
-        "WHOOP": {
+        "Connected · Updates every hour": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "WHOOP"
+                        "value": "Connecté · Mise à jour toutes les heures"
                     }
                 }
             }
         },
-        "Sleep, recovery, strain and workouts. Updates every hour.": {
+        "Sleep, recovery, strain and workouts": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Sommeil, récupération, effort et entraînements. Mise à jour toutes les heures."
+                        "value": "Sommeil, récupération, effort et entraînements"
+                    }
+                }
+            }
+        },
+        "Connect your WHOOP account and FitFight gets your sleep, recovery, strain and workouts straight from WHOOP, updated every hour.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte ton compte WHOOP et FitFight reçoit ton sommeil, ta récupération, ton effort et tes entraînements directement de WHOOP, mis à jour toutes les heures."
+                    }
+                }
+            }
+        },
+        "WHOOP account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte WHOOP"
                     }
                 }
             }
@@ -63,7 +83,7 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Impossible de connecter WHOOP. Touchez pour réessayer."
+                        "value": "Impossible de connecter WHOOP. Touche pour réessayer."
                     }
                 }
             }
@@ -83,7 +103,377 @@
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "En connectant WHOOP, vous acceptez notre [Politique de confidentialité](privacy)."
+                        "value": "En connectant WHOOP, tu acceptes notre [Politique de confidentialité](privacy)."
+                    }
+                }
+            }
+        },
+        "Connectors": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connexions"
+                    }
+                }
+            }
+        },
+        "Steps and workouts": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Pas et entraînements"
+                    }
+                }
+            }
+        },
+        "FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight lit Santé d’Apple. Connecte ta montre ou ton app à Santé d’Apple et elle compte ici aussi."
+                    }
+                }
+            }
+        },
+        "FitFight reads your activity from Apple Health. Any watch or app you connect to Apple Health counts too.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight lit ton activité dans Santé d’Apple. Toute montre ou app connectée à Santé d’Apple compte aussi."
+                    }
+                }
+            }
+        },
+        "Access": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Accès"
+                    }
+                }
+            }
+        },
+        "Review access": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Vérifier l’accès"
+                    }
+                }
+            }
+        },
+        "Choose what FitFight can read.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Choisis ce que FitFight peut lire."
+                    }
+                }
+            }
+        },
+        "Change access in Health": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Modifier l’accès dans Santé"
+                    }
+                }
+            }
+        },
+        "In Health, tap your profile → Apps → FitFight.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dans Santé, touche ton profil → Apps → FitFight."
+                    }
+                }
+            }
+        },
+        "FitFight asks to read": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "FitFight demande à lire"
+                    }
+                }
+            }
+        },
+        "Used in your fights": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Utilisés dans tes défis"
+                    }
+                }
+            }
+        },
+        "Workouts": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Entraînements"
+                    }
+                }
+            }
+        },
+        "Active and resting energy": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Énergie active et au repos"
+                    }
+                }
+            }
+        },
+        "Distance and pushes": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Distance et poussées"
+                    }
+                }
+            }
+        },
+        "Exercise, move and stand minutes": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Minutes d’exercice, de mouvement et debout"
+                    }
+                }
+            }
+        },
+        "Flights climbed": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Étages montés"
+                    }
+                }
+            }
+        },
+        "Which steps count": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Quels pas comptent"
+                    }
+                }
+            }
+        },
+        "Your iPhone counts steps, and so does your watch. When both count the same walk, Apple Health keeps one count, from the device at the top of its list. Put the one you wear all day at the top.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton iPhone compte tes pas, ta montre aussi. Quand les deux comptent la même marche, Santé d’Apple garde un seul compte, celui de l’appareil en haut de sa liste. Mets en haut celui que tu portes toute la journée."
+                    }
+                }
+            }
+        },
+        "Open Health and tap Browse": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvre Santé et touche Parcourir"
+                    }
+                }
+            }
+        },
+        "Then tap Activity → Steps → Data Sources & Access.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Puis touche Activité → Pas → Sources de données et accès."
+                    }
+                }
+            }
+        },
+        "Tap Edit": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touche Modifier"
+                    }
+                }
+            }
+        },
+        "Drag the device you wear all day to the top, then tap Done.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Fais glisser en haut l’appareil que tu portes toute la journée, puis touche OK."
+                    }
+                }
+            }
+        },
+        "Garmin stopped letting new apps connect to its data, so FitFight can’t link to Garmin directly. Your Garmin steps still count: Garmin Connect sends them to Apple Health, and FitFight reads them there.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Garmin n’accepte plus de nouvelles apps sur ses données, donc FitFight ne peut pas se connecter directement à Garmin. Tes pas Garmin comptent quand même : Garmin Connect les envoie à Santé d’Apple, et FitFight les lit là."
+                    }
+                }
+            }
+        },
+        "Turn on Apple Health in Garmin Connect": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Active Santé d’Apple dans Garmin Connect"
+                    }
+                }
+            }
+        },
+        "In Garmin Connect, tap More → Settings → Connected Apps → Apple Health, then turn on Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dans Garmin Connect, touche Plus → Paramètres → Applications connectées → Santé d’Apple, puis active Pas."
+                    }
+                }
+            }
+        },
+        "Open Garmin Connect to sync": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvre Garmin Connect pour synchroniser"
+                    }
+                }
+            }
+        },
+        "Garmin sends steps to Apple Health only while Garmin Connect is open. After your watch syncs, open Garmin Connect, then FitFight. Do it once more before a fight ends.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Garmin envoie tes pas à Santé d’Apple seulement quand Garmin Connect est ouvert. Après la synchro de ta montre, ouvre Garmin Connect, puis FitFight. Refais-le avant la fin d’un défi."
+                    }
+                }
+            }
+        },
+        "Put Garmin first in Health": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mets Garmin en premier dans Santé"
+                    }
+                }
+            }
+        },
+        "Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag Garmin to the top.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton iPhone compte aussi tes pas. Dans Santé, touche Parcourir → Activité → Pas → Sources de données et accès → Modifier, puis fais glisser Garmin en haut."
+                    }
+                }
+            }
+        },
+        "WHOOP sends your steps and workouts to Apple Health, and FitFight reads them there.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "WHOOP envoie tes pas et tes entraînements à Santé d’Apple, et FitFight les lit là."
+                    }
+                }
+            }
+        },
+        "Turn on Apple Health in WHOOP": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Active Santé d’Apple dans WHOOP"
+                    }
+                }
+            }
+        },
+        "In the WHOOP app, turn on Apple Health and allow Steps.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dans l’app WHOOP, active Santé d’Apple et autorise Pas."
+                    }
+                }
+            }
+        },
+        "Put WHOOP first in Health": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mets WHOOP en premier dans Santé"
+                    }
+                }
+            }
+        },
+        "Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag WHOOP to the top.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton iPhone compte aussi tes pas. Dans Santé, touche Parcourir → Activité → Pas → Sources de données et accès → Modifier, puis fais glisser WHOOP en haut."
+                    }
+                }
+            }
+        },
+        "Open Health": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ouvrir Santé"
+                    }
+                }
+            }
+        },
+        "Connect later from Profile → Settings → Connectors.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte-toi plus tard dans Profil → Réglages → Connexions."
+                    }
+                }
+            }
+        },
+        "Settings now has Connectors: Apple Health, Garmin and WHOOP. Tap Apple Health to sync, review what FitFight can read, and choose which device’s steps count. Garmin and WHOOP show how to send your steps to Apple Health, where FitFight reads them. The sync details are no longer in Settings.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Réglages a maintenant Connexions : Santé d’Apple, Garmin et WHOOP. Touche Santé d’Apple pour synchroniser, vérifier ce que FitFight peut lire et choisir l’appareil dont les pas comptent. Garmin et WHOOP montrent comment envoyer tes pas à Santé d’Apple, où FitFight les lit. Les détails de synchro ne sont plus dans Réglages."
                     }
                 }
             }
@@ -638,16 +1028,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "L’onglet Vous s’appelle désormais Profil."
-                    }
-                }
-            }
-        },
-        "Connect later from Profile → Settings → Apple Health.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Connecte-toi plus tard dans Profil → Réglages → Santé d’Apple."
                     }
                 }
             }

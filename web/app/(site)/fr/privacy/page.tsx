@@ -165,7 +165,7 @@ export default function PrivacyPage() {
                     <h2>WHOOP</h2>
                     <p>
                         La connexion à WHOOP est facultative. Vous la lancez sous
-                        Profil → Réglages → Connecter WHOOP, puis vous vous
+                        Profil → Réglages → Connexions → WHOOP, puis vous vous
                         connectez à WHOOP pour autoriser l’accès. En connectant
                         WHOOP, vous acceptez cette politique de confidentialité.
                     </p>

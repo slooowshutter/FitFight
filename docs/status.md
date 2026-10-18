@@ -11,7 +11,7 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 Marc approved it on 18 Oct 2026 (Notion backlog row "WHOOP connection: pull all WHOOP
 API data (steps stay on Apple Health)", now Building).
 
-**What exists: code only, not deployed.** Profile → Settings → Connect WHOOP opens WHOOP
+**What exists: code only, not deployed.** Profile → Settings → Connectors → WHOOP → Connect opens WHOOP
 sign-in; the row says "By connecting, you agree to our Privacy Policy." The server pulls
 everything the WHOOP API offers (cycles, recovery, sleep, workouts, body measurements,
 WHOOP user ID): the full history at connect, then every hour and whenever WHOOP sends a

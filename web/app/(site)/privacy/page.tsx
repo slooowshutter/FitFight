@@ -154,7 +154,7 @@ export default function PrivacyPage() {
                     <h2>WHOOP</h2>
                     <p>
                         Connecting WHOOP is optional. You start it under Profile
-                        → Settings → Connect WHOOP and sign in to WHOOP to
+                        → Settings → Connectors → WHOOP and sign in to WHOOP to
                         approve access. By connecting, you agree to this Privacy
                         Policy.
                     </p>

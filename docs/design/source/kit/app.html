@@ -3457,7 +3457,10 @@
             const spec = f.friends ? `present:fightLeaveFriend?id=${f.id}` : owner ? `present:fightOwnerLeave?id=${f.id}` : `fdLeave:${f.id}`;
             leave = `<div style="padding-top:20px">${FF.button(owner && alone && !f.friends ? "Delete fight" : "Leave fight", { kind: "ghost", full: true, on: spec })}</div>${ui.fdLeaveError ? `<p class="t-caption c-ember" style="padding-top:10px">${esc(ui.fdLeaveError)}</p>` : ""}`;
         }
-        return hero + standingsSection(f, ui) + charts + leave;
+        const invite = V("fight-share") === "card" && f.joinCode && isYou(f.inviter) && !otherMembers(f).length && f.status === "live"
+            ? FF.notice("Nobody else is in yet. Send your friends the link.", { tone: "moss", icon: "person.2", actionTitle: "Share", on: `present:sysShare?url=${encodeURIComponent(shareURL(f.joinCode))}` })
+            : "";
+        return invite + hero + standingsSection(f, ui) + charts + leave;
     }
 
     // ─── FightDayChartsView ─────────────────────────────────────────
@@ -3946,7 +3949,7 @@
     window.addEventListener("pointerup", () => { drag = null; });
     window.addEventListener("pointercancel", () => { drag = null; });
 
-    globalThis.FIGHT_DETAIL = { joinPreview, leaderboardRow: (o) => leaderboardRow({ ...o, avatar: o.avatar ?? (o.person ? undefined : FF.avatar(o.monogram || "?", { size: 38 })) }) };
+    globalThis.FIGHT_DETAIL = { joinPreview, shareURL, leaderboardRow: (o) => leaderboardRow({ ...o, avatar: o.avatar ?? (o.person ? undefined : FF.avatar(o.monogram || "?", { size: 38 })) }) };
 
     // ─── Icons ──────────────────────────────────────────────────────
     ICONS["fd.chevron.left"] = '<path d="M15.6 5.2L8.4 12l7.2 6.8" stroke-width="2.4"/>';
@@ -4685,6 +4688,16 @@
     });
 
     // NewFightView.startFight -> AppModel.createAndStartFight. Success opens the new fight on Fights.
+    variant("fight-share", {
+        title: "Share right after creating a fight",
+        note: "Today the new fight opens on Stats and Share is under Details. Create a fight on New, then tap Start.",
+        options: [
+            { id: "today", name: "Today", when: "The app as it is now." },
+            { id: "sheet", name: "Share sheet opens", when: "Right if most people create a fight to send it right away." },
+            { id: "card", name: "Invite card on the fight", when: "Right if people share later too: it stays on Stats until someone joins." },
+        ],
+        links: [["Create a fight: Review", "#newFight/newCreate?step=4&title=Weekend walk-off"]],
+    });
     action("nfStart", () => {
         const d = newDraft();
         if (d.creating) return;
@@ -4709,7 +4722,7 @@
             D().fights.unshift(fight);
             if (d.joinable) D().discovery.public.unshift({ ...summaryOfFight(fight), ownerHandle: handleOf(D().you), alreadyMember: true, membershipState: "accepted" });
             S.ui.newFight = {};
-            go(`#fights/fight?id=${id}`);
+            go(V("fight-share") === "sheet" ? `#fights/fight?id=${id}/~sysShare?url=${encodeURIComponent(FIGHT_DETAIL.shareURL(fight.joinCode))}` : `#fights/fight?id=${id}`);
         }, 900);
     });
 
@@ -8263,6 +8276,16 @@
     const spinner = (size = 21, tone = "gold") => `<svg class="cp-spin" style="width:${size}px;height:${size}px;color:var(--${tone})" viewBox="0 0 24 24" aria-hidden="true">${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<line x1="12" y1="2.6" x2="12" y2="7.2" transform="rotate(${i * 45} 12 12)" opacity="${(1 - i * 0.11).toFixed(2)}"/>`).join("")}</svg>`;
     // FreeCharacterBadge
     const freeBadge = (count) => `<span class="cp-free">${icon("gift")}${count} free</span>`;
+    variant("companion-referral", {
+        title: "Refer a friend for a free character",
+        note: "Shown only with no free character. With one, today's free badge and Create for free stay.",
+        options: [
+            { id: "today", name: "Today", when: "The app as it is now: only Profile → Settings has Refer a friend." },
+            { id: "pay", name: "Under the price", when: "Right if the nudge should come when they are about to pay." },
+            { id: "picker", name: "Top of companions", when: "Right if everyone who opens companions should see it, even without making one." },
+        ],
+        links: [["Pay step", "#fights/~paidCharacter?state=review"], ["Companions", "#you/~companionPicker?tab=all"], ["Yours", "#you/~companionPicker?tab=yours"], ["With 1 free", "#fights/~paidCharacter?state=review&free=1"]],
+    });
 
     // ═══ SNAKE (SnakeGame.swift): 15x15, edges wrap, only your own tail ends a game ═══
     const SIZE = 15;
@@ -8626,6 +8649,7 @@
         out.push(`<div class="cp-head"><h1 class="cp-title">Choose your companion</h1>${ui.category !== "yours" && visible.length ? `<button type="button" class="cp-glyph ff-press" aria-label="${ui.grid ? "Show one at a time" : "Show all"}" data-on="toggle:grid">${icon(ui.grid ? "rectangle.portrait" : "square.grid.2x2")}</button>` : ""}${required ? "" : `<button type="button" class="cp-close" data-on="close"${busy ? " disabled" : ""}>Close</button>`}</div>`);
         out.push(`<p class="cp-copy">How others see you in fights and Feed. Change it anytime.</p>`);
         if (s.free > 0) out.push(`<div class="hstack" style="gap:10px">${freeBadge(s.free)}<span class="t-caption c-2">Unlock any Special or create your own.</span></div>`);
+        else if (V("companion-referral") === "picker") out.push(FF.notice("Refer a friend and you each get one free.", { tone: "moss", icon: "gift", actionTitle: "Invite", on: `present:sysShare?url=${encodeURIComponent(`https://fitfight.app/r/${D().referralCode}`)}` }));
         const tabs = [["all", "All"], ...(LIMITED.some((id) => shows(ui, id)) ? [["limited", "Specials"]] : []), ["yours", "Yours"]];
         out.push(FF.segmented(tabs, ui.category, { on: "cpCategory:", fill: true }));
         if (ui.category === "limited" || (ui.category === "all" && isLimited(ui.draft))) {
@@ -9055,6 +9079,9 @@
                 else {
                     const title = ui.pending ? "Purchase pending" : ui.storeOff ? "Purchases unavailable" : `Create for ${CHARACTER_PRICE}`;
                     button = FF.button(title, { size: "large", full: true, on: "cpcBuy", enabled: !ui.storeOff && !ui.pending && !ui.busy, busy: ui.busy });
+                }
+                if (!ready && !(s.free > 0) && V("companion-referral") === "pay") {
+                    return FF.button("Refer a friend, you each get one for free", { kind: "ghost", size: "small", full: true, on: `present:sysShare?url=${encodeURIComponent(`https://fitfight.app/r/${D().referralCode}`)}` }) + button;
                 }
                 return `${button}<p class="t-caption c-2 cpc-note">Three portraits in about a minute. You pick your favourite.</p>`;
             }

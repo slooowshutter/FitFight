@@ -7777,21 +7777,19 @@
     // ─── Wall of Honor (proposal, not in the app) ───────────────────
     // A Feedback request, 19 Sep 2026: "a place where I can see all challenges I already won. Like medals on a wall.
     // With title and date of the challenge, what it was and whether I got 1st, second or third." Marc, 18 Oct: fights
-    // only, opened from a medal button next to Dashboard. Each option is today's Profile plus that button and one
-    // design of the page. 2nd place counts in fights of 3 or more people, 3rd in fights of 4 or more.
+    // only, opened from a medal button next to Dashboard, and every medal visible at once, each at its own angle, like
+    // an Olympic champion wearing them all. 2nd place counts in fights of 3 or more people, 3rd in fights of 4 or more.
     variant("wall", {
         title: "Wall of Honor · the page",
-        note: "Your 1st, 2nd and 3rd places, opened from the medal next to Dashboard. Same fights in every option.",
+        note: "Every medal you won, all at once. Tap one to see its fight. Same fights in every option.",
         options: [
             { id: "today", name: "Today", when: "The app as it is now: no Wall of Honor." },
-            { id: "list", name: "List by month", when: "Right if it should be plain and fast to scan: one row per fight, newest first." },
-            { id: "shelf", name: "Medal shelves", when: "Right if it should look like medals on a wall: shelves of medals, tap one for the fight." },
-            { id: "podium", name: "Podium on top", when: "Right if the totals matter: a podium with your 1st, 2nd and 3rd counts, tap a step to filter." },
-            { id: "counters", name: "Three counters", when: "Right if the podium feels too much: three medal counts that filter the list." },
-            { id: "plaques", name: "Framed plaques", when: "Right if each win deserves its own frame, with who you beat." },
-            { id: "cards", name: "Fight cards", when: "Right if the story matters: what it was, who was in it and what the loser had to do." },
-            { id: "seasons", name: "Month by month", when: "Right if people will have hundreds: one line per month, tap to open it." },
-            { id: "carousel", name: "Swipe through", when: "Right if it should feel like a highlight reel: one big card per fight." },
+            { id: "neck", name: "Around your companion's neck", when: "Right if it should feel like an Olympic champion: your companion wears every medal." },
+            { id: "hanger", name: "Medal hanger", when: "Right if it should look like medals hung on rails at home, each swinging a little." },
+            { id: "nail", name: "All on one nail", when: "Right if it should look like a bunch of medals hung on one nail, fanning out." },
+            { id: "board", name: "Pinned to a wall", when: "Right if each medal should be pinned where it landed, a bit crooked." },
+            { id: "case", name: "Display case", when: "Right if it should feel precious: rows of medals laid in a frame." },
+            { id: "rail", name: "One long rail", when: "Right if the order matters: newest first along one rail you swipe." },
         ],
         links: [["Profile", "#you"], ["Wall of Honor", "#you/honor"], ["One fight", "#you/honor/~honorFight?id=h0"], ["A 3rd place", "#you/honor/~honorFight?id=everybody"]],
     });
@@ -7827,15 +7825,14 @@
             const mine = Math.round(lengthDays * (9400 + ((i * 937) % 2600)));
             const theirs = Math.round(mine * (0.82 + ((i * 13) % 15) / 100));
             const rival = rivalsCycle[i % 4];
-            return [{ id: h.id, name: h.name, at: new Date(`${h.endsAt}T20:00:00`).getTime(), lengthDays, place: 1, size: 2, standings: [{ person: me, score: mine }, { person: rival, score: theirs }], stake: STAKES[i % STAKES.length], fightId: null }];
+            return [{ id: h.id, name: h.name, at: new Date(`${h.endsAt}T20:00:00`).getTime(), lengthDays, place: 1, size: 2, standings: [{ person: me, score: mine }, { person: rival, score: theirs }], stake: STAKES[i % STAKES.length] }];
         });
         for (const g of GROUP_PODIUMS) {
             const scores = g.cast.map((_, i) => Math.round(g.lengthDays * (11800 - i * 900) + ((i + 3) * 7919) % 811));
-            rows.push({ id: g.id, name: g.name, at: Date.now() - g.daysAgo * DAY, lengthDays: g.lengthDays, place: g.cast.indexOf(me) + 1, size: g.cast.length + (g.others || 0), standings: g.cast.map((person, i) => ({ person, score: scores[i] })), stake: g.stake, fightId: null });
+            rows.push({ id: g.id, name: g.name, at: Date.now() - g.daysAgo * DAY, lengthDays: g.lengthDays, place: g.cast.indexOf(me) + 1, size: g.cast.length + (g.others || 0), standings: g.cast.map((person, i) => ({ person, score: scores[i] })), stake: g.stake });
         }
         return rows.sort((a, b) => b.at - a.at);
     }
-    const PLACE_TONE = { 1: "first", 2: "second", 3: "third" };
     const placeWord = (n) => ({ 1: "1st", 2: "2nd", 3: "3rd" })[n];
     const placeOf = (row) => `${placeWord(row.place)} of ${row.size}`;
     // "Steps · 1 week · 1v1 with Theo" or "Steps · 1 month · 6 people"
@@ -7843,35 +7840,181 @@
         const rival = row.size === 2 ? person(row.standings.find((s) => s.person !== D().you).person) : null;
         return `Steps · ${LENGTH_WORDS[row.lengthDays]} · ${rival ? `1v1 with ${rival.name}` : `${row.size} people`}`;
     };
-    const loserLine = (row) => {
-        if (!row.stake) return null;
-        const last = person(row.standings[row.standings.length - 1].person);
-        return `${last.name}: ${row.stake}`;
-    };
+    const loserLine = (row) => (row.stake ? `${person(row.standings[row.standings.length - 1].person).name}: ${row.stake}` : null);
     const longDay = (ms) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    const monthLabel = (ms) => new Date(ms).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    const byMonth = (rows) => {
-        const months = [];
-        for (const r of rows) {
-            const label = monthLabel(r.at);
-            if (months[months.length - 1]?.label !== label) months.push({ label, rows: [] });
-            months[months.length - 1].rows.push(r);
-        }
-        return months;
-    };
     const counts = (rows) => ({ 1: rows.filter((r) => r.place === 1).length, 2: rows.filter((r) => r.place === 2).length, 3: rows.filter((r) => r.place === 3).length });
 
-    // One medal: a coin on a ribbon from 40pt, a plain coin below that.
-    function honorMedal(place, size = 44) {
-        const ribbon = size >= 40;
-        const shape = ribbon
-            ? `<path class="wh-tail" d="M19 2h11l6 21H25z"/><path class="wh-tail b" d="M45 2H34l-6 21h11z"/><circle class="wh-bg" cx="32" cy="41" r="19"/><circle class="wh-ring" cx="32" cy="41" r="14"/><text x="32" y="47.5" text-anchor="middle" font-size="18" font-weight="800" fill="currentColor">${place}</text>`
-            : `<circle class="wh-bg" cx="32" cy="32" r="28"/><circle class="wh-ring" cx="32" cy="32" r="21.5"/><text x="32" y="39.5" text-anchor="middle" font-size="22" font-weight="800" fill="currentColor">${place}</text>`;
-        return `<span class="wh-medal wh-${PLACE_TONE[place] || "none"}" style="width:${size}px;height:${size}px"><svg viewBox="0 0 64 64" aria-hidden="true">${shape}</svg></span>`;
+    // ─── Drawing a medal ────────────────────────────────────────────
+    // Metal and ribbons are drawn in the Night palette in both themes (data-theme="night" on the art only): gold
+    // should look like gold on a light screen too. Angles and lengths come from the fight id, so a medal keeps its
+    // place between visits.
+    const METAL = { 1: "var(--medalGold)", 2: "var(--medalSilver)", 3: "var(--medalBronze)" };
+    const metalHi = (m) => `color-mix(in srgb, ${m} 45%, var(--text))`;
+    const metalLo = (m) => `color-mix(in srgb, ${m} 55%, var(--canvas))`;
+    const seeded = (id, k) => { let h = 2166136261; for (const c of `${id}:${k}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 1000) / 1000; };
+    let medalSeq = 0;
+    function medalDisc(place) {
+        const id = `whm${medalSeq++}`;
+        const m = METAL[place];
+        const leaf = (deg) => {
+            const t = (deg * Math.PI) / 180;
+            return `<ellipse cx="${(22.6 * Math.cos(t)).toFixed(2)}" cy="${(22.6 * Math.sin(t)).toFixed(2)}" rx="3.5" ry="1.6" transform="rotate(${deg + 90} ${(22.6 * Math.cos(t)).toFixed(2)} ${(22.6 * Math.sin(t)).toFixed(2)})" style="fill:${metalLo(m)}" opacity="0.75"/>`;
+        };
+        const leaves = [110, 134, 158, 182, 206, 230, 70, 46, 22, -2, -26, -50].map(leaf).join("");
+        const text = (dx, dy, fill, op) => `<text x="${dx}" y="${7.2 + dy}" text-anchor="middle" font-size="21" font-weight="800" style="fill:${fill}" opacity="${op}">${place}</text>`;
+        return `<svg viewBox="-34 -34 68 68" aria-hidden="true">
+                <defs><radialGradient id="${id}" cx="36%" cy="30%" r="80%"><stop offset="0" style="stop-color:${metalHi(m)}"/><stop offset="0.5" style="stop-color:${m}"/><stop offset="1" style="stop-color:${metalLo(m)}"/></radialGradient></defs>
+                <rect x="-5" y="-34" width="10" height="7" rx="2.5" style="fill:${metalLo(m)}"/>
+                <circle r="29.5" fill="url(#${id})" style="stroke:${metalLo(m)}" stroke-width="1.5"/>
+                <circle r="25.5" fill="none" style="stroke:${metalHi(m)}" stroke-width="1" opacity="0.7"/>
+                <circle r="25" fill="none" style="stroke:${metalLo(m)}" stroke-width="0.7" opacity="0.5"/>
+                ${leaves}${text(0.6, 0.6, metalHi(m), 0.9)}${text(0, 0, metalLo(m), 1)}
+                <ellipse cx="-10" cy="-14" rx="10" ry="4.5" transform="rotate(-35 -10 -14)" style="fill:var(--text)" opacity="0.2"/>
+            </svg>`;
     }
-    const faces = (row, size = 22) => `<span class="wh-faces">${row.standings.filter((s) => s.person !== D().you).slice(0, 4).map((s) => companionImg(s.person, { w: size, h: size, pose: "avatar", cls: "wh-face" })).join("")}${row.size - 1 > 4 ? `<span class="t-micro c-2">+${row.size - 5}</span>` : ""}</span>`;
-    const openRow = (row) => `present:honorFight?id=${row.id}`;
+    // A strap from (x1, y1) to (x2, y2): dark edges, the green ribbon, and a stripe in the medal's metal.
+    const strap = (x1, y1, x2, y2, place, w = 9) => {
+        const line = (stroke, width, op = 1) => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:${stroke}" stroke-width="${width}" opacity="${op}"/>`;
+        return line(metalLo("var(--mossFill)"), w) + line("var(--mossFill)", w - 2) + line(METAL[place], w * 0.26, 0.9);
+    };
+    // A folded ribbon above a medal laid flat (display case, the fight drawer), turned with it around its centre.
+    const band = (cx, cy, r, a, place, len = 42) => {
+        const t = (a * Math.PI) / 180;
+        const pt = (x, y) => `${(cx + x * Math.cos(t) - y * Math.sin(t)).toFixed(1)},${(cy + x * Math.sin(t) + y * Math.cos(t)).toFixed(1)}`;
+        const w = r * 0.5;
+        return `<polygon points="${[pt(-w, -r - len), pt(w, -r - len), pt(w * 0.42, -r + 3), pt(-w * 0.42, -r + 3)].join(" ")}" style="fill:var(--mossFill);stroke:${metalLo("var(--mossFill)")}" stroke-width="1"/>
+            <polygon points="${[pt(-w * 0.28, -r - len), pt(w * 0.28, -r - len), pt(w * 0.12, -r + 3), pt(-w * 0.12, -r + 3)].join(" ")}" style="fill:${METAL[place]}" opacity="0.9"/>`;
+    };
+    // Where a medal's loop sits when it hangs at angle `a` (degrees, CSS rotate) around its centre.
+    const loopOf = (x, y, r, a) => [x + r * 0.9 * Math.sin((a * Math.PI) / 180), y - r * 0.9 * Math.cos((a * Math.PI) / 180)];
+    // A medal hanging `len` below (px, py), swung by `a` degrees.
+    const hang = (px, py, len, a) => [px - len * Math.sin((a * Math.PI) / 180), py + len * Math.cos((a * Math.PI) / 180)];
+    const WALL_W = 362;
+    function wallDisplay({ width = WALL_W, height, decor = "", ribbons = "", over = "", items }, o = {}) {
+        const buttons = items.map((it) => `<button type="button" class="wh2-m" data-theme="night" style="left:${(it.x - it.s / 2).toFixed(1)}px;top:${(it.y - it.s / 2).toFixed(1)}px;width:${it.s}px;height:${it.s}px;transform:rotate(${it.a.toFixed(1)}deg);z-index:${it.z || 1}" data-on="present:honorFight?id=${it.row.id}" aria-label="${esc(`${it.row.name}, ${placeOf(it.row)}`)}">${medalDisc(it.row.place)}</button>`).join("");
+        return `<div class="wh2-display ${o.cls || ""}" style="width:${width}px;height:${height}px">${decor}<div class="wh2-ribbons" data-theme="night"><svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${ribbons}</svg></div>${buttons}${over}</div>`;
+    }
+    const steelBar = (x, y, w, h = 12) => `<div class="wh2-bar" data-theme="night" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px"></div>`;
 
+    // ─── The six walls ──────────────────────────────────────────────
+    const WALLS = {
+        // Your companion in the middle; every ribbon goes round its neck, medals in rows across its chest.
+        neck: (rows) => {
+            const art = 280, nx = WALL_W / 2, ny = 96, s = 44;
+            const items = [];
+            let ribbons = `<path d="M${nx - 34} ${ny - 10} Q${nx} ${ny + 16} ${nx + 34} ${ny - 10}" fill="none" style="stroke:${metalLo("var(--mossFill)")}" stroke-width="10"/><path d="M${nx - 34} ${ny - 10} Q${nx} ${ny + 16} ${nx + 34} ${ny - 10}" fill="none" style="stroke:var(--mossFill)" stroke-width="8"/>`;
+            let i = 0, j = 0;
+            while (i < rows.length) {
+                const n = Math.min(j % 2 ? 6 : 5, rows.length - i);
+                const y = ny + 74 + j * 42;
+                const spread = 128 + j * 40;
+                for (let k = 0; k < n; k++, i++) {
+                    const r = rows[i];
+                    const x = n === 1 ? nx : nx - spread / 2 + (k * spread) / (n - 1) + (seeded(r.id, 1) - 0.5) * 8;
+                    const a = (seeded(r.id, 2) - 0.5) * 24;
+                    const [lx, ly] = loopOf(x, y, s / 2, a);
+                    // Each ribbon leaves the collar above its medal, so they fan out instead of bunching at one point.
+                    const cx = nx + Math.max(-30, Math.min(30, (x - nx) * 0.24));
+                    ribbons += strap(cx, ny + 3 - 13 * ((cx - nx) / 34) ** 2, lx, ly, r.place, 7);
+                    items.push({ row: r, x, y, a, s, z: 50 - j });
+                }
+                j++;
+            }
+            const height = Math.max(art + 10, ny + 74 + (j - 1) * 42 + s / 2 + 16);
+            return wallDisplay({ height, items, ribbons, decor: `<span class="wh2-companion" style="left:${(WALL_W - art) / 2}px">${companionImg(you(), { w: art, h: art })}</span>` });
+        },
+        // Steel rails; each medal hangs on its own ribbon, long and short in turn so they interleave.
+        hanger: (rows) => {
+            const per = 8, gap = 196, s = 50;
+            const bars = Math.ceil(rows.length / per);
+            let ribbons = "", decor = "";
+            const items = rows.map((r, i) => {
+                const bar = Math.floor(i / per), k = i % per;
+                const px = 26 + (k * (WALL_W - 52)) / (per - 1) + (seeded(r.id, 1) - 0.5) * 6;
+                const py = 24 + bar * gap;
+                const a = (seeded(r.id, 2) - 0.5) * 18;
+                const [x, y] = hang(px, py, (k % 2 ? 104 : 60) + seeded(r.id, 3) * 16 + s / 2, a);
+                const [lx, ly] = loopOf(x, y, s / 2, a);
+                ribbons += strap(px, py, lx, ly, r.place);
+                return { row: r, x, y, a, s, z: k % 2 ? 2 : 1 };
+            });
+            for (let b = 0; b < bars; b++) decor += steelBar(0, 18 + b * gap, WALL_W);
+            return wallDisplay({ height: (bars - 1) * gap + 24 + 104 + 16 + s + 14, items, ribbons, decor });
+        },
+        // One nail; every ribbon starts there and the medals fan out in rings, the newest on top.
+        nail: (rows) => {
+            const nx = WALL_W / 2, ny = 18, s = 48;
+            let ribbons = "";
+            const items = [];
+            let i = 0, j = 0;
+            while (i < rows.length) {
+                const n = Math.min(j % 2 ? 6 : 5, rows.length - i);
+                const reach = 108 + j * 50;
+                const spread = 36 + j * 5;
+                for (let k = 0; k < n; k++, i++) {
+                    const r = rows[i];
+                    const a = (n === 1 ? 0 : spread - (k * 2 * spread) / (n - 1)) + (seeded(r.id, 1) - 0.5) * 6;
+                    const [x, y] = hang(nx, ny, reach + seeded(r.id, 2) * 10, a);
+                    const tilt = a + (seeded(r.id, 3) - 0.5) * 10;
+                    const [lx, ly] = loopOf(x, y, s / 2, tilt);
+                    ribbons = strap(nx, ny, lx, ly, r.place, 8) + ribbons;
+                    items.push({ row: r, x, y, a: tilt, s, z: 50 - j });
+                }
+                j++;
+            }
+            return wallDisplay({ height: ny + 108 + (j - 1) * 50 + 10 + s / 2 + 18, items, ribbons, over: `<span class="wh2-nail" data-theme="night" style="left:${nx - 7}px;top:${ny - 7}px"></span>` });
+        },
+        // A wooden wall; each medal hangs from its own pin, a bit crooked.
+        board: (rows) => {
+            const cols = 4, cell = WALL_W / cols, rowH = 106, s = 50;
+            let ribbons = "", pins = "";
+            const items = rows.map((r, i) => {
+                const c = i % cols, line = Math.floor(i / cols);
+                const x = c * cell + cell / 2 + (seeded(r.id, 1) - 0.5) * 16;
+                const y = line * rowH + 72 + (seeded(r.id, 2) - 0.5) * 12;
+                const a = (seeded(r.id, 3) - 0.5) * 30;
+                const [lx, ly] = loopOf(x, y, s / 2, a);
+                const [px, py] = loopOf(x, y, s / 2 + 34, a);
+                ribbons += strap(px, py, lx, ly, r.place, 8);
+                pins += `<span class="wh2-pin" data-theme="night" style="left:${(px - 5).toFixed(1)}px;top:${(py - 5).toFixed(1)}px"></span>`;
+                return { row: r, x, y, a, s };
+            });
+            const height = Math.ceil(rows.length / cols) * rowH + 28;
+            return wallDisplay({ height, items, ribbons, decor: `<div class="wh2-wall"></div>`, over: pins });
+        },
+        // A framed case: rows of medals laid flat, each under its folded ribbon, turned a little either way.
+        case: (rows) => {
+            const cols = 4, pad = 18, cell = (WALL_W - pad * 2) / cols, rowH = 114, s = 52;
+            let ribbons = "";
+            const items = rows.map((r, i) => {
+                const c = i % cols, line = Math.floor(i / cols);
+                const x = pad + c * cell + cell / 2;
+                const y = pad + line * rowH + 76;
+                const a = (c % 2 ? 6 : -6) + (seeded(r.id, 1) - 0.5) * 8;
+                ribbons += band(x, y, s / 2, a, r.place, 40);
+                return { row: r, x, y, a, s };
+            });
+            const height = pad * 2 + Math.ceil(rows.length / cols) * rowH + 6;
+            return wallDisplay({ height, items, ribbons, decor: `<div class="wh2-case"></div>` });
+        },
+        // One long rail, newest on the left; the month is written above where it starts.
+        rail: (rows) => {
+            const step = 46, s = 50, py = 34;
+            const width = Math.max(WALL_W, 40 + rows.length * step + 20);
+            let ribbons = "", labels = "", last = "";
+            const items = rows.map((r, i) => {
+                const px = 32 + i * step;
+                const a = (seeded(r.id, 2) - 0.5) * 16;
+                const [x, y] = hang(px, py, (i % 2 ? 100 : 58) + seeded(r.id, 3) * 14 + s / 2, a);
+                const [lx, ly] = loopOf(x, y, s / 2, a);
+                ribbons += strap(px, py, lx, ly, r.place);
+                const month = new Date(r.at).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+                if (month !== last) { labels += `<span class="wh2-month t-micro c-2" style="left:${px - 8}px">${esc(month)}</span>`; last = month; }
+                return { row: r, x, y, a, s, z: i % 2 ? 2 : 1 };
+            });
+            return `<div class="wh2-scroll">${wallDisplay({ width, height: py + 100 + 14 + s + 18, items, ribbons, decor: steelBar(0, py - 6, width) + labels })}</div>`;
+        },
+    };
     // ─── Profile: the medal next to Dashboard ───────────────────────
     function honorButton() {
         const rows = honorRows();
@@ -7880,75 +8023,19 @@
         const badge = style !== "plain" && n ? `<span class="wh-dot ${style === "gold" ? "gold" : ""}">${n}</span>` : "";
         return `<button type="button" class="pf-round wh-round" aria-label="Wall of Honor" data-on="pfPush:honor">${icon("medal")}${badge}</button>`;
     }
-
-    // ─── The page designs ───────────────────────────────────────────
-    const listRow = (r) => `<button type="button" class="wh-row ff-press" data-on="${openRow(r)}">
-            ${honorMedal(r.place, 42)}
-            <span class="vstack grow" style="gap:2px;min-width:0"><span class="t-rowTitle ellipsis">${esc(r.name)}</span><span class="t-caption c-2 ellipsis">${esc(whatItWas(r))}</span></span>
-            <span class="vstack" style="align-items:flex-end;gap:2px"><span class="t-label">${esc(placeOf(r))}</span><span class="t-micro c-2">${esc(monthDay(r.at))}</span></span>
-        </button>`;
-    const listOf = (rows) => `<div class="ff-grouped">${rows.map(listRow).join('<div class="ff-divider"></div>')}</div>`;
-    const monthsList = (rows) => byMonth(rows).map((m) => FF.section(m.label, listOf(m.rows))).join("");
-    function placeFilter(rows, ui) {
-        const place = Number(ui.place) || 0;
-        return place ? rows.filter((r) => r.place === place) : rows;
-    }
-    const filterNote = (ui) => (Number(ui.place) ? `<div class="hstack" style="margin-top:12px"><span class="t-caption c-2 grow">Only ${placeWord(Number(ui.place))} places</span><button type="button" class="wh-link" data-on="set:place=0">Show all</button></div>` : "");
-    const DESIGNS = {
-        list: (rows) => monthsList(rows),
-        shelf: (rows) => byMonth(rows).map((m) => FF.section(m.label, `<div class="wh-shelf">${m.rows.map((r) => `<button type="button" class="wh-shelf-item" data-on="${openRow(r)}" aria-label="${esc(`${r.name}, ${placeOf(r)}`)}">${honorMedal(r.place, 58)}<span class="t-micro c-2 ellipsis" style="max-width:100%">${esc(r.name)}</span></button>`).join("")}</div>`)).join(""),
-        podium: (rows, ui) => {
-            const c = counts(rows);
-            const step = (place, height) => `<button type="button" class="wh-step ${Number(ui.place) === place ? "on" : ""}" data-on="set:place=${Number(ui.place) === place ? 0 : place}">${honorMedal(place, 52)}<span class="wh-block wh-${PLACE_TONE[place]}" style="height:${height}px"><span class="wh-block-n">${c[place]}</span><span class="t-micro">${placeWord(place)}</span></span></button>`;
-            return `<div class="wh-podium">${step(2, 70)}${step(1, 104)}${step(3, 48)}</div>${filterNote(ui)}${monthsList(placeFilter(rows, ui))}`;
-        },
-        counters: (rows, ui) => {
-            const c = counts(rows);
-            const tile = (place) => `<button type="button" class="wh-counter ${Number(ui.place) === place ? "on" : ""}" data-on="set:place=${Number(ui.place) === place ? 0 : place}">${honorMedal(place, 30)}<span class="vstack" style="gap:0"><span class="wh-counter-n">${c[place]}</span><span class="t-micro c-2">${placeWord(place)}</span></span></button>`;
-            return `<div class="wh-counters">${tile(1)}${tile(2)}${tile(3)}</div>${filterNote(ui)}${monthsList(placeFilter(rows, ui))}`;
-        },
-        plaques: (rows) => `<div class="wh-plaques">${rows.map((r) => `<button type="button" class="wh-plaque" data-on="${openRow(r)}">
-                <span class="wh-plaque-in">${honorMedal(r.place, 56)}<span class="t-label wh-two">${esc(r.name)}</span><span class="t-micro c-2">${esc(placeOf(r))} · ${esc(monthDay(r.at))}</span>${faces(r, 20)}</span>
-            </button>`).join("")}</div>`,
-        cards: (rows) => `<div class="vstack" style="gap:12px;margin-top:16px">${rows.map((r) => {
-            const loser = loserLine(r);
-            return FF.card(`<div class="vstack" style="gap:10px">
-                    <div class="hstack" style="gap:12px">${honorMedal(r.place, 46)}<span class="vstack grow" style="gap:2px;min-width:0"><span class="t-heading ellipsis">${esc(r.name)}</span><span class="t-caption c-2">${esc(longDay(r.at))}</span></span><span class="t-label">${esc(placeOf(r))}</span></div>
-                    <span class="t-caption c-2">${esc(whatItWas(r))}</span>
-                    <div class="hstack" style="gap:10px">${faces(r, 26)}<span class="grow"></span><span class="t-caption c-2">${esc(`${num(r.standings.find((s) => s.person === D().you).score)} steps`)}</span></div>
-                    ${loser ? `<div class="wh-stake">${icon("flag")}<span class="t-caption">${esc(loser)}</span></div>` : ""}
-                </div>`, { on: openRow(r), cls: "pf-press-card", padding: 16 });
-        }).join("")}</div>`,
-        seasons: (rows, ui) => byMonth(rows).map((m, i) => {
-            const open = ui[`m${i}`] ?? i === 0;
-            const c = counts(m.rows);
-            const chips = [1, 2, 3].filter((p) => c[p]).map((p) => `<span class="hstack" style="gap:3px">${honorMedal(p, 24)}<span class="t-label">${c[p]}</span></span>`).join("");
-            return `<div class="wh-season">
-                    <button type="button" class="wh-season-head" data-on="set:m${i}=${!open}"><span class="vstack grow" style="gap:2px"><span class="t-heading">${esc(m.label)}</span><span class="t-caption c-2">${esc(`${m.rows.length} ${m.rows.length === 1 ? "podium" : "podiums"}`)}</span></span><span class="hstack" style="gap:10px">${chips}</span><span class="pf-updown c-2">${icon(open ? "chevron.up" : "chevron.down")}</span></button>
-                    ${open ? listOf(m.rows) : ""}
-                </div>`;
-        }).join(""),
-        carousel: (rows) => `<div class="wh-reel">${rows.map((r) => `<button type="button" class="wh-reel-card wh-${PLACE_TONE[r.place]}" data-on="${openRow(r)}">
-                <span class="t-eyebrow c-2">${esc(longDay(r.at))}</span>
-                ${honorMedal(r.place, 120)}
-                <span class="wh-reel-place">${esc(placeOf(r))}</span>
-                <span class="t-title wh-two" style="text-align:center">${esc(r.name)}</span>
-                <span class="t-caption c-2" style="text-align:center">${esc(whatItWas(r))}</span>
-                ${faces(r, 30)}
-            </button>`).join("")}</div><p class="t-caption c-2" style="text-align:center;margin-top:10px">${esc(`Swipe · ${rows.length} fights`)}</p>`,
-    };
     screen("honor", {
         kind: "push",
         title: "Wall of Honor",
-        render: (p, ui) => {
+        render: () => {
             const rows = honorRows();
-            const design = V("wall") === "today" ? "list" : V("wall");
-            const played = S.scenario === "empty" || S.scenario === "loading" ? 0 : D().record.played + GROUP_PODIUMS.length;
-            const lead = rows.length
-                ? `<p class="t-body c-2">${esc(`On the podium in ${rows.length} of your ${played} fights.`)}</p>`
-                : "";
-            const body = rows.length ? DESIGNS[design](rows, ui) : `<div class="wh-empty">${honorMedal(1, 88)}<span class="t-heading">Your wall is empty</span><span class="t-body c-2">Finish a fight in the top 3 and its medal goes here, with the date and your place.</span>${FF.button("Start a fight", { on: "tab:newFight" })}</div>`;
-            return `<div class="pf-push">${FF.screen(largeTitle("Wall of Honor") + lead + body, { top: navBar("Wall of Honor") })}</div>`;
+            const design = V("wall") === "today" ? "neck" : V("wall");
+            const c = counts(rows);
+            const played = rows.length ? D().record.played + GROUP_PODIUMS.length : 0;
+            const tally = [[1, "gold"], [2, "silver"], [3, "bronze"]].filter(([p]) => c[p]).map(([p, word]) => `<span class="wh2-tally"><i class="wh2-dotm" data-theme="night" style="background:${METAL[p]}"></i>${c[p]} ${word}</span>`).join("");
+            const body = rows.length
+                ? `<p class="t-body c-2">${esc(`On the podium in ${rows.length} of your ${played} fights.`)}</p><div class="hstack" style="gap:14px;flex-wrap:wrap">${tally}</div>${WALLS[design](rows)}<p class="t-caption c-2" style="text-align:center">Tap a medal to see its fight.</p>`
+                : `<div class="wh-empty"><span class="wh2-ghost"></span><span class="t-heading">Your wall is empty</span><span class="t-body c-2">Finish a fight in the top 3 and its medal hangs here, with the date and your place.</span>${FF.button("Start a fight", { on: "tab:newFight" })}</div>`;
+            return `<div class="pf-push">${FF.screen(largeTitle("Wall of Honor") + body, { top: navBar("Wall of Honor") })}</div>`;
         },
     });
 
@@ -7965,9 +8052,10 @@
             if (!shown.some((s) => s.person === me)) shown.push(r.standings.find((s) => s.person === me));
             const loser = loserLine(r);
             const from = r.at - r.lengthDays * DAY;
+            const medal = wallDisplay({ width: 140, height: 170, items: [{ row: r, x: 70, y: 112, a: 0, s: 104 }], ribbons: band(70, 112, 52, 0, r.place, 52) }, { cls: "wh2-solo" });
             return `<div class="fl-drawer wh-drawer" data-scroll>
                     <div class="vstack" style="align-items:center;gap:6px;text-align:center">
-                        ${honorMedal(r.place, 96)}
+                        ${medal}
                         <span class="wh-headline">${esc(placeOf(r))}</span>
                         <span class="t-title">${esc(r.name)}</span>
                         <span class="t-caption c-2">${esc(`${monthDay(from)} to ${longDay(r.at)}`)}</span>
@@ -7975,8 +8063,7 @@
                     </div>
                     <div class="ff-grouped">${shown.map((s) => {
                         const rank = r.standings.indexOf(s) + 1;
-                        const who = person(s.person);
-                        return `<div class="wh-stand ${s.person === me ? "me" : ""}"><span class="wh-rank">${rank}</span>${companionImg(s.person, { w: 30, h: 30, pose: "avatar" })}<span class="t-label grow">${esc(s.person === me ? "You" : who.name)}</span><span class="t-label">${esc(num(s.score))}</span></div>`;
+                        return `<div class="wh-stand ${s.person === me ? "me" : ""}"><span class="wh-rank">${rank}</span>${companionImg(s.person, { w: 30, h: 30, pose: "avatar" })}<span class="t-label grow">${esc(s.person === me ? "You" : person(s.person).name)}</span><span class="t-label">${esc(num(s.score))}</span></div>`;
                     }).join('<div class="ff-divider"></div>')}</div>
                     ${r.size > shown.length ? `<p class="t-caption c-2" style="margin-top:-8px">${esc(`${r.size - shown.length} more people`)}</p>` : ""}
                     ${loser ? `<div class="wh-stake">${icon("flag")}<span class="t-caption">${esc(`Loser's action · ${loser}`)}</span></div>` : ""}
@@ -7986,53 +8073,33 @@
     });
 
     addCSS(`
-        .wh-medal { position: relative; display: inline-grid; place-items: center; flex: none; color: var(--wh-ink); }
-        .wh-medal svg { width: 100%; height: 100%; overflow: visible; }
-        .wh-medal .wh-bg { fill: var(--wh-wash); stroke: var(--wh-ink); stroke-width: 3; }
-        .wh-medal .wh-ring { fill: none; stroke: var(--wh-ink); stroke-width: 1.4; opacity: 0.4; }
-        .wh-medal .wh-tail { fill: var(--wh-ink); opacity: 0.55; }
-        .wh-medal .wh-tail.b { opacity: 0.8; }
-        .wh-medal text { font-family: Nunito, sans-serif; }
-        .wh-first { --wh-ink: var(--medalGold); --wh-wash: var(--medalGoldWash); }
-        .wh-second { --wh-ink: var(--medalSilver); --wh-wash: var(--medalSilverWash); }
-        .wh-third { --wh-ink: var(--medalBronze); --wh-wash: var(--medalBronzeWash); }
         .wh-round { position: relative; }
         .wh-dot { position: absolute; top: -3px; right: -5px; min-width: 20px; padding: 0 5px; border-radius: 999px; background: var(--mossFill); color: var(--mossOn); font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--bg); }
-        .wh-dot.gold { background: var(--medalGold); color: var(--bg); }
-        .wh-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; text-align: left; }
-        .wh-link { color: var(--mossText); font-size: 13px; font-weight: 800; min-height: 32px; }
-        .wh-shelf { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 4px; padding: 6px 4px 0; background: linear-gradient(transparent calc(100% - 10px), var(--controlAlt) calc(100% - 10px), var(--controlAlt) calc(100% - 4px), transparent calc(100% - 4px)); background-size: 100% 104px; }
-        .wh-shelf-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 94px; min-width: 0; padding-bottom: 10px; }
-        .wh-podium { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; gap: 8px; margin-top: 18px; }
-        .wh-step { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .wh-block { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; border-radius: 16px 16px 6px 6px; background: var(--wh-wash); color: var(--wh-ink); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wh-ink) 30%, transparent); }
-        .wh-step.on .wh-block { box-shadow: inset 0 0 0 2px var(--wh-ink); }
-        .wh-block-n { font-size: 26px; font-weight: 800; line-height: 1; }
-        .wh-counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
-        .wh-counter { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 18px; background: var(--card); box-shadow: inset 0 0 0 1px var(--hairline); text-align: left; }
-        .wh-counter.on { box-shadow: inset 0 0 0 2px var(--mossEdge); }
-        .wh-counter-n { font-size: 20px; font-weight: 800; line-height: 1.1; }
-        .wh-plaques { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
-        .wh-plaque { padding: 6px; border-radius: 22px; background: var(--controlAlt); text-align: center; }
-        .wh-plaque-in { display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; padding: 14px 10px 12px; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 1px var(--hairline); }
-        .wh-two { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .wh-faces { display: inline-flex; align-items: center; }
-        .wh-face { margin-left: -6px; border-radius: 50%; background: var(--control); box-shadow: 0 0 0 2px var(--card); }
-        .wh-faces .wh-face:first-child { margin-left: 0; }
-        .wh-faces .t-micro { margin-left: 6px; }
+        .wh-dot.gold { background: var(--medalGold); color: var(--goldInk); }
+        .wh2-display { position: relative; flex: none; margin: 4px auto 0; isolation: isolate; }
+        .wh2-ribbons { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+        .wh2-ribbons svg { display: block; overflow: visible; }
+        .wh2-m { position: absolute; display: block; padding: 0; transform-origin: 50% 50%; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35)); }
+        .wh2-m svg { display: block; width: 100%; height: 100%; overflow: visible; }
+        .wh2-m text { font-family: Nunito, sans-serif; }
+        .wh2-companion { position: absolute; top: 0; z-index: 0; }
+        .wh2-bar { position: absolute; z-index: 3; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--medalSilver) 70%, var(--text)), var(--medalSilver) 40%, color-mix(in srgb, var(--medalSilver) 45%, var(--canvas))); box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
+        .wh2-nail, .wh2-pin { position: absolute; z-index: 60; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--medalSilver) 60%, var(--text)), var(--medalSilver) 45%, color-mix(in srgb, var(--medalSilver) 40%, var(--canvas))); box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        .wh2-pin { width: 10px; height: 10px; z-index: 2; }
+        .wh2-wall { position: absolute; inset: 0; border-radius: 26px; background: repeating-linear-gradient(90deg, var(--card) 0 44px, color-mix(in srgb, var(--card) 80%, var(--canvas)) 44px 46px); box-shadow: inset 0 0 0 1px var(--hairline); }
+        .wh2-case { position: absolute; inset: 0; border-radius: 24px; border: 9px solid var(--controlAlt); background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--mossWash) 60%, var(--card)), var(--card)); box-shadow: inset 0 8px 18px rgba(0,0,0,0.28), 0 6px 18px rgba(0,0,0,0.18); }
+        .wh2-scroll { margin: 0 -20px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
+        .wh2-scroll::-webkit-scrollbar { display: none; }
+        .wh2-scroll .wh2-display { margin: 4px 0 0; }
+        .wh2-month { position: absolute; top: 4px; white-space: nowrap; }
+        .wh2-tally { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--text); }
+        .wh2-dotm { width: 12px; height: 12px; border-radius: 50%; }
+        .wh2-solo { margin: 0 auto -6px; }
+        .wh2-ghost { width: 88px; height: 88px; border-radius: 50%; border: 2px dashed var(--line); }
         .wh-stake { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 14px; background: var(--chip); color: var(--textDim); }
         .wh-stake svg { font-size: 14px; flex: none; color: var(--textSecondary); }
-        .wh-season { margin-top: 12px; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--hairline); overflow: hidden; }
-        .wh-season-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; }
-        .wh-season .ff-grouped { border-radius: 0; box-shadow: none; border-top: 1px solid var(--hairline); }
-        .wh-reel { display: flex; gap: 12px; margin: 16px -20px 0; padding: 0 20px 4px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
-        .wh-reel::-webkit-scrollbar { display: none; }
-        .wh-reel-card { flex: none; width: 290px; height: 430px; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; border-radius: 30px; background: radial-gradient(90% 55% at 50% 35%, var(--wh-wash), transparent 75%), var(--card); box-shadow: inset 0 0 0 1px var(--hairline); }
-        .wh-reel-place { font-size: 28px; font-weight: 800; color: var(--wh-ink); }
         .wh-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 40px; text-align: center; }
-        .wh-empty .wh-medal { --wh-ink: var(--textFaint); --wh-wash: var(--chip); }
-        .wh-empty .wh-bg { stroke-dasharray: 4 4; stroke-width: 2; }
-        .wh-drawer { gap: 16px; padding-top: 28px; padding-bottom: 28px; }
+        .wh-drawer { gap: 16px; padding-top: 22px; padding-bottom: 28px; }
         .wh-headline { font-size: 18px; font-weight: 800; color: var(--text); }
         .wh-stand { display: flex; align-items: center; gap: 10px; padding: 10px 16px; }
         .wh-stand.me { background: var(--mossWash); }

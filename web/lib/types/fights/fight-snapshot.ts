@@ -95,14 +95,18 @@ export const fightSnapshotSchema = z.object({
             steps: z.number().int().nonnegative(),
         }),
     ),
-    /** One card for everything the caller hosts: its current rounds and how many the host leads. */
+    /**
+     * One card for everything the caller hosts: its current rounds and how many the host leads. Always sent by current
+     * servers; absent from older responses, such as production's while the web app's Production switch reads it.
+     */
     hosted: z
         .object({
             name: z.string(),
             rounds: z.number().int().positive(),
             leading: z.number().int().nonnegative(),
         })
-        .nullable(),
+        .nullable()
+        .optional(),
     /**
      * The caller's Friends card, always sent by current servers and absent from older responses.
      * leading counts rounds the caller is strictly ahead in; requests counts incoming friend requests.

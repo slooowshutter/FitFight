@@ -43,6 +43,27 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 17,
+            notes: "The Feed tab shows how many new posts people sent since you last opened it."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "Adding people to a fight: matching usernames show as you type. Tap one to add it, or see right away when no one has that username."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
             notes: "Fight pictures now open instantly instead of loading for several seconds."
         ),
         ReleaseNote(

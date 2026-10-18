@@ -863,6 +863,13 @@ struct FitFightAPI {
         try await get(path: "friends/suggestions", accessToken: accessToken)
     }
 
+    /// Up to 8 people whose username starts with `query`, exact match first.
+    func searchProfiles(query: String, accessToken: String) async throws -> ProfileSearchList {
+        var items = URLComponents()
+        items.queryItems = [URLQueryItem(name: "q", value: query)]
+        return try await get(path: "profiles/search?\(items.percentEncodedQuery ?? "")", accessToken: accessToken)
+    }
+
     func lookupProfile(handle: String, accessToken: String) async throws -> SharedProfileIdentity {
         var query = URLComponents()
         query.queryItems = [URLQueryItem(name: "handle", value: handle)]

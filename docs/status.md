@@ -36,6 +36,50 @@ started). Not deployed.
 
 ---
 
+## User feedback: username search, required title, longer loser action, Feed count, prepared 17 Oct 2026
+
+From the production Feedback tab (@fabi and @claire). Marc picked option B in
+`docs/design/source/kit/feed-unread-proposals.html`.
+
+**App:**
+- The Feed tab shows an Ember count (1-9, then 9+) of posts by other people newer than
+  the last time you opened Feed on this phone. It checks the newest feed page (10 posts)
+  when the app comes to the foreground, after the in-app alerts load, and clears when you open or leave Feed. The first
+  launch of this build starts counting from then, so nobody sees old posts as new. The
+  time is kept per account on the phone only; no server change.
+- New fight and Edit fight, People step: matching usernames show under the box as you
+  type (from 2 characters, after a 150 ms pause, at most 8, people already added hidden).
+  Typing more narrows the last results on the phone at once, and skips the server when
+  that list was under 8. Tap one to add it. With no match it says "No one has the
+  username @x.". Add refuses a username the search didn't find: tapped early, it waits
+  for the answer; if the search can't load, Add works as before and saving the fight
+  still rejects unknown usernames. Your own username keeps "Add someone else's username.".
+- The loser action takes 240 characters (was 120). Title and loser action boxes start
+  as one line and grow up to 6 lines as you type; Return still moves on or closes the
+  keyboard. The web app's New fight uses a growing text area for the loser action.
+- A fight needs a title now (Marc, 17 Oct); the loser action stays optional. New fight's
+  Next on the title step and Start, and the web app's Start, stay off until a title is
+  typed. Edit fight asks for one before Save when the fight has none; a friend round keeps
+  its name. The fight name is the title, so it never takes the loser action's 240. The
+  home page demo asks for a title too.
+
+**Contract (additive, `/api/v1`):** new `GET /profiles/search?q=` (signed in; `q` is a
+username prefix, 2-30 of `a-z 0-9 _`, a leading `@` is ignored) returns
+`{ people: [{ user_id, handle, display_name, companion_id, avatar_url }] }`: never the
+caller, deleted accounts, or anyone either side blocked; exact match first. Unlike the
+exact lookup it has no hourly cap. Create and update accept `actionText` up to 240
+characters; older apps still stop at 120. `name` stays optional, so older apps can still
+create a fight without a title; the server names it after their loser action (120 at
+most). No migration. Deploy the backend before distributing the app; on an older backend
+the search fails quietly and Add behaves as before.
+
+**Checks:** web typecheck and `npm test` pass (549 tests); the search SQL ran read-only
+on staging; simulator build succeeded; localization check passed. Typecheck, `npm test`,
+the localization checks, and the simulator build were rerun after the required title.
+Not yet seen on a device.
+
+---
+
 ## Friends screen: Add friends button, History, weekly rounds, prepared 17 Oct 2026
 
 Marc picked option B from `docs/design/source/kit/friends-group-add-proposals.html` and asked

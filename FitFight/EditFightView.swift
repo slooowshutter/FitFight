@@ -84,8 +84,10 @@ struct EditFightView: View {
     }
 
     private var canSave: Bool {
-        fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
-            && actionText.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
+        // A friend round keeps its name, so only other fights need a title.
+        (fight.friends == true || !fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            && fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
+            && actionText.trimmingCharacters(in: .whitespacesAndNewlines).count <= 240
             && scheduleError == nil
             && (fight.joinCode == nil || AppModel.joinCodeLength.contains(joinCode.count))
             && !model.isUpdatingFight
@@ -147,7 +149,8 @@ struct EditFightView: View {
                 text: $actionText,
                 focus: $actionFocused,
                 submitLabel: .done,
-                onSubmit: { actionFocused = false }
+                onSubmit: { actionFocused = false },
+                limit: 240
             )
             friendLengthRow
             deadlineRow

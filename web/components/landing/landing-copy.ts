@@ -180,8 +180,7 @@ const en = {
         usernamePlaceholder: "@username",
         add: "Add",
         titleTitle: "Title and action",
-        titleText:
-            "Both are optional. If you skip a title, the action is the name of the fight.",
+        titleText: "Give the fight a title. The loser action is optional.",
         title: "Title",
         titlePlaceholder: "Weekend walk-off",
         action: "Loser action",
@@ -193,7 +192,6 @@ const en = {
         metric: "Metric",
         metricValue: "Steps · highest total wins",
         privateValue: "Join with code or invite link",
-        usesAction: "Uses the action",
         none: "None",
         health: "Apple Health Steps",
         connected: "Connected",
@@ -205,7 +203,6 @@ const en = {
         doneTitle: "Fight on.",
         doneText: (title: string) =>
             `Share the link so your friends can join ${title}.`,
-        theFight: "the fight",
         share: "Share invite",
         restart: "Start over",
     },
@@ -722,8 +719,7 @@ const fr: typeof en = {
         usernamePlaceholder: "@nom_utilisateur",
         add: "Ajouter",
         titleTitle: "Titre et gage",
-        titleText:
-            "Les deux sont facultatifs. Sans titre, le gage devient le nom du défi.",
+        titleText: "Donnez un titre au défi. Le gage est facultatif.",
         title: "Titre",
         titlePlaceholder: "Défi du week-end",
         action: "Gage du perdant",
@@ -735,7 +731,6 @@ const fr: typeof en = {
         metric: "Mesure",
         metricValue: "Pas · le total le plus élevé gagne",
         privateValue: "Rejoindre avec le code ou le lien d’invitation",
-        usesAction: "Utilise le gage",
         none: "Aucun",
         health: "Pas de Santé d’Apple",
         connected: "Connecté",
@@ -748,7 +743,6 @@ const fr: typeof en = {
         doneTitle: "C’est parti.",
         doneText: (title: string) =>
             `Partagez le lien pour que vos amis rejoignent ${title}.`,
-        theFight: "le défi",
         share: "Partager l’invitation",
         restart: "Recommencer",
     },

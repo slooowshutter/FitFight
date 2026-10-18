@@ -1,0 +1,31 @@
+# Hourly WHOOP sync on staging, where Vercel Cron never runs. Production uses the Vercel Cron in
+# web/vercel.json. GitHub runs schedules only from the default branch and may start them late.
+name: WHOOP sync
+
+on:
+    schedule:
+        - cron: "0 * * * *"
+
+concurrency:
+    group: whoop-sync
+    cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+    sync:
+        name: Sync staging
+        runs-on: ubuntu-latest
+        timeout-minutes: 6
+        steps:
+            - name: Call the protected sync endpoint
+              env:
+                  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+                  URL: https://staging.fitfight.app/api/internal/whoop/sync
+              run: |
+                  if [ -z "$CRON_SECRET" ]; then
+                      echo "Repository secret CRON_SECRET is not set; skipping."
+                      exit 0
+                  fi
+                  curl --fail-with-body --silent --show-error --max-time 320 \
+                      -H "Authorization: Bearer $CRON_SECRET" "$URL"

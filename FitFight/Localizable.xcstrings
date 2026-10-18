@@ -1,6 +1,113 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte ton compte WHOOP dans Réglages → Connexions → WHOOP. FitFight garde ton sommeil, ta récupération, ton effort et tes entraînements WHOOP, mis à jour toutes les heures."
+                    }
+                }
+            }
+        },
+        "Connected · Updates every hour": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecté · Mise à jour toutes les heures"
+                    }
+                }
+            }
+        },
+        "Sleep, recovery, strain and workouts": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sommeil, récupération, effort et entraînements"
+                    }
+                }
+            }
+        },
+        "Connect your WHOOP account and FitFight gets your sleep, recovery, strain and workouts straight from WHOOP, updated every hour.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connecte ton compte WHOOP et FitFight reçoit ton sommeil, ta récupération, ton effort et tes entraînements directement de WHOOP, mis à jour toutes les heures."
+                    }
+                }
+            }
+        },
+        "WHOOP account": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Compte WHOOP"
+                    }
+                }
+            }
+        },
+        "Updates every hour": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mise à jour toutes les heures"
+                    }
+                }
+            }
+        },
+        "whoop.last-update": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Updates every hour · Last update %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mise à jour toutes les heures · Dernière mise à jour %@"
+                    }
+                }
+            }
+        },
+        "Couldn’t connect WHOOP. Tap to try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de connecter WHOOP. Touche pour réessayer."
+                    }
+                }
+            }
+        },
+        "Connecting": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connexion"
+                    }
+                }
+            }
+        },
+        "By connecting, you agree to our [Privacy Policy](privacy).": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En connectant WHOOP, tu acceptes notre [Politique de confidentialité](privacy)."
+                    }
+                }
+            }
+        },
         "Connectors": {
             "localizations": {
                 "fr": {

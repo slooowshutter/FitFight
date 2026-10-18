@@ -1,6 +1,8 @@
+import AuthenticationServices
 import SwiftUI
 
-/// A watch or app whose activity reaches FitFight through Apple Health. FitFight reads only Apple Health.
+/// A watch or app whose steps reach FitFight through Apple Health. WHOOP also connects directly for
+/// sleep, recovery, strain and workouts; Fight steps still come only from Apple Health.
 enum Connector: String, CaseIterable, Identifiable {
     case garmin, whoop
 
@@ -19,13 +21,21 @@ enum Connector: String, CaseIterable, Identifiable {
         case .whoop: "Connector-WHOOP"
         }
     }
+
+    var summary: String {
+        switch self {
+        case .garmin: String(appLocalized: "Steps and workouts")
+        case .whoop: String(appLocalized: "Sleep, recovery, strain and workouts")
+        }
+    }
 }
 
 private let healthApp = URL(string: "x-apple-health://")!
 
-/// Settings > Connectors: one watch or app, with its own logo.
+/// Settings > Connectors: one watch or app, with its own logo. `status` replaces the summary once connected.
 struct ConnectorRow: View {
     let connector: Connector
+    var status: String? = nil
     let action: () -> Void
 
     @Environment(\.ffTheme) private var theme
@@ -42,9 +52,9 @@ struct ConnectorRow: View {
                     Text(verbatim: connector.name)
                         .ffType(.rowTitle)
                         .foregroundStyle(theme.text)
-                    Text(String(appLocalized: "Steps and workouts"))
+                    Text(status ?? connector.summary)
                         .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
+                        .foregroundStyle(status == nil ? theme.textSecondary : theme.mossText)
                 }
                 Spacer(minLength: 0)
                 FFChevron()
@@ -193,11 +203,16 @@ struct AppleHealthSheet: View {
 }
 
 /// Settings > Connectors > a watch or app: how its activity reaches Apple Health, where FitFight reads it.
+/// WHOOP's sheet starts with connecting the WHOOP account itself.
 struct ConnectorGuideSheet: View {
     let connector: Connector
+    @ObservedObject var whoop: WhoopConnectionStore
+    let privacy: URL
 
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.webAuthenticationSession) private var webAuthenticationSession
 
     var body: some View {
         VStack(spacing: 0) {
@@ -220,13 +235,19 @@ struct ConnectorGuideSheet: View {
                             (String(appLocalized: "Put Garmin first in Health"), String(appLocalized: "Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag Garmin to the top.")),
                         ])
                     case .whoop:
-                        Text(String(appLocalized: "WHOOP sends your steps and workouts to Apple Health, and FitFight reads them there."))
+                        Text(String(appLocalized: "Connect your WHOOP account and FitFight gets your sleep, recovery, strain and workouts straight from WHOOP, updated every hour."))
                             .ffType(.body)
                             .foregroundStyle(theme.textSecondary)
-                        ConnectorSteps(steps: [
-                            (String(appLocalized: "Turn on Apple Health in WHOOP"), String(appLocalized: "In the WHOOP app, turn on Apple Health and allow Steps.")),
-                            (String(appLocalized: "Put WHOOP first in Health"), String(appLocalized: "Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag WHOOP to the top.")),
-                        ])
+                        whoopAccount
+                        FFSection(title: String(appLocalized: "Steps")) {
+                            Text(String(appLocalized: "WHOOP sends your steps and workouts to Apple Health, and FitFight reads them there."))
+                                .ffType(.body)
+                                .foregroundStyle(theme.textSecondary)
+                            ConnectorSteps(steps: [
+                                (String(appLocalized: "Turn on Apple Health in WHOOP"), String(appLocalized: "In the WHOOP app, turn on Apple Health and allow Steps.")),
+                                (String(appLocalized: "Put WHOOP first in Health"), String(appLocalized: "Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag WHOOP to the top.")),
+                            ])
+                        }
                     }
                     FFGroupedRows {
                         Link(destination: healthApp) {
@@ -240,6 +261,98 @@ struct ConnectorGuideSheet: View {
             }
         }
         .background(theme.bg.ignoresSafeArea())
+    }
+}
+
+extension ConnectorGuideSheet {
+    /// The WHOOP account row, and the consent line until it is connected.
+    private var whoopAccount: some View {
+        let subtitle: String = whoop.connected
+            ? whoop.connection?.lastSyncedAt.map {
+                String(format: String(appLocalized: "whoop.last-update"),
+                       $0.formatted(.relative(presentation: .named).locale(AppLocalization.locale)))
+            } ?? String(appLocalized: "Updates every hour")
+            : whoop.failed
+                ? String(appLocalized: "Couldn’t connect WHOOP. Tap to try again.")
+                : String(appLocalized: "Not connected")
+        let pill: FFPill = whoop.busy ? FFPill(String(appLocalized: "Connecting"), style: .neutral)
+            : whoop.connected ? FFPill(String(appLocalized: "Connected"), style: .softMoss)
+            : whoop.failed ? FFPill(String(appLocalized: "Retry"), style: .softEmber)
+            : FFPill(String(appLocalized: "Connect"), style: .solidMoss)
+        return VStack(alignment: .leading, spacing: 10) {
+            FFGroupedRows {
+                Button {
+                    Task {
+                        await whoop.refresh(session: session, connectWith: whoop.connected ? nil : webAuthenticationSession)
+                    }
+                } label: {
+                    FFGroupedRow(
+                        title: String(appLocalized: "WHOOP account"),
+                        subtitle: subtitle,
+                        systemImage: "waveform.path.ecg",
+                        enabled: !whoop.busy,
+                        subtitleTone: whoop.connected ? .moss : whoop.failed ? .ember : .neutral,
+                        trailing: AnyView(pill)
+                    )
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(whoop.busy)
+            }
+            if !whoop.connected {
+                Text(AttributedString(
+                    localized: "By connecting, you agree to our [Privacy Policy](privacy).",
+                    bundle: AppLocalization.bundle, locale: AppLocalization.locale
+                ))
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .tint(theme.mossText)
+                .environment(\.openURL, OpenURLAction { _ in .systemAction(privacy) })
+                .padding(.horizontal, 16)
+            }
+        }
+    }
+}
+
+/// The signed-in person's WHOOP connection. Settings loads it; the WHOOP sheet connects.
+@MainActor
+final class WhoopConnectionStore: ObservableObject {
+    @Published private(set) var connection: FitFightWhoopConnection?
+    /// True while WHOOP's sign-in is open or the status reloads.
+    @Published private(set) var busy = false
+    @Published private(set) var failed = false
+
+    var connected: Bool { connection?.connected == true }
+
+    /// Reloads the status. With a web session it first opens WHOOP's sign-in, which ends on
+    /// fitfight://whoop?code=...&state=...; the app then finishes the link with its own sign-in.
+    func refresh(session: SessionStore, connectWith webAuthentication: WebAuthenticationSession? = nil) async {
+        guard !CompanionPreview.isEnabled, session.isSignedIn else { return }
+        busy = true
+        defer { busy = false }
+        if let webAuthentication {
+            failed = false
+            do {
+                let url = try await FitFightAPI().startWhoopConnection(accessToken: session.freshAccessToken())
+                let callback = try await webAuthentication.authenticate(
+                    using: url, callbackURLScheme: "fitfight", preferredBrowserSession: .shared
+                )
+                let items = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.queryItems ?? []
+                if let code = items.first(where: { $0.name == "code" })?.value,
+                   let state = items.first(where: { $0.name == "state" })?.value {
+                    try await FitFightAPI().finishWhoopConnection(
+                        code: code, state: state, accessToken: session.freshAccessToken()
+                    )
+                } else {
+                    failed = true
+                }
+            } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            } catch {
+                failed = true
+            }
+        }
+        if let loaded = try? await FitFightAPI().whoopConnection(accessToken: session.freshAccessToken()) {
+            connection = loaded
+        }
     }
 }
 

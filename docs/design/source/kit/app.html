@@ -328,10 +328,10 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 8b63590d + Connectors", updated: "18 Oct 2026" };
+            const MIRROR = { matches: "develop 436c68ee", updated: "18 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
-            const DATA_VERSION = 1;
+            const DATA_VERSION = 2;
             const ROOT = "../../../../";
             const QUERY = new URLSearchParams(location.search);
 
@@ -469,6 +469,7 @@
                 "hourglass": '<path d="M6.5 3h11M6.5 21h11M7.5 3c0 5 9 5 9 9s-9 4-9 9M16.5 3c0 5-9 5-9 9s9 4 9 9"/>',
                 "wifi.slash": '<path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5.5-2.7M14 10.4A10 10 0 0 1 19 13M2 9.5a15 15 0 0 1 4.6-2.8M11 5.5A15 15 0 0 1 22 9.5M12 20v.1"/>',
                 "heart.text.square": '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 15.5s-4-2.4-4-5.3A2.2 2.2 0 0 1 12 9a2.2 2.2 0 0 1 4 1.2c0 2.9-4 5.3-4 5.3z"/>',
+                "waveform.path.ecg": '<path d="M2.5 12.5h4.2l1.8-4 3.2 9 3.1-11 2.2 6h4.5"/>',
                 "slider.horizontal.3": '<path d="M3.5 6h9M17.5 6h3M3.5 12h3M11.5 12h9M3.5 18h11M19.5 18h1"/><circle cx="15" cy="6" r="2.3"/><circle cx="9" cy="12" r="2.3"/><circle cx="17" cy="18" r="2.3"/>',
                 "shoeprints.fill": '<path d="M7 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM5 15h4v2a2 2 0 0 1-4 0zM17 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM15 19h4v1a2 2 0 0 1-4 0z"/>',
             };
@@ -6638,6 +6639,7 @@
 
     // Changelog.swift, the 12 newest rows verbatim (newest first). Changelog.current is the first row of this marketing version.
     const CHANGELOG = [
+        ["1.2.0", "2026-10-18", "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour."],
         ["1.2.0", "2026-10-18", "Settings now has Connectors: Apple Health, Garmin and WHOOP. Tap Apple Health to sync, review what FitFight can read, and choose which device’s steps count. Garmin and WHOOP show how to send your steps to Apple Health, where FitFight reads them. The sync details are no longer in Settings."],
         ["1.2.0", "2026-10-17", "New post: Photo or video shows Take Photo and Photo Library right under the button, so adding a photo no longer sometimes does nothing."],
         ["1.2.0", "2026-10-17", "The evening summary now says who posted and in which fight."],
@@ -6649,7 +6651,6 @@
         ["1.2.0", "2026-10-17", "Opening FitFight no longer sometimes freezes on a blank Fights screen."],
         ["1.2.0", "2026-10-16", "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."],
         ["1.2.0", "2026-10-16", "Tap someone's name to open their Player card: your record against them in every Fight, 1v1 or group, your steps compared since you became friends, and your Fights together. Block is gone; Report stays. The flame next to Fights is your 10K streak, the days in a row you walked 10,000 steps."],
-        ["1.2.0", "2026-10-16", "The heading of New is now in French when your phone is in French."],
     ].map(([version, date, notes], i) => ({ id: i, version, date, notes }));
 
     // What the server would send about each other person. record is [wins, losses, draws]; shares is their
@@ -6712,6 +6713,8 @@
                 lastAutomaticSync: iso(now - 14 * 60e3), lastManualSync: iso(now - 2 * HOUR), errorCode: null, failureDetail: null, failureReference: null,
                 activitySyncFailed: false, activityProcessingPending: false,
             },
+            // YouView's WHOOP @State: busy while WHOOP's sign-in is open or the status reloads.
+            whoop: { connected: false, lastSyncedAt: null, busy: false, failed: false },
             reported: [],
             referralCode: "8f2c6a1e-4b7d-4c19-9e35-0d6b2a7f41c3",
         };
@@ -6804,6 +6807,16 @@
     }
     function healthState(p = {}) {
         return { ...PD().health, ...(HEALTH_STATES[p.health] || {}) };
+    }
+    // Link-only WHOOP states for Settings (`settings?whoop=...`).
+    function whoopState(p = {}) {
+        const states = {
+            notConnected: { connected: false, lastSyncedAt: null, busy: false, failed: false },
+            connecting: { connected: false, busy: true, failed: false },
+            connected: { connected: true, lastSyncedAt: iso(Date.now() - 12 * 60e3), busy: false, failed: false },
+            error: { connected: false, busy: false, failed: true },
+        };
+        return { ...PD().whoop, ...(states[p.whoop] || {}) };
     }
     const healthAvailable = () => PD().health.connection !== "notConnected";
     function stepsOf(id) {
@@ -7093,6 +7106,14 @@
             : h.connection === "syncing" ? pill("Syncing", "neutral") : h.connection === "notConnected" ? pill("Connect", "solidMoss") : pill("Connected", "softMoss");
         return FF.groupedRow({ title: "Apple Health activity", subtitle: detail, icon: "heart", enabled: !busy, subtitleTone: tone, trailing: healthPill, on: onSpec });
     }
+    // ConnectorGuideSheet.whoopAccount: the WHOOP account row, and the consent line until it is connected.
+    function whoopAccount(w) {
+        const subtitle = w.connected ? `Updates every hour${w.lastSyncedAt ? ` · Last update ${fmt.ago(w.lastSyncedAt)}` : ""}`
+            : w.failed ? "Couldn’t connect WHOOP. Tap to try again." : "Not connected";
+        const whoopPill = w.busy ? pill("Connecting", "neutral") : w.connected ? pill("Connected", "softMoss") : w.failed ? pill("Retry", "softEmber") : pill("Connect", "solidMoss");
+        return FF.grouped([FF.groupedRow({ title: "WHOOP account", subtitle, icon: "waveform.path.ecg", enabled: !w.busy, subtitleTone: w.connected ? "moss" : w.failed ? "ember" : "neutral", trailing: whoopPill, on: w.busy ? null : "pfWhoop" })])
+            + (w.connected ? "" : `<p class="t-caption c-2 pf-footer">By connecting, you agree to our <button type="button" class="c-moss" data-on="${esc(external(`${siteRoot()}/privacy`))}">Privacy Policy</button>.</p>`);
+    }
     screen("settings", {
         kind: "push",
         title: "Settings",
@@ -7156,7 +7177,7 @@
             why: "Garmin stopped letting new apps connect to its data, so FitFight can’t link to Garmin directly. Your Garmin steps still count: Garmin Connect sends them to Apple Health, and FitFight reads them there.",
             setup: "In Garmin Connect, tap More → Settings → Connected Apps → Apple Health, then turn on Steps.",
             sync: "Garmin sends steps to Apple Health only while Garmin Connect is open. After your watch syncs, open Garmin Connect, then FitFight. Do it once more before a fight ends." },
-        { id: "whoop", name: "WHOOP", app: "WHOOP", logo: asset("Connector-WHOOP"), gives: "Steps and workouts", setup: "In the WHOOP app, turn on Apple Health and allow Steps." },
+        { id: "whoop", name: "WHOOP", app: "WHOOP", logo: asset("Connector-WHOOP"), gives: "Sleep, recovery, strain and workouts", setup: "In the WHOOP app, turn on Apple Health and allow Steps." },
     ];
     // What HealthKitActivityAggregates.readTypes asks for, grouped the way people say it.
     const HEALTH_READS = [
@@ -7166,7 +7187,9 @@
     const openHealthRow = (title = "Open Health", subtitle = "", glyph = null) => FF.groupedRow({ title, subtitle, icon: glyph, subtitleTone: "neutral", trailing: `<span class="pf-syschev" style="color:var(--text)">${icon("arrow.up.right")}</span>`, on: external("x-apple-health://") });
     const guideSteps = (list) => FF.card(list.map(([title, text], i) => `<div class="pf-step"><span class="pf-step-num">${i + 1}</span><span class="vstack grow" style="gap:3px"><span class="t-rowTitle">${esc(title)}</span><span class="t-caption c-2">${esc(text)}</span></span></div>`).join(""), { padding: 16 });
     function connectorsGroup(p) {
-        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><img class="pf-logo" src="${s.logo}" alt=""><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
+        // A connected WHOOP shows its status in place of the summary (ConnectorRow's status).
+        const status = (s) => (s.id === "whoop" && whoopState(p).connected ? "Connected · Updates every hour" : null);
+        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><img class="pf-logo" src="${s.logo}" alt=""><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(${status(s) ? "--mossText" : "--textSecondary"})">${esc(status(s) || s.gives)}</span></span>${FF.chevron()}</button>`);
         return FF.grouped([healthRow(healthState(p), "pfHealthOpen"), ...rows])
             + `<p class="t-caption c-2 pf-footer">FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too.</p>`;
     }
@@ -7199,11 +7222,42 @@
         title: "Connector",
         render: (p) => {
             const s = SOURCES.find((x) => x.id === p.id) || SOURCES[0];
-            const body = (s.why ? FF.notice(s.why, { tone: "neutral", icon: "info.circle" }) : `<p class="t-body c-2">${esc(`${s.app} sends your ${s.gives.toLowerCase()} to Apple Health, and FitFight reads them there.`)}</p>`)
-                + guideSteps([[`Turn on Apple Health in ${s.app}`, s.setup], ...(s.sync ? [[`Open ${s.app} to sync`, s.sync]] : []), [`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]])
-                + FF.grouped([openHealthRow()]);
+            const steps = guideSteps([[`Turn on Apple Health in ${s.app}`, s.setup], ...(s.sync ? [[`Open ${s.app} to sync`, s.sync]] : []), [`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]]);
+            // WHOOP also connects directly for sleep, recovery, strain and workouts; its steps still come through Apple Health.
+            const body = s.id === "whoop"
+                ? `<p class="t-body c-2">Connect your WHOOP account and FitFight gets your sleep, recovery, strain and workouts straight from WHOOP, updated every hour.</p>`
+                    + whoopAccount(whoopState(p))
+                    + FF.section("Steps", `<p class="t-body c-2">WHOOP sends your steps and workouts to Apple Health, and FitFight reads them there.</p>` + steps)
+                    + FF.grouped([openHealthRow()])
+                : FF.notice(s.why, { tone: "neutral", icon: "info.circle" }) + steps + FF.grouped([openHealthRow()]);
             return FF.screen(body, { top: sheetHead(s.name), clearance: false, bodyStyle: "padding-top:0" });
         },
+    });
+    // The WHOOP sheet's account row: not connected opens WHOOP's sign-in in ASWebAuthenticationSession;
+    // connected only reloads the status.
+    action("pfWhoop", () => {
+        const entry = topEntry();
+        const w = PD().whoop;
+        if (entry?.p?.whoop) { Object.assign(w, whoopState(entry.p)); delete entry.p.whoop; }
+        w.busy = true;
+        if (w.connected) { render(); return later(800, () => (w.busy = false)); }
+        w.failed = false;
+        present("pfWhoopConsent");
+    });
+    // Continue stands in for signing in on WHOOP and the app finishing the link. Cancel is no error.
+    action("pfWhoopDone", (status) => {
+        const w = PD().whoop;
+        w.busy = status !== "cancel";
+        dismiss();
+        if (w.busy) later(1200, () => Object.assign(w, { busy: false, connected: true, lastSyncedAt: iso(Date.now()) }));
+    });
+    screen("pfWhoopConsent", {
+        kind: "alert", title: "Use whoop.com to sign in",
+        alert: () => ({
+            title: "“FitFight” Wants to Use “whoop.com” to Sign In",
+            message: "This allows the app and website to share information about you.",
+            buttons: [{ title: "Cancel", role: "cancel", on: "pfWhoopDone:cancel" }, { title: "Continue", on: "pfWhoopDone:connected" }],
+        }),
     });
     action("pfRestore", (_, ctx) => {
         const ui = ctx.ui;
@@ -7995,6 +8049,12 @@
         ["Apple Health, not connected", "#you/settings/~appleHealth?health=notConnected"],
         ["Garmin", "#you/settings/~sourceGuide?id=garmin"],
         ["WHOOP", "#you/settings/~sourceGuide?id=whoop"],
+        ["Settings, WHOOP connected", "#you/settings?whoop=connected"],
+        ["WHOOP: not connected", "#you/settings/~sourceGuide?id=whoop&whoop=notConnected"],
+        ["WHOOP: connecting", "#you/settings/~sourceGuide?id=whoop&whoop=connecting"],
+        ["WHOOP: connected", "#you/settings/~sourceGuide?id=whoop&whoop=connected"],
+        ["WHOOP: couldn’t connect", "#you/settings/~sourceGuide?id=whoop&whoop=error"],
+        ["WHOOP: use whoop.com to sign in", "#you/settings/~sourceGuide?id=whoop&whoop=connecting/~pfWhoopConsent", { kind: "system" }],
         ["Delete account?", "#you/settings/~profileDeleteAccount"],
         ["Dashboard: Steps", "#you/dashboard"],
         ["Dashboard: Fights", "#you/dashboard?tab=fights"],

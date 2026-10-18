@@ -37,6 +37,14 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FitFightApiError, useFitFightApi } from "@/hooks/use-fitfight-api";
@@ -357,6 +365,49 @@ function ChartCard({ chart }: { chart: AdminDashboardChart }) {
                     <p className="text-sm text-muted-foreground">
                         No data yet.
                     </p>
+                ) : chart.kind === "table" ? (
+                    <Table className="tabular-nums">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead />
+                                {chart.series.map((series) => (
+                                    <TableHead
+                                        key={series.name}
+                                        className="text-right"
+                                    >
+                                        {series.name}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rows.map((row) => (
+                                <TableRow key={row.x}>
+                                    <TableCell className="whitespace-normal">
+                                        {row.x}
+                                    </TableCell>
+                                    {chart.series.map((series) => {
+                                        const value = series.points.find(
+                                            (point) => point.x === row.x,
+                                        )?.y;
+                                        return (
+                                            <TableCell
+                                                key={series.name}
+                                                className="text-right"
+                                            >
+                                                {value === undefined
+                                                    ? "-"
+                                                    : formatValue(
+                                                          value,
+                                                          chart.unit,
+                                                      )}
+                                            </TableCell>
+                                        );
+                                    })}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 ) : (
                     <ChartContainer
                         config={config}

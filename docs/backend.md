@@ -9,7 +9,7 @@ The backend saves incoming records, resolves current measurements, and publishes
 Fight standings and compatible older-client mirrors. There are no app-facing
 Postgres RPCs.
 
-[`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, WHOOP, Strava, payments, or a website until the backlog says so. Fight posts and photo uploads go through the API below.
+[`system-design.md`](system-design.md) is the golden guide. This folder is the first slice of it, not the whole thing. Do not add Active Minutes, Workout Count, Strava, payments, or a website until the backlog says so. The WHOOP connection (raw data pull, see [WHOOP connection](#whoop-connection-prepared-18-oct-2026)) was approved on 18 Oct 2026; WHOOP-based Fights and other WHOOP UI still wait for the backlog. Fight posts and photo uploads go through the API below.
 
 Hosted production (no secrets): https://pvqntpteehdvhqyctwum.supabase.co  
 Hosted staging / git `develop` (no secrets): https://zstzbfocunthczzubggz.supabase.co
@@ -301,6 +301,48 @@ where raw.user_id = (
 order by raw.collected_at desc, raw.id, metric.metric
 limit 100;
 ```
+
+## WHOOP connection (prepared 18 Oct 2026)
+
+Marc approved pulling all WHOOP API data on 18 Oct 2026. Fight Steps still come
+only from Apple Health. Code only, not deployed: see [status](status.md#whoop-connection-prepared-18-oct-2026).
+
+- **Routes:** `POST /api/v1/whoop/connect` (bearer, empty body) returns
+  `{ "url" }`, the WHOOP sign-in page. `GET /api/v1/whoop/connection` returns
+  `{ "connected", "last_synced_at", "history_synced_at" }`. `GET /api/whoop/callback`
+  is the OAuth redirect: it only forwards WHOOP's code and state to the app at
+  `fitfight://whoop?code=...&state=...` (or `?status=denied`). The app posts them with its
+  own sign-in to `POST /api/v1/whoop/finish`, which accepts only a state that account
+  started, so a sign-in link sent to someone else connects nothing.
+  `POST /api/whoop/webhook` takes WHOOP v2 webhooks, HMAC-SHA256 signed with the
+  client secret. `GET|POST /api/internal/whoop/sync` is the hourly cron, behind the
+  cron secret.
+- **Storage:** `private.whoop_connections` holds each account's encrypted WHOOP
+  tokens (AES-256-GCM, `WHOOP_TOKEN_ENCRYPTION_KEY`) and sync times. Records are
+  stored raw in `private.activity_raw` under a `data_sources` row with provider
+  `whoop` and connection_route `oauth`, as `record_type` `whoop_cycle`,
+  `whoop_recovery`, `whoop_sleep`, `whoop_workout`, or `whoop_body`. Nothing
+  resolves them into `activity_metrics` yet.
+- **Sync:** connecting pulls the full WHOOP history (`history_synced_at`). A
+  verified webhook syncs that user's recent window from the WHOOP API, and the
+  hourly cron syncs every connection. WHOOP rotates the refresh token on every
+  refresh, so a refresh happens under a row lock on the connection; two
+  concurrent refreshes would spend the same token and lose the connection.
+- **Limits:** 100 requests per minute and 10,000 per day for the whole app, not
+  per user. The sandbox tier allows up to 10 WHOOP members until WHOOP approves a
+  higher tier.
+- **WHOOP app:** one app for staging and production. Redirect URLs
+  `https://staging.fitfight.app/api/whoop/callback` and
+  `https://fitfight.app/api/whoop/callback`; v2 webhooks at `/api/whoop/webhook`
+  on both hosts. The client ID is committed in `web/lib/whoop/whoop.ts`;
+  `WHOOP_CLIENT_SECRET` and `WHOOP_TOKEN_ENCRYPTION_KEY` are Vercel secrets.
+- **Admin:** the admin dashboard's **Metrics** tab lists raw records by source and
+  type, cleaned metrics by source, and live WHOOP connections. Which source scores
+  Fights is a constant in `admin-dashboard-supabase-query.ts` (Steps from Apple
+  Health), never a setting on the page.
+- **Retention:** WHOOP data is kept while the account exists, and account
+  deletion removes it. A user can ask support to delete their WHOOP data. If
+  WHOOP ends our API access, its terms require deleting WHOOP data.
 
 ## Application database boundary
 

@@ -28,6 +28,7 @@ struct YouView: View {
     @State private var showingAppleHealth = false
     @State private var connector: Connector?
     @State private var showingCompanionPreviewControls = false
+    @StateObject private var whoop = WhoopConnectionStore()
     static let profileCachePrefix = "fitfight.you."
 
     var body: some View {
@@ -261,7 +262,11 @@ struct YouView: View {
                     AppleHealthRow { showingAppleHealth = true }
                     ForEach(Connector.allCases) { connector in
                         FFDivider()
-                        ConnectorRow(connector: connector) { self.connector = connector }
+                        ConnectorRow(
+                            connector: connector,
+                            status: connector == .whoop && whoop.connected
+                                ? String(appLocalized: "Connected · Updates every hour") : nil
+                        ) { self.connector = connector }
                     }
                 }
                 Text(String(appLocalized: "FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too."))
@@ -297,13 +302,16 @@ struct YouView: View {
             }
         }
         .navigationTitle(String(appLocalized: "Settings"))
+        .task {
+            if !staticRender { await whoop.refresh(session: session) }
+        }
         .sheet(isPresented: $showingAppleHealth) {
             health
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }
         .sheet(item: $connector) { connector in
-            ConnectorGuideSheet(connector: connector)
+            ConnectorGuideSheet(connector: connector, whoop: whoop, privacy: sitePage("privacy"))
                 .fitFightTheme(themeStore.theme)
                 .presentationBackground(themeStore.theme.bg)
         }

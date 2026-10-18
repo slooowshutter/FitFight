@@ -7182,11 +7182,11 @@
         ],
     });
     const SOURCES = [
-        { id: "garmin", name: "Garmin", app: "Garmin Connect", gives: "Steps and workouts",
+        { id: "garmin", name: "Garmin", app: "Garmin Connect", logo: "garmin.svg", gives: "Steps and workouts",
             why: "Garmin stopped letting new apps connect to its data, so FitFight can’t link to Garmin directly. Your Garmin steps still count: Garmin Connect sends them to Apple Health, and FitFight reads them there.",
             setup: "In Garmin Connect, tap More → Settings → Connected Apps → Apple Health, then turn on Steps.",
             sync: "Garmin sends steps to Apple Health only while Garmin Connect is open. After your watch syncs, open Garmin Connect, then FitFight. Do it once more before a fight ends." },
-        { id: "whoop", name: "WHOOP", app: "WHOOP", gives: "Steps and workouts", setup: "In the WHOOP app, turn on Apple Health and allow Steps." },
+        { id: "whoop", name: "WHOOP", app: "WHOOP", logo: "whoop.png", gives: "Steps and workouts", setup: "In the WHOOP app, turn on Apple Health and allow Steps." },
     ];
     // What HealthKitActivityAggregates.readTypes asks for, grouped the way people say it.
     const HEALTH_READS = [
@@ -7196,7 +7196,7 @@
     const openHealthRow = (title = "Open Health", subtitle = "") => FF.groupedRow({ title, subtitle, subtitleTone: "neutral", trailing: `<span class="pf-syschev" style="color:var(--text)">${icon("arrow.up.right")}</span>`, on: external("x-apple-health://") });
     const guideSteps = (list) => FF.card(list.map(([title, text], i) => `<div class="pf-step"><span class="pf-step-num">${i + 1}</span><span class="vstack grow" style="gap:3px"><span class="t-rowTitle">${esc(title)}</span><span class="t-caption c-2">${esc(text)}</span></span></div>`).join(""), { padding: 16 });
     function connectorsGroup(p) {
-        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><img class="pf-logo" src="connectors/${s.id}.png" alt=""><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
+        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><img class="pf-logo" src="connectors/${s.logo}" alt=""><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
         return FF.grouped([healthRow(healthState(p), "pfHealthOpen"), ...rows])
             + `<p class="t-caption c-2 pf-footer">FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too.</p>`;
     }

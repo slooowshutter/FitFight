@@ -7168,19 +7168,16 @@
     // FitFight reads only Apple Health. Each connector is a watch or app and how it gets into Apple Health.
     variant("connectors", {
         title: "Connectors",
-        note: "Settings lists Apple Health and every watch or app as connectors. Apple Health opens its access and sync; each watch or app shows how to send it to Apple Health. The sync diagnostics stay in the admin Debug menu.",
+        note: "Settings lists Apple Health and Garmin as connectors. Apple Health opens its access and sync; Garmin shows how to send it to Apple Health. The sync diagnostics stay in the admin Debug menu.",
         options: [
             { id: "today", name: "Today", when: "The app as it is now: Apple Health and More settings." },
-            { id: "connectors", name: "Connectors", when: "Marc's pick: one list, Apple Health first, then each watch or app." },
+            { id: "connectors", name: "Connectors", when: "Marc's pick: Apple Health first, then Garmin. Other watches and apps come later." },
         ],
         links: [
             ["Settings", "#you/settings"],
             ["Apple Health", "#you/settings/~appleHealth"],
             ["Apple Health, not connected", "#you/settings/~appleHealth?health=notConnected"],
             ["Garmin", "#you/settings/~sourceGuide?id=garmin"],
-            ["WHOOP", "#you/settings/~sourceGuide?id=whoop"],
-            ["Strava", "#you/settings/~sourceGuide?id=strava"],
-            ["Fitbit", "#you/settings/~sourceGuide?id=fitbit"],
         ],
     });
     const SOURCES = [
@@ -7188,15 +7185,6 @@
             why: "Garmin stopped letting new apps connect to its data, so FitFight can’t link to Garmin directly. Your Garmin steps still count: Garmin Connect sends them to Apple Health, and FitFight reads them there.",
             setup: "In Garmin Connect, tap More → Settings → Connected Apps → Apple Health, then turn on Steps.",
             sync: "Garmin sends steps to Apple Health only while Garmin Connect is open. After your watch syncs, open Garmin Connect, then FitFight. Do it once more before a fight ends." },
-        { id: "whoop", name: "WHOOP", app: "WHOOP", gives: "Steps and workouts", setup: "In the WHOOP app, turn on Apple Health and allow Steps." },
-        { id: "oura", name: "Oura", app: "Oura", gives: "Steps and workouts", setup: "In the Oura app, turn on Apple Health and allow Steps." },
-        { id: "polar", name: "Polar", app: "Polar Flow", gives: "Steps and workouts", setup: "In Polar Flow, turn on Apple Health and allow Steps." },
-        { id: "coros", name: "COROS", app: "COROS", gives: "Steps", setup: "In the COROS app, turn on Apple Health and allow Steps." },
-        { id: "strava", name: "Strava", app: "Strava", gives: "Workouts only", noSteps: true,
-            why: "Strava sends the workouts it records to Apple Health, but not steps, so it doesn’t change your step count. Your steps come from your iPhone or watch.",
-            setup: "In Strava, tap You → Settings → Manage Apps and Devices → Health, then tap Connect." },
-        { id: "fitbit", name: "Fitbit", gives: "Not available yet", unavailable: true,
-            why: "Fitbit doesn’t send your activity to Apple Health yet, so FitFight can’t read it." },
     ];
     // What HealthKitActivityAggregates.readTypes asks for, grouped the way people say it.
     const HEALTH_READS = [
@@ -7206,7 +7194,7 @@
     const openHealthRow = (title = "Open Health", subtitle = "") => FF.groupedRow({ title, subtitle, subtitleTone: "neutral", trailing: `<span class="pf-syschev" style="color:var(--text)">${icon("arrow.up.right")}</span>`, on: external("x-apple-health://") });
     const guideSteps = (list) => FF.card(list.map(([title, text], i) => `<div class="pf-step"><span class="pf-step-num">${i + 1}</span><span class="vstack grow" style="gap:3px"><span class="t-rowTitle">${esc(title)}</span><span class="t-caption c-2">${esc(text)}</span></span></div>`).join(""), { padding: 16 });
     function connectorsGroup(p) {
-        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><span class="icon pf-mono">${esc(s.name[0])}</span><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--${s.unavailable ? "textTertiary" : "textSecondary"})">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
+        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><span class="icon pf-mono">${esc(s.name[0])}</span><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
         return FF.grouped([healthRow(healthState(p), "pfHealthOpen"), ...rows])
             + `<p class="t-caption c-2 pf-footer">FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too.</p>`;
     }
@@ -7239,13 +7227,9 @@
         title: "Connector",
         render: (p) => {
             const s = SOURCES.find((x) => x.id === p.id) || SOURCES[0];
-            let body = s.why ? FF.notice(s.why, { tone: "neutral", icon: "info.circle" }) : `<p class="t-body c-2">${esc(`${s.app} sends your ${s.gives.toLowerCase()} to Apple Health, and FitFight reads them there.`)}</p>`;
-            if (!s.unavailable) {
-                const list = [[`Turn on Apple Health in ${s.app}`, s.setup]];
-                if (s.sync) list.push([`Open ${s.app} to sync`, s.sync]);
-                if (!s.noSteps) list.push([`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]);
-                body += guideSteps(list) + FF.grouped([openHealthRow()]);
-            }
+            const body = FF.notice(s.why, { tone: "neutral", icon: "info.circle" })
+                + guideSteps([[`Turn on Apple Health in ${s.app}`, s.setup], [`Open ${s.app} to sync`, s.sync], [`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]])
+                + FF.grouped([openHealthRow()]);
             return FF.screen(body, { top: sheetHead(s.name), clearance: false, bodyStyle: "padding-top:0" });
         },
     });

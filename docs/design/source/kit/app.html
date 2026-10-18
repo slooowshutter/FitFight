@@ -7196,7 +7196,7 @@
     const openHealthRow = (title = "Open Health", subtitle = "") => FF.groupedRow({ title, subtitle, subtitleTone: "neutral", trailing: `<span class="pf-syschev" style="color:var(--text)">${icon("arrow.up.right")}</span>`, on: external("x-apple-health://") });
     const guideSteps = (list) => FF.card(list.map(([title, text], i) => `<div class="pf-step"><span class="pf-step-num">${i + 1}</span><span class="vstack grow" style="gap:3px"><span class="t-rowTitle">${esc(title)}</span><span class="t-caption c-2">${esc(text)}</span></span></div>`).join(""), { padding: 16 });
     function connectorsGroup(p) {
-        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><span class="icon pf-mono">${esc(s.name[0])}</span><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
+        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><img class="pf-logo" src="connectors/${s.id}.png" alt=""><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
         return FF.grouped([healthRow(healthState(p), "pfHealthOpen"), ...rows])
             + `<p class="t-caption c-2 pf-footer">FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too.</p>`;
     }
@@ -8002,7 +8002,7 @@
         .pf-choice { display: inline-grid; place-items: center; font-size: 20px; color: var(--textFaint); }
         .pf-choice.on { color: var(--mossText); }
         .pf-footer { margin: 8px 16px 0; }
-        .pf-mono { font-size: 17px; font-weight: 800; color: var(--text); }
+        .pf-logo { flex: none; width: 36px; height: 36px; border-radius: 9px; }
         .pf-step { display: flex; align-items: flex-start; gap: 12px; }
         .pf-step + .pf-step { margin-top: 16px; }
         .pf-step-num { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--control); font-size: 13px; font-weight: 800; color: var(--text); }

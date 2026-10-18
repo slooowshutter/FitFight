@@ -2,7 +2,7 @@
 
 English (U.S.) and French (France) App Store copy. Keep the existing approved app name, contact details, territories, and seller settings unless Marc requests a change.
 
-**1.2.0, prepared 16 Oct 2026:** Marc asked for the 1.2.0 listing to match the fitfight.app redesign of 15 Oct. The promotional text, description, What's new and screenshots below use the website's copy and sample people. 1.1.3 (226) is still in App Review, so App Store Connect cannot hold a 1.2.0 version yet; save this copy and the screenshots when the 1.2.0 version is created. Keywords and the fields in App information are unchanged.
+**1.2.0, prepared 16 Oct 2026:** Marc asked for the 1.2.0 listing to match the fitfight.app redesign of 15 Oct. The promotional text, description, What's new and screenshots below use the website's copy and sample people. 1.1.3 (226) was approved and is live. On 18 Oct 2026 Marc asked to submit 1.2.0 right away; What's new was extended with the work merged from 16 to 18 Oct, and `scripts/app-store-release-audit.rb draft` saves this copy and the screenshots. Keywords and the fields in App information are unchanged. On 19 Oct 2026 Marc named the version 1.2.1: the same App Store Connect version was pulled from review and renamed, so this listing, What's new and the screenshots carried over unchanged.
 
 ## App information
 
@@ -68,14 +68,17 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 
 `step challenge,walking,fitness,friends,competition,pedometer,health`
 
-## What is new in 1.2.0
+## What is new in 1.2.1
 
 > Friends: a Steps fight with each friend that runs the whole month and starts again on the 1st. Tap Friends at the top of Fights.
 > Fight Marc: when you sign up, start a 30-day Steps fight against FitFight's founder.
-> New post: send it to everyone, or choose your friends and the fights that see it.
-> Name your companion: pick a name and a line, and see your friends' companions on their profiles.
-> Change your fight's code in Edit. A repeating fight shows your last round's result when it starts again.
-> FitFight opens on your last fights, even offline, and updates them in the background.
+> Player cards: tap a name to see your record against that person, your steps side by side and your fights together.
+> Every fight has its own picture: everyone's companions running together.
+> Repeating fights: History shows every round with its podium, an all-time leaderboard and records.
+> New post: send it to everyone, or choose your friends and the fights that see it. Feed shows how many new posts are waiting.
+> Make your own companion on one page, play Snake while it draws, then give it a name and a line.
+> Settings has Connectors for Apple Health, Garmin and WHOOP.
+> Usernames show as you type, you can change your fight's code, and FitFight opens on your last fights, even offline.
 
 ## Screenshot set
 
@@ -146,13 +149,16 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 `défi de pas,marche,fitness,amis,compétition,podomètre,santé`
 
-### Nouveautés de la version 1.2.0
+### Nouveautés de la version 1.2.1
 
 > Amis : un défi de pas avec chaque ami, sur tout le mois, qui recommence le 1er. Touchez Amis en haut de Défis.
 > Affrontez Marc : à l’inscription, lancez un défi de pas de 30 jours contre le fondateur de FitFight.
-> Nouvelle publication : envoyez-la à tout le monde, ou choisissez les amis et les défis qui la voient.
-> Nommez votre compagnon : choisissez un nom et une phrase, et découvrez les compagnons de vos amis sur leur profil.
-> Changez le code de votre défi dans Modifier. Un défi récurrent affiche le résultat de votre dernière manche quand il recommence.
-> FitFight s’ouvre sur vos derniers défis, même hors ligne, et les met à jour en arrière-plan.
+> Cartes de joueur : touchez un nom pour voir votre bilan face à cette personne, vos pas côte à côte et vos défis en commun.
+> Chaque défi a sa propre image : les compagnons de tout le monde qui courent ensemble.
+> Défis récurrents : l’Historique montre chaque manche avec son podium, un classement de tous les temps et des records.
+> Nouvelle publication : envoyez-la à tout le monde, ou choisissez les amis et les défis qui la voient. Le Fil indique combien de nouvelles publications vous attendent.
+> Créez votre compagnon sur une seule page, jouez à Snake pendant qu’il se dessine, puis donnez-lui un nom et une phrase.
+> Les Réglages ont des Connexions pour Santé d’Apple, Garmin et WHOOP.
+> Les noms d’utilisateur s’affichent pendant la saisie, vous pouvez changer le code de votre défi, et FitFight s’ouvre sur vos derniers défis, même hors ligne.
 
 Use the same six screenshot subjects as English, from the `app-store-screenshots-fr` artifact.

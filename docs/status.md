@@ -68,6 +68,36 @@ every avatar. Staging in one tab, a new tab opens Production.
 
 ---
 
+## Feed photo picker and named evening summary, prepared 17 Oct 2026
+
+From production feedback. @rad (13 Oct, build 210): adding a photo to a Feed post "doesn't
+work", then worked. Production had no upload row for the failed try, so it never left the
+phone: the composer opened the library only after its "Add media" dialog closed, behind a
+450 ms wait, and that sometimes showed nothing. @marc (19 Sep): "Fighter posted in the feed"
+did not say who or where.
+
+**App:** "Photo or video" is now a Menu (Take Photo, Photo Library). Menu actions run after
+the menu has closed, so they set the existing `.photosPicker` and camera cover directly, as
+Apple recommends; without a camera the button opens the library directly. The dialog, the
+wait and the "Add media" string are gone. Mirror updated; its shared menu now opens to the
+right of a left-side button instead of running off the screen.
+
+**Backend:** the evening summary names the posters and the fight: "@a and 2 others posted in
+Weekend Warriors." (several fights: "in 3 fights"), French too. It used to say "N new posts in
+your fights." Single-post pushes already named both since #300.
+
+**Contract:** no API, schema or migration change; only push text changes.
+**Deployment order:** backend and app are independent.
+
+**Verification (local, 17 Oct, on develop at 27871a51):** web typecheck clean, 546 of 546
+unit tests, localization check, Simulator compile (no Simulator runtime on this Mac, so the
+picker was not tapped). `test:database` on a private disposable Supabase: notification
+controls 2 of 2; whole suite 140 of 144, the 4 failures unrelated (three
+`complete_through cannot be in the future` clock checks, one realtime test with realtime not
+started). Not deployed.
+
+---
+
 ## User feedback: username search, required title, longer loser action, Feed count, prepared 17 Oct 2026
 
 From the production Feedback tab (@fabi and @claire). Marc picked option B in

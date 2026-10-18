@@ -739,16 +739,9 @@ struct FightPostComposer: View {
     @State private var isLoadingMedia = false
     @State private var images: [UIImage] = []
     @State private var videoURL: URL?
-    @State private var showMediaSource = false
     @State private var showLibrary = false
     @State private var showCamera = false
-    @State private var pendingMedia: MediaSource?
     @FocusState private var bodyFocused: Bool
-
-    private enum MediaSource {
-        case camera
-        case library
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -813,22 +806,30 @@ struct FightPostComposer: View {
                 }
             }
             HStack(spacing: 10) {
-                Button {
-                    showCamera = false
-                    showLibrary = false
+                // NOTE: a Menu, not a dialog: its actions run once it has closed, so the library always appears.
+                Group {
                     if CameraPhotoPicker.isAvailable {
-                        showMediaSource = true
+                        Menu {
+                            Button {
+                                showCamera = true
+                            } label: {
+                                Label(String(appLocalized: "Take Photo"), systemImage: "camera")
+                            }
+                            Button {
+                                showLibrary = true
+                            } label: {
+                                Label(String(appLocalized: "Photo Library"), systemImage: "photo")
+                            }
+                        } label: {
+                            mediaButtonLabel
+                        }
                     } else {
-                        presentMedia(.library, waitForSourceDialog: false)
+                        Button {
+                            showLibrary = true
+                        } label: {
+                            mediaButtonLabel
+                        }
                     }
-                } label: {
-                    Label(String(appLocalized: "Photo or video"), systemImage: "photo.on.rectangle.angled")
-                        .ffType(.label)
-                        .foregroundStyle(theme.mossText)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 42)
-                        .background(theme.chip, in: Capsule())
-                        .overlay { Capsule().strokeBorder(theme.chipEdge, lineWidth: 1) }
                 }
                 .buttonStyle(FFHapticPlainStyle())
                 .disabled(images.count >= 4 || videoURL != nil || isLoadingMedia || feed.isSaving)
@@ -848,22 +849,6 @@ struct FightPostComposer: View {
             }
         }
         .ffKeyboardDismissOnBackgroundTap()
-        .confirmationDialog(String(appLocalized: "Add media"), isPresented: $showMediaSource, titleVisibility: .visible) {
-            Button(String(appLocalized: "Take Photo")) {
-                pendingMedia = .camera
-            }
-            Button(String(appLocalized: "Photo Library")) {
-                pendingMedia = .library
-            }
-            Button(String(appLocalized: "Cancel"), role: .cancel) {}
-        }
-        .onChange(of: showMediaSource) { _, presented in
-            guard !presented else { return }
-            let next = pendingMedia
-            pendingMedia = nil
-            guard let next else { return }
-            presentMedia(next, waitForSourceDialog: true)
-        }
         .photosPicker(
             isPresented: $showLibrary,
             selection: $mediaItems,
@@ -895,24 +880,14 @@ struct FightPostComposer: View {
         return !feed.isSaving && !isLoadingMedia && !destinations.isEmpty && (!note.isEmpty || !images.isEmpty || videoURL != nil)
     }
 
-    private func presentMedia(_ source: MediaSource, waitForSourceDialog: Bool) {
-        Task { @MainActor in
-            showCamera = false
-            showLibrary = false
-            if waitForSourceDialog {
-                // NOTE: the composer is already a sheet; presenting camera/library while Add media is still dismissing never appears.
-                try? await Task.sleep(for: .milliseconds(450))
-            } else {
-                await Task.yield()
-            }
-            guard !Task.isCancelled else { return }
-            switch source {
-            case .camera:
-                showCamera = true
-            case .library:
-                showLibrary = true
-            }
-        }
+    private var mediaButtonLabel: some View {
+        Label(String(appLocalized: "Photo or video"), systemImage: "photo.on.rectangle.angled")
+            .ffType(.label)
+            .foregroundStyle(theme.mossText)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 42)
+            .background(theme.chip, in: Capsule())
+            .overlay { Capsule().strokeBorder(theme.chipEdge, lineWidth: 1) }
     }
 
     private func loadMedia(_ items: [PhotosPickerItem]) async {

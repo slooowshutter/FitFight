@@ -7,7 +7,7 @@ Decision horizon: **the next 6–12 months**
 
 This is the source of truth for how the real FitFight product should be built. It covers the iOS app, website, backend, authentication, access, fitness providers, synchronization, scoring, notifications, links, privacy, operations, and repository layout.
 
-**How to use this document:** it is a golden guide, not a build checklist. Follow it so new work fits the same model. The current product scores private **Steps** Fights; the approved activity pipeline also retains private merged daily history and workout summaries. Do not build Active Minutes or Workout Count Fights, direct WHOOP/Strava, payments, or a broader website until the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. Production scoring is Steps only.
+**How to use this document:** it is a golden guide, not a build checklist. Follow it so new work fits the same model. The current product scores private **Steps** Fights; the approved activity pipeline also retains private merged daily history and workout summaries. Do not build Active Minutes or Workout Count Fights, direct Strava, payments, or a broader website until the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The direct WHOOP connection (raw data pull) was approved on 18 Oct 2026; WHOOP-based Fights and other WHOOP UI still wait for the backlog. Production scoring is Steps only.
 
 This is a reference, not a requirement to build everything at once. Sections 1–9 contain the product and architecture decisions; the later sections explain how those decisions can be implemented safely when their phase arrives.
 

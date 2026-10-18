@@ -353,3 +353,65 @@ test("friend fights stay out of the fight metrics, and the friends section reads
     assert.equal(after.sum("requests_and_accepts", "Accepted") - before.sum("requests_and_accepts", "Accepted"), 2);
     assert.equal((after.points("friendships_over_time").at(-1)?.y ?? 0) - (before.points("friendships_over_time").at(-1)?.y ?? 0), 2);
 });
+
+test("the metrics section lists every source, counts WHOOP as collected only and marks what Fights score", async (t) => {
+    const [userId, revokedId, appleId, whoopId] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    t.after(async () => {
+        await database`delete from auth.users where id in (${userId}, ${revokedId})`;
+    });
+    const read = async () => {
+        const dashboard = await readAdminDashboard("metrics", 30, "staging", database);
+        const card = (id: string) => dashboard.cards.find((item) => item.id === id)?.value ?? 0;
+        const points = (chart: string, series: string) => dashboard.charts.find((item) => item.id === chart)
+            ?.series.find((line) => line.name === series)?.points ?? [];
+        const cell = (chart: string, series: string, x: string) => points(chart, series).find((point) => point.x === x)?.y ?? 0;
+        return { card, points, cell };
+    };
+    const before = await read();
+    for (const id of [userId, revokedId]) await database`insert into auth.users(id, created_at) values (${id}, now() - interval '20 days')`;
+    await database`
+        insert into public.data_sources(id, user_id, provider, source_label, connection_route)
+        values (${appleId}, ${userId}, 'apple_health', 'Apple Health', 'healthkit'), (${whoopId}, ${userId}, 'whoop', 'WHOOP', 'oauth')
+    `;
+    await database`
+        insert into private.activity_raw(user_id, source_id, record_kind, record_type, record_key, payload, payload_hash,
+            collected_at, received_at, processing_state)
+        select ${userId}, raw.source_id::uuid, raw.kind, raw.type, raw.key, '{}', repeat(raw.key, 64), now(),
+            now() - interval '1 minute', raw.state
+        from (values
+            (${appleId}, 'total', 'steps', '1', 'processed'),
+            (${whoopId}, 'sample', 'whoop_cycle', '2', 'pending'),
+            (${whoopId}, 'sample', 'whoop_cycle', '3', 'pending'),
+            (${whoopId}, 'sample', 'whoop_sleep', '4', 'pending')
+        ) as raw(source_id, kind, type, key, state)
+    `;
+    await database`
+        insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+            observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+        select ${userId}, ${appleId}, 'day', 'day:1', 'steps', day::timestamp at time zone 'Europe/Paris',
+            (day + 1)::timestamp at time zone 'Europe/Paris', (day + 1)::timestamp at time zone 'Europe/Paris',
+            day, 'Europe/Paris', 5000, 'count', array[gen_random_uuid()], 1
+        from (select (now() at time zone 'Europe/Paris')::date - 1 as day) as yesterday
+    `;
+    // The second login was revoked by WHOOP: its tokens are gone.
+    await database`
+        insert into private.whoop_connections(user_id, tokens_ciphertext, tokens_iv, tokens_tag, access_token_expires_at, connected_at)
+        values (${userId}, 'sealed', 'iv', 'tag', now() + interval '1 hour', now()), (${revokedId}, null, null, null, null, now())
+    `;
+    const after = await read();
+    const moved = (id: string) => after.card(id) - before.card(id);
+    assert.deepEqual(
+        ["whoop_connected", "apple_health_people", "raw_received", "raw_pending"].map(moved),
+        [1, 1, 4, 3],
+    );
+    const cycle = "WHOOP: whoop_cycle";
+    assert.equal(after.cell("raw_by_type", "Records", cycle) - before.cell("raw_by_type", "Records", cycle), 2);
+    assert.equal(after.cell("raw_by_type", "People", cycle) - before.cell("raw_by_type", "People", cycle), 1);
+    assert.ok(after.cell("raw_by_type", "Hours since last", cycle) < 1);
+    const scored = "Apple Health: steps (scores Fights)";
+    assert.equal(after.cell("metrics_by_source", "Rows", scored) - before.cell("metrics_by_source", "Rows", scored), 1);
+    assert.ok(after.cell("metrics_by_source", "Days since latest", scored) <= 1);
+    const today = after.points("raw_per_bucket", "WHOOP").at(-1);
+    assert.ok(today);
+    assert.equal(today.y - before.cell("raw_per_bucket", "WHOOP", today.x), 3);
+});

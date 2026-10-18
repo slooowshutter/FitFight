@@ -611,6 +611,16 @@ struct FitFightReferralClaim: Decodable {
     let recorded: Bool
 }
 
+struct FitFightWhoopConnection: Decodable, Equatable {
+    let connected: Bool
+    let lastSyncedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case connected
+        case lastSyncedAt = "last_synced_at"
+    }
+}
+
 struct FitFightDailyStatusRecap: Decodable {
     let recap: String
     let sentAt: Date
@@ -1602,6 +1612,16 @@ struct FitFightAPI {
         )
     }
 
+    func whoopConnection(accessToken: String) async throws -> FitFightWhoopConnection {
+        try await get(path: "whoop/connection", accessToken: accessToken)
+    }
+
+    /// WHOOP's sign-in page. It ends on fitfight://whoop?status=connected, denied or error.
+    func startWhoopConnection(accessToken: String) async throws -> URL {
+        let response: WhoopConnectResponse = try await post(path: "whoop/connect", accessToken: accessToken, body: EmptyJSON())
+        return response.url
+    }
+
     private func post<Body: Encodable, Response: Decodable>(
         path: String,
         accessToken: String,
@@ -1785,6 +1805,10 @@ struct FitFightAPI {
 }
 
 private struct EmptyJSON: Encodable {}
+
+private struct WhoopConnectResponse: Decodable {
+    let url: URL
+}
 
 /// `hosted` and `friends` are left out unless set: older servers reject unknown snapshot fields.
 private struct FightSnapshotRequest: Encodable {

@@ -328,10 +328,10 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 5f36e5e7", updated: "17 Oct 2026" };
+            const MIRROR = { matches: "develop 5f36e5e7", updated: "18 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
-            const DATA_VERSION = 1;
+            const DATA_VERSION = 2;
             const ROOT = "../../../../";
             const QUERY = new URLSearchParams(location.search);
 
@@ -469,6 +469,7 @@
                 "hourglass": '<path d="M6.5 3h11M6.5 21h11M7.5 3c0 5 9 5 9 9s-9 4-9 9M16.5 3c0 5-9 5-9 9s9 4 9 9"/>',
                 "wifi.slash": '<path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5.5-2.7M14 10.4A10 10 0 0 1 19 13M2 9.5a15 15 0 0 1 4.6-2.8M11 5.5A15 15 0 0 1 22 9.5M12 20v.1"/>',
                 "heart.text.square": '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 15.5s-4-2.4-4-5.3A2.2 2.2 0 0 1 12 9a2.2 2.2 0 0 1 4 1.2c0 2.9-4 5.3-4 5.3z"/>',
+                "waveform.path.ecg": '<path d="M2.5 12.5h4.2l1.8-4 3.2 9 3.1-11 2.2 6h4.5"/>',
                 "slider.horizontal.3": '<path d="M3.5 6h9M17.5 6h3M3.5 12h3M11.5 12h9M3.5 18h11M19.5 18h1"/><circle cx="15" cy="6" r="2.3"/><circle cx="9" cy="12" r="2.3"/><circle cx="17" cy="18" r="2.3"/>',
                 "shoeprints.fill": '<path d="M7 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM5 15h4v2a2 2 0 0 1-4 0zM17 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM15 19h4v1a2 2 0 0 1-4 0z"/>',
             };
@@ -6639,18 +6640,18 @@
 
     // Changelog.swift, the 12 newest rows verbatim (newest first). Changelog.current is the first row of this marketing version.
     const CHANGELOG = [
+        ["1.2.0", "2026-10-18", "Connect WHOOP in Settings. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour."],
+        ["1.2.0", "2026-10-17", "The Feed tab shows how many new posts people sent since you last opened it."],
+        ["1.2.0", "2026-10-17", "Adding people to a fight: matching usernames show as you type. Tap one to add it, or see right away when no one has that username."],
+        ["1.2.0", "2026-10-17", "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too."],
+        ["1.2.0", "2026-10-17", "Fight pictures now open instantly instead of loading for several seconds."],
+        ["1.2.0", "2026-10-17", "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month."],
         ["1.2.0", "2026-10-17", "Opening FitFight no longer sometimes freezes on a blank Fights screen."],
         ["1.2.0", "2026-10-16", "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."],
         ["1.2.0", "2026-10-16", "Tap someone's name to open their Player card: your record against them in every Fight, 1v1 or group, your steps compared since you became friends, and your Fights together. Block is gone; Report stays. The flame next to Fights is your 10K streak, the days in a row you walked 10,000 steps."],
         ["1.2.0", "2026-10-16", "The heading of New is now in French when your phone is in French."],
         ["1.2.0", "2026-10-16", "Each fight now has its own picture at the top: everyone's companions running together, drawn for your fight. A new picture comes about an hour after someone joins or changes their companion."],
         ["1.2.0", "2026-10-16", "If someone hasn’t synced when a fight ends, their last synced steps now count instead of a forfeit, and the fight ends as soon as nobody missing can change the result. Fights you make and friend fights wait for everyone’s final steps; fights everyone is invited to and Fight Marc close 24 hours after the end. Owners can change this in Edit fight, except for fights everyone is invited to and Fight Marc."],
-        ["1.2.0", "2026-10-16", "A new way to create your own companion, all on one page: describe it, pick the words, pick a portrait, name it. After you describe your animal, we suggest three richer versions or ask about a missing detail. While it draws, play Snake and try to beat the record of every player, or tap Notify me and close the app; the notification opens your character. Paying now shows a single loader."],
-        ["1.2.0", "2026-10-16", "When you open FitFight, it can now show a short tip, like how to start your first fight or make your own character. Tap the button to try it, or Not now to close it."],
-        ["1.2.0", "2026-10-16", "Repeating fights: History now opens with the rounds, racers, steps walked together and your place in each round, in gold, silver and bronze when you made the podium; tap one to see that round. Then an all-time leaderboard of wins, podiums and steps, and records showing who holds the best day and best round, with your own best under each, plus the closest finish and biggest win. Each past round shows the top 3 and you, with Show all for everyone."],
-        ["1.2.0", "2026-10-16", "The top of Fights now shows how many of your live fights you lead, and New states the rule: Steps, highest total wins."],
-        ["1.2.0", "2026-10-16", "Trophies now count every round each player has won in a fight, not only rounds won in a row. Everyone who has won a round shows a trophy, with ×N for more than one."],
-        ["1.2.0", "2026-10-16", "When Apple Health wakes FitFight in the background, your fights now refresh as soon as you open the app, instead of showing standings from the wake."],
     ].map(([version, date, notes], i) => ({ id: i, version, date, notes }));
 
     // What the server would send about each other person. record is [wins, losses, draws]; shares is their
@@ -6713,6 +6714,8 @@
                 lastAutomaticSync: iso(now - 14 * 60e3), lastManualSync: iso(now - 2 * HOUR), errorCode: null, failureDetail: null, failureReference: null,
                 activitySyncFailed: false, activityProcessingPending: false,
             },
+            // YouView's WHOOP @State: busy while WHOOP's sign-in is open or the status reloads.
+            whoop: { connected: false, lastSyncedAt: null, busy: false, failed: false },
             reported: [],
             referralCode: "8f2c6a1e-4b7d-4c19-9e35-0d6b2a7f41c3",
         };
@@ -6805,6 +6808,16 @@
     }
     function healthState(p = {}) {
         return { ...PD().health, ...(HEALTH_STATES[p.health] || {}) };
+    }
+    // Link-only WHOOP states for Settings (`settings?whoop=...`).
+    function whoopState(p = {}) {
+        const states = {
+            notConnected: { connected: false, lastSyncedAt: null, busy: false, failed: false },
+            connecting: { connected: false, busy: true, failed: false },
+            connected: { connected: true, lastSyncedAt: iso(Date.now() - 12 * 60e3), busy: false, failed: false },
+            error: { connected: false, busy: false, failed: true },
+        };
+        return { ...PD().whoop, ...(states[p.whoop] || {}) };
     }
     const healthAvailable = () => PD().health.connection !== "notConnected";
     function stepsOf(id) {
@@ -7103,6 +7116,14 @@
             ] : []),
         ]);
     }
+    function whoopGroup(p) {
+        const w = whoopState(p);
+        const subtitle = w.connected ? `Updates every hour${w.lastSyncedAt ? ` · Last update ${fmt.ago(w.lastSyncedAt)}` : ""}`
+            : w.failed ? "Couldn’t connect WHOOP. Tap to try again." : "Sleep, recovery, strain and workouts. Updates every hour.";
+        const whoopPill = w.busy ? pill("Connecting", "neutral") : w.connected ? pill("Connected", "softMoss") : w.failed ? pill("Retry", "softEmber") : pill("Connect", "solidMoss");
+        return FF.grouped([FF.groupedRow({ title: "WHOOP", subtitle, icon: "waveform.path.ecg", enabled: !w.busy, subtitleTone: w.connected ? "moss" : w.failed ? "ember" : "neutral", trailing: whoopPill, on: w.busy ? null : "pfWhoop" })])
+            + (w.connected ? "" : `<p class="t-caption c-2">By connecting, you agree to our <button type="button" class="c-moss" data-on="${esc(external(`${siteRoot()}/privacy`))}">Privacy Policy</button>.</p>`);
+    }
     screen("settings", {
         kind: "push",
         title: "Settings",
@@ -7133,6 +7154,7 @@
             const body = largeTitle("Settings")
                 + FF.section("Profile", profileRows, { extraTop: false })
                 + FF.section("Apple Health", healthGroup(p, ui))
+                + FF.section("WHOOP", whoopGroup(p))
                 + FF.section("Activity", FF.grouped([navRow("Notifications & activity", "push:activity")]))
                 + FF.section("App", appRows)
                 + developer;
@@ -7158,6 +7180,33 @@
         later(1600, () => Object.assign(h, { connection: result === "denied" ? "noAccessibleSteps" : "upToDate", lastManualSync: iso(Date.now()), errorCode: null, failureDetail: null, failureReference: null, activitySyncFailed: false }));
     });
     action("pfOpenSettings", () => toast({ title: "Opens iPhone Settings", message: "Settings → FitFight", icon: "gearshape", tone: "neutral" }));
+    // Tapping WHOOP: not connected opens WHOOP's sign-in in ASWebAuthenticationSession; connected only reloads the status.
+    action("pfWhoop", () => {
+        const entry = topEntry();
+        const w = PD().whoop;
+        if (entry?.p?.whoop) { Object.assign(w, whoopState(entry.p)); delete entry.p.whoop; }
+        w.busy = true;
+        if (w.connected) { render(); return later(800, () => (w.busy = false)); }
+        w.failed = false;
+        present("pfWhoopConsent");
+    });
+    // Continue stands in for signing in on WHOOP, which returns fitfight://whoop?status=connected. Cancel is no error.
+    action("pfWhoopDone", (status) => {
+        const entry = topEntry();
+        if (entry?.p?.whoop) delete entry.p.whoop;
+        const w = PD().whoop;
+        w.busy = status !== "cancel";
+        dismiss();
+        if (w.busy) later(1200, () => Object.assign(w, { busy: false, connected: true, lastSyncedAt: iso(Date.now()) }));
+    });
+    screen("pfWhoopConsent", {
+        kind: "alert", title: "Use whoop.com to sign in",
+        alert: () => ({
+            title: "“FitFight” Wants to Use “whoop.com” to Sign In",
+            message: "This allows the app and website to share information about you.",
+            buttons: [{ title: "Cancel", role: "cancel", on: "pfWhoopDone:cancel" }, { title: "Continue", on: "pfWhoopDone:connected" }],
+        }),
+    });
     action("pfRestore", (_, ctx) => {
         const ui = ctx.ui;
         ui.purchase = { busy: true, message: "" };
@@ -7942,6 +7991,11 @@
         ["Apple Health: other activity failed", "#you/settings?health=activityFailed&more=1"],
         ["Apple Health: no accessible Steps", "#you/settings?health=noSteps"],
         ["Apple Health: background refresh denied", "#you/settings?health=denied&more=1"],
+        ["WHOOP: not connected", "#you/settings?whoop=notConnected"],
+        ["WHOOP: connecting", "#you/settings?whoop=connecting"],
+        ["WHOOP: connected", "#you/settings?whoop=connected"],
+        ["WHOOP: couldn’t connect", "#you/settings?whoop=error"],
+        ["WHOOP: use whoop.com to sign in", "#you/settings?whoop=connecting/~pfWhoopConsent", { kind: "system" }],
         ["Delete account?", "#you/settings/~profileDeleteAccount"],
         ["Dashboard: Steps", "#you/dashboard"],
         ["Dashboard: Fights", "#you/dashboard?tab=fights"],

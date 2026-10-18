@@ -1,6 +1,93 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Connect WHOOP in Settings. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connectez WHOOP dans Réglages. FitFight conserve votre sommeil, votre récupération, votre effort et vos entraînements WHOOP, mis à jour toutes les heures."
+                    }
+                }
+            }
+        },
+        "WHOOP": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "WHOOP"
+                    }
+                }
+            }
+        },
+        "Sleep, recovery, strain and workouts. Updates every hour.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sommeil, récupération, effort et entraînements. Mise à jour toutes les heures."
+                    }
+                }
+            }
+        },
+        "Updates every hour": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mise à jour toutes les heures"
+                    }
+                }
+            }
+        },
+        "whoop.last-update": {
+            "extractionState": "manual",
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Updates every hour · Last update %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Mise à jour toutes les heures · Dernière mise à jour %@"
+                    }
+                }
+            }
+        },
+        "Couldn’t connect WHOOP. Tap to try again.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Impossible de connecter WHOOP. Touchez pour réessayer."
+                    }
+                }
+            }
+        },
+        "Connecting": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Connexion"
+                    }
+                }
+            }
+        },
+        "By connecting, you agree to our [Privacy Policy](privacy).": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En connectant WHOOP, vous acceptez notre [Politique de confidentialité](privacy)."
+                    }
+                }
+            }
+        },
         "feed.unread-count": {
             "extractionState": "manual",
             "localizations": {

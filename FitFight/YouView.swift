@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 import UIKit
 
@@ -12,6 +13,7 @@ struct YouView: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.webAuthenticationSession) private var webAuthenticationSession
     @StateObject private var profileStore = ProfileScreenStore()
     @StateObject private var activity = YouActivityStore()
     @State private var showingEditProfile = false
@@ -28,6 +30,10 @@ struct YouView: View {
     @State private var showingBroadcastCompose = false
     @State private var showingHealthDetails = false
     @State private var showingCompanionPreviewControls = false
+    @State private var whoop: FitFightWhoopConnection?
+    /// True while WHOOP's sign-in is open or the status reloads.
+    @State private var whoopBusy = false
+    @State private var whoopFailed = false
     static let profileCachePrefix = "fitfight.you."
 
     var body: some View {
@@ -259,6 +265,7 @@ struct YouView: View {
             FFSection(title: String(appLocalized: "Apple Health")) {
                 health
             }
+            whoopSection
             FFSection(title: String(appLocalized: "Activity")) {
                 FFGroupedRows {
                     navRow(String(appLocalized: "Notifications & activity")) { model.showingActivity = true }
@@ -287,6 +294,7 @@ struct YouView: View {
             }
         }
         .navigationTitle(String(appLocalized: "Settings"))
+        .task { await refreshWhoop(connect: false) }
     }
 
     private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger, requestAccess: Bool = false) async {
@@ -464,6 +472,72 @@ struct YouView: View {
             return FFPill(String(appLocalized: "Connected"), style: .softMoss)
         case .notConnected:
             return FFPill(String(appLocalized: "Connect"), style: .solidMoss)
+        }
+    }
+
+    private var whoopSection: some View {
+        let connected = whoop?.connected == true
+        let subtitle: String = connected
+            ? whoop?.lastSyncedAt.map { String(format: String(appLocalized: "whoop.last-update"), diagnosticDate($0)) }
+                ?? String(appLocalized: "Updates every hour")
+            : whoopFailed
+                ? String(appLocalized: "Couldn’t connect WHOOP. Tap to try again.")
+                : String(appLocalized: "Sleep, recovery, strain and workouts. Updates every hour.")
+        let pill: FFPill = whoopBusy ? FFPill(String(appLocalized: "Connecting"), style: .neutral)
+            : connected ? FFPill(String(appLocalized: "Connected"), style: .softMoss)
+            : whoopFailed ? FFPill(String(appLocalized: "Retry"), style: .softEmber)
+            : FFPill(String(appLocalized: "Connect"), style: .solidMoss)
+        return FFSection(title: String(appLocalized: "WHOOP")) {
+            FFGroupedRows {
+                Button {
+                    Task { await refreshWhoop(connect: !connected) }
+                } label: {
+                    FFGroupedRow(
+                        title: String(appLocalized: "WHOOP"),
+                        subtitle: subtitle,
+                        systemImage: "waveform.path.ecg",
+                        enabled: !whoopBusy,
+                        subtitleTone: connected ? .moss : whoopFailed ? .ember : .neutral,
+                        trailing: AnyView(pill)
+                    )
+                }
+                .buttonStyle(FFHapticPlainStyle())
+                .disabled(whoopBusy)
+            }
+            if !connected {
+                Text(AttributedString(
+                    localized: "By connecting, you agree to our [Privacy Policy](privacy).",
+                    bundle: AppLocalization.bundle, locale: AppLocalization.locale
+                ))
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .tint(theme.mossText)
+                .environment(\.openURL, OpenURLAction { _ in .systemAction(sitePage("privacy")) })
+            }
+        }
+    }
+
+    /// Connecting opens WHOOP's sign-in, which ends on fitfight://whoop?status=..., then reloads the status.
+    private func refreshWhoop(connect: Bool) async {
+        guard !staticRender, !CompanionPreview.isEnabled, session.isSignedIn else { return }
+        whoopBusy = true
+        defer { whoopBusy = false }
+        if connect {
+            whoopFailed = false
+            do {
+                let url = try await FitFightAPI().startWhoopConnection(accessToken: session.freshAccessToken())
+                let callback = try await webAuthenticationSession.authenticate(
+                    using: url, callbackURLScheme: "fitfight", preferredBrowserSession: .shared
+                )
+                whoopFailed = URLComponents(url: callback, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "status" })?.value != "connected"
+            } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            } catch {
+                whoopFailed = true
+            }
+        }
+        if let loaded = try? await FitFightAPI().whoopConnection(accessToken: session.freshAccessToken()) {
+            whoop = loaded
         }
     }
 

@@ -2674,6 +2674,121 @@ function definitions(
                 ],
             };
         }
+        case "metrics": {
+            // NOTE: Fights score each member's Apple Health Steps (fight_members.selected_source_id). Every
+            // other source and metric is stored and listed here, and scores nothing.
+            const scoring = "Fights score Steps from Apple Health. Other sources are collected only.";
+            // A new provider also needs its name in the chart's series to get its own bars over time.
+            const sourceName = sql`
+                case source.provider when 'apple_health' then 'Apple Health' when 'whoop' then 'WHOOP' else source.provider end
+            `;
+            const raw = sql`
+                select raw.user_id, raw.received_at as at, source.provider, ${sourceName} as series
+                from private.activity_raw as raw
+                join public.data_sources as source on source.id = raw.source_id
+            `;
+            return {
+                cards: [
+                    {
+                        id: "whoop_connected", title: "WHOOP connected", unit: "count", better: true,
+                        note: "People with a working WHOOP login, now. Collected only: Fights do not score WHOOP.",
+                        definition: "People whose WHOOP login FitFight can use now. A login WHOOP stopped accepting does not count. WHOOP records are collected only: Fights do not score them. There is no comparison.",
+                        example: (r) => `${r.count(r.value, "person has", "people have")} WHOOP connected now.`,
+                        // NOTE: access_token_expires_at is set exactly when the sealed tokens are
+                        // (whoop_connections_tokens), so the dashboard never reads the token columns.
+                        query: sql`
+                            select count(*) filter (where access_token_expires_at is not null)::float8 as value,
+                                null::float8 as previous
+                            from private.whoop_connections
+                        `,
+                    },
+                    {
+                        id: "apple_health_people", title: "Weekly people sending Apple Health", unit: "count", better: true,
+                        note: "Sent new Apple Health records in the last 7 days, vs the 7 before.",
+                        definition: `People whose phone sent at least one new Apple Health record in the last 7 days, up to now, compared with the 7 days before. Each person counts once. ${scoring}`,
+                        example: (r) => `${r.count(r.value, "person's phone", "people's phones")} sent new Apple Health records in the last 7 days${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, sql`select * from (${raw}) as raw where raw.provider = 'apple_health'`, people),
+                    },
+                    {
+                        id: "raw_received", title: "Weekly raw records received", unit: "count", better: null,
+                        note: "Every source, last 7 days vs the 7 before.",
+                        definition: "New raw records FitFight stored from every source in the last 7 days, up to now, compared with the 7 days before. A record counts when it first arrives: the same content sent again does not count, and content that changed counts as a new record.",
+                        example: (r) => `FitFight received ${r.count(r.value, "new raw record", "new raw records")} in the last 7 days${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, raw, count),
+                    },
+                    {
+                        id: "raw_pending", title: "Raw records pending", unit: "count", better: null,
+                        note: "Waiting to be cleaned into metrics, now.",
+                        definition: "Raw records from every source still waiting to be cleaned into metrics, now. WHOOP records are collected only, so they stay pending. Records that failed to clean are not counted. There is no comparison.",
+                        example: (r) => `${r.count(r.value, "raw record is", "raw records are")} waiting to be cleaned now.`,
+                        query: sql`
+                            select count(*)::float8 as value, null::float8 as previous
+                            from private.activity_raw where processing_state = 'pending'
+                        `,
+                    },
+                ],
+                charts: [
+                    {
+                        id: "raw_by_type", title: "Raw records by source and type, all time", kind: "table", unit: "count", x: "label",
+                        definition: `Every type of raw record FitFight has stored, by source: how many records, how many people sent them, and how many hours ago the newest arrived. ${scoring}`,
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has the most raw records: ${r.format(r.top.y)}, ${r.top.share} of all.` : null),
+                        note: scoring,
+                        query: sql`
+                            select grouped.x, cell.y, cell.series
+                            from (
+                                select ${sourceName} || ': ' || raw.record_type as x, count(*) as total,
+                                    count(distinct raw.user_id) as people, max(raw.received_at) as newest
+                                from private.activity_raw as raw
+                                join public.data_sources as source on source.id = raw.source_id
+                                group by 1
+                            ) as grouped
+                            cross join lateral (values
+                                (1, 'Records', grouped.total::float8),
+                                (2, 'People', grouped.people::float8),
+                                (3, 'Hours since last', extract(epoch from ${w.now} - grouped.newest)::float8 / 3600)
+                            ) as cell(position, series, y)
+                            order by grouped.total desc, grouped.x, cell.position
+                        `,
+                    },
+                    {
+                        id: "metrics_by_source", title: "Cleaned metrics by source, all time", kind: "table", unit: "count", x: "label",
+                        definition: `Every metric cleaned from raw records, by source: how many rows, how many people they belong to, and how many days ago the latest one was. The metric Fights score is marked. ${scoring}`,
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has the most cleaned rows: ${r.format(r.top.y)}, ${r.top.share} of all.` : null),
+                        note: scoring,
+                        query: sql`
+                            select grouped.x, cell.y, cell.series
+                            from (
+                                select ${sourceName} || ': ' || metric.metric || case
+                                        when source.provider = 'apple_health' and metric.metric = 'steps' then ' (scores Fights)' else ''
+                                    end as x,
+                                    count(*) as total, count(distinct metric.user_id) as people,
+                                    max(coalesce(metric.day, (metric.observed_through at time zone 'Europe/Paris')::date)) as latest
+                                from private.activity_metrics as metric
+                                join public.data_sources as source on source.id = metric.source_id
+                                group by 1
+                            ) as grouped
+                            cross join lateral (values
+                                (1, 'Rows', grouped.total::float8),
+                                (2, 'People', grouped.people::float8),
+                                (3, 'Days since latest', greatest(${w.today}::date - grouped.latest, 0)::float8)
+                            ) as cell(position, series, y)
+                            order by grouped.total desc, grouped.x, cell.position
+                        `,
+                    },
+                    {
+                        id: "raw_per_bucket", title: `Raw records ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `New raw records FitFight stored in each ${w.bucket}, by source. A record counts when it first arrives.`,
+                        example: (r) => {
+                            const apple = r.at("Apple Health");
+                            const whoop = r.at("WHOOP");
+                            return apple === undefined || whoop === undefined ? null
+                                : `FitFight received ${r.count(apple, "new Apple Health record", "new Apple Health records")} and ${r.count(whoop, "new WHOOP record", "new WHOOP records")} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, raw, count, { series: ["Apple Health", "WHOOP"] }),
+                    },
+                ],
+            };
+        }
     }
 }
 

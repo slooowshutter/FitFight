@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.2.0",
             year: 2026,
             month: 10,
+            day: 18,
+            notes: "Connect WHOOP in Settings. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
             day: 17,
             notes: "The Feed tab shows how many new posts people sent since you last opened it."
         ),

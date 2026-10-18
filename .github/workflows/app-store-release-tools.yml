@@ -7,10 +7,14 @@ on:
             - "scripts/app-store-release-audit.rb"
             - ".github/workflows/app-store-release-tools.yml"
 
+concurrency:
+    group: ios-distribution
+    cancel-in-progress: false
+
 jobs:
     audit:
         runs-on: ubuntu-latest
-        timeout-minutes: 10
+        timeout-minutes: 20
         permissions:
             contents: read
         steps:

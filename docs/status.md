@@ -6,6 +6,33 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## App Store 1.2.0 submitted for review, 18 Oct 2026
+
+Marc asked on 18 Oct 2026 to merge everything on `preview` into `main` and submit the
+next App Store version right away. He said 1.2.1; the version is 1.2.0 because 1.1.3 (226)
+is the live version, no 1.2.0 was ever on the App Store, and his rule is 1.1.3, 1.2.0, 1.3.0.
+
+- **Production:** PR #423 merged (`b735a82`), `preview` plus #346. Supabase applied
+  `20261014140000` to `20261018120000` (the management API lists all 13), then Vercel
+  deployed. `/api/health` ok, privacy and support 200, the privacy page has the WHOOP section.
+- **Build:** the App Store candidate workflow uploaded 1.2.0 (232), registered as `prod`.
+- **App Store Connect:** version 1.2.0 with the listing in `app-store/metadata.md` (English
+  and French), What's new extended with the 16 to 18 Oct work, the 1.2.0 review notes
+  (3,988 characters), the `2026-10-16` screenshots and `AFTER_APPROVAL`. Submitted on 18 Oct
+  at about 23:25 UTC: `WAITING_FOR_REVIEW`. Both In-App Purchases were already approved
+  with 1.1.3, so the submission holds only the version.
+- **Release endpoint:** production `/api/app-release` shows latest 1.1.3 (226) and review
+  1.2.0 (232), so App Review can buy in Sandbox on production.
+- **App Privacy:** unchanged. It was published on 14 Oct with Product Interaction, User ID
+  for Analytics and Purchase History; WHOOP data fits the declared Health type, which
+  matches `PrivacyInfo.xcprivacy`.
+- **Until people install 1.2.0, 1.1.3 users:** get friend-round pushes that open "That fight
+  isn't on your list", see friends-only posts labeled Public, and count friend rounds in
+  profile records. Fight group pictures start generating for active production fights
+  (about $0.12 to $0.17 each, capped at 1,000 a week).
+
+---
+
 ## WHOOP connection, prepared 18 Oct 2026
 
 Marc approved it on 18 Oct 2026 (Notion backlog row "WHOOP connection: pull all WHOOP

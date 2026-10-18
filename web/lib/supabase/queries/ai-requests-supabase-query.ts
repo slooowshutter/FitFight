@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { Sql, TransactionSql } from "postgres";
 import type { ZodType } from "zod";
 import { ApiError } from "@/lib/http";
+import { companionSuggestions } from "@/lib/domain/ai/companion-suggestions";
 import { appendAiBalanceEvent } from "@/lib/supabase/queries/ai-credits-supabase-query";
 import { aiLibraryRowSchema } from "@/lib/types/ai/library";
 import { aiCreditBalanceSchema, type AiRecovery } from "@/lib/types/ai/credits";
+import { companionLinesBatchSchema } from "@/lib/types/ai/custom-character";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     aiAdmissionCountsSchema,
@@ -191,19 +193,34 @@ export async function reserveAiRequest(
                     join private.special_accounts account on account.id = purchase.account_id
                     where purchase.id = ${input.resourceId} and account.user_id = ${userId}
                         and purchase.revoked_at is null for share of purchase`;
-                if (!paid || input.creditPrice !== 0 || !["avatar", "fitness"].includes(input.workflow))
+                if (!paid || input.creditPrice !== 0 || !["avatar", "fitness", "companion_lines"].includes(input.workflow))
                     return new ApiError(403, "character_purchase_required", "Purchase a character before generating");
-                const key = input.workflow === "avatar" ? paid.avatar_action_key : paid.fitness_action_key;
-                const [portrait] = input.workflow === "avatar" && key !== input.idempotencyKey
-                    ? await sql`select id from private.custom_character_portraits
-                        where purchase_id = ${input.resourceId} and action_key = ${input.idempotencyKey}
-                            and not exists (select 1 from private.custom_character_portraits chosen
-                                where chosen.purchase_id = ${input.resourceId} and chosen.selected_at is not null)`
-                    : [];
-                if ((key !== input.idempotencyKey && !portrait) || paid.description !== input.description)
+                if (paid.description !== input.description)
                     return new ApiError(409, "ai_request_conflict", "Character action does not match this purchase");
-                if (input.workflow === "fitness") {
-                    // A purchase with portrait choices draws its poses from the chosen portrait only.
+                if (input.workflow === "companion_lines") {
+                    // A batch after a completed one is a "Four more" batch. The admission lock makes the count exact.
+                    const batches = companionLinesBatchSchema.array().parse(await sql`
+                        select id, resource_id, idempotency_key, status, result from private.ai_requests
+                        where resource_id = ${input.resourceId} and workflow = 'companion_lines'
+                        order by created_at, id`);
+                    const state = companionSuggestions(batches);
+                    if (state.suggestions_pending)
+                        return new ApiError(409, "ai_in_progress", "New suggestions are already on the way.");
+                    if (state.more_suggestions_left === 0)
+                        return new ApiError(409, "suggestions_limit", "This character has no more suggestions left.");
+                } else {
+                    const key = input.workflow === "avatar" ? paid.avatar_action_key : paid.fitness_action_key;
+                    const [portrait] = input.workflow === "avatar" && key !== input.idempotencyKey
+                        ? await sql`select id from private.custom_character_portraits
+                            where purchase_id = ${input.resourceId} and action_key = ${input.idempotencyKey}
+                                and not exists (select 1 from private.custom_character_portraits chosen
+                                    where chosen.purchase_id = ${input.resourceId} and chosen.selected_at is not null)`
+                        : [];
+                    if (key !== input.idempotencyKey && !portrait)
+                        return new ApiError(409, "ai_request_conflict", "Character action does not match this purchase");
+                }
+                if (input.workflow !== "avatar") {
+                    // A purchase with portrait choices draws its poses and suggestions from the chosen portrait only.
                     const [source] = await sql`select request.id from private.ai_requests request
                         where request.id = ${input.sourceRequestIds[0] ?? null} and request.resource_id = ${input.resourceId}
                             and request.user_id = ${userId} and request.workflow = 'avatar' and request.status = 'completed'
@@ -219,21 +236,31 @@ export async function reserveAiRequest(
                 }
             }
 
+            // Prompt checks have their own minute and day limits, so checking ideas never uses up drawing.
+            const checking = input.workflow === "prompt_check";
             const [rawCounts] = await sql`
             select
                 clock_timestamp() as observed_at,
-                count(*) filter (where user_id = ${userId} and created_at >= clock_timestamp() - interval '1 minute')::int as minute_count,
-                count(*) filter (where user_id = ${userId} and created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC')::int as day_count,
-                min(created_at) filter (where user_id = ${userId} and created_at >= clock_timestamp() - interval '1 minute') as first_minute_start,
-                count(*) filter (where status in ('starting', 'pending', 'running', 'start_unconfirmed'))::int as unresolved_count,
+                count(*) filter (where user_id = ${userId} and (workflow = 'prompt_check') = ${checking}
+                    and created_at >= clock_timestamp() - interval '1 minute')::int as minute_count,
+                count(*) filter (where user_id = ${userId} and (workflow = 'prompt_check') = ${checking}
+                    and created_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC')::int as day_count,
+                min(created_at) filter (where user_id = ${userId} and (workflow = 'prompt_check') = ${checking}
+                    and created_at >= clock_timestamp() - interval '1 minute') as first_minute_start,
+                count(*) filter (where status in ('starting', 'pending', 'running', 'start_unconfirmed')
+                    and (workflow = 'prompt_check') = ${checking})::int as unresolved_count,
                 (array_agg(id) filter (where user_id = ${userId} and status in ('starting', 'pending', 'running', 'start_unconfirmed')
-                    and (${input.resourceId}::uuid is null or resource_id is distinct from ${input.resourceId}::uuid)))[1] as user_unresolved_id
+                    and workflow not in ('companion_lines', 'prompt_check')
+                    and (${input.resourceId}::uuid is null or resource_id is distinct from ${input.resourceId}::uuid)))[1] as user_unresolved_id,
+                count(*) filter (where user_id = ${userId} and workflow = 'prompt_check'
+                    and status in ('starting', 'pending', 'running', 'start_unconfirmed'))::int as user_checks_unresolved
             from private.ai_requests
             where created_at >= least(date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC', clock_timestamp() - interval '1 minute')
                 or status in ('starting', 'pending', 'running', 'start_unconfirmed')
         `;
             const counts = databaseRow(aiAdmissionCountsSchema, rawCounts);
-            if (counts.user_unresolved_id !== null) {
+            // Suggestion batches and prompt checks are small text runs: they neither wait for nor hold up other work.
+            if (counts.user_unresolved_id !== null && !["companion_lines", "prompt_check"].includes(input.workflow)) {
                 return new ApiError(
                     409,
                     "ai_in_progress",
@@ -268,7 +295,7 @@ export async function reserveAiRequest(
                     },
                 );
             }
-            if (counts.day_count >= 20) {
+            if (counts.day_count >= (checking ? 30 : 20)) {
                 const now = counts.observed_at;
                 const midnight = Date.UTC(
                     now.getUTCFullYear(),
@@ -288,7 +315,8 @@ export async function reserveAiRequest(
                     },
                 );
             }
-            if (counts.unresolved_count >= limits.globalConcurrentRuns) {
+            // Prompt checks never take a drawing's place: they count only against each other, two per person.
+            if (counts.unresolved_count >= limits.globalConcurrentRuns || (checking && counts.user_checks_unresolved >= 2)) {
                 return new ApiError(
                     503,
                     "ai_busy",
@@ -406,7 +434,8 @@ export async function claimAiRequestPoll(
         const [row] = await sql`
             update private.ai_requests set lease_token = ${randomUUID()},
                 lease_expires_at = clock_timestamp() + interval '15 seconds',
-                next_poll_at = clock_timestamp() + interval '3 seconds'
+                next_poll_at = clock_timestamp() + ${request.workflow === "companion_lines" ? "10 seconds"
+                    : request.workflow === "prompt_check" ? "5 seconds" : "3 seconds"}::interval
             where id = ${requestId} and user_id = ${userId}
                 and status in ('pending', 'running') and next_poll_at <= clock_timestamp()
                 and (lease_expires_at is null or lease_expires_at <= clock_timestamp())
@@ -486,13 +515,23 @@ export async function finishAiRequestAttempt(
                 reserved_change: -request.credit_price,
             });
         }
-        if (update.status === "completed" && update.result !== null) {
+        // Companion lines are text, so only image results enter the library.
+        if (update.status === "completed" && update.result !== null && ["avatar", "fitness", "group_photo"].includes(request.workflow)) {
             for (const [stage, url] of Object.entries(update.result)) {
                 await sql`insert into private.ai_library_images
                     (request_id, user_id, workflow, description, stage, image_url)
                     values (${requestId}, ${userId}, ${request.workflow}, ${request.description}, ${stage}, ${url})`;
             }
         }
+        // NOTE: the response goes in as text; postgres.js would encode a string bound to a jsonb parameter a second time.
+        const providerResponse = update.providerResponse === undefined ? null : JSON.stringify(update.providerResponse);
+        // Every read spends the global Blend budget. A suggestion batch takes 40 to 55 s: its first read waits 30 s
+        // after the start, then one every 10 s. A prompt check takes about 45 s and its owner is waiting: 20 s, then 5 s.
+        const pollDelay = request.workflow === "companion_lines"
+            ? request.status === "starting" ? "30 seconds" : "10 seconds"
+            : request.workflow === "prompt_check"
+              ? request.status === "starting" ? "20 seconds" : "5 seconds"
+              : "3 seconds";
         const [row] = await sql`
             update private.ai_requests set
                 credit_state = ${creditState},
@@ -504,10 +543,11 @@ export async function finishAiRequestAttempt(
                 run_handle = ${update.runHandle === null ? null : sql.json(update.runHandle)},
                 result = ${update.result === null ? null : sql.json(update.result)},
                 error_code = ${update.errorCode},
+                provider_response = coalesce(${providerResponse}::text::jsonb, provider_response),
                 lease_token = null,
                 lease_expires_at = null,
                 updated_at = clock_timestamp(),
-                next_poll_at = greatest(next_poll_at, clock_timestamp() + interval '3 seconds', ${blockedUntil}::timestamptz)
+                next_poll_at = greatest(next_poll_at, clock_timestamp() + ${pollDelay}::interval, ${blockedUntil}::timestamptz)
             where id = ${requestId} and user_id = ${userId} and lease_token = ${leaseToken}
             returning *
         `;

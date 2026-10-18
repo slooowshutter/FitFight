@@ -33,10 +33,12 @@ test("finalizing a fight uses a bounded number of writes as the roster grows", a
                             state: "live",
                             starts_at: "2026-08-27T16:06:36.729Z",
                             ends_at: endsAt,
-                            final_sync_grace_seconds: 86_400,
+                            grace_ends_at: "2026-09-04T16:06:35.093Z",
                             outcome_rule: "highest_total",
                             stake_minor: null,
                             default_goal_value: null,
+                            host_id: null,
+                            friends: false,
                         },
                     ]);
                 if (query.includes("from public.fight_members"))
@@ -125,6 +127,8 @@ test("finalizing a fight uses a bounded number of writes as the roster grows", a
 
 function mockRecalculateDatabase(input: {
     endsAt: string;
+    friends?: boolean;
+    graceEndsAt?: string | null;
     members: Array<{
         user_id: string;
         personal_target: null;
@@ -148,10 +152,15 @@ function mockRecalculateDatabase(input: {
                         state: "live",
                         starts_at: "2026-08-27T16:06:36.729Z",
                         ends_at: input.endsAt,
-                        final_sync_grace_seconds: 86_400,
+                        grace_ends_at:
+                            input.graceEndsAt === undefined
+                                ? new Date(Date.parse(input.endsAt) + 86_400_000).toISOString()
+                                : input.graceEndsAt,
                         outcome_rule: "highest_total",
                         stake_minor: null,
                         default_goal_value: null,
+                        host_id: null,
+                        friends: input.friends ?? false,
                     },
                 ]);
             if (query.includes("from public.fight_members"))
@@ -176,9 +185,122 @@ function mockRecalculateDatabase(input: {
     return { database, queries };
 }
 
-test("awaiting_final_sync still ranks by raw score; final forfeits incomplete members", async () => {
+const fightId = "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7";
+const endsAt = "2026-09-03T16:06:35.093Z";
+const trio = [0, 1, 2].map((index) => ({
+    user_id: `a0000000-0000-4000-8000-00000000000${index}`,
+    personal_target: null,
+    input_revision: index,
+}));
+
+function trioSnapshots(missingValue: string) {
+    return [
+        {
+            id: "c0000000-0000-4000-8000-000000000000",
+            user_id: trio[0].user_id,
+            value: missingValue,
+            cutoff_at: "2026-09-03T16:00:00.000Z",
+        },
+        {
+            id: "c0000000-0000-4000-8000-000000000001",
+            user_id: trio[1].user_id,
+            value: "100",
+            cutoff_at: endsAt,
+        },
+        {
+            id: "c0000000-0000-4000-8000-000000000002",
+            user_id: trio[2].user_id,
+            value: "500",
+            cutoff_at: endsAt,
+        },
+    ];
+}
+
+function memberPayload(queries: Array<{ query: string; values: readonly unknown[] }>) {
+    return queries
+        .find(({ query }) => query.includes("update public.fight_members"))
+        ?.values.find((value) =>
+            JSON.stringify(value).includes('"final_steps_complete"'),
+        );
+}
+
+function movedTo(
+    queries: Array<{ query: string; values: readonly unknown[] }>,
+    state: string,
+) {
+    return queries.some(
+        ({ query, values }) =>
+            query.includes("update public.fights set state") &&
+            values.includes(state),
+    );
+}
+
+test("a lone missing member already ahead settles the fight at once on their last sync", async () => {
+    const { database, queries } = mockRecalculateDatabase({
+        endsAt,
+        members: trio,
+        snapshots: trioSnapshots("9000"),
+    });
+    await recalculateFight(fightId, new Date("2026-09-03T17:00:00.000Z"), database);
+    assert.deepEqual(
+        memberPayload(queries),
+        json([
+            { user_id: trio[0].user_id, current_value: 9000, rank: 1, outcome_minor: 0, final_steps_complete: false },
+            { user_id: trio[2].user_id, current_value: 500, rank: 2, outcome_minor: 0, final_steps_complete: true },
+            { user_id: trio[1].user_id, current_value: 100, rank: 3, outcome_minor: 0, final_steps_complete: true },
+        ]),
+    );
+    assert.ok(movedTo(queries, "final"));
+});
+
+test("a missing member who could still catch up keeps the fight open until its deadline", async () => {
+    const ranks = json([
+        { user_id: trio[2].user_id, current_value: 500, rank: 1, outcome_minor: 0, final_steps_complete: true },
+        { user_id: trio[0].user_id, current_value: 300, rank: 2, outcome_minor: 0, final_steps_complete: false },
+        { user_id: trio[1].user_id, current_value: 100, rank: 3, outcome_minor: 0, final_steps_complete: true },
+    ]);
+    const waiting = mockRecalculateDatabase({ endsAt, members: trio, snapshots: trioSnapshots("300") });
+    await recalculateFight(fightId, new Date("2026-09-03T17:00:00.000Z"), waiting.database);
+    assert.deepEqual(memberPayload(waiting.queries), ranks);
+    assert.ok(movedTo(waiting.queries, "awaiting_final_sync"));
+    assert.ok(!movedTo(waiting.queries, "final"));
+
+    const closed = mockRecalculateDatabase({ endsAt, members: trio, snapshots: trioSnapshots("300") });
+    await recalculateFight(fightId, new Date("2026-09-05T16:06:35.093Z"), closed.database);
+    assert.deepEqual(memberPayload(closed.queries), ranks, "the last synced total counts");
+    assert.ok(movedTo(closed.queries, "final"));
+
+    const noDeadline = mockRecalculateDatabase({
+        endsAt,
+        graceEndsAt: null,
+        members: trio,
+        snapshots: trioSnapshots("300"),
+    });
+    await recalculateFight(fightId, new Date("2027-09-03T16:06:35.093Z"), noDeadline.database);
+    assert.ok(!movedTo(noDeadline.queries, "final"), "a Fight someone made waits for everyone");
+});
+
+test("finalizing with every member incomplete ranks them by last synced totals", async () => {
+    const members = trio.slice(0, 2);
+    const { database, queries } = mockRecalculateDatabase({
+        endsAt,
+        members,
+        snapshots: [trioSnapshots("42")[0]],
+    });
+    await recalculateFight(fightId, new Date("2026-09-05T16:06:35.093Z"), database);
+    assert.deepEqual(
+        memberPayload(queries),
+        json([
+            { user_id: members[0].user_id, current_value: 42, rank: 1, outcome_minor: 0, final_steps_complete: false },
+            { user_id: members[1].user_id, current_value: 0, rank: 2, outcome_minor: 0, final_steps_complete: false },
+        ]),
+    );
+    assert.ok(movedTo(queries, "final"));
+});
+
+test("a friend round queues one batched push per person instead of per-fight pushes", async () => {
     const fightId = "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7";
-    const endsAt = "2026-09-03T16:06:35.093Z";
+    const endsAt = "2026-11-01T00:00:00.000Z";
     const members = [
         {
             user_id: "a0000000-0000-4000-8000-000000000000",
@@ -188,12 +310,7 @@ test("awaiting_final_sync still ranks by raw score; final forfeits incomplete me
         {
             user_id: "a0000000-0000-4000-8000-000000000001",
             personal_target: null,
-            input_revision: 1,
-        },
-        {
-            user_id: "a0000000-0000-4000-8000-000000000002",
-            personal_target: null,
-            input_revision: 2,
+            input_revision: 0,
         },
     ];
     const snapshots = [
@@ -201,58 +318,23 @@ test("awaiting_final_sync still ranks by raw score; final forfeits incomplete me
             id: "c0000000-0000-4000-8000-000000000000",
             user_id: members[0].user_id,
             value: "9000",
-            cutoff_at: "2026-09-03T16:00:00.000Z",
-        },
-        {
-            id: "c0000000-0000-4000-8000-000000000001",
-            user_id: members[1].user_id,
-            value: "100",
-            cutoff_at: endsAt,
-        },
-        {
-            id: "c0000000-0000-4000-8000-000000000002",
-            user_id: members[2].user_id,
-            value: "500",
             cutoff_at: endsAt,
         },
     ];
+    const perFightIntent = ({ query }: { query: string }) =>
+        query.includes("jsonb_to_recordset") &&
+        query.includes("insert into private.notification_intents");
 
-    const awaiting = mockRecalculateDatabase({ endsAt, members, snapshots });
+    const awaiting = mockRecalculateDatabase({
+        endsAt,
+        friends: true,
+        members,
+        snapshots,
+    });
     await recalculateFight(
         fightId,
-        new Date("2026-09-03T17:00:00.000Z"),
+        new Date("2026-11-01T01:00:00.000Z"),
         awaiting.database,
-    );
-    const awaitingPayload = awaiting.queries
-        .find(({ query }) => query.includes("update public.fight_members"))
-        ?.values.find((value) =>
-            JSON.stringify(value).includes('"final_steps_complete"'),
-        );
-    assert.deepEqual(
-        awaitingPayload,
-        json([
-            {
-                user_id: members[0].user_id,
-                current_value: 9000,
-                rank: 1,
-                outcome_minor: 0,
-                final_steps_complete: false,
-            },
-            {
-                user_id: members[2].user_id,
-                current_value: 500,
-                rank: 2,
-                outcome_minor: 0,
-                final_steps_complete: true,
-            },
-            {
-                user_id: members[1].user_id,
-                current_value: 100,
-                rank: 3,
-                outcome_minor: 0,
-                final_steps_complete: true,
-            },
-        ]),
     );
     assert.ok(
         awaiting.queries.some(
@@ -261,108 +343,33 @@ test("awaiting_final_sync still ranks by raw score; final forfeits incomplete me
                 values.includes("awaiting_final_sync"),
         ),
     );
+    assert.equal(
+        awaiting.queries.filter(({ query }) => query.includes("'friends_sync'"))
+            .length,
+        1,
+    );
+    assert.equal(awaiting.queries.filter(perFightIntent).length, 0);
 
-    const finalized = mockRecalculateDatabase({ endsAt, members, snapshots });
-    await recalculateFight(
-        fightId,
-        new Date("2026-09-05T16:06:35.093Z"),
-        finalized.database,
-    );
-    const finalPayload = finalized.queries
-        .find(({ query }) => query.includes("update public.fight_members"))
-        ?.values.find((value) =>
-            JSON.stringify(value).includes('"final_steps_complete"'),
-        );
-    assert.deepEqual(
-        finalPayload,
-        json([
-            {
-                user_id: members[2].user_id,
-                current_value: 500,
-                rank: 1,
-                outcome_minor: 0,
-                final_steps_complete: true,
-            },
-            {
-                user_id: members[1].user_id,
-                current_value: 100,
-                rank: 2,
-                outcome_minor: 0,
-                final_steps_complete: true,
-            },
-            {
-                user_id: members[0].user_id,
-                current_value: 9000,
-                rank: 3,
-                outcome_minor: 0,
-                final_steps_complete: false,
-            },
-        ]),
-    );
-    assert.ok(
-        finalized.queries.some(
-            ({ query, values }) =>
-                query.includes("update public.fights set state") &&
-                values.includes("final"),
-        ),
-    );
-});
-
-test("finalizing with every member incomplete is a draw and keeps last verified totals", async () => {
-    const fightId = "b4c1285d-0232-4d15-b8cc-1a916ba2bbf7";
-    const endsAt = "2026-09-03T16:06:35.093Z";
-    const members = [
-        {
-            user_id: "a0000000-0000-4000-8000-000000000000",
-            personal_target: null,
-            input_revision: 0,
-        },
-        {
-            user_id: "a0000000-0000-4000-8000-000000000001",
-            personal_target: null,
-            input_revision: 1,
-        },
-    ];
-    const snapshots = [
-        {
-            id: "c0000000-0000-4000-8000-000000000000",
-            user_id: members[0].user_id,
-            value: "42",
-            cutoff_at: "2026-09-03T16:00:00.000Z",
-        },
-    ];
-    const { database, queries } = mockRecalculateDatabase({
+    const finalized = mockRecalculateDatabase({
         endsAt,
+        friends: true,
         members,
         snapshots,
     });
     await recalculateFight(
         fightId,
-        new Date("2026-09-05T16:06:35.093Z"),
-        database,
+        new Date("2026-11-02T00:00:00.000Z"),
+        finalized.database,
     );
-    const payload = queries
-        .find(({ query }) => query.includes("update public.fight_members"))
-        ?.values.find((value) =>
-            JSON.stringify(value).includes('"final_steps_complete"'),
-        );
-    assert.deepEqual(
-        payload,
-        json([
-            {
-                user_id: members[0].user_id,
-                current_value: 42,
-                rank: 1,
-                outcome_minor: 0,
-                final_steps_complete: false,
-            },
-            {
-                user_id: members[1].user_id,
-                current_value: 0,
-                rank: 1,
-                outcome_minor: 0,
-                final_steps_complete: false,
-            },
-        ]),
+    const lock = finalized.queries.findIndex(({ query }) =>
+        query.includes("pg_advisory_xact_lock"),
     );
+    const results = finalized.queries.findIndex(({ query }) =>
+        query.includes("'friends_results'"),
+    );
+    assert.ok(
+        lock >= 0 && results > lock,
+        "the month lock is taken before checking the other rounds",
+    );
+    assert.equal(finalized.queries.filter(perFightIntent).length, 0);
 });

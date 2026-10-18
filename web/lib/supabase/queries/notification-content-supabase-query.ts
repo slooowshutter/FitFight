@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
-import { notificationAlert } from "@/lib/notifications/notification-copy";
+import { friendsResultsNotificationAlert, notificationAlert } from "@/lib/notifications/notification-copy";
 import {
+    friendsResultsCountsSchema,
     notificationPostContextSchema,
     type NotificationContent,
     type NotificationDeliveryRow,
@@ -89,18 +90,24 @@ export async function readNotificationContent(
             const reactions = contexts.filter((event) => event.kind === "post_reaction");
             const actors = [...new Set(reactions.map((event) => event.actor_handle))];
             const reactedPosts = new Set(reactions.map((event) => event.post_id)).size;
-            const newPosts = new Set(contexts.filter((event) => event.kind === "feed_post").map((event) => event.post_id)).size;
+            const posted = contexts.filter((event) => event.kind === "feed_post");
+            const posters = [...new Set(posted.map((event) => event.actor_handle))];
+            const newPosts = new Set(posted.map((event) => event.post_id)).size;
+            const named = (handles: string[]) => `@${handles[0]}` + (handles.length > 1
+                ? (fr ? ` et ${handles.length - 1} autre${handles.length > 2 ? "s" : ""}` : ` and ${handles.length - 1} other${handles.length > 2 ? "s" : ""}`) : "");
             const parts: string[] = [];
             if (actors.length > 0) {
-                const who = `@${actors[0]}` + (actors.length > 1
-                    ? (fr ? ` et ${actors.length - 1} autre${actors.length > 2 ? "s" : ""}` : ` and ${actors.length - 1} other${actors.length > 2 ? "s" : ""}`) : "");
                 parts.push(fr
-                    ? `${who} ${actors.length > 1 ? "ont" : "a"} réagi à ${reactedPosts === 1 ? "ta publication" : `${reactedPosts} de tes publications`}.`
-                    : `${who} reacted to ${reactedPosts === 1 ? "your post" : `${reactedPosts} of your posts`}.`);
+                    ? `${named(actors)} ${actors.length > 1 ? "ont" : "a"} réagi à ${reactedPosts === 1 ? "ta publication" : `${reactedPosts} de tes publications`}.`
+                    : `${named(actors)} reacted to ${reactedPosts === 1 ? "your post" : `${reactedPosts} of your posts`}.`);
             }
-            if (newPosts > 0) parts.push(fr
-                ? `${newPosts} nouvelle${newPosts > 1 ? "s" : ""} publication${newPosts > 1 ? "s" : ""} dans tes défis.`
-                : `${newPosts} new post${newPosts > 1 ? "s" : ""} in your fights.`);
+            if (newPosts > 0) {
+                const fights = new Set(posted.map((event) => event.fight_id)).size;
+                const where = fights === 1 ? posted[0].fight_name : (fr ? `${fights} défis` : `${fights} fights`);
+                parts.push(fr
+                    ? `${named(posters)} ${posters.length > 1 ? "ont" : "a"} publié dans ${where}.`
+                    : `${named(posters)} posted in ${where}.`);
+            }
             title = onePost ? first.fight_name : (fr ? "Ton résumé du soir" : "Your evening summary");
             body = parts.join(" ");
             if (onePost && newPosts === 1 && actors.length === 0) {
@@ -127,7 +134,7 @@ export async function readNotificationContent(
 
     const deadline = new Intl.DateTimeFormat(fr ? "fr-FR" : "en-GB", {
         timeZone: row.time_zone, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-    }).format(row.kind === "final_sync" ? row.sync_deadline : row.ends_at);
+    }).format(row.kind === "final_sync" ? (row.sync_deadline ?? row.ends_at) : row.ends_at);
     let alert = notificationAlert(row.copy_key, locale);
     switch (row.kind) {
         case "fight_invite":
@@ -142,9 +149,11 @@ export async function readNotificationContent(
                 + (fr ? ` Fin : ${deadline}.` : ` Ends ${deadline}.`) };
             break;
         case "final_sync":
-            alert = { title: row.fight_name, body: fr
-                ? `Défi terminé. Ouvre FitFight avant le ${deadline} pour envoyer tes derniers pas.`
-                : `Fight ended. Open FitFight before ${deadline} to submit your final steps.` };
+            alert = { title: row.fight_name, body: row.sync_deadline === null
+                ? (fr ? "Défi terminé. Ouvre FitFight pour envoyer tes derniers pas." : "Fight ended. Open FitFight to submit your final steps.")
+                : fr
+                    ? `Défi terminé. Ouvre FitFight avant le ${deadline} pour envoyer tes derniers pas.`
+                    : `Fight ended. Open FitFight before ${deadline} to submit your final steps.` };
             break;
         case "fight_ended":
             alert = { title: row.fight_name, body: fr ? "Défi terminé. Les résultats sont en attente des derniers pas." : "Fight ended. Results are waiting for the final steps." };
@@ -155,6 +164,28 @@ export async function readNotificationContent(
         case "daily_status":
             alert = { title: row.fight_name, body: row.alert_body ?? alert.body };
             break;
+        case "friends_results": {
+            const [counts] = friendsResultsCountsSchema.array().parse(await database`
+                select to_char(anchor.starts_at at time zone anchor.time_zone, 'YYYY-MM') as month,
+                    count(*) filter (where mine.rank < them.rank)::int as won,
+                    count(*)::int as total
+                from public.fights anchor
+                join public.fights round on round.friends and round.state = 'final'
+                    and to_char(round.starts_at at time zone round.time_zone, 'YYYY-MM')
+                        = to_char(anchor.starts_at at time zone anchor.time_zone, 'YYYY-MM')
+                join public.fight_members mine on mine.fight_id = round.id
+                    and mine.user_id = ${row.user_id} and mine.state = 'accepted'
+                cross join lateral (
+                    select min(other.rank) as rank from public.fight_members other
+                    where other.fight_id = round.id and other.user_id <> mine.user_id and other.state = 'accepted'
+                ) them
+                where anchor.id = ${row.fight_id}
+                group by 1
+            `);
+            if (!counts) return null;
+            alert = friendsResultsNotificationAlert(counts.month, counts.won, counts.total, locale);
+            break;
+        }
     }
     return { ...alert, route: row.route, threadId: `fight:${row.fight_id}`, imageUrl: null };
 }

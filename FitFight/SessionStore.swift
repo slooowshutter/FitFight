@@ -21,7 +21,10 @@ final class SessionStore: ObservableObject {
         supabaseURL: SupabaseConfig.projectURL,
         supabaseKey: SupabaseConfig.publishableKey.isEmpty
             ? "sb_publishable_missing"
-            : SupabaseConfig.publishableKey
+            : SupabaseConfig.publishableKey,
+        // Open on the saved session even when its token expired; the token refreshes in the background,
+        // so a slow or missing connection no longer holds the launch spinner or shows signed out.
+        options: SupabaseClientOptions(auth: .init(emitLocalSessionAsInitialSession: true))
     )
     private let api = FitFightAPI()
     private static let handleChosenKey = "ff.handle.chosen"
@@ -173,7 +176,7 @@ final class SessionStore: ObservableObject {
         self.init(screenshot: ())
         profile = FitFightProfile(
             userId: UUID(uuidString: CompanionPreview.people[0].id)!,
-            handle: "marc", displayName: "Marc", handleSetAt: "2026-09-13T00:00:00Z",
+            handle: "alex", displayName: "Alex", handleSetAt: "2026-09-13T00:00:00Z",
             referralCode: nil, avatar: nil
         )
     }

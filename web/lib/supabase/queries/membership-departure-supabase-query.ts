@@ -9,7 +9,7 @@ export async function departFightMemberships(actorId: string, fightId: string, t
     return database.begin(async (sql) => {
         await lockFightSeries(sql, fightId);
         const fights = departureFightSchema.array().parse(await sql`
-            select id, owner_id, state::text, series_id from public.fights
+            select id, owner_id, state::text, series_id, host_id, friends from public.fights
             where id = ${fightId} or id = (
                 select series.current_fight_id from public.fights original
                 join public.fight_series series on series.id = original.series_id where original.id = ${fightId}
@@ -18,7 +18,8 @@ export async function departFightMemberships(actorId: string, fightId: string, t
         const fight = fights.find((item) => item.id === fightId);
         if (!fight) throw new ApiError(404, "not_found", "Fight not found");
         const voluntary = actorId === targetId;
-        if (voluntary && fight.owner_id === actorId) {
+        // A founder or friend series is one against one: anyone leaving ends it, with no successor.
+        if (voluntary && fight.owner_id === actorId && !fight.host_id && !fight.friends) {
             if (!newOwnerId) throw new ApiError(403, "forbidden", "The owner cannot leave this fight");
             const [successor] = await sql`
                 select 1 from public.fight_members where fight_id = ${fightId} and user_id = ${newOwnerId}
@@ -50,6 +51,9 @@ export async function departFightMemberships(actorId: string, fightId: string, t
         }
         if (fight.series_id) {
             await sql`update public.fight_series_members set state = 'withdrawn' where series_id = ${fight.series_id} and user_id = ${targetId}`;
+            if (fight.host_id || fight.friends) {
+                await sql`update public.fight_series set paused_at = coalesce(paused_at, now()) where id = ${fight.series_id}`;
+            }
         }
         return { fight, changed: active.map((member) => member.fight_id) };
     });

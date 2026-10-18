@@ -100,6 +100,8 @@ async function readLiveMemberRows(database: Sql): Promise<LiveMemberRow[]> {
             limit 1
         ) as installation on true
         where fight.state = 'live'
+            and not fight.friends
+            and fight.host_id is distinct from member.user_id
             and coalesce(preferences.enabled, true)
             and coalesce(preferences.daily_status, false)
         order by fight.id, member.user_id

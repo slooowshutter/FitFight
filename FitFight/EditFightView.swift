@@ -6,6 +6,7 @@ struct EditFightView: View {
     @EnvironmentObject private var session: SessionStore
     @EnvironmentObject private var steps: HealthKitStepsStore
     @Environment(\.ffTheme) private var theme
+    @Environment(\.ffStaticRender) private var staticRender
     @Environment(\.dismiss) private var dismiss
 
     @State private var step = FightComposerStep.review
@@ -18,7 +19,11 @@ struct EditFightView: View {
     @State private var customStart: Date
     @State private var customEnd: Date
     @State private var timeZone: TimeZone
+    @State private var joinCode: String
     @State private var people: [FightComposerPerson]
+    @State private var closesAfterGrace: Bool
+    /// A friend round's length: "month" or "week".
+    @State private var friendRoundLength: String
     @State private var username = ""
     @State private var usernameError: String?
     @State private var confirmDelete = false
@@ -32,6 +37,9 @@ struct EditFightView: View {
         let stored = fight.name.trimmingCharacters(in: .whitespacesAndNewlines)
         _fightTitle = State(initialValue: stored == "Steps Fight" || stored == "Défi de pas" ? "" : stored)
         _actionText = State(initialValue: fight.actionText)
+        _joinCode = State(initialValue: fight.joinCode ?? "")
+        _closesAfterGrace = State(initialValue: fight.graceEndsAt != nil)
+        _friendRoundLength = State(initialValue: fight.friendRoundLength ?? "month")
         _visibilityJoinable = State(initialValue: fight.visibility == "joinable")
         _recurring = State(initialValue: fight.recurring)
         let days = max(1, Int((fight.windowEnd.timeIntervalSince(fight.windowStart) / 86_400).rounded()))
@@ -76,9 +84,12 @@ struct EditFightView: View {
     }
 
     private var canSave: Bool {
-        fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
-            && actionText.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
+        // A friend round keeps its name, so only other fights need a title.
+        (fight.friends == true || !fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            && fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).count <= 120
+            && actionText.trimmingCharacters(in: .whitespacesAndNewlines).count <= 240
             && scheduleError == nil
+            && (fight.joinCode == nil || AppModel.joinCodeLength.contains(joinCode.count))
             && !model.isUpdatingFight
             && !model.isDeletingFight
     }
@@ -130,6 +141,26 @@ struct EditFightView: View {
 
     @ViewBuilder
     private var currentStep: some View {
+        // A friend round keeps its pair and start: only its loser action and length can change.
+        if fight.friends == true {
+            FightComposerLimitedField(
+                label: String(appLocalized: "Loser action"),
+                placeholder: String(appLocalized: "Cook dinner"),
+                text: $actionText,
+                focus: $actionFocused,
+                submitLabel: .done,
+                onSubmit: { actionFocused = false },
+                limit: 240
+            )
+            friendLengthRow
+            deadlineRow
+        } else {
+            composerStep
+        }
+    }
+
+    @ViewBuilder
+    private var composerStep: some View {
         switch step {
         case .metric:
             FightComposerMetricPage()
@@ -183,6 +214,95 @@ struct EditFightView: View {
                 onChange: { step = $0 },
                 onConnectHealth: connectAppleHealth
             )
+            if fight.joinCode != nil {
+                codeField
+            }
+            deadlineRow
+        }
+    }
+
+    /// Switching moves this round's end, like the server: weekly to the next 7-day mark from its
+    /// start but never later, monthly to the end of this month.
+    private var friendLengthRow: some View {
+        let weekly = friendRoundLength == "week"
+        var note = weekly
+            ? String(appLocalized: "Each round lasts 7 days.")
+            : String(appLocalized: "Each round runs to the end of the month.")
+        if friendRoundLength != (fight.friendRoundLength ?? "month") {
+            let now = Date()
+            let week: TimeInterval = 7 * 86_400
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+            let end = weekly
+                ? min(fight.windowStart.addingTimeInterval(((now.timeIntervalSince(fight.windowStart) / week).rounded(.down) + 1) * week), fight.windowEnd)
+                : calendar.dateInterval(of: .month, for: now)?.end ?? fight.windowEnd
+            let day = end.formatted(.dateTime.day().month(.wide).locale(AppLocalization.locale))
+            note += " " + String(appLocalized: "friends.length-ends", defaultValue: "This round will end on \(day).")
+        }
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(String(appLocalized: "Length"))
+                    .ffType(.rowTitle)
+                    .foregroundStyle(theme.text)
+                Spacer(minLength: 8)
+                FFSegmented(items: ["month", "week"], selection: $friendRoundLength) { item in
+                    item == "week" ? String(appLocalized: "1 week") : String(appLocalized: "1 month")
+                }
+            }
+            Text(note)
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var deadlineRow: some View {
+        FFGroupedRows {
+            FFGroupedRow(
+                title: String(appLocalized: "Results 24 hours after the end"),
+                subtitle: closesAfterGrace
+                    ? String(appLocalized: "Anyone who hasn’t synced by then keeps the steps they last synced.")
+                    : String(appLocalized: "Off: results wait until everyone has synced, however long that takes."),
+                systemImage: "clock",
+                subtitleTone: closesAfterGrace ? .moss : .neutral,
+                trailing: AnyView(
+                    Toggle(String(appLocalized: "Results 24 hours after the end"), isOn: $closesAfterGrace)
+                        .labelsHidden()
+                        .tint(theme.mossFill)
+                )
+            )
+        }
+    }
+
+    private var codeField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(String(appLocalized: "Fight code"))
+                .ffType(.rowTitle)
+                .foregroundStyle(theme.text)
+            Group {
+                if staticRender {
+                    Text(verbatim: joinCode)
+                        .foregroundStyle(theme.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    TextField("K7M2", text: $joinCode)
+                        .foregroundStyle(theme.text)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .onChange(of: joinCode) { _, value in
+                            joinCode = AppModel.typedJoinCode(value)
+                        }
+                }
+            }
+            .font(.ff(15, 700))
+            .padding(.horizontal, 15)
+            .padding(.vertical, 13)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
+            .ffBorder(theme.line, radius: theme.radius.field)
+            Text(String(appLocalized: "4 to 12 letters or numbers, not used by another fight. The old code and link stop working."))
+                .ffType(.caption)
+                .foregroundStyle(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -199,7 +319,7 @@ struct EditFightView: View {
                 save()
             }
 
-            if isOwner {
+            if isOwner, fight.friends != true {
                 FFButton(
                     title: model.isDeletingFight ? String(appLocalized: "Deleting…") : String(appLocalized: "Delete"),
                     kind: .ember,
@@ -293,8 +413,11 @@ struct EditFightView: View {
                 startsAt: canEditStart ? startsAt : nil,
                 endsAt: endsAt,
                 timeZone: canEditStart && timeZone.identifier != fight.timeZone ? timeZone.identifier : nil,
+                joinCode: fight.joinCode != nil && joinCode != fight.joinCode ? joinCode : nil,
                 inviteHandles: inviteHandles,
-                removeUserIds: Array(removeUserIds)
+                removeUserIds: Array(removeUserIds),
+                closesAfterGrace: closesAfterGrace != (fight.graceEndsAt != nil) ? closesAfterGrace : nil,
+                friendRoundLength: friendRoundLength != (fight.friendRoundLength ?? "month") ? friendRoundLength : nil
             )
             if saved {
                 dismiss()

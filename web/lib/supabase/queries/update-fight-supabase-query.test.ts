@@ -77,6 +77,139 @@ test("saved Fight zones update before the start and cannot change once that inst
     assert.equal(patches.length, 2);
 });
 
+test("the owner picks a new code that no other fight uses", async () => {
+    assert.equal(updateFightRequestSchema.parse({ joinCode: " marc " }).joinCode, "MARC");
+    assert.equal(updateFightRequestSchema.parse({ joinCode: "golf-club-26" }).joinCode, "GOLFCLUB26");
+    assert.equal(updateFightRequestSchema.safeParse({ joinCode: "ABC" }).success, false);
+    assert.equal(updateFightRequestSchema.safeParse({ joinCode: "GOLFCLUB20261" }).success, false);
+    assert.equal(updateFightRequestSchema.safeParse({ joinCode: "GOLF!" }).success, false);
+
+    const fight = {
+        id: fightId, owner_id: owner, name: "Steps Fight", state: "live",
+        starts_at: startsAt, ends_at: endsAt, action_text: null, series_id: seriesId, time_zone: "UTC",
+    };
+    let seriesResponse = (): Response => Response.json([{ id: seriesId }]);
+    const patches: string[] = [];
+    const admin = createClient("https://update-fight.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: async (input, init) => {
+            const request = new Request(input, init);
+            const url = new URL(request.url);
+            if (request.method === "GET") return Response.json([fight]);
+            patches.push(url.pathname);
+            if (url.pathname === "/rest/v1/fights") return new Response(null, { status: 204 });
+            assert.equal(url.searchParams.get("join_code"), "neq.PGG7");
+            assert.deepEqual(await request.json(), { join_code: "MARC" });
+            return seriesResponse();
+        } },
+    });
+    const { updateFight } = await import("./update-fight-supabase-query");
+    const now = new Date("2026-09-15T12:00:00Z");
+    await updateFight(owner, fightId, { joinCode: "MARC" }, admin, now);
+    assert.deepEqual(patches, ["/rest/v1/fight_series"]);
+
+    patches.length = 0;
+    seriesResponse = () => Response.json(
+        { code: "23505", message: "duplicate key value violates unique constraint" },
+        { status: 409 },
+    );
+    await assert.rejects(
+        updateFight(owner, fightId, { joinCode: "MARC", name: "Office steps" }, admin, now),
+        (error: unknown) => error instanceof ApiError && error.status === 409 && error.code === "join_code_taken",
+    );
+    assert.deepEqual(patches, ["/rest/v1/fight_series"]);
+
+    await assert.rejects(
+        updateFight(owner, fightId, { joinCode: "PGG7" }, admin, now),
+        (error: unknown) => error instanceof ApiError && error.status === 409 && error.code === "join_code_taken",
+    );
+    assert.deepEqual(patches, ["/rest/v1/fight_series"]);
+
+    seriesResponse = () => Response.json([]);
+    await assert.rejects(
+        updateFight(owner, fightId, { joinCode: "MARC" }, admin, now),
+        (error: unknown) => error instanceof ApiError && error.status === 403 && error.code === "forbidden",
+    );
+});
+
+test("either friend changes only the action of a friend round; the app's other fields are ignored", async () => {
+    const fight = {
+        id: fightId, owner_id: owner, name: "Friends", state: "live", starts_at: startsAt, ends_at: endsAt,
+        action_text: null, series_id: seriesId, time_zone: "UTC", host_id: null, friends: true,
+    };
+    let member: { user_id: string } | null = { user_id: other };
+    const patches: Array<[string, unknown]> = [];
+    const admin = createClient("https://update-fight.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: async (input, init) => {
+            const request = new Request(input, init);
+            const url = new URL(request.url);
+            if (request.method === "GET" && url.pathname === "/rest/v1/fight_members") return Response.json(member ? [member] : []);
+            if (request.method === "GET") return Response.json([fight]);
+            patches.push([url.pathname, await request.json()]);
+            return new Response(null, { status: 204 });
+        } },
+    });
+    const { updateFight } = await import("./update-fight-supabase-query");
+    await updateFight(other, fightId, updateFightRequestSchema.parse({
+        name: "Renamed", actionText: "Buy the coffee", visibility: "joinable", recurring: false,
+        endsAt: "2026-09-28T12:00:00.000Z", inviteHandles: ["leo_runs"], removeUserIds: [owner],
+    }), admin, new Date("2026-09-15T12:00:00Z"));
+    assert.deepEqual(patches, [
+        ["/rest/v1/fights", { name: "Friends", action_text: "Buy the coffee" }],
+        ["/rest/v1/fight_series", { name: "Friends", action_text: "Buy the coffee" }],
+    ]);
+    patches.length = 0;
+    await updateFight(other, fightId, { closesAfterGrace: true }, admin, new Date("2026-09-15T12:00:00Z"));
+    assert.deepEqual(patches, [["/rest/v1/fights", { closes_after_grace: true }]]);
+
+    member = null;
+    await assert.rejects(
+        updateFight(other, fightId, { actionText: "Nope" }, admin, new Date("2026-09-15T12:00:00Z")),
+        (error: unknown) => error instanceof ApiError && error.status === 403,
+    );
+});
+
+test("the owner switches the final-sync deadline, but never off for Fight Marc or a fight everyone is in", async () => {
+    const fight = {
+        id: fightId, owner_id: owner, name: "Fight Marc", state: "live", starts_at: startsAt, ends_at: endsAt,
+        action_text: null, series_id: seriesId, time_zone: "UTC", host_id: other as string | null, friends: false,
+    };
+    const series = { suggested: false, join_code: "PGG7" };
+    const patches: Array<[string, unknown]> = [];
+    const admin = createClient("https://update-fight.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: async (input, init) => {
+            const request = new Request(input, init);
+            if (request.method === "GET" && new URL(request.url).pathname === "/rest/v1/fight_series") {
+                return Response.json(series);
+            }
+            if (request.method === "GET") return Response.json([fight]);
+            patches.push([new URL(request.url).pathname, await request.json()]);
+            return new Response(null, { status: 204 });
+        } },
+    });
+    const { updateFight } = await import("./update-fight-supabase-query");
+    const now = new Date("2026-09-15T12:00:00Z");
+    await assert.rejects(
+        updateFight(owner, fightId, { closesAfterGrace: false }, admin, now),
+        (error: unknown) => error instanceof ApiError && error.status === 403,
+    );
+    assert.deepEqual(patches, []);
+    fight.host_id = null;
+    for (const shared of [{ suggested: false, join_code: "PGG7" }, { suggested: true, join_code: "K7M2" }]) {
+        Object.assign(series, shared);
+        await assert.rejects(
+            updateFight(owner, fightId, { closesAfterGrace: false }, admin, now),
+            (error: unknown) => error instanceof ApiError && error.status === 403,
+        );
+    }
+    assert.deepEqual(patches, []);
+    Object.assign(series, { suggested: false, join_code: "K7M2" });
+    await updateFight(owner, fightId, { closesAfterGrace: false }, admin, now);
+    assert.deepEqual(patches, [["/rest/v1/fights", { closes_after_grace: false }]]);
+});
+
 test("owner can rename a live fight without touching membership", async (t) => {
     const savedURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const savedKey = process.env.SUPABASE_SECRET_KEY;

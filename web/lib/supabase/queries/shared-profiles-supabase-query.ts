@@ -1,8 +1,8 @@
 import type { Sql, TransactionSql } from "postgres";
 import { profileAccess } from "@/lib/domain/profiles/profile-access";
-import { classifyFightResult, profileRecord, rivalryRecord } from "@/lib/domain/profiles/profile-results";
-import { profileStepStatistics } from "@/lib/domain/profiles/profile-step-statistics";
-import { profileStatisticsContextSchema } from "@/lib/types/profiles/profile-step-statistics";
+import { classifyFightResult, headToHeadRecord, headToHeadResult, profileRecord, rivalryRecord } from "@/lib/domain/profiles/profile-results";
+import { friendComparison, profileStepStatistics, tenKStreak } from "@/lib/domain/profiles/profile-step-statistics";
+import { profileStartDaysRowSchema, profileStatisticsContextSchema } from "@/lib/types/profiles/profile-step-statistics";
 import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { fightRecordFactSchema, type FightRecordFact, type ProfileHistoryPage } from "@/lib/types/profiles/profile-results";
@@ -12,6 +12,7 @@ import {
     type ProfilePageQuery, type ProfilePreviewAudience, type ProfileSettings,
     type SharedIdentity, type SharedProfile, type UpdateProfileSettings, type ProfileRivalrySummary,
 } from "@/lib/types/profiles/shared-profile";
+import { readCompanionLabel } from "./custom-characters-supabase-query";
 import { signMediaUrl, signMediaUrls } from "./media-supabase-query";
 
 /** Profile locks serialize new sharing reads with settings, friendships, blocks, and deletion. */
@@ -46,6 +47,7 @@ async function loadProfileAccessRows(sql: TransactionSql, viewerId: string, targ
                     join public.fights fight on fight.id = mine.fight_id
                     where mine.user_id = ${viewerId} and theirs.user_id = profile.id
                         and mine.state = 'accepted' and theirs.state = 'accepted'
+                        and fight.host_id is null
                         and fight.starts_at <= now()
                         and fight.state in ('live', 'awaiting_final_sync')
                         and now() < fight.ends_at + fight.final_sync_grace_seconds * interval '1 second'
@@ -95,7 +97,7 @@ export async function loadProfileFightFacts(
         from public.fights fight
         join private.fight_record_contexts context on context.fight_id = fight.id
         join private.fight_participation_records mine on mine.fight_id = fight.id
-        where mine.user_id = ${userId}
+        where mine.user_id = ${userId} and fight.host_id is null
             ${page?.fightIds ? sql`and fight.id = any(${sql.array(page.fightIds)}::uuid[])` : sql``}
             ${page?.cursor ? sql`and (fight.ends_at, fight.id) <= (
                 select cursor_fight.ends_at, cursor_fight.id from private.fight_participation_records cursor_member
@@ -104,6 +106,32 @@ export async function loadProfileFightFacts(
             )` : sql``}
         order by fight.ends_at desc, fight.id desc
         ${page ? sql`limit ${page.rows}` : sql``}
+    `);
+}
+
+/** Each day's newest Apple Health Steps value, from `from` onward or over the whole history. */
+async function loadStepDays(sql: TransactionSql, userId: string, from: string | null) {
+    return activityDaySchema.array().parse(await sql`
+        with days as (
+            select metric.day, metric.value, metric.time_zone, metric.updated_at,
+                metric.observed_through >= metric.ends_at as finalized, 1 as priority
+            from private.activity_metrics as metric
+            join public.data_sources as source on source.id = metric.source_id
+            where metric.user_id = ${userId} and metric.scope = 'day' and metric.metric = 'steps'
+                and source.provider = 'apple_health'
+            union all
+            select legacy.day, legacy.value, legacy.time_zone, legacy.updated_at,
+                legacy.finalized_at is not null as finalized, 0 as priority
+            from public.metric_days as legacy
+            join public.data_sources as source on source.id = legacy.source_id
+            where legacy.user_id = ${userId} and legacy.metric = 'steps'
+                and source.provider = 'apple_health'
+        )
+        select distinct on (days.day) days.day::text, days.value::float8 steps,
+            days.time_zone, days.updated_at::text, days.finalized
+        from days
+        ${from === null ? sql`` : sql`where days.day >= ${from}::date`}
+        order by days.day, days.updated_at desc, days.priority desc
     `);
 }
 
@@ -136,13 +164,28 @@ export async function readSharedProfile(
         } : row.relationship;
         const access = profileAccess(row.settings, relationship);
         const facts = access.record ? await loadProfileFightFacts(sql, targetId) : [];
+        const sharedIds = relationship.owner || preview ? [] : (await loadSharedFightIds(sql, viewerId, [targetId])).map((fight) => fight.id);
         const rivalry = access.record && !relationship.owner && !preview
-            ? rivalryRecord(facts, viewerId, targetId, new Set((await loadSharedFightIds(sql, viewerId, [targetId])).map((fight) => fight.id)))
+            ? rivalryRecord(facts, viewerId, targetId, new Set(sharedIds))
             : null;
+        const together = sharedIds.length > 0
+            ? await loadProfileFightFacts(sql, targetId, { fightIds: sharedIds, cursor: undefined, rows: sharedIds.length })
+            : [];
         const [contextRow] = await sql`
             select (now() at time zone ${row.time_zone})::date::text today, ${row.time_zone}::text time_zone
         `;
         const context = profileStatisticsContextSchema.parse(contextRow);
+        const [startRow] = await sql`
+            select (profile.created_at at time zone ${row.time_zone})::date::text member_since,
+                (friendship.accepted_at at time zone ${row.time_zone})::date::text friends_since
+            from public.profiles profile
+            left join private.profile_friendships friendship
+                on friendship.user_low = least(${viewerId}::uuid, profile.id)
+                and friendship.user_high = greatest(${viewerId}::uuid, profile.id)
+                and friendship.state = 'accepted'
+            where profile.id = ${targetId}
+        `;
+        const start = profileStartDaysRowSchema.parse(startRow);
         const values = access.activity ? activityDaySchema.array().parse(await sql`
             with days as (
                 select metric.day, metric.value, metric.time_zone, metric.updated_at,
@@ -167,30 +210,20 @@ export async function readSharedProfile(
             order by days.day, days.updated_at desc, days.priority desc
         `) : [];
         let statistics: SharedProfile["step_statistics"] = null;
+        let streak: SharedProfile["ten_k_streak"] = null;
+        let comparison: SharedProfile["friend_comparison"] = null;
         if (access.activity) {
-            const history = relationship.owner ? activityDaySchema.array().parse(await sql`
-                with days as (
-                    select metric.day, metric.value, metric.time_zone, metric.updated_at,
-                        metric.observed_through >= metric.ends_at as finalized, 1 as priority
-                    from private.activity_metrics as metric
-                    join public.data_sources as source on source.id = metric.source_id
-                    where metric.user_id = ${targetId} and metric.scope = 'day' and metric.metric = 'steps'
-                        and source.provider = 'apple_health'
-                    union all
-                    select legacy.day, legacy.value, legacy.time_zone, legacy.updated_at,
-                        legacy.finalized_at is not null as finalized, 0 as priority
-                    from public.metric_days as legacy
-                    join public.data_sources as source on source.id = legacy.source_id
-                    where legacy.user_id = ${targetId} and legacy.metric = 'steps'
-                        and source.provider = 'apple_health'
-                )
-                select distinct on (days.day) days.day::text, days.value::float8 steps,
-                    days.time_zone, days.updated_at::text, days.finalized
-                from days
-                order by days.day, days.updated_at desc, days.priority desc
-            `) : values;
-            statistics = profileStepStatistics(history, context, relationship.owner ? null : row.settings.activity_days);
+            // Friends see a streak and totals since the friendship from the whole history, never its days.
+            const history = relationship.owner || relationship.friend ? await loadStepDays(sql, targetId, null) : values;
+            statistics = profileStepStatistics(relationship.owner ? history : values, context, relationship.owner ? null : row.settings.activity_days);
+            if (relationship.owner || relationship.friend) streak = tenKStreak(history, context.today, relationship.owner);
+            if (start.friends_since !== null) {
+                comparison = friendComparison(await loadStepDays(sql, viewerId, start.friends_since), history, start.friends_since, context.today);
+            }
         }
+        const label = (relationship.owner || access.shared) && row.companion_image_url
+            ? await readCompanionLabel(targetId, row.companion_image_url, sql)
+            : {};
         return sharedProfileSchema.parse({
             identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) },
             access: relationship.owner ? "owner" : access.shared ? "shared" : "private",
@@ -204,6 +237,11 @@ export async function readSharedProfile(
             view_measurement_enabled: !preview && access.shared && profileFeatureConfigSchema.parse({
                 measurement: process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED,
             }).measurement,
+            ...label,
+            member_since: start.member_since,
+            head_to_head: relationship.owner || preview ? null : headToHeadRecord(together, viewerId, targetId),
+            ten_k_streak: streak,
+            friend_comparison: comparison,
         });
     });
 }
@@ -238,6 +276,10 @@ export async function readProfileHistory(
                     result: result.result, placement: result.placement, field_size: result.fieldSize,
                     counted: result.counted,
                     complete: fight.members.find((member) => member.user_id === targetId)!.complete,
+                    ...(sharedIds ? {
+                        viewer_placement: classifyFightResult(fight, viewerId).placement,
+                        head_to_head: headToHeadResult(fight, viewerId, targetId),
+                    } : {}),
                 };
             }),
             next_cursor: facts.length > query.limit ? page[page.length - 1].history_id : null,

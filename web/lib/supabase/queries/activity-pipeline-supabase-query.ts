@@ -13,11 +13,13 @@ import {
     activityMeasurementSchema,
     activityRawIdSchema,
     claimedActivityRawSchema,
+    fightScoreTotalSchema,
     fightTotalPayloadSchema,
     selectedActivityRawSchema,
     type ActivityMeasurement,
     type ActivityRawRecord,
     type ClaimedActivityRaw,
+    type FightScoreTotal,
     type JsonValue,
     type SelectedActivityRaw,
 } from "@/lib/types/activity/activity-pipeline";
@@ -34,6 +36,7 @@ import {
     healthKitAggregateMemberSchema,
 } from "@/lib/types/healthkit/healthkit-aggregate-database";
 import { skipGraceNotificationsForMember } from "./notification-intents-supabase-query";
+import { SETTLED_FINAL_SYNC_DAYS } from "./provider-uploads-supabase-query";
 
 const MAX_PROCESSING_ATTEMPTS = 5;
 
@@ -269,6 +272,8 @@ export async function processActivity(
                             or candidate.lease_expires_at < now())
                         and (candidate.processing_state <> 'failed'
                             or candidate.processing_attempts < ${MAX_PROCESSING_ATTEMPTS})
+                        -- WHOOP rows are stored raw and wait for their own cleaner; this resolver reads Apple Health.
+                        and not starts_with(candidate.record_type, 'whoop_')
                         and (${userId}::uuid is null or candidate.user_id = ${userId}::uuid)
                         and (${rawIds}::uuid[] is null or candidate.id = any(${rawIds}::uuid[]))
                     order by candidate.received_at, candidate.id
@@ -334,6 +339,7 @@ export async function processActivity(
         from private.activity_raw
         where user_id = ${userId}
             and (${rawIds}::uuid[] is null or id = any(${rawIds}::uuid[]))
+            and not starts_with(record_type, 'whoop_')
             and processing_state <> 'processed'
             and (processing_state <> 'failed'
                 or processing_attempts < ${MAX_PROCESSING_ATTEMPTS})
@@ -466,7 +472,26 @@ async function resolveActivity(
         raw.record_key.startsWith("fight:"),
     );
     if (fightReadings.length > 0) {
-        await publishFightScores(sql, userId, sourceId, fightReadings);
+        await publishFightScores(sql, userId, sourceId, fightReadings.map((raw) => ({
+            ...fightTotalPayloadSchema.parse(raw.payload),
+            // A later re-read that returns to an earlier total becomes the newest revision again.
+            input_hash: createHash("sha256")
+                .update(`${raw.payload_hash}:${raw.collected_at}`)
+                .digest("hex"),
+        })));
+    }
+    if (measurements.some((measurement) => measurement.scope === "day" && measurement.metric === "steps")) {
+        // A friend round can start before its member ever synced; their first day Steps give it a source.
+        await sql`
+            update public.fight_members as member
+            set selected_source_id = ${sourceId}, source_label = 'Apple Health'
+            from public.fights as fight
+            where fight.id = member.fight_id and fight.friends
+                and fight.state in ('live', 'awaiting_final_sync')
+                and member.user_id = ${userId} and member.state = 'accepted'
+                and member.selected_source_id is null
+        `;
+        await publishCivilDayScores(sql, userId, sourceId);
     }
     await mirrorLegacyStepDays(sql, userId, sourceId, selected);
 
@@ -533,19 +558,77 @@ async function saveMeasurements(
 }
 
 /**
- * Publish the selected exact-window reading as the member's newest score revision, then rescore.
+ * A founder fight's host and both members of a friend round never upload a window total. Their
+ * score is the sum of their stored daily Steps for the round's dates, published through the same
+ * path as a phone upload. Dates, not instants, so each person's own local days count and a day
+ * still counts while the phone is in another zone; the round is complete once its last date is.
+ */
+export async function publishCivilDayScores(
+    sql: TransactionSql,
+    userId: string,
+    sourceId: string,
+    fightId: string | null = null,
+): Promise<void> {
+    const totals = fightScoreTotalSchema.array().parse(await sql`
+        with days as (
+            select fight.id as fight_id, day.day, day.value, day.observed_through, day.updated_at,
+                least(day.ends_at, day.observed_through, fight.ends_at) as cutoff_at,
+                day.day = (fight.ends_at at time zone fight.time_zone)::date - 1
+                    and day.observed_through >= day.ends_at as completes_round,
+                sum(day.value) over (partition by fight.id order by day.day)::bigint as steps
+            from public.fights as fight
+            join public.fight_members as member
+                on member.fight_id = fight.id and member.user_id = ${userId}
+            join private.activity_metrics as day
+                on day.source_id = member.selected_source_id and day.scope = 'day'
+                and day.metric = 'steps'
+                and day.day >= (fight.starts_at at time zone fight.time_zone)::date
+                and day.day < (fight.ends_at at time zone fight.time_zone)::date
+            where (fight.host_id = ${userId} or fight.friends)
+                and fight.state in ('live', 'awaiting_final_sync')
+                and member.state = 'accepted'
+                and member.finalized_at is null
+                and member.selected_source_id = ${sourceId}
+                and (${fightId}::uuid is null or fight.id = ${fightId}::uuid)
+                and not (fight.state = 'awaiting_final_sync' and member.final_steps_complete
+                    and fight.ends_at < now() - make_interval(days => ${SETTLED_FINAL_SYNC_DAYS}))
+        )
+        select fight.id as fight_id, fight.starts_at::text as starts_at, fight.ends_at::text as ends_at,
+            -- Only a fully observed last date completes the round. A phone west of the round's zone
+            -- passes ends_at before its own last day ends, so an incomplete cutoff stays below it.
+            -- A date without Steps stores no day, so a stored later date also proves the last one ended.
+            (case when bool_or(days.completes_round) or exists (
+                    select 1 from private.activity_metrics as later
+                    where later.source_id = ${sourceId} and later.scope = 'day' and later.metric = 'steps'
+                        and later.day >= (fight.ends_at at time zone fight.time_zone)::date
+                ) then fight.ends_at
+                else least(fight.ends_at - interval '1 millisecond', max(days.observed_through)) end)::text as cutoff_at,
+            max(days.steps)::integer as steps,
+            jsonb_agg(jsonb_build_object(
+                'day', days.day::text, 'cutoff_at', days.cutoff_at, 'steps', days.steps
+            ) order by days.day) as step_checkpoints,
+            encode(sha256(convert_to(string_agg(
+                concat_ws(':', days.day, days.value, days.observed_through, days.updated_at),
+                ',' order by days.day), 'UTF8')), 'hex') as input_hash
+        from days
+        join public.fights as fight on fight.id = days.fight_id
+        group by fight.id
+    `);
+    if (totals.length > 0) {
+        await publishFightScores(sql, userId, sourceId, totals);
+    }
+}
+
+/**
+ * Publish exact-window totals as the member's newest score revisions, then rescore.
  * Final or changed Fights are skipped: their frozen result follows the finalization policy.
  */
 async function publishFightScores(
     sql: TransactionSql,
     userId: string,
     sourceId: string,
-    readings: SelectedActivityRaw[],
+    totals: FightScoreTotal[],
 ): Promise<void> {
-    const totals = readings.map((raw) => ({
-        raw,
-        total: fightTotalPayloadSchema.parse(raw.payload),
-    }));
     const fights = healthKitAggregateFightSchema.array().parse(
         await sql`
             select fight.id as fight_id, fight.starts_at::text as starts_at,
@@ -559,12 +642,12 @@ async function publishFightScores(
                 and member.state = 'accepted'
                 and member.finalized_at is null
                 and fight.state in ('live', 'awaiting_final_sync')
-                and fight.id = any(${sql.array(totals.map(({ total }) => total.fight_id))}::uuid[])
+                and fight.id = any(${sql.array(totals.map((total) => total.fight_id))}::uuid[])
             order by fight.id
             for update of fight, member
         `,
     );
-    const snapshots = totals.flatMap(({ raw, total }) => {
+    const snapshots = totals.flatMap((total) => {
         const fight = fights.find((row) => row.fight_id === total.fight_id);
         if (
             !fight ||
@@ -579,10 +662,7 @@ async function publishFightScores(
                 cutoff_at: total.cutoff_at,
                 value: total.steps,
                 step_checkpoints: total.step_checkpoints,
-                // A later re-read that returns to an earlier total becomes the newest revision again.
-                input_hash: createHash("sha256")
-                    .update(`${raw.payload_hash}:${raw.collected_at}`)
-                    .digest("hex"),
+                input_hash: total.input_hash,
                 final_steps_complete:
                     Date.parse(total.cutoff_at) >= Date.parse(fight.ends_at),
             },

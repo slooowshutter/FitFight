@@ -564,6 +564,15 @@ struct CompanionAvatar: View {
             .contentShape(Rectangle())
             .opacity(pending ? 0.55 : 1)
             .accessibilityHidden(true)
+        } else if let photoURL, (isYou && companions.hasChosen) ? companions.isCustom : companionID == CompanionStore.customId {
+            // A custom character is transparent art like the stock animals, so it stands free in the same square, never in a photo circle.
+            RemotePhoto(url: photoURL, kind: .avatar, contentMode: .fit) { Color.clear }
+                .frame(width: halfBody ? size / 0.55 : size, height: halfBody ? size / 0.55 : size)
+                .frame(width: size, height: size, alignment: .top)
+                .clipped()
+                .contentShape(Rectangle())
+                .opacity(pending ? 0.55 : 1)
+                .accessibilityHidden(true)
         } else {
             FFAvatar(monogram: monogram, size: size, photoURL: photoURL, dimmed: pending)
                 .overlay {
@@ -619,17 +628,20 @@ struct CompanionIntroduction: View {
             if surface == .fights {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Fights")
-                            .ffType(.title)
-                            .foregroundStyle(theme.text)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("A little further.")
+                        HStack(spacing: 10) {
+                            Text("Fights")
+                                .ffType(.title)
                                 .foregroundStyle(theme.text)
-                            Text("Together.")
-                                .foregroundStyle(theme.mossText)
+                            TenKStreakBadge()
                         }
-                        .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
-                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: 44)
+                        let live = model.fights.filter { $0.status == .live && !$0.isUpcoming }
+                        if !live.isEmpty {
+                            let leading = live.filter { $0.rank == 1 }.count
+                            Text(String(appLocalized: "fights.hosted-leading", defaultValue: "Leading \(leading) of \(live.count)"))
+                                .font(.custom("Nunito-ExtraBold", size: 16, relativeTo: .body))
+                                .foregroundStyle(leading > 0 ? theme.mossText : theme.emberText)
+                        }
                         dailySteps
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -729,18 +741,15 @@ struct CompanionIntroduction: View {
     private var copy: some View {
         VStack(alignment: .leading, spacing: 7) {
             if surface == .newFight {
-                Text("Good company.")
+                Text("Steps. Highest total wins.")
                     .font(.custom("Nunito-ExtraBold", size: 24, relativeTo: .title2))
                     .foregroundStyle(theme.text)
-                Text("A good excuse to walk.")
-                    .font(.custom("Nunito-ExtraBold", size: 24, relativeTo: .title2))
-                    .foregroundStyle(theme.mossText)
             } else {
                 if companions.isCustom {
-                    Text("Custom")
+                    Text(session.profile?.companionName ?? String(appLocalized: "Custom"))
                         .font(.custom("Nunito-ExtraBold", size: 22, relativeTo: .title2))
                         .foregroundStyle(theme.text)
-                    Text("Your own animal.")
+                    Text(session.profile?.companionLine ?? String(appLocalized: "Your own animal."))
                         .font(.custom("Nunito-Bold", size: 12, relativeTo: .caption))
                         .foregroundStyle(theme.textSecondary)
                 } else {
@@ -965,7 +974,15 @@ struct CompanionFightSummary: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if CompanionPreview.isEnabled && racing.count == 4 {
+            if let groupImageURL = fight.groupImageURL {
+                // Transparent art straight on the screen, no box, 12 pt from the edges like the approved proposal.
+                RemotePhoto(url: groupImageURL, kind: .photo, contentMode: .fit) { Color.clear }
+                    .aspectRatio(3 / 2, contentMode: .fit)
+                    .padding(.horizontal, 12 - theme.space.screenPadding)
+                    .accessibilityElement()
+                    .accessibilityLabel(String(appLocalized: "Everyone in this fight running together"))
+                    .accessibilityAddTraits(.isImage)
+            } else if CompanionPreview.isEnabled && racing.count == 4 {
                 CompanionScene()
                     .frame(height: 220)
                     .frame(maxWidth: .infinity)
@@ -987,7 +1004,7 @@ struct CompanionFightSummary: View {
                 .frame(height: 144)
                 .frame(maxWidth: .infinity)
             } else {
-                // There is no saved group identity/art contract yet. Keep the real roster visible.
+                // Until the fight's group image is ready, keep the real roster visible.
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) {
                         ForEach(racing.prefix(6)) { row in
@@ -1191,6 +1208,8 @@ struct CompanionPicker: View {
     @State private var loadingEditions = false
     @State private var editionsError = ""
     @State private var showingGeneration = false
+    /// The character the creation screen opens on; nil with "Create your own" starts a new one.
+    @State private var generationCharacterID: UUID?
     @State private var showingGrid = false
 
     private let startWithCustom: Bool
@@ -1388,11 +1407,13 @@ struct CompanionPicker: View {
                             if character.status == .complete, let entry {
                                 Task { await equip(entry) }
                             } else {
+                                generationCharacterID = character.id
                                 showingGeneration = true
                             }
                         } label: {
                             collectionTile(
-                                name: character.description ?? entry?.description ?? String(appLocalized: "Your character"),
+                                name: character.name ?? character.suggestions?.first?.name
+                                    ?? character.description ?? entry?.description ?? String(appLocalized: "Your character"),
                                 caption: character.phase == .complete ? (equipped ? String(appLocalized: "Equipped") : nil)
                                     : character.phase == .choosing ? String(appLocalized: "Pick one")
                                     : [.portraits, .poses].contains(character.phase) ? String(appLocalized: "Being drawn")
@@ -1415,10 +1436,19 @@ struct CompanionPicker: View {
                         .buttonStyle(FFHapticPlainStyle())
                         .disabled(isSaving)
                         .accessibilityAddTraits(equipped ? .isSelected : [])
+                        .contextMenu {
+                            if character.status == .complete && character.suggestions != nil {
+                                Button(String(appLocalized: "Name your companion"), systemImage: "pencil") {
+                                    generationCharacterID = character.id
+                                    showingGeneration = true
+                                }
+                            }
+                        }
                     }
                     // Paid characters stay hidden while sales are off, except for an account that already bought one.
                     if CompanionPreview.isEnabled || characterPurchases.snapshot.map({ $0.purchasesEnabled || !$0.characters.isEmpty }) == true {
                         Button {
+                            generationCharacterID = nil
                             showingGeneration = true
                         } label: {
                             collectionTile(
@@ -1490,7 +1520,8 @@ struct CompanionPicker: View {
         }
         .interactiveDismissDisabled(session.needsCompanionSelection || isSaving || purchases.isBusy)
         .sheet(isPresented: $showingGeneration) {
-            PaidCharacterView(initialDescription: customPrompt)
+            PaidCharacterView(initialDescription: customPrompt, characterID: generationCharacterID,
+                              startNew: generationCharacterID == nil)
         }
         .onAppear {
             if customPrompt.isEmpty { customPrompt = companions.customPrompt }

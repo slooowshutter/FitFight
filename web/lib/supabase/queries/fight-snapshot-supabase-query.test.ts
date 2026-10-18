@@ -40,12 +40,17 @@ test("the shared native snapshot fixture preserves the API contract and strips i
     assert.equal(fixture.members[0].current_value, 8500);
     assert.equal(fixture.profiles[0].companion_id, "fox");
     assert.equal(fixture.profiles[1].companion_id, null);
+    assert.deepEqual(fixture.hosted, { name: "Fight Marc", rounds: 20, leading: 12 });
 });
 
 test("snapshot validates the requested timezone and returns five empty arrays", () => {
     assert.deepEqual(
         fightSnapshotRequestSchema.parse({ time_zone: "Europe/Paris" }),
         { time_zone: "Europe/Paris" },
+    );
+    assert.deepEqual(
+        fightSnapshotRequestSchema.parse({ time_zone: "UTC", hosted: true }),
+        { time_zone: "UTC", hosted: true },
     );
     assert.equal(
         fightSnapshotRequestSchema.safeParse({ time_zone: "Mars/Olympus" })
@@ -66,9 +71,104 @@ test("snapshot validates the requested timezone and returns five empty arrays", 
             profiles: [],
             series: [],
             step_days: [],
+            hosted: null,
         }),
-        { fights: [], members: [], profiles: [], series: [], step_days: [] },
+        { fights: [], members: [], profiles: [], series: [], step_days: [], hosted: null },
     );
+});
+
+test("the friends flag is optional and strict, so older requests keep their meaning", () => {
+    assert.deepEqual(
+        fightSnapshotRequestSchema.parse({ time_zone: "UTC", friends: true }),
+        { time_zone: "UTC", friends: true },
+    );
+    assert.equal(
+        fightSnapshotRequestSchema.safeParse({ time_zone: "UTC", friends: "yes" }).success,
+        false,
+    );
+    assert.equal(
+        fightSnapshotRequestSchema.safeParse({ time_zone: "UTC", friends: true, rounds: 3 }).success,
+        false,
+    );
+    const legacy = fightSnapshotRequestSchema.parse({ time_zone: "UTC", hosted: true });
+    assert.equal("friends" in legacy, false, "an older request never asks for friend rounds");
+});
+
+test("the friend rounds fixture carries the Friends summary and marks every round", () => {
+    const raw = JSON.parse(
+        readFileSync(
+            new URL(
+                "../../../../contracts/fixtures/fight-snapshot-friends.json",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+    );
+    const fixture = fightSnapshotSchema.parse(raw);
+    assert.deepEqual(fixture, raw);
+    assert.deepEqual(fixture.friends, { rounds: 1, leading: 1, requests: 2 });
+    assert.ok(fixture.fights.every((fight) => fight.friends === true));
+    assert.equal(fixture.fights[0].name, "Friends");
+    assert.equal(fixture.hosted, null);
+    assert.ok(fixture.members.every((member) => member.state === "accepted"));
+});
+
+test("an ended round comes with the live one, and only the live one is counted", () => {
+    const raw = JSON.parse(
+        readFileSync(
+            new URL(
+                "../../../../contracts/fixtures/fight-snapshot-friends-month-turn.json",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+    );
+    const fixture = fightSnapshotSchema.parse(raw);
+    assert.deepEqual(fixture, raw);
+    const now = Date.parse("2026-11-01T06:00:00Z");
+    const [last, current] = fixture.fights;
+    assert.equal(last.series_id, current.series_id);
+    assert.ok(Date.parse(last.ends_at) <= now && last.state === "awaiting_final_sync");
+    assert.ok(Date.parse(current.ends_at) > now && current.state === "live");
+    assert.deepEqual(fixture.friends, { rounds: 1, leading: 1, requests: 0 });
+});
+
+test("every ended round of a weekly pair comes for History, with the series' round length", () => {
+    const raw = JSON.parse(
+        readFileSync(
+            new URL(
+                "../../../../contracts/fixtures/fight-snapshot-friends-history.json",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+    );
+    const fixture = fightSnapshotSchema.parse(raw);
+    assert.deepEqual(fixture, raw);
+    assert.deepEqual(fixture.series.map((series) => series.friend_round_length), ["week"]);
+    assert.ok(fixture.fights.every((fight) => fight.series_id === fixture.series[0].id));
+    assert.deepEqual(fixture.fights.map((fight) => fight.state), ["final", "final", "live"]);
+    assert.deepEqual(fixture.friends, { rounds: 1, leading: 1, requests: 0 }, "only the live round is counted");
+    for (const name of ["fight-snapshot", "fight-snapshot-friends"]) {
+        const older = fightSnapshotSchema.parse(JSON.parse(
+            readFileSync(new URL(`../../../../contracts/fixtures/${name}.json`, import.meta.url), "utf8"),
+        ));
+        assert.ok(older.series.every((series) => !("friend_round_length" in series)), "older responses still parse");
+    }
+});
+
+test("older snapshot responses without friend fields still parse unchanged", () => {
+    for (const name of ["fight-snapshot", "fight-snapshot-checkpoints"]) {
+        const raw = JSON.parse(
+            readFileSync(
+                new URL(`../../../../contracts/fixtures/${name}.json`, import.meta.url),
+                "utf8",
+            ),
+        );
+        const fixture = fightSnapshotSchema.parse(raw);
+        assert.equal("friends" in fixture, false);
+        assert.ok(fixture.fights.every((fight) => !("friends" in fight)));
+    }
 });
 
 test("checkpoint snapshots preserve legacy scores and publish matching cumulative history", () => {
@@ -99,13 +199,22 @@ test("snapshot establishes transaction-local caller permissions before its singl
         profiles: [],
         series: [],
         step_days: [],
+        hosted: null,
+        friends: { rounds: 0, leading: 0, requests: 2 },
     };
+    const friendId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
     const calls: Array<{ query: string; values: unknown[] }> = [];
-    const sql = async (strings: TemplateStringsArray, ...values: unknown[]) => {
-        const query = strings.join("?");
-        calls.push({ query, values });
-        return query.includes("as snapshot") ? [{ snapshot }] : [];
-    };
+    const sql = Object.assign(
+        async (strings: TemplateStringsArray, ...values: unknown[]) => {
+            const query = strings.join("?");
+            calls.push({ query, values });
+            if (query.includes("private.profile_friendships")) {
+                return [{ requests: 2, friend_ids: [friendId] }];
+            }
+            return query.includes("as snapshot") ? [{ snapshot }] : [];
+        },
+        { array: (values: unknown[]) => values },
+    );
     const database = {
         begin: async (
             options: string,
@@ -119,21 +228,80 @@ test("snapshot establishes transaction-local caller permissions before its singl
         await readFightSnapshot(userId, "Europe/Paris", database as never),
         snapshot,
     );
-    assert.equal(calls.length, 3);
-    assert.equal(calls[0].query, "set local role fitfight_backend_reader");
+    // Private friendships are read (calls[0]) before the role drops; the visibility
+    // condition is a nested fragment (calls[3]) inside the one data query.
+    assert.equal(calls.length, 5);
+    assert.match(calls[0].query, /friendship.state = 'pending'/);
+    assert.match(calls[0].query, /array_agg\(profile.id\) filter \(where friendship.state = 'accepted'\)/);
+    assert.match(calls[3].query, /not fight.friends and fight.host_id is distinct from/);
+    assert.equal(calls[1].query, "set local role fitfight_backend_reader");
     assert.ok(
-        calls[1].query.includes("set_config('request.jwt.claim.sub', ?, true)"),
+        calls[2].query.includes("set_config('request.jwt.claim.sub', ?, true)"),
     );
-    assert.deepEqual(calls[1].values, [
+    assert.deepEqual(calls[2].values, [
         userId,
         JSON.stringify({ sub: userId, role: "authenticated" }),
     ]);
-    assert.ok(calls[2].values.includes("Europe/Paris"));
-    assert.match(calls[2].query, /as grace_ends_at/);
-    assert.match(calls[2].query, /avatar_media_id/);
-    assert.match(calls[2].query, /companion_id/);
-    assert.match(calls[2].query, /select snapshot.value, snapshot.step_checkpoints/);
-    assert.doesNotMatch(calls[2].query, /as final_sync_grace_seconds/);
+    assert.ok(calls[4].values.includes("Europe/Paris"));
+    assert.ok(calls[4].values.includes(2), "the request count reaches the Friends summary");
+    assert.ok(
+        calls[4].values.some((value) => Array.isArray(value) && value.includes(friendId)),
+        "the summary counts only rounds with a current friend",
+    );
+    assert.match(calls[4].query, /fight.state = 'live' and fight.ends_at > now\(\)\s*\)\s*\) as snapshot/);
+    assert.match(calls[4].query, /as grace_ends_at/);
+    assert.match(calls[4].query, /avatar_media_id/);
+    assert.match(calls[4].query, /companion_id/);
+    assert.match(calls[4].query, /select snapshot.value, snapshot.step_checkpoints/);
+    assert.doesNotMatch(calls[4].query, /as final_sync_grace_seconds/);
+});
+
+test("the friends and hosted flags each select only their own rounds", async () => {
+    const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const snapshot = {
+        fights: [],
+        members: [],
+        profiles: [],
+        series: [],
+        step_days: [],
+        hosted: null,
+        friends: { rounds: 0, leading: 0, requests: 0 },
+    };
+    const filters: string[] = [];
+    const database = {
+        begin: async (
+            _options: string,
+            callback: (
+                transaction: (
+                    strings: TemplateStringsArray,
+                    ...values: unknown[]
+                ) => Promise<unknown>,
+            ) => Promise<unknown>,
+        ) =>
+            callback(
+                Object.assign(
+                    async (strings: TemplateStringsArray) => {
+                        const query = strings.join("?");
+                        if (query.includes("private.profile_friendships")) {
+                            return [{ requests: 0, friend_ids: [] }];
+                        }
+                        if (query.includes("as snapshot")) return [{ snapshot }];
+                        if (query.includes("fight.")) filters.push(query);
+                        return [];
+                    },
+                    { array: (values: unknown[]) => values },
+                ),
+            ),
+    };
+    await readFightSnapshot(userId, "UTC", database as never, false, true);
+    await readFightSnapshot(userId, "UTC", database as never, true);
+    assert.equal(filters.length, 2);
+    assert.match(filters[0], /^fight\.friends and fight\.state in \('live', 'awaiting_final_sync', 'final'\)\s+and fight\.id in \(\s*select fight_id from public\.fight_members where user_id = \? and state = 'accepted'/);
+    assert.match(filters[0], /friend\.user_id = any\(\?::uuid\[\]\)/);
+    assert.doesNotMatch(filters[0], /now\(\)/, "ended rounds stay for the fight's History");
+    assert.doesNotMatch(filters[0], /host_id/);
+    assert.match(filters[1], /^fight\.host_id = \?/);
+    assert.doesNotMatch(filters[1], /friends/);
 });
 
 test("snapshot profiles without a photo come back with a null avatar", async () => {
@@ -146,6 +314,8 @@ test("snapshot profiles without a photo come back with a null avatar", async () 
         ],
         series: [],
         step_days: [],
+        hosted: null,
+        friends: { rounds: 0, leading: 0, requests: 0 },
     };
     const database = {
         begin: async (
@@ -157,14 +327,16 @@ test("snapshot profiles without a photo come back with a null avatar", async () 
                 ) => Promise<unknown>,
             ) => Promise<unknown>,
         ) => {
-            const sql = async (
-                strings: TemplateStringsArray,
-                ..._values: unknown[]
-            ) => {
-                return strings.join("?").includes("as snapshot")
-                    ? [{ snapshot }]
-                    : [];
-            };
+            const sql = Object.assign(
+                async (strings: TemplateStringsArray, ..._values: unknown[]) => {
+                    const query = strings.join("?");
+                    if (query.includes("private.profile_friendships")) {
+                        return [{ requests: 0, friend_ids: [] }];
+                    }
+                    return query.includes("as snapshot") ? [{ snapshot }] : [];
+                },
+                { array: (values: unknown[]) => values },
+            );
             return callback(sql);
         },
     };
@@ -193,8 +365,10 @@ test("ordinary maintenance uses one database query and never scans unrelated ser
         strings: TemplateStringsArray,
         ...values: unknown[]
     ) => {
-        statements++;
         const query = strings.join("?");
+        // A nested fragment runs inside the statement that embeds it.
+        if (query.trimStart().startsWith("case")) return [];
+        statements++;
         if (query.includes("coalesce((")) {
             assert.ok(values.includes(userId));
             return [
@@ -261,6 +435,7 @@ test("refresh answers after the caller's maintenance and delivers notifications 
         profiles: [],
         series: [],
         step_days: [],
+        hosted: null,
     };
     const database = {};
     const steps: string[] = [];
@@ -315,6 +490,15 @@ test("refresh answers after the caller's maintenance and delivers notifications 
                     },
                 };
             }
+            if (specifier.endsWith("/friend-fights-supabase-query")) {
+                return {
+                    ensureFriendFights: async (sql: unknown, user: string) => {
+                        assert.equal(sql, database);
+                        assert.equal(user, userId);
+                        steps.push("friends");
+                    },
+                };
+            }
             if (specifier.endsWith("/fight-snapshot-supabase-query")) {
                 return {
                     readFightSnapshot: async () => {
@@ -340,12 +524,12 @@ test("refresh answers after the caller's maintenance and delivers notifications 
     assert.deepEqual(await response.json(), snapshot);
     assert.deepEqual(
         steps,
-        ["invite", "close", "snapshot"],
-        "The response must not wait for every account's notifications",
+        ["invite", "close", "friends", "snapshot"],
+        "Refresh backfills friend rounds before reading, and must not wait for every account's notifications",
     );
     assert.equal(deferred.length, 1);
     await assert.rejects(deferred[0](), /APNs transport unavailable/);
-    assert.deepEqual(steps, ["invite", "close", "snapshot", "notifications"]);
+    assert.deepEqual(steps, ["invite", "close", "friends", "snapshot", "notifications"]);
 });
 
 test("live snapshot endpoint authenticates before reading and never caches responses", async () => {

@@ -101,6 +101,17 @@ test("snapshot preserves invited, declined, owner-only and day-specific RLS acce
         new Set([f.shared, f.ownerOnly]),
     );
     assert.ok(owner.members.every((member) => member.fight_id === f.shared));
+    const ownerOnly = owner.fights.find((fight) => fight.id === f.ownerOnly);
+    assert.equal(
+        ownerOnly && Date.parse(ownerOnly.grace_ends_at ?? "") - Date.parse(ownerOnly.ends_at),
+        86_400_000,
+        "a fight that closes after the grace shows its deadline",
+    );
+    await database`update public.fights set closes_after_grace = false where id = ${f.shared}`;
+    const waiting = (await readFightSnapshot(f.owner, "Europe/Paris", database)).fights.find(
+        (fight) => fight.id === f.shared,
+    );
+    assert.equal(waiting?.grace_ends_at, null, "a fight that waits for everyone has no deadline");
     assert.deepEqual(
         owner.step_days
             .filter((day) => day.user_id === f.peer)
@@ -169,6 +180,8 @@ test("snapshot preserves invited, declined, owner-only and day-specific RLS acce
         profiles: [],
         series: [],
         step_days: [],
+        hosted: null,
+        friends: { rounds: 0, leading: 0, requests: 0 },
     });
 
     // max: 1 forces this assertion to inspect the same pooled connection used above.

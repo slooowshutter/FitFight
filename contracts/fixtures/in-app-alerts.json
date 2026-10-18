@@ -1,0 +1,24 @@
+{
+    "alerts": [
+        {
+            "id": "make-your-character",
+            "title": "Make your own character",
+            "body": "Describe anyone: a friend, your dog, yourself. Pick one of three portraits and make it your companion.",
+            "image_url": "https://fitfight.app/landing/companion-alpaca-1.webp",
+            "buttons": [
+                { "title": "Make mine", "action": "open_character", "url": null, "primary": true },
+                { "title": "Not now", "action": "dismiss", "url": null, "primary": false }
+            ]
+        },
+        {
+            "id": "update-example",
+            "title": "New in FitFight",
+            "body": "Update to try it.",
+            "image_url": null,
+            "buttons": [
+                { "title": "Update", "action": "update", "url": "https://apps.apple.com/app/id6804230516", "primary": true },
+                { "title": "Later", "action": "dismiss", "url": null, "primary": false }
+            ]
+        }
+    ]
+}

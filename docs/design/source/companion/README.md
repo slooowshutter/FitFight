@@ -49,8 +49,9 @@ All three cases need authenticated ownership checks, validated requests and prov
 
 Thirty Specials in five series of six replace the first forty, which were never
 sold: Night Hunters, Royals, Gym Bros, Cozy Club, and Odd Squad.
-`limited-editions.json` records each stable ID, series, and English/French name
-and caption; the earlier roster remains in git history. Like the regular animals,
+`limited-editions.json` records each stable ID, series, English/French name and
+caption, and the `rosterName` and `description` the group photo prompt uses
+(written from the shipped art, 15 Oct 2026); the earlier roster remains in git history. Like the regular animals,
 every Special has a portrait, a 300 by 300 head avatar, and five effort poses.
 `scripts/import-specials.py` turns the generated art (`portrait.png`,
 `effort-1.png` to `effort-5.png` per ID) into those imagesets on the 352 by 400

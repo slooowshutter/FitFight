@@ -21,19 +21,24 @@ import {
     type AdminDashboardWindow,
 } from "@/lib/types/admin/admin-dashboard";
 
-/** The last `span` days, rolling to now, against the `span` days before them; rows expose `at`. */
+/**
+ * The last `span` days, rolling to now, against the `span` days before them; rows expose `at`.
+ * A previous period that starts before the Paris day `from` stays empty.
+ */
 function eventCard(
     sql: Sql,
     w: AdminDashboardWindow,
     span: number,
     events: AdminDashboardQueryFragment,
     measure: AdminDashboardQueryFragment,
+    from: AdminDashboardQueryFragment = sql`'-infinity'::date`,
 ): AdminDashboardQueryFragment {
     const start = new Date(w.now.getTime() - span * 86_400_000);
     const previousStart = new Date(w.now.getTime() - 2 * span * 86_400_000);
     return sql`
         select ${measure} filter (where e.at >= ${start} and e.at < ${w.now}) as value,
-            ${measure} filter (where e.at >= ${previousStart} and e.at < ${start}) as previous
+            case when ${previousStart} >= ${from}::timestamp at time zone 'Europe/Paris'
+                then ${measure} filter (where e.at >= ${previousStart} and e.at < ${start}) end as previous
         from (${events}) as e
     `;
 }
@@ -61,21 +66,26 @@ function dayCard(
  * One point per bucket from the chart start through today (yesterday for `complete` rows, which
  * carry a civil `day`; other rows carry `at`). Counts fill empty buckets with 0; `gaps` leaves them
  * out, for averages and shares. `series` lists the values of the rows' `series` column in legend
- * order, so a series keeps its place and colour whatever the period.
+ * order, so a series keeps its place and colour whatever the period. Buckets that start before the
+ * Paris day `from` are left out.
  */
 function perBucket(
     sql: Sql,
     w: AdminDashboardWindow,
     rows: AdminDashboardQueryFragment,
     measure: AdminDashboardQueryFragment,
-    { complete = false, gaps = false, series }: { complete?: boolean; gaps?: boolean; series?: string[] } = {},
+    { complete = false, gaps = false, series, from = sql`'-infinity'::date` }: {
+        complete?: boolean; gaps?: boolean; series?: string[]; from?: AdminDashboardQueryFragment;
+    } = {},
 ): AdminDashboardQueryFragment {
     const lastDay = complete ? sql`(${w.today}::date - 1)` : sql`${w.today}::date`;
     const day = complete ? sql`e.day` : sql`(e.at at time zone 'Europe/Paris')::date`;
     return sql`
         with buckets as (
-            select generate_series(${w.start}::timestamp, date_trunc(${w.bucket}::text, ${lastDay}::timestamp),
-                ('1 ' || ${w.bucket}::text)::interval)::date as bucket
+            select bucket::date as bucket
+            from generate_series(${w.start}::timestamp, date_trunc(${w.bucket}::text, ${lastDay}::timestamp),
+                ('1 ' || ${w.bucket}::text)::interval) as bucket
+            where bucket >= ${from}
         ),
         listed as (
             ${series
@@ -187,20 +197,62 @@ function definitions(
             companion_id, (created_at at time zone 'Europe/Paris')::date as joined_day
         from public.profiles where deleted_at is null
     `;
-    // NOTE: a background Health sync ends by refreshing Fights under a "foreground"
-    // trace. Traces that follow an observer (background) sync within a minute are not opens.
+    // NOTE: iOS answers a denied Apple Health read with an empty success, so a person counts as
+    // connected only once their phone has sent a day with steps.
+    const stepPeople = sql`
+        select metric.user_id from private.activity_metrics as metric
+        join public.data_sources as source on source.id = metric.source_id
+        where metric.scope = 'day' and metric.metric = 'steps' and metric.value > 0 and source.provider = 'apple_health'
+        union
+        select legacy.user_id from public.metric_days as legacy
+        join public.data_sources as source on source.id = legacy.source_id
+        where legacy.metric = 'steps' and legacy.value > 0 and source.provider = 'apple_health'
+    `;
+    // Same 7-day rule as claimReferral: an older account that opens a share link to join a Fight is
+    // not a referral. Rows from before that rule are kept, so the dashboard applies it. Dated by signup.
+    const referrals = sql`
+        select r.referrer_user_id as user_id, r.referred_user_id, referred.created_at as at
+        from private.referrals as r
+        join public.profiles as referred on referred.user_id = r.referred_user_id
+        where referred.deleted_at is null and r.created_at <= referred.created_at + interval '7 days'
+    `;
+    // NOTE: an open (or a pull to refresh) is a "foreground" (or "manual") trace that reads Apple
+    // Health, or only refreshes Fights for someone without it. Not opens: that Fights refresh within
+    // a minute after a background sync, the activity import after any sync (activity stages only),
+    // and background relaunches that builds without the launch guard in FitFightApp record as opens:
+    // on a locked phone (HealthKit error 6), or 59.5 to 66 minutes after the person's previous Health
+    // sync, the beat of background delivery, which iOS can deliver late but not early. Ceiling, week
+    // to 15 Oct: drops about 550 relaunches and about 25 real opens, and still counts about 150
+    // relaunches that land later. Delete the hour rule once no installed build lacks the launch guard
+    // (1.1.2 (210) and 1.1.3 (226) today); keep the error 6 rule, since nobody opens a locked phone.
     const activitySince = (floor: AdminDashboardQueryFragment) => sql`
         select traced.user_id, traced.started_at as at, traced.trigger, traced.app_version, traced.app_build
         from (
-            select a.user_id, a.started_at, a.trigger, a.app_version, a.app_build,
+            select a.user_id, a.started_at, a.trigger, a.app_version, a.app_build, a.stages, a.health,
                 max(a.started_at) filter (where a.trigger = 'observer')
-                    over (partition by a.user_id order by a.started_at) as last_observer
-            from private.healthkit_sync_attempts as a
-            where a.started_at >= ${floor}
+                    over (partition by a.user_id order by a.started_at) as last_observer,
+                max(a.started_at) filter (where a.trigger = 'observer' or a.health) over (
+                    partition by a.user_id order by a.started_at rows between unbounded preceding and 1 preceding
+                ) as last_health
+            from (
+                select attempt.*, attempt.trigger <> 'observer' and attempt.stages @? '$[*] ? (@.stage != "session" && @.stage != "fights_refresh" && @.stage != "healthkit_activity" && @.stage != "activity_upload")' as health
+                from private.healthkit_sync_attempts as attempt
+                where attempt.started_at >= ${floor}
+            ) as a
         ) as traced
         where traced.trigger in ('foreground', 'manual')
-            and (traced.last_observer is null or traced.started_at - traced.last_observer > interval '60 seconds')
+            and (traced.health or (traced.stages @? '$[*] ? (@.stage == "session" || @.stage == "fights_refresh")'
+                and (traced.last_observer is null or traced.started_at - traced.last_observer > interval '60 seconds')))
+            and not traced.stages @> '[{"stage": "today_total", "error": {"kind": "healthkit", "code": 6}}]'
+            and (traced.health and traced.trigger = 'foreground' and traced.started_at - traced.last_health
+                between interval '59 minutes 30 seconds' and interval '66 minutes') is not true
     `;
+    // NOTE: until 1 Oct 2026 servers deleted Health sync reports past 7 days or 100 per person,
+    // keeping the last reports of people who left. App opens are complete from 2 Oct 2026, so
+    // comparisons and chart buckets that start earlier stay empty.
+    const openedFrom = sql`'2026-10-02'::date`;
+    const kept = "App opens are complete from 2 Oct 2026";
+    const background = "Background syncs are not opens. Older app builds also record some background relaunches by Apple Health as opens: those on a locked phone or 59.5 to 66 minutes after the last sync are left out, but some that land later still count, so opens read slightly high until people update.";
     // The month before the chart start feeds its monthly actives; 61 days feed the monthly cards.
     const activity = activitySince(
         sql`least(${w.start}::date - 31, ${w.today}::date - 61)::timestamp at time zone 'Europe/Paris'`,
@@ -209,8 +261,13 @@ function definitions(
     const activeDays = sql`
         select distinct user_id, (at at time zone 'Europe/Paris')::date as day from (${activity}) as activity
     `;
-    // Same newest-row rule as profile statistics: complete Apple Health days only.
+    // Complete Apple Health days only: a complete row beats a newer incomplete one (profile statistics
+    // take the newest row), and real rows beat the Fight fallback.
     // Window-bound queries pass a floor so they do not sort years of imported history.
+    // NOTE: 1.1.2 (210) phones that connected Health before 16 Sep 2026 fail their daily-Steps
+    // upload (HealthKit error 5) but still upload Fight totals. A day without a complete daily row
+    // takes the steps between two daily checkpoints of a Fight upload: whole days, highest Fight.
+    // Remove once no installed build is 1.1.2 (210); silly and samuel upload no Fights and stay missing.
     const stepHistory = (floor: AdminDashboardQueryFragment) => sql`
         select latest.user_id, latest.day, latest.steps, p.joined_day, p.handle
         from (
@@ -228,8 +285,27 @@ function definitions(
                 from public.metric_days as legacy
                 join public.data_sources as source on source.id = legacy.source_id
                 where legacy.metric = 'steps' and source.provider = 'apple_health' and legacy.day >= ${floor}
+                union all
+                select fight.user_id, fight.day, max(fight.steps), max(fight.updated_at), true, -1
+                from (
+                    select snapshot.user_id, snapshot.created_at as updated_at, (point.value->>'day')::date as day,
+                        (point.value->>'steps')::float8 - coalesce(lag((point.value->>'steps')::float8)
+                            over (partition by snapshot.id order by point.ordinality), 0) as steps,
+                        (point.value->>'cutoff_at')::timestamptz = ((point.value->>'day')::date + 1)::timestamp at time zone f.time_zone
+                            and (point.value->>'day')::date::timestamp at time zone f.time_zone >= f.starts_at as whole
+                    from (
+                        select distinct on (s.fight_id, s.user_id) s.id, s.fight_id, s.user_id, s.created_at, s.step_checkpoints
+                        from private.fight_score_snapshots as s
+                        where s.step_checkpoints is not null and s.cutoff_at >= ${floor}
+                        order by s.fight_id, s.user_id, s.cutoff_at desc, s.created_at desc
+                    ) as snapshot
+                    join public.fights as f on f.id = snapshot.fight_id
+                    cross join lateral jsonb_array_elements(snapshot.step_checkpoints) with ordinality as point
+                ) as fight
+                where fight.whole and fight.day >= ${floor}
+                group by fight.user_id, fight.day
             ) as days
-            order by days.user_id, days.day, days.updated_at desc, days.priority desc
+            order by days.user_id, days.day, days.finalized desc, days.priority < 0, days.updated_at desc, days.priority desc
         ) as latest
         join (${profiles}) as p on p.user_id = latest.user_id
         where latest.finalized and latest.day < ${w.today}::date
@@ -240,37 +316,80 @@ function definitions(
         select * from (${stepHistory(sql`least(${w.start}::date, ${w.today}::date - 61)`)}) as history
         where history.day >= history.joined_day
     `;
+    // NOTE: the Production view runs this code on the preview server against production, which has no
+    // host_id or friends column until 20261014140000_founder_fights and 20261015210000_friend_fights
+    // reach it. to_jsonb(row) ->> 'column' reads null there and the column elsewhere; use the columns
+    // directly once production has the migrations.
+    // The app-wide and suggested Fights invite people automatically, and every friendship gets a
+    // friend Fight; they distort social metrics.
+    // A founder Fight counts for its challenger, who accepted a real 30-day Fight, but not for the
+    // founder, who is in every one: tiles about a person's own progress add
+    // `m.user_id::text is distinct from f.host`.
+    const userFights = sql`
+        select f.*, to_jsonb(f) ->> 'host_id' as host from public.fights as f
+        left join public.fight_series as series on series.id = f.series_id
+        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false)
+            and (to_jsonb(f) ->> 'friends') is distinct from 'true'
+    `;
+    // Fight counts and social tiles leave founder Fights out entirely.
+    const realFights = sql`select * from (${userFights}) as f where f.host is null`;
     const fightDays = sql`
         select s.*, exists (
             select 1 from public.fight_members as m
-            join public.fights as f on f.id = m.fight_id
-            where m.user_id = s.user_id and m.state = 'accepted' and f.state <> 'cancelled'
-                and f.starts_at < (s.day + 1)::timestamp and f.ends_at > s.day::timestamp
+            join (${userFights}) as f on f.id = m.fight_id
+            where m.user_id = s.user_id and m.state = 'accepted' and f.state not in ('draft', 'cancelled')
+                and m.user_id::text is distinct from f.host
+                and m.accepted_at < (s.day + 1)::timestamp at time zone f.time_zone
+                and f.starts_at < (s.day + 1)::timestamp at time zone f.time_zone
+                and f.ends_at > s.day::timestamp at time zone f.time_zone
+                and exists (
+                    select 1 from public.fight_members as rival
+                    where rival.fight_id = f.id and rival.state = 'accepted' and rival.user_id <> m.user_id
+                )
         ) as in_fight
         from (${recentSteps}) as s
     `;
-    // The app-wide and suggested Fights invite people automatically; they distort social metrics.
-    const realFights = sql`
+    // A Fight counts once someone besides its owner has accepted a round of it. A Fight nobody
+    // joined, such as a solo test, is not a contest.
+    const userContests = sql`
+        select f.* from (${userFights}) as f
+        where f.state not in ('draft', 'cancelled') and exists (
+            select 1 from public.fights as round
+            join public.fight_members as m on m.fight_id = round.id
+            where round.series_id = f.series_id and m.state = 'accepted' and m.user_id <> round.owner_id
+        )
+    `;
+    const contests = sql`select * from (${userContests}) as f where f.host is null`;
+    // Rounds with one accepted fighter are not contests either.
+    const rounds = sql`
         select f.* from public.fights as f
-        left join public.fight_series as series on series.id = f.series_id
-        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false)
+        where (to_jsonb(f) ->> 'host_id') is null and (to_jsonb(f) ->> 'friends') is distinct from 'true' and (
+            select count(*) from public.fight_members as m where m.fight_id = f.id and m.state = 'accepted'
+        ) > 1
     `;
     const firstRounds = sql`
-        select f.id, f.owner_id as user_id, f.created_at as at from (${realFights}) as f
+        select f.id, f.series_id, f.owner_id as user_id, f.created_at as at from (${contests}) as f
         where not exists (
             select 1 from public.fights as earlier
             where earlier.series_id = f.series_id and earlier.starts_at < f.starts_at
         )
     `;
+    // A new round of a repeating Fight copies its roster; only a person's first round of a Fight is a join.
     const joins = sql`
         select m.user_id, m.accepted_at as at from public.fight_members as m
         join (${realFights}) as f on f.id = m.fight_id
         where m.state = 'accepted' and m.accepted_at is not null and m.user_id <> f.owner_id
+            and not exists (
+                select 1 from public.fight_members as earlier
+                join public.fights as round on round.id = earlier.fight_id
+                where round.series_id = f.series_id and round.starts_at < f.starts_at
+                    and earlier.user_id = m.user_id and earlier.state = 'accepted'
+            )
     `;
     const totalUsers: AdminDashboardCardDefinition = {
         id: "total_users", title: "Total users", unit: "count", better: true,
         note: "Now, vs 7 days ago. Deleted accounts are not counted.",
-        definition: "Everyone with a FitFight account now, compared with 7 days ago. Deleted accounts are not counted.",
+        definition: "Everyone with a FitFight account now, compared with 7 days ago. Deleted accounts are not counted. It counts accounts, so a person with two accounts counts twice.",
         example: (r) => `FitFight has ${r.count(r.value, "user", "users")} now${r.against("a week ago")}.`,
         query: sql`
             select count(*)::float8 as value, count(*) filter (where created_at < ${ago(7)})::float8 as previous
@@ -286,47 +405,47 @@ function definitions(
     };
     const weeklyActive: AdminDashboardCardDefinition = {
         id: "weekly_active", title: "Weekly active users", unit: "count", better: true,
-        note: "Opened the app in the last 7 days, vs the 7 before.",
-        definition: "People who opened the app at least once in the last 7 days, up to now, compared with the 7 days before. Each person counts once. A background sync without an open does not count.",
+        note: "Opened the app in the last 7 days, vs the 7 before. Older builds read slightly high.",
+        definition: `People who opened the app at least once in the last 7 days, up to now, compared with the 7 days before. Each person counts once. ${background} ${kept}, so the comparison shows from 16 Oct.`,
         example: (r) => `${r.count(r.value, "person", "people")} opened the app in the last 7 days${r.against("in the 7 days before")}.`,
-        query: eventCard(sql, w, 7, activity, people),
+        query: eventCard(sql, w, 7, activity, people, openedFrom),
     };
     const monthlyActive: AdminDashboardCardDefinition = {
         id: "monthly_active", title: "Monthly active users", unit: "count", better: true,
         note: "Opened the app in the last 30 days, vs the 30 before.",
-        definition: "People who opened the app at least once in the last 30 days, up to now, compared with the 30 days before. Each person counts once. A background sync without an open does not count.",
+        definition: `People who opened the app at least once in the last 30 days, up to now, compared with the 30 days before. Each person counts once. ${background} ${kept}, so the comparison shows from 1 Dec.`,
         example: (r) => `${r.count(r.value, "person", "people")} opened the app in the last 30 days${r.against("in the 30 days before")}.`,
-        query: eventCard(sql, w, 30, activity, people),
+        query: eventCard(sql, w, 30, activity, people, openedFrom),
     };
     const weeklyOpens: AdminDashboardCardDefinition = {
         id: "app_opens", title: "Weekly app opens", unit: "count", better: true,
-        note: "Last 7 days vs the 7 before.",
-        definition: "How many times people opened the app in the last 7 days, up to now, compared with the 7 days before. A pull to refresh is not an open, and neither is the refresh right after a background sync.",
+        note: "Last 7 days vs the 7 before. Older builds read slightly high.",
+        definition: `How many times people opened the app in the last 7 days, up to now, compared with the 7 days before. Each launch or return to the app counts. A pull to refresh is not an open, and neither are the syncs that follow an open or a background sync. ${background} ${kept}, so the comparison shows from 16 Oct.`,
         example: (r) => `The app was opened ${r.count(r.value, "time", "times")} in the last 7 days${r.against("in the 7 days before")}.`,
-        query: eventCard(sql, w, 7, opens, count),
+        query: eventCard(sql, w, 7, opens, count, openedFrom),
     };
     const liveFights: AdminDashboardCardDefinition = {
         id: "live_fights", title: "Live fights", unit: "count", better: true,
-        note: "Now, vs 7 days ago. App-wide Fight included.",
-        definition: "Fights running now, compared with 7 days ago. The app-wide Fight counts. Drafts and cancelled Fights do not.",
+        note: "Now, vs 7 days ago. App-wide Fight included, founder and friend Fights and solo rounds not.",
+        definition: "Fights running now with two or more fighters, compared with 7 days ago. The app-wide Fight counts. Drafts, cancelled Fights, founder Fights, friend Fights and rounds with one fighter do not.",
         example: (r) => `${r.count(r.value, "fight is", "fights are")} live now${r.against("a week ago")}.`,
         query: sql`
             select count(*) filter (where starts_at <= ${w.now} and ends_at > ${w.now})::float8 as value,
                 count(*) filter (where starts_at <= ${ago(7)} and ends_at > ${ago(7)})::float8 as previous
-            from public.fights where state not in ('draft', 'cancelled')
+            from (${rounds}) as f where f.state not in ('draft', 'cancelled')
         `,
     };
     const weeklyFightsCreated: AdminDashboardCardDefinition = {
         id: "fights_started", title: "Weekly fights created", unit: "count", better: true,
-        note: "New Fights, not later rounds or app-wide ones. Last 7 days vs the 7 before.",
-        definition: "New Fights created in the last 7 days, up to now, compared with the 7 days before. Later rounds of a repeating Fight, the app-wide Fight and suggested Fights are not counted.",
+        note: "New Fights someone else joined, not later rounds, app-wide, founder or friend ones. Last 7 days vs the 7 before.",
+        definition: "New Fights created in the last 7 days, up to now, compared with the 7 days before. A Fight counts once someone besides its owner joins it, so recent days can still grow. Later rounds of a repeating Fight, cancelled Fights, the app-wide Fight, suggested Fights, founder Fights and friend Fights are not counted.",
         example: (r) => `${r.count(r.value, "new fight was", "new fights were")} created in the last 7 days${r.against("in the 7 days before")}.`,
         query: eventCard(sql, w, 7, firstRounds, count),
     };
     const weeklySteps: AdminDashboardCardDefinition = {
         id: "steps_walked", title: "Weekly steps", unit: "steps", better: true,
-        note: "The 7 complete days before today, vs the 7 before.",
-        definition: "Steps from Apple Health over the 7 complete days before today, added up for everyone, compared with the 7 days before. Only complete days, from each person's signup day.",
+        note: "The 7 complete days before today, vs the 7 before. New signups add to it.",
+        definition: "Steps from Apple Health over the 7 complete days before today, added up for everyone, compared with the 7 days before. Only complete days, from each person's signup day, so people who joined this week raise it too. A phone adds yesterday at its next sync, so the newest day can still grow. A day a phone sent only inside a Fight upload counts from that Fight's daily checkpoints.",
         example: (r) => `FitFight people walked ${r.format(r.value)} steps in the last 7 complete days${r.against("in the 7 days before")}.`,
         query: dayCard(sql, w, 7, recentSteps, sql`sum(e.steps)`),
     };
@@ -359,31 +478,32 @@ function definitions(
     };
     const opensChart: AdminDashboardChartDefinition = {
         id: "opens_per_bucket", title: `App opens ${per}`, kind: "bar", unit: "count", x: "date",
-        definition: `How many times people opened the app in each ${w.bucket}. The refresh right after a background sync is not an open.`,
+        definition: `How many times people opened the app in each ${w.bucket}. Each launch or return to the app counts. A pull to refresh is not an open, and neither are the syncs that follow an open or a background sync. ${background} ${kept}; earlier ${w.bucket}s are left out.`,
         example: (r) => {
             const n = r.at();
             return n === undefined ? null : `The app was opened ${r.count(n, "time", "times")} ${r.when}.`;
         },
-        query: perBucket(sql, w, opens, count, { gaps: true }),
+        note: `${kept}; earlier ${w.bucket}s are left out.`,
+        query: perBucket(sql, w, opens, count, { gaps: true, from: openedFrom }),
     };
     const fightsCreatedChart: AdminDashboardChartDefinition = {
         id: "fights_created_per_bucket", title: `Fights created ${per}`, kind: "bar", unit: "count", x: "date",
-        definition: `New Fights created in each ${w.bucket}. Later rounds of a repeating Fight, the app-wide Fight and suggested Fights are not counted.`,
+        definition: `New Fights created in each ${w.bucket}. A Fight counts once someone besides its owner joins it, so recent ${w.bucket}s can still grow. Later rounds of a repeating Fight, cancelled Fights, the app-wide Fight, suggested Fights, founder Fights and friend Fights are not counted.`,
         example: (r) => {
             const n = r.at();
             return n === undefined ? null : `${r.count(n, "new fight was", "new fights were")} created ${r.when}.`;
         },
-        note: "New Fights, not later rounds. App-wide and suggested Fights excluded.",
+        note: "New Fights someone else joined, not later rounds. App-wide, suggested, founder and friend Fights excluded.",
         query: perBucket(sql, w, firstRounds, count),
     };
     const stepsChart: AdminDashboardChartDefinition = {
         id: "steps_per_bucket", title: `Steps ${per}`, kind: "bar", unit: "steps", x: "date",
-        definition: `Steps from Apple Health in each ${w.bucket}, added up for everyone. Only complete days, from each person's signup day.`,
+        definition: `Steps from Apple Health in each ${w.bucket}, added up for everyone. Only complete days, from each person's signup day. A day a phone sent only inside a Fight upload counts from that Fight's daily checkpoints.`,
         example: (r) => {
             const n = r.at();
             return n === undefined ? null : `FitFight people walked ${r.format(n)} steps ${r.when}.`;
         },
-        note: "Complete days since each person joined, through yesterday.",
+        note: "Complete days since each person joined, through yesterday, which still grows as phones sync.",
         query: perBucket(sql, w, recentSteps, sql`sum(e.steps)`, { complete: true }),
     };
 
@@ -394,14 +514,16 @@ function definitions(
                     totalUsers, weeklyActive, monthlyActive, weeklyNewUsers, weeklyFightsCreated, liveFights,
                     weeklySteps,
                     {
-                        id: "health_connected", title: "Apple Health connected", unit: "count", better: true,
-                        note: "People with Apple Health connected now, vs 7 days ago.",
-                        definition: "People with Apple Health connected now, compared with 7 days ago. A connection that is off now is not counted in either number.",
-                        example: (r) => `${r.count(r.value, "person has", "people have")} Apple Health connected now${r.against("a week ago")}.`,
+                        id: "health_connected", title: "Weekly people syncing Health", unit: "count", better: true,
+                        note: "Phone synced Apple Health in the last 7 days, vs the 7 before.",
+                        definition: "People whose phone synced Apple Health at least once in the last 7 days, up to now, compared with the 7 days before. iOS does not tell FitFight when someone turns Health off or deletes the app, so a phone that stops syncing is how a lost connection shows.",
+                        example: (r) => `${r.count(r.value, "person's phone", "people's phones")} synced Apple Health in the last 7 days${r.against("in the 7 days before")}.`,
                         query: sql`
-                            select count(distinct user_id)::float8 as value,
-                                count(distinct user_id) filter (where connected_at < ${ago(7)})::float8 as previous
-                            from public.data_sources where provider = 'apple_health' and revoked_at is null
+                            select count(distinct user_id) filter (where started_at >= ${ago(7)})::float8 as value,
+                                count(distinct user_id) filter (where started_at < ${ago(7)})::float8 as previous
+                            from private.healthkit_sync_attempts
+                            where outcome = 'succeeded' and started_at >= ${ago(14)} and started_at < ${w.now}
+                                and (stages @> '[{"stage":"today_total"}]' or stages @> '[{"stage":"local_state"}]')
                         `,
                     },
                 ],
@@ -409,13 +531,13 @@ function definitions(
                     totalUsersChart, newUsersChart,
                     {
                         id: "active_users_per_bucket", title: `Active users ${per}`, kind: "line", unit: "count", x: "date",
-                        definition: `People who opened the app at least once in each ${w.bucket}. Each person counts once per ${w.bucket}. A background sync without an open does not count.`,
+                        definition: `People who opened the app at least once in each ${w.bucket}. Each person counts once per ${w.bucket}. ${background} ${kept}; earlier ${w.bucket}s are left out.`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `${r.count(n, "person", "people")} opened the app ${r.when}.`;
                         },
-                        note: `Distinct people who opened the app in each ${w.bucket}.`,
-                        query: perBucket(sql, w, activity, people, { gaps: true }),
+                        note: `Distinct people who opened the app in each ${w.bucket}. ${kept}; earlier ${w.bucket}s are left out.`,
+                        query: perBucket(sql, w, activity, people, { gaps: true, from: openedFrom }),
                     },
                     fightsCreatedChart, stepsChart, opensChart,
                 ],
@@ -439,23 +561,20 @@ function definitions(
                         },
                         {
                             id: "health_rate", title: "Monthly Health connect rate", did: "connected Apple Health",
-                            definition: "Of the people who signed up in the last 30 days, the share who have connected Apple Health, compared with the people who signed up in the 30 days before. A connection turned off later still counts. Recent signups have had less time to do it.",
-                            condition: sql`exists (
-                                select 1 from public.data_sources as s
-                                where s.user_id = p.user_id and s.provider = 'apple_health')`,
+                            definition: "Of the people who signed up in the last 30 days, the share who have connected Apple Health, compared with the people who signed up in the 30 days before. Connected means their phone has sent at least one day with steps; allowing Health without read access sends none. A connection turned off later still counts. Recent signups have had less time to do it.",
+                            condition: sql`p.user_id in (${stepPeople})`,
                         },
                         {
                             id: "fight_rate", title: "Monthly fight join rate", did: "joined a fight",
-                            definition: "Of the people who signed up in the last 30 days, the share who have joined a fight, compared with the people who signed up in the 30 days before. Creating a fight counts. The app-wide Fight and suggested Fights do not. Recent signups have had less time to do it.",
+                            definition: "Of the people who signed up in the last 30 days, the share who have joined a fight, compared with the people who signed up in the 30 days before. Creating a fight counts once someone else joins it. Cancelled Fights, the app-wide Fight and suggested Fights do not. Founder Fights count for the challenger only, and friend Fights do not count. Recent signups have had less time to do it.",
                             condition: sql`exists (
-                                select 1 from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
-                                where m.user_id = p.user_id and m.state = 'accepted')`,
+                                select 1 from public.fight_members as m join (${userContests}) as f on f.id = m.fight_id
+                                where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host)`,
                         },
                         {
                             id: "referral_rate", title: "Monthly referral rate", did: "came from a referral",
-                            definition: "Of the people who signed up in the last 30 days, the share who came through someone's referral link, compared with the people who signed up in the 30 days before.",
-                            condition: sql`exists (
-                                select 1 from private.referrals as r where r.referred_user_id = p.user_id)`,
+                            definition: "Of the people who signed up in the last 30 days, the share who came through someone's referral link, compared with the people who signed up in the 30 days before. A referral counts only when claimed within 7 days of signing up.",
+                            condition: sql`p.user_id in (select r.referred_user_id from (${referrals}) as r)`,
                         },
                     ].map(({ id, title, did, definition, condition }): AdminDashboardCardDefinition => ({
                         id, title, unit: "percent", better: true,
@@ -472,17 +591,17 @@ function definitions(
                         `,
                     })),
                     {
-                        id: "days_to_first_fight", title: "Monthly days to first fight", unit: "days", better: false,
+                        id: "days_to_first_fight", title: "Monthly time to first fight", unit: "minutes", better: false,
                         note: "Median, for the last 30 days' signups who joined a fight, vs the 30 days before.",
-                        definition: "The median time from signup to joining a first fight, for the people who signed up in the last 30 days and have joined one, compared with the people who signed up in the 30 days before. Half of them joined faster. Creating a fight counts. The app-wide Fight and suggested Fights do not.",
+                        definition: "The median time from signup to joining a first fight, in minutes, for the people who signed up in the last 30 days and have joined one, compared with the people who signed up in the 30 days before. Half of them joined faster. Creating a fight counts once someone else joins it. Cancelled Fights, the app-wide Fight and suggested Fights do not. Founder Fights count for the challenger only, and friend Fights do not count.",
                         example: (r) => `Half of the people who signed up in the last 30 days and joined a fight did it within ${r.format(r.value)}${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select * from (
                                 select p.user_id, p.created_at as at, extract(epoch from (
                                     select min(m.accepted_at) from public.fight_members as m
-                                    join (${realFights}) as f on f.id = m.fight_id
-                                    where m.user_id = p.user_id and m.state = 'accepted'
-                                ) - p.created_at) / 86400 as waited
+                                    join (${userContests}) as f on f.id = m.fight_id
+                                    where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host
+                                ) - p.created_at) / 60 as waited
                                 from public.profiles as p where p.deleted_at is null
                             ) as waits where waits.waited is not null
                         `, sql`percentile_cont(0.5) within group (order by greatest(e.waited, 0))`),
@@ -490,11 +609,9 @@ function definitions(
                     {
                         id: "referrals", title: "Monthly referrals", unit: "count", better: true,
                         note: "Last 30 days vs the 30 before.",
-                        definition: "Signups that came through someone's referral link in the last 30 days, up to now, compared with the 30 days before.",
+                        definition: "Signups in the last 30 days, up to now, that came through someone's referral link, compared with the 30 days before. A referral counts only when claimed within 7 days of signing up, so an older account opening a link to join a fight does not count.",
                         example: (r) => `${r.count(r.value, "person", "people")} joined through a referral in the last 30 days${r.against("in the 30 days before")}.`,
-                        query: eventCard(sql, w, 30, sql`
-                            select referrer_user_id as user_id, created_at as at from private.referrals
-                        `, count),
+                        query: eventCard(sql, w, 30, referrals, count),
                     },
                 ],
                 charts: [
@@ -503,7 +620,7 @@ function definitions(
                         { id: "user_growth_mom", title: "Month-over-month user growth", span: 30, name: "month" },
                     ].map(({ id, title, span, name }): AdminDashboardChartDefinition => ({
                         id, title, kind: "line", unit: "percent", x: "date",
-                        definition: `How much the number of users grew in the ${span} days up to the end of each ${w.bucket}: total users then against total users ${span} days earlier.`,
+                        definition: `How much the number of users grew in the ${span} days up to the end of each ${w.bucket}: total users then against total users ${span} days earlier. A point shows only once there were at least 20 users ${span} days earlier, so a tiny early base does not draw huge percentages.`,
                         example: (r) => {
                             const growth = r.latest();
                             return growth === undefined ? null
@@ -517,14 +634,14 @@ function definitions(
                             from (${samplePoints(sql, w)}) as point
                             cross join (${profiles}) as p
                             group by point.bucket, point.day
-                            having count(*) filter (where p.joined_day <= point.day - ${span}::int) > 0
+                            having count(*) filter (where p.joined_day <= point.day - ${span}::int) >= 20
                             order by point.bucket
                         `,
                     })),
                     newUsersChart, totalUsersChart,
                     {
                         id: "onboarding_by_signup", title: `Onboarding by signup ${w.bucket}`, kind: "line", unit: "percent", x: "date",
-                        definition: `For the people who signed up in each ${w.bucket}: the share who picked a username, connected Apple Health and joined a fight, as of now. Recent signups have had less time, so their shares can still grow.`,
+                        definition: `For the people who signed up in each ${w.bucket}: the share who picked a username, connected Apple Health and joined a fight, as of now. Connected Apple Health means their phone has sent at least one day with steps. Creating a fight counts once someone else joins it. Cancelled, app-wide and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count. A ${w.bucket} with fewer than 5 signups is left out, because one person would swing it. Recent signups have had less time, so their shares can still grow.`,
                         example: (r) => {
                             const name = r.at("Picked a username");
                             const health = r.at("Connected Apple Health");
@@ -532,38 +649,36 @@ function definitions(
                             if (name === undefined || health === undefined || fight === undefined) return null;
                             return `Of the people who signed up ${r.when}, ${r.format(name)} picked a username, ${r.format(health)} connected Apple Health and ${r.format(fight)} joined a fight.`;
                         },
-                        note: `Share of each ${w.bucket}'s signups who did each step, as of now. Recent signups have had less time.`,
+                        note: `Share of each ${w.bucket}'s signups who did each step, as of now. Only ${w.bucket}s with 5 or more signups. Recent signups have had less time.`,
                         query: perBucket(sql, w, sql`
                             select p.at, step.series, step.done
                             from (${profiles}) as p
                             cross join lateral (values
                                 ('Picked a username', p.handle_set_at is not null),
-                                ('Connected Apple Health', exists (
-                                    select 1 from public.data_sources as s
-                                    where s.user_id = p.user_id and s.provider = 'apple_health')),
+                                ('Connected Apple Health', p.user_id in (${stepPeople})),
                                 ('Joined a fight', exists (
-                                    select 1 from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
-                                    where m.user_id = p.user_id and m.state = 'accepted'))
+                                    select 1 from public.fight_members as m join (${userContests}) as f on f.id = m.fight_id
+                                    where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host))
                             ) as step(series, done)
-                        `, sql`avg(case when e.done then 100.0 else 0 end)`, {
+                        `, sql`case when count(*) >= 5 then avg(case when e.done then 100.0 else 0 end) end`, {
                             gaps: true, series: ["Picked a username", "Connected Apple Health", "Joined a fight"],
                         }),
                     },
                     {
                         id: "referrals_per_bucket", title: `Referrals ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Signups that came through someone's referral link, in each ${w.bucket}.`,
+                        definition: `Signups that came through someone's referral link, in each ${w.bucket} of signup. A referral counts only when claimed within 7 days of signing up.`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `${r.count(n, "person", "people")} joined through a referral ${r.when}.`;
                         },
-                        query: perBucket(sql, w, sql`select created_at as at from private.referrals`, count),
+                        query: perBucket(sql, w, referrals, count),
                     },
                     ...[
                         { id: "funnel_period", title: "Onboarding funnel, last 30 days' signups", who: "the people who signed up in the last 30 days", scope: sql`p.created_at >= ${ago(30)}` },
                         { id: "funnel_all", title: "Onboarding funnel, all users", who: "all users", scope: sql`true` },
                     ].map(({ id, title, who, scope }): AdminDashboardChartDefinition => ({
                         id, title, kind: "bar", unit: "count", x: "label",
-                        definition: `How far ${who} got: picking a username, connecting Apple Health, joining a first fight, finishing one and joining a second.`,
+                        definition: `How far ${who} got: picking a username, connecting Apple Health, joining a first fight, finishing one and joining a second. Connecting Apple Health means their phone has sent at least one day with steps. A repeating Fight counts once, and creating a fight counts once someone else joins it. Cancelled, app-wide and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count.`,
                         example: (r) => {
                             const signed = r.row("Signed up");
                             const joined = r.row("Joined a fight");
@@ -575,14 +690,14 @@ function definitions(
                         query: sql`
                             with cohort as (
                                 select p.user_id, p.handle_set_at,
-                                    exists (select 1 from public.data_sources as s
-                                        where s.user_id = p.user_id and s.provider = 'apple_health') as health,
-                                    (select count(*) from public.fight_members as m
-                                        join (${realFights}) as f on f.id = m.fight_id
-                                        where m.user_id = p.user_id and m.state = 'accepted') as fights,
+                                    p.user_id in (${stepPeople}) as health,
+                                    (select count(distinct f.series_id) from public.fight_members as m
+                                        join (${userContests}) as f on f.id = m.fight_id
+                                        where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host) as fights,
                                     exists (select 1 from public.fight_members as m
-                                        join (${realFights}) as f on f.id = m.fight_id
-                                        where m.user_id = p.user_id and m.state = 'accepted' and f.state = 'final') as finished
+                                        join (${userContests}) as f on f.id = m.fight_id
+                                        where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host
+                                            and f.state = 'final') as finished
                                 from public.profiles as p
                                 where p.deleted_at is null and p.created_at < ${w.now} and ${scope}
                             )
@@ -625,11 +740,11 @@ function definitions(
                     },
                     {
                         id: "time_zones", title: "Top time zones, all users", kind: "bar", unit: "count", x: "label",
-                        definition: "Each person's saved time zone, a rough guide to where they live.",
-                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.share} of users are in ${r.top.x} (${r.format(r.top.y)}).` : null),
+                        definition: "Each person's saved time zone, a rough guide to where they live. People without a saved time zone are left out: most accounts created before 28 Sep 2026 have none.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.share} of users with a saved time zone are in ${r.top.x} (${r.format(r.top.y)}).` : null),
                         query: sql`
-                            select coalesce(time_zone, 'Unknown') as x, count(*)::float8 as y
-                            from public.profiles where deleted_at is null group by 1 order by 2 desc, 1 limit 12
+                            select time_zone as x, count(*)::float8 as y
+                            from public.profiles where deleted_at is null and time_zone is not null group by 1 order by 2 desc, 1 limit 12
                         `,
                     },
                     {
@@ -646,20 +761,20 @@ function definitions(
                     },
                     {
                         id: "top_referrers", title: "Top referrers, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People whose referral links brought the most signups, all time.",
+                        definition: "People whose referral links brought the most signups, all time. A referral counts only when claimed within 7 days of signing up.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} brought ${r.count(r.top.y, "person", "people")} to FitFight.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
-                            from private.referrals as r join public.profiles as p on p.user_id = r.referrer_user_id
+                            from (${referrals}) as r join public.profiles as p on p.user_id = r.user_id
                             group by p.handle order by 2 desc, 1 limit 10
                         `,
                     },
                 ],
             };
         case "retention": {
-            // NOTE: retention follows people who connected Apple Health. Their phones sync steps
+            // NOTE: retention follows people whose phone has sent Apple Health steps. Their phones sync steps
             // in the background, opened or not, until the app is deleted or Health is turned off.
-            // App opens can't be used while servers still delete them after 7 days. The floor
+            // App opens can't be used: they are complete only from 2 Oct 2026. The floor
             // covers the last 6 signup months, the cards' cohorts and the chart period.
             const synced = sql`
                 select distinct history.user_id, history.day
@@ -668,9 +783,7 @@ function definitions(
             `;
             const withHealth = sql`
                 select p.user_id, p.joined_day, p.at from (${profiles}) as p
-                where exists (
-                    select 1 from public.data_sources as s where s.user_id = p.user_id and s.provider = 'apple_health'
-                )
+                where p.user_id in (${stepPeople})
             `;
             // Signups of the `span` days that just got past day `to` after signing up, against the
             // `span` days before them: the share who synced steps `from` to `to` days after.
@@ -687,10 +800,12 @@ function definitions(
                     join active as a on a.user_id = e.user_id
                         and a.day between e.joined_day + ${from}::int and e.joined_day + ${to}::int
                 )
-                select 100.0 * count(h.user_id) filter (where not e.previous)
-                        / nullif(count(*) filter (where not e.previous), 0) as value,
-                    100.0 * count(h.user_id) filter (where e.previous)
-                        / nullif(count(*) filter (where e.previous), 0) as previous
+                select case when count(*) filter (where not e.previous) >= 10
+                        then 100.0 * count(h.user_id) filter (where not e.previous) / count(*) filter (where not e.previous)
+                    end as value,
+                    case when count(*) filter (where e.previous) >= 10 and count(*) filter (where not e.previous) >= 10
+                        then 100.0 * count(h.user_id) filter (where e.previous) / count(*) filter (where e.previous)
+                    end as previous
                 from eligible as e
                 left join hits as h using (user_id)
             `;
@@ -732,7 +847,7 @@ function definitions(
                     {
                         id: "signups_with_health", title: "Monthly signups with Health", unit: "count", better: true,
                         note: "The people retention follows. The 30 days before today vs the 30 before.",
-                        definition: "People who signed up in the 30 complete days before today and connected Apple Health, compared with the 30 days before. These are the people retention follows.",
+                        definition: "People who signed up in the 30 complete days before today and connected Apple Health, compared with the 30 days before. Connected means their phone has sent at least one day with steps. These are the people retention follows.",
                         example: (r) => `${r.count(r.value, "person", "people")} signed up and connected Apple Health in the last 30 complete days${r.against("in the 30 days before")}.`,
                         query: sql`
                             select count(*) filter (where c.joined_day >= ${w.today}::date - 30)::float8 as value,
@@ -750,7 +865,7 @@ function definitions(
                     ].map(({ id, title, from, to, span }): AdminDashboardCardDefinition => ({
                         id, title, unit: "percent", better: true,
                         note: `Phone synced steps on days ${from} to ${to} after signup. Latest ${span} days of signups to get there, vs the ${span} before.`,
-                        definition: `The share of people with Apple Health whose phone synced steps for at least one day from day ${from} to day ${to} after signup. Day 0 is the signup day. It covers the latest ${span} days of signups that are past day ${to}, compared with the ${span} days of signups before them. A phone syncs in the background until the app is deleted or Health is turned off.`,
+                        definition: `The share of people with Apple Health whose phone synced steps for at least one day from day ${from} to day ${to} after signup. Day 0 is the signup day. It covers the latest ${span} days of signups that are past day ${to}, compared with the ${span} days of signups before them. A number shows only when its group has at least 10 people, and the comparison only when both groups do. A phone syncs in the background until the app is deleted or Health is turned off. A phone that comes back after a gap uploads the days it missed, and those days count.`,
                         example: (r) => `${r.format(r.value)} of the latest ${span} days' signups with Apple Health still synced steps from day ${from} to day ${to}${r.against(`for the ${span} days of signups before`)}.`,
                         query: rate(from, to, span),
                     })),
@@ -784,14 +899,14 @@ function definitions(
                     },
                     {
                         id: "retention_by_signup", title: `Retention by signup ${cohort}`, kind: "line", unit: "percent", x: "date",
-                        definition: `For each signup ${cohort}: the share of people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34) after signing up. It shows if newer signups stay longer.`,
+                        definition: `For each signup ${cohort}: the share of people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34) after signing up. It shows if newer signups stay longer. Week 4 needs signups at least 35 days old, so it shows only on periods longer than 30 days. A ${cohort} with fewer than 5 people is left out.`,
                         example: (r) => {
                             const week = r.series.find((line) => line.name === "Week 1")?.points.at(-1);
                             return week
                                 ? `Of the people who signed up in the ${cohort} starting ${r.day(week.x)}, ${r.format(week.y)} still synced steps in week 1.`
                                 : null;
                         },
-                        note: `Share of each signup ${cohort}'s people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34). People count once they get there.`,
+                        note: `Share of each signup ${cohort}'s people with Apple Health whose phone still synced steps in week 1 (days 7 to 13) and week 4 (days 28 to 34). People count once they get there. Week 4 needs a period over 30 days. Only ${cohort}s with 5 or more people.`,
                         query: sql`
                             with active as materialized (${synced}),
                             cohort as (
@@ -809,6 +924,7 @@ function definitions(
                                 cross join (values ('Week 1', 1, 7, 13), ('Week 4', 2, 28, 34)) as k(series, position, low, high)
                                 where c.joined_day + k.high < ${w.today}::date
                                 group by c.bucket, k.series, k.position
+                                having count(*) >= 5
                             )
                             select bucket::text as x, y::float8 as y, series from measured order by position, bucket
                         `,
@@ -827,10 +943,8 @@ function definitions(
             };
         }
         case "churn": {
-            // NOTE: until 1 Oct 2026 servers deleted Health sync reports past 7 days or 100 per person,
-            // keeping the last reports of people who left. Churn by app opens reads only periods from
-            // 2 Oct on; earlier ones would read too high. Phone syncs (step days) were never deleted.
-            const openedFrom = sql`'2026-10-02'::date`;
+            // NOTE: churn by app opens reads only periods from 2 Oct 2026 (see `openedFrom`); earlier
+            // ones would read too high. Phone syncs (step days) were never deleted.
             const floor = sql`least(${w.start}::date - 60, ${w.today}::date - 90)`;
             const opened = sql`
                 select distinct user_id, (at at time zone 'Europe/Paris')::date as day
@@ -884,9 +998,9 @@ function definitions(
                 select bucket::text as x, (100.0 * count(*) filter (where not stayed) / count(*))::float8 as y, series
                 from flags where was
                 group by bucket, series, position
+                having count(*) >= 10
                 order by position, bucket
             `;
-            const kept = "App opens are complete from 2 Oct 2026";
             return {
                 cards: [
                     ...[
@@ -900,7 +1014,7 @@ function definitions(
                         return {
                             id, title, unit: share ? "percent" : "count", better: false,
                             note: `${share ? "Share" : "People"} who opened the app ${before} but not in the last ${span} days, vs ${earlier}.`,
-                            definition: `${share ? "The share" : "The number"} of people who opened the app ${before} and did not open it in the ${span} complete days before today, compared with ${earlier}. A background sync without an open does not count. ${kept}, so it shows from ${starts}.`,
+                            definition: `${share ? "The share" : "The number"} of people who opened the app ${before} and did not open it in the ${span} complete days before today, compared with ${earlier}. ${background} ${kept}, so it shows from ${starts}.`,
                             example: (r) => share
                                 ? `${r.format(r.value)} of the people who opened the app ${before} did not open it in the last ${span} days${r.against(earlier)}.`
                                 : `${r.count(r.value, "person", "people")} who opened the app ${before} did not open it in the last ${span} days${r.against(earlier)}.`,
@@ -978,7 +1092,7 @@ function definitions(
                     },
                     {
                         id: "sync_churn_rate", title: "Weekly and monthly sync churn", kind: "line", unit: "percent", x: "date",
-                        definition: `Weekly sync churn: of the people whose phone synced Apple Health steps in the 7 days before the last 7, the share whose phone synced no day in the last 7. Monthly: the same with 30 days. Each point reads the complete days up to the end of its ${w.bucket}. A phone stops syncing when the app is deleted or Health is turned off. A phone that comes back uploads the days it missed, so older points drop when people return.`,
+                        definition: `Weekly sync churn: of the people whose phone synced Apple Health steps in the 7 days before the last 7, the share whose phone synced no day in the last 7. Monthly: the same with 30 days. Each point reads the complete days up to the end of its ${w.bucket}. A point shows only when at least 10 people synced in the earlier days. A phone stops syncing when the app is deleted or Health is turned off. A phone that comes back uploads the days it missed, so older points drop when people return.`,
                         example: (r) => {
                             const weekly = r.at("Weekly churn");
                             const monthly = r.at("Monthly churn");
@@ -990,7 +1104,7 @@ function definitions(
                     },
                     {
                         id: "churn_by_fight", title: "Weekly churn, in a fight or not", kind: "bar", unit: "percent", x: "label",
-                        definition: `People who opened the app 8 to 14 days ago, split by whether they were in a live fight when the last 7 complete days started. Each bar is the share who did not open the app in those 7 days. The app-wide Fight and suggested Fights do not count. ${kept}, so it shows from 16 Oct.`,
+                        definition: `People who opened the app 8 to 14 days ago, split by whether they were in a live fight when the last 7 complete days started. Each bar is the share who did not open the app in those 7 days. The app-wide Fight and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count. ${kept}, so it shows from 16 Oct.`,
                         example: (r) => {
                             const fighting = r.row("In a live fight");
                             const idle = r.row("No live fight");
@@ -1008,8 +1122,8 @@ function definitions(
                             ),
                             grouped as (
                                 select people.stayed, exists (
-                                    select 1 from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
-                                    where m.user_id = people.user_id and m.state = 'accepted'
+                                    select 1 from public.fight_members as m join (${userFights}) as f on f.id = m.fight_id
+                                    where m.user_id = people.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host
                                         and f.state not in ('draft', 'cancelled')
                                         and f.starts_at <= (${w.today}::date - 7)::timestamp at time zone 'Europe/Paris'
                                         and f.ends_at > (${w.today}::date - 7)::timestamp at time zone 'Europe/Paris'
@@ -1035,46 +1149,49 @@ function definitions(
                     {
                         id: "daily_active", title: "Daily active users", unit: "count", better: true,
                         note: "Opened the app in the last 24 hours, vs the 24 before.",
-                        definition: "People who opened the app at least once in the last 24 hours, compared with the 24 hours before. Each person counts once. A background sync without an open does not count.",
+                        definition: `People who opened the app at least once in the last 24 hours, compared with the 24 hours before. Each person counts once. ${background}`,
                         example: (r) => `${r.count(r.value, "person", "people")} opened the app in the last 24 hours${r.against("in the 24 hours before")}.`,
-                        query: eventCard(sql, w, 1, activity, people),
+                        query: eventCard(sql, w, 1, activity, people, openedFrom),
                     },
                     weeklyActive, monthlyActive,
                     {
                         id: "stickiness", title: "Monthly stickiness", unit: "percent", better: true,
-                        note: "Average daily actives divided by monthly actives, last 30 days vs the 30 before.",
-                        definition: "Average daily active users divided by monthly active users, over the last 30 days, compared with the 30 days before. It is also the share of days an active person opens the app: 100% means every day.",
-                        example: (r) => `On an average day of the last 30 days, ${r.format(r.value)} of the monthly active users opened the app${r.against("for the 30 days before")}.`,
+                        note: `Average daily actives divided by monthly actives, the 30 complete days before today vs the 30 before. ${kept}, so until 1 Nov it reads the days since then.`,
+                        definition: `Average daily active users divided by the people active in the same days, over the 30 complete days before today, compared with the 30 days before. It is also the share of days an active person opens the app: 100% means every day. ${kept}, so until 1 Nov it reads the complete days since then, and the comparison shows from 1 Dec.`,
+                        example: (r) => `On an average complete day of the last 30, ${r.format(r.value)} of the people active in that time opened the app${r.against("for the 30 days before")}.`,
                         query: sql`
-                            select 100.0 * (count(distinct (e.user_id, (e.at at time zone 'Europe/Paris')::date)) filter (
-                                    where e.at >= ${ago(30)}) / 30.0)
-                                    / nullif(count(distinct e.user_id) filter (where e.at >= ${ago(30)}), 0) as value,
-                                100.0 * (count(distinct (e.user_id, (e.at at time zone 'Europe/Paris')::date)) filter (
-                                    where e.at >= ${ago(60)} and e.at < ${ago(30)}) / 30.0)
+                            select 100.0 * count(*) filter (where e.day >= greatest(${w.today}::date - 30, ${openedFrom}))
+                                    / (${w.today}::date - greatest(${w.today}::date - 30, ${openedFrom}))
                                     / nullif(count(distinct e.user_id) filter (
-                                        where e.at >= ${ago(60)} and e.at < ${ago(30)}), 0) as previous
-                            from (${activity}) as e where e.at < ${w.now}
+                                        where e.day >= greatest(${w.today}::date - 30, ${openedFrom})), 0) as value,
+                                case when ${w.today}::date - 60 >= ${openedFrom}
+                                    then 100.0 * count(*) filter (where e.day < ${w.today}::date - 30) / 30
+                                        / nullif(count(distinct e.user_id) filter (where e.day < ${w.today}::date - 30), 0)
+                                end as previous
+                            from (${activeDays}) as e
+                            where e.day >= ${w.today}::date - 60 and e.day < ${w.today}::date
                         `,
                     },
                     weeklyOpens,
                     {
                         id: "opens_per_active", title: "Weekly opens per active user", unit: "count", better: true,
                         note: "App opens divided by people who opened the app, last 7 days vs the 7 before.",
-                        definition: "App opens in the last 7 days divided by the people who opened the app, compared with the 7 days before. It shows how often an active person comes back.",
+                        definition: `App opens in the last 7 days divided by the people who opened the app, compared with the 7 days before. It shows how often an active person comes back. ${kept}, so the comparison shows from 16 Oct.`,
                         example: (r) => `Each active person opened the app ${r.count(r.value, "time", "times")} on average in the last 7 days${r.against("in the 7 days before")}.`,
                         query: sql`
                             select count(*) filter (where e.trigger = 'foreground' and e.at >= ${ago(7)})::float8
                                     / nullif(count(distinct e.user_id) filter (where e.at >= ${ago(7)}), 0) as value,
-                                count(*) filter (where e.trigger = 'foreground' and e.at >= ${ago(14)} and e.at < ${ago(7)})::float8
-                                    / nullif(count(distinct e.user_id) filter (where e.at >= ${ago(14)} and e.at < ${ago(7)}), 0)
-                                    as previous
+                                case when ${ago(14)} >= ${openedFrom}::timestamp at time zone 'Europe/Paris' then
+                                    count(*) filter (where e.trigger = 'foreground' and e.at >= ${ago(14)} and e.at < ${ago(7)})::float8
+                                        / nullif(count(distinct e.user_id) filter (where e.at >= ${ago(14)} and e.at < ${ago(7)}), 0)
+                                end as previous
                             from (${activity}) as e where e.at < ${w.now}
                         `,
                     },
                     {
                         id: "returning", title: "Weekly return rate", unit: "percent", better: true,
                         note: "Share of the previous 7 days' active people who were active again in the last 7.",
-                        definition: "Of the people who opened the app 7 to 14 days ago, the share who opened it again in the last 7 days. The comparison is the same share one week earlier.",
+                        definition: `Of the people who opened the app 7 to 14 days ago, the share who opened it again in the last 7 days. The comparison is the same share one week earlier. ${kept}, so the comparison shows from 23 Oct.`,
                         example: (r) => `${r.format(r.value)} of the people active 7 to 14 days ago came back in the last 7 days${r.against("a week earlier")}.`,
                         query: sql`
                             with periods as (
@@ -1085,16 +1202,18 @@ function definitions(
                             select 100.0 * count(*) filter (where p.period = 1 and exists (
                                         select 1 from periods as q where q.user_id = p.user_id and q.period = 0))
                                     / nullif(count(*) filter (where p.period = 1), 0) as value,
-                                100.0 * count(*) filter (where p.period = 2 and exists (
-                                        select 1 from periods as q where q.user_id = p.user_id and q.period = 1))
-                                    / nullif(count(*) filter (where p.period = 2), 0) as previous
+                                case when ${ago(21)} >= ${openedFrom}::timestamp at time zone 'Europe/Paris' then
+                                    100.0 * count(*) filter (where p.period = 2 and exists (
+                                            select 1 from periods as q where q.user_id = p.user_id and q.period = 1))
+                                        / nullif(count(*) filter (where p.period = 2), 0)
+                                end as previous
                             from periods as p
                         `,
                     },
                     {
                         id: "lapsed", title: "Lapsed for 14+ days", unit: "count", better: false,
                         note: "Opened the app before, not in the last 14 days. Now vs 7 days ago.",
-                        definition: "People who opened the app in the last 120 days, but not in the last 14 days, compared with the same count 7 days ago.",
+                        definition: "People who opened the app in the last 120 days, but not in the last 14 days, compared with the same count 7 days ago. Opens are recorded from 16 Sep 2026, so someone who stopped before then is not counted.",
                         example: (r) => `${r.count(r.value, "person who used the app in the last 120 days has", "people who used the app in the last 120 days have")} not opened it for 14 days or more${r.against("a week ago")}.`,
                         query: sql`
                             with last_open as (
@@ -1108,21 +1227,19 @@ function definitions(
                     },
                     {
                         id: "active_days", title: "Monthly active days", unit: "days", better: true,
-                        note: "Average days each active person opened the app, last 30 days vs the 30 before.",
-                        definition: "The average number of days each active person opened the app in the last 30 days, today included, compared with the 30 days before.",
-                        example: (r) => `An active person opened the app on ${r.format(r.value)} on average in the last 30 days${r.against("in the 30 days before")}.`,
+                        note: `Average days each active person opened the app, the 30 complete days before today vs the 30 before. ${kept}, so until 1 Nov it reads the days since then.`,
+                        definition: `The average number of days each active person opened the app in the 30 complete days before today, compared with the 30 days before. ${kept}, so until 1 Nov it counts the complete days since then, and the comparison shows from 1 Dec.`,
+                        example: (r) => `An active person opened the app on ${r.format(r.value)} on average in the last 30 complete days${r.against("in the 30 days before")}.`,
                         query: sql`
-                            with windows as (
-                                select case when e.day > ${w.today}::date - 30 then 'value' else 'previous' end as period,
-                                    e.user_id
-                                from (${activeDays}) as e
-                                where e.day > ${w.today}::date - 60
-                            )
-                            select (count(*) filter (where period = 'value'))::float8
-                                    / nullif(count(distinct user_id) filter (where period = 'value'), 0) as value,
-                                (count(*) filter (where period = 'previous'))::float8
-                                    / nullif(count(distinct user_id) filter (where period = 'previous'), 0) as previous
-                            from windows
+                            select count(*) filter (where e.day >= greatest(${w.today}::date - 30, ${openedFrom}))::float8
+                                    / nullif(count(distinct e.user_id) filter (
+                                        where e.day >= greatest(${w.today}::date - 30, ${openedFrom})), 0) as value,
+                                case when ${w.today}::date - 60 >= ${openedFrom}
+                                    then count(*) filter (where e.day < ${w.today}::date - 30)::float8
+                                        / nullif(count(distinct e.user_id) filter (where e.day < ${w.today}::date - 30), 0)
+                                end as previous
+                            from (${activeDays}) as e
+                            where e.day >= ${w.today}::date - 60 and e.day < ${w.today}::date
                         `,
                     },
                 ],
@@ -1130,21 +1247,21 @@ function definitions(
                     {
                         id: "dau_wau_mau", title: "Daily, weekly and monthly active users", kind: "line", unit: "count", x: "date",
                         definition: w.bucket === "day"
-                            ? "DAU: people who opened the app that day. WAU and MAU: people who opened it at least once in the 7 or 30 days up to that day."
-                            : `DAU: people who opened the app on a day, averaged over the days of each ${w.bucket}. WAU and MAU: people who opened it at least once in the 7 or 30 days up to the end of the ${w.bucket}.`,
+                            ? `DAU: people who opened the app that day. WAU and MAU: people who opened it at least once in the 7 or 30 days up to that day. ${kept}, so DAU starts then, WAU on 8 Oct and MAU on 31 Oct.`
+                            : `DAU: people who opened the app on a day, averaged over the days of each ${w.bucket}. WAU and MAU: people who opened it at least once in the 7 or 30 days up to the end of the ${w.bucket}. ${kept}, so earlier ${w.bucket}s are left out, WAU starts on 8 Oct and MAU on 31 Oct.`,
                         example: (r) => {
                             const daily = r.at("DAU");
                             const weekly = r.at("WAU");
                             const monthly = r.at("MAU");
-                            if (daily === undefined || weekly === undefined || monthly === undefined) return null;
+                            if (daily === undefined || weekly === undefined) return null;
                             const opened = w.bucket === "day"
                                 ? `${r.count(daily, "person", "people")} opened the app ${r.when}`
                                 : `${r.format(daily)} people opened the app on an average day ${r.when}`;
-                            return `${opened}. ${r.format(weekly)} opened it in the 7 days up to then, and ${r.format(monthly)} in the 30 days.`;
+                            return `${opened}. ${r.format(weekly)} opened it in the 7 days up to then${monthly === undefined ? "" : `, and ${r.format(monthly)} in the 30 days`}.`;
                         },
                         note: w.bucket === "day"
-                            ? "WAU and MAU count the 7 and 30 days up to each day."
-                            : `DAU is the daily average in each ${w.bucket}. WAU and MAU count the 7 and 30 days up to its end, now for the last one.`,
+                            ? `WAU and MAU count the 7 and 30 days up to each day. ${kept}: WAU starts on 8 Oct, MAU on 31 Oct.`
+                            : `DAU is the daily average in each ${w.bucket}. WAU and MAU count the 7 and 30 days up to its end, now for the last one. ${kept}: WAU starts on 8 Oct, MAU on 31 Oct.`,
                         query: sql`
                             with active as materialized (${activeDays}), point as (${samplePoints(sql, w)}), counted as (
                                 select point.bucket, point.day,
@@ -1158,9 +1275,10 @@ function definitions(
                             )
                             select counted.bucket::text as x, value.y::float8 as y, value.series
                             from counted cross join lateral (values
-                                (1, 'DAU', counted.daily), (2, 'WAU', counted.weekly), (3, 'MAU', counted.monthly)
-                            ) as value(position, series, y)
-                            where counted.day >= (select min(day) from active)
+                                (1, 'DAU', counted.daily, 0), (2, 'WAU', counted.weekly, 6), (3, 'MAU', counted.monthly, 29)
+                            ) as value(position, series, y, reach)
+                            where counted.day >= (select min(day) from active) and counted.bucket >= ${openedFrom}
+                                and counted.day - value.reach >= ${openedFrom}
                             order by value.position, counted.bucket
                         `,
                     },
@@ -1172,10 +1290,10 @@ function definitions(
                             const n = r.at();
                             return n === undefined ? null : `Each active person opened the app ${r.count(n, "time", "times")} on average ${r.when}.`;
                         },
-                        note: `App opens divided by people who opened the app in each ${w.bucket}.`,
+                        note: `App opens divided by people who opened the app in each ${w.bucket}. ${kept}; earlier ${w.bucket}s are left out.`,
                         query: perBucket(sql, w, activity, sql`
                             count(*) filter (where e.trigger = 'foreground')::float8 / nullif(count(distinct e.user_id), 0)
-                        `, { gaps: true }),
+                        `, { gaps: true, from: openedFrom }),
                     },
                     {
                         id: "new_vs_returning", title: `New vs returning active users ${per}`, kind: "bar", unit: "count", x: "date",
@@ -1186,13 +1304,13 @@ function definitions(
                             return back === undefined ? null
                                 : `${r.count(back, "returning person", "returning people")} and ${r.count(fresh, "new person", "new people")} opened the app ${r.when}.`;
                         },
-                        note: `New: signed up in the same ${w.bucket}.`,
+                        note: `New: signed up in the same ${w.bucket}. ${kept}; earlier ${w.bucket}s are left out.`,
                         query: perBucket(sql, w, sql`
                             select a.user_id, a.at, case when date_trunc(${w.bucket}::text, p.joined_day::timestamp)
                                 = date_trunc(${w.bucket}::text, (a.at at time zone 'Europe/Paris')::date::timestamp)
                                 then 'New' else 'Returning' end as series
                             from (${activity}) as a join (${profiles}) as p using (user_id)
-                        `, people, { gaps: true, series: ["New", "Returning"] }),
+                        `, people, { gaps: true, series: ["New", "Returning"], from: openedFrom }),
                     },
                     {
                         id: "opens_percentiles", title: "Opens per person per day: P50 and P90", kind: "line", unit: "count", x: "date",
@@ -1203,7 +1321,7 @@ function definitions(
                             return typical === undefined || top === undefined ? null
                                 : `The typical active person opened the app ${r.count(typical, "time", "times")} a day ${r.when}, and the top 10% ${r.count(top, "time", "times")} or more.`;
                         },
-                        note: `Among people who opened the app that day${w.bucket === "day" ? "" : `, across each ${w.bucket}`}.`,
+                        note: `Among people who opened the app that day${w.bucket === "day" ? "" : `, across each ${w.bucket}`}. ${kept}; earlier ${w.bucket}s are left out.`,
                         query: sql`
                             with daily as (
                                 select user_id, (at at time zone 'Europe/Paris')::date as day, count(*) as opens
@@ -1214,7 +1332,7 @@ function definitions(
                                 select date_trunc(${w.bucket}::text, day::timestamp)::date as bucket,
                                     percentile_cont(0.5) within group (order by opens) as p50,
                                     percentile_cont(0.9) within group (order by opens) as p90
-                                from daily group by 1
+                                from daily where date_trunc(${w.bucket}::text, day::timestamp)::date >= ${openedFrom} group by 1
                             )
                             select bucketed.bucket::text as x, value.y::float8 as y, value.series
                             from bucketed cross join lateral (values (1, 'P50', bucketed.p50), (2, 'P90', bucketed.p90))
@@ -1231,7 +1349,7 @@ function definitions(
                                 ? `${r.count(regular, "person", "people")} opened the app on 15 or more of the last 30 days, out of ${r.format(r.total)} who opened it at all.`
                                 : null;
                         },
-                        note: "People by how many of the last 30 days they opened the app.",
+                        note: `People by how many of the last 30 days they opened the app. ${kept}, so until 31 Oct the higher groups read low.`,
                         query: sql`
                             with per_person as (
                                 select user_id, count(*) as days from (${activeDays}) as a
@@ -1247,7 +1365,7 @@ function definitions(
                     },
                     {
                         id: "recency", title: "Days since last open, all users", kind: "bar", unit: "count", x: "label",
-                        definition: "Every user by the days since they last opened the app. Never means no open recorded in the last 120 days.",
+                        definition: "Every user by the days since they last opened the app. Never means no open recorded in the last 120 days. Opens are recorded from 16 Sep 2026, so Never includes people who last opened the app before then.",
                         example: (r) => {
                             const today = r.row("Today") ?? 0;
                             const never = r.row("Never") ?? 0;
@@ -1255,7 +1373,7 @@ function definitions(
                                 ? `${r.count(today, "person", "people")} opened the app today, and ${r.format(never)} have no open in the last 120 days.`
                                 : null;
                         },
-                        note: "Never: no open recorded in the last 120 days.",
+                        note: "Never: no open recorded in the last 120 days, or since recording began on 16 Sep 2026.",
                         query: sql`
                             with seen_days as (
                                 select distinct user_id, (at at time zone 'Europe/Paris')::date as day from (${seen}) as a
@@ -1274,11 +1392,11 @@ function definitions(
                     },
                     {
                         id: "opens_heatmap", title: "When people open the app, last 30 days", kind: "heatmap", unit: "count", x: "label",
-                        definition: "Each cell is the number of different people who opened the app at least once on that weekday at that hour in the last 30 days, in their own time zone. Someone who opens it often counts once per cell. Paris time when a person has no valid time zone. The darker the cell, the more people.",
+                        definition: "Each cell is the number of different people who opened the app at least once on that weekday at that hour in the last 30 days, in their saved time zone. Someone who opens it often counts once per cell. People without a saved time zone, most accounts created before 28 Sep 2026, are placed in Paris time, so evening opens in the Americas show as Paris night. The darker the cell, the more people.",
                         example: (r) => (r.peak && r.peak.value > 0
                             ? `The busiest time is ${r.peak.y} ${r.peak.x}:00 local time: ${r.count(r.peak.value, "person", "people")} opened the app then in the last 30 days.`
                             : null),
-                        note: "People who opened the app, by weekday and hour in their own time zone.",
+                        note: "People who opened the app, by weekday and hour in their saved time zone, else Paris time.",
                         query: sql`
                             with zones as (select name from pg_timezone_names),
                             counted as (
@@ -1300,7 +1418,7 @@ function definitions(
                     },
                     {
                         id: "top_openers", title: "Most app opens, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "People who opened the app the most in the last 30 days.",
+                        definition: `People who opened the app the most in the last 30 days. ${kept}, so until 1 Nov earlier opens are missing.`,
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} opened the app ${r.count(r.top.y, "time", "times")} in the last 30 days.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
@@ -1318,7 +1436,7 @@ function definitions(
                     weeklySteps,
                     {
                         id: "average_steps", title: "Weekly avg daily steps", unit: "steps", better: true,
-                        note: "Per person-day, the 7 complete days before today vs the 7 before.",
+                        note: "Per person-day, the 7 complete days before today vs the 7 before. New signups count.",
                         definition: "Average steps per person per day over the 7 complete days before today, compared with the 7 days before. Each person's complete Apple Health days count, from their signup day.",
                         example: (r) => `The average person walked ${r.format(r.value)} steps a day in the last 7 complete days${r.against("in the 7 days before")}.`,
                         query: dayCard(sql, w, 7, recentSteps, sql`avg(e.steps)`),
@@ -1332,7 +1450,7 @@ function definitions(
                     },
                     {
                         id: "walkers", title: "Weekly walkers", unit: "count", better: true,
-                        note: "People with step data in the 7 days before today, vs the 7 before.",
+                        note: "People with step data in the 7 days before today, vs the 7 before. New signups count.",
                         definition: "People with at least one complete day of Apple Health steps in the 7 complete days before today, compared with the 7 days before.",
                         example: (r) => `${r.count(r.value, "person", "people")} had step data in the last 7 complete days${r.against("in the 7 days before")}.`,
                         query: dayCard(sql, w, 7, recentSteps, people),
@@ -1346,36 +1464,41 @@ function definitions(
                     },
                     {
                         id: "fight_day_lift", title: "Monthly fight-day lift", unit: "percent", better: true,
-                        note: "Extra steps on days in a live Fight vs other days. Last 30 days vs the 30 before.",
-                        definition: "How many more steps people walk on days they are in a live Fight than on their other days, in percent. Average steps per person-day over the 30 complete days before today, compared with the 30 days before. Every Fight counts, the app-wide one included.",
-                        example: (r) => `People walked ${r.format(Math.abs(r.value))} ${r.value < 0 ? "fewer" : "more"} steps on fight days than on other days in the last 30 complete days${r.against("in the 30 days before")}.`,
+                        note: "Median person: steps on their days in a live Fight vs their other days. Last 30 days vs the 30 before.",
+                        definition: "For each person, how many more steps they walk on days in a live Fight than on their own other days, in percent, over the 30 complete days before today. The card shows the median person, compared with the 30 days before. Only people with 3 or more days of each kind count, and a window shows no number until 5 people do. A Fight counts from the day the person accepted it, and only with another accepted member. The app-wide and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count.",
+                        example: (r) => `The median person walked ${r.format(Math.abs(r.value))} ${r.value < 0 ? "fewer" : "more"} steps on fight days than on their other days in the last 30 complete days${r.against("in the 30 days before")}.`,
                         query: sql`
-                            with windows as (
+                            with people as (
                                 select case when e.day >= ${w.today}::date - 30 then 'value' else 'previous' end as period,
-                                    e.steps, e.in_fight
+                                    100.0 * (avg(e.steps) filter (where e.in_fight)
+                                        / nullif(avg(e.steps) filter (where not e.in_fight), 0) - 1) as lift
                                 from (${fightDays}) as e
                                 where e.day >= ${w.today}::date - 60
+                                group by 1, e.user_id
+                                having count(*) filter (where e.in_fight) >= 3 and count(*) filter (where not e.in_fight) >= 3
                             )
-                            select 100.0 * (avg(steps) filter (where period = 'value' and in_fight)
-                                    / nullif(avg(steps) filter (where period = 'value' and not in_fight), 0) - 1) as value,
-                                100.0 * (avg(steps) filter (where period = 'previous' and in_fight)
-                                    / nullif(avg(steps) filter (where period = 'previous' and not in_fight), 0) - 1) as previous
-                            from windows
+                            select case when count(lift) filter (where period = 'value') >= 5
+                                    then percentile_cont(0.5) within group (order by lift) filter (where period = 'value') end as value,
+                                case when count(lift) filter (where period = 'previous') >= 5
+                                    then percentile_cont(0.5) within group (order by lift) filter (where period = 'previous') end as previous
+                            from people
                         `,
                     },
                     {
                         id: "joining_lift", title: "Change after joining", unit: "percent", better: true,
-                        note: "All time. Median of each person's 4 weeks after signup vs the 4 before.",
-                        definition: "For each person, the change in average daily steps from the 4 weeks before signup to the 4 weeks after, from Apple Health history. The card shows the median person, all time. Only people with 7 or more days of data on each side count. There is no comparison.",
+                        note: "All time. Median of each person's 4 full weeks after signup vs the 4 before.",
+                        definition: "For each person who signed up more than 4 weeks ago, the change in average daily steps from the 4 weeks before signup to the 4 weeks after the signup day, from Apple Health history. The signup day itself is left out. Only people with 20 or more days of data on each side count. The card shows the median person, all time. There is no comparison.",
                         example: (r) => `The median person walks ${r.format(Math.abs(r.value))} ${r.value < 0 ? "less" : "more"} in the 4 weeks after signing up than in the 4 weeks before.`,
                         query: sql`
                             with compared as (
                                 select user_id,
                                     avg(steps) filter (where day >= joined_day - 28 and day < joined_day) as before,
-                                    avg(steps) filter (where day >= joined_day and day < joined_day + 28) as after
-                                from (${history}) as h group by user_id
-                                having count(*) filter (where day >= joined_day - 28 and day < joined_day) >= 7
-                                    and count(*) filter (where day >= joined_day and day < joined_day + 28) >= 7
+                                    avg(steps) filter (where day > joined_day and day <= joined_day + 28) as after
+                                from (${history}) as h
+                                where joined_day + 28 < ${w.today}::date
+                                group by user_id
+                                having count(*) filter (where day >= joined_day - 28 and day < joined_day) >= 20
+                                    and count(*) filter (where day > joined_day and day <= joined_day + 28) >= 20
                             )
                             select percentile_cont(0.5) within group (order by 100.0 * (after / nullif(before, 0) - 1)) as value,
                                 null::float8 as previous
@@ -1448,33 +1571,39 @@ function definitions(
                     },
                     {
                         id: "fight_vs_other_days", title: "Steps on fight days vs other days", kind: "line", unit: "steps", x: "date",
-                        definition: "Average steps per person-day on days when the person was in a live Fight, against their days without one.",
+                        definition: "Average steps per person-day on days when the person was in a live Fight, against their days without one. Both lines are the same people: those with 3 or more days of each kind in the period. A Fight counts from the day the person accepted it, and only with another accepted member. The app-wide and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count.",
                         example: (r) => {
                             const fighting = r.at("In a fight");
                             const other = r.at("Other days");
                             return fighting === undefined || other === undefined ? null
                                 : `People in a fight walked ${r.format(fighting)} steps a day ${r.when}, against ${r.format(other)} on other days.`;
                         },
-                        note: `Average steps per person-day${w.bucket === "day" ? "" : ` in each ${w.bucket}`}, on days in a live Fight vs days without one.`,
+                        note: `Average steps per person-day${w.bucket === "day" ? "" : ` in each ${w.bucket}`}, on days in a live Fight vs days without one. Only people with 3+ days of each kind in the period.`,
                         query: perBucket(sql, w, sql`
-                            select d.*, case when d.in_fight then 'In a fight' else 'Other days' end as series
-                            from (${fightDays}) as d
+                            select * from (
+                                select d.*, case when d.in_fight then 'In a fight' else 'Other days' end as series,
+                                    count(*) filter (where d.in_fight) over (partition by d.user_id) as fighting,
+                                    count(*) filter (where not d.in_fight) over (partition by d.user_id) as other
+                                from (${fightDays}) as d
+                                where d.day >= ${w.start}::date
+                            ) as d
+                            where d.fighting >= 3 and d.other >= 3
                         `, sql`avg(e.steps)`, { complete: true, gaps: true, series: ["In a fight", "Other days"] }),
                     },
                     {
                         id: "people_by_average", title: "People by daily average, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "People by their average daily steps over the last 30 complete days.",
+                        definition: "People by their average daily steps over the last 30 complete days. Only people with 7 or more complete days of steps in those 30 count.",
                         example: (r) => {
                             const active = (r.row("10K-15K") ?? 0) + (r.row("15K+") ?? 0);
                             const part = r.share(active, r.total);
                             return part
-                                ? `${r.count(active, "person averages", "people average")} 10,000 steps a day or more: ${part} of everyone with step data.`
+                                ? `${r.count(active, "person averages", "people average")} 10,000 steps a day or more: ${part} of everyone with 7 or more days of step data.`
                                 : null;
                         },
                         query: sql`
                             with people as (
                                 select user_id, avg(steps) as steps from (${recentSteps}) as s
-                                where s.day >= ${w.today}::date - 30 group by 1
+                                where s.day >= ${w.today}::date - 30 group by 1 having count(*) >= 7
                             )
                             select level.x, count(people.user_id)::float8 as y from (values
                                 (1, 'Under 3K', 0, 3000), (2, '3K-6K', 3000, 6000), (3, '6K-10K', 6000, 10000),
@@ -1486,7 +1615,7 @@ function definitions(
                     },
                     {
                         id: "around_joining", title: "Steps around signup, all time", kind: "line", unit: "steps", x: "label",
-                        definition: "Average steps per person on each day around signup, from Apple Health history. Day 0 is the signup day; negative days are before it.",
+                        definition: "Average steps per person on each day around signup, from Apple Health history. Only people with 7 or more days of data both in the 4 weeks before signup and in the 4 weeks after the signup day, so both sides are the same people. Day 0 is the signup day; negative days are before it. A day with fewer than 20 people is left out.",
                         example: (r) => {
                             const mean = (low: number, high: number) => {
                                 const days = r.rows.filter((row) => Number(row.x) >= low && Number(row.x) < high);
@@ -1497,31 +1626,38 @@ function definitions(
                             return before === undefined || after === undefined ? null
                                 : `People walked ${r.format(before)} steps a day in the week before signing up and ${r.format(after)} in their first week.`;
                         },
-                        note: "Day 0 is the signup day. Average across everyone with Health history on each day.",
+                        note: "Day 0 is the signup day. People with 7+ days of history on each side; days with under 20 people are left out.",
                         query: sql`
                             select (day - joined_day)::text as x, avg(steps)::float8 as y
-                            from (${history}) as h
-                            where day - joined_day between -28 and 28
-                            group by day - joined_day order by day - joined_day
+                            from (
+                                select h.*,
+                                    count(*) filter (where h.day - h.joined_day between -28 and -1) over (partition by h.user_id) as before,
+                                    count(*) filter (where h.day - h.joined_day between 1 and 28) over (partition by h.user_id) as after
+                                from (${history}) as h
+                            ) as h
+                            where day - joined_day between -28 and 28 and before >= 7 and after >= 7
+                            group by day - joined_day having count(*) >= 20 order by day - joined_day
                         `,
                     },
                     {
                         id: "joining_change_distribution", title: "Change after joining, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People by how their average steps changed: the 4 weeks after signup against the 4 weeks before. Only people with 7 or more days of data on each side.",
+                        definition: "People by how their average steps changed: the 4 weeks after the signup day against the 4 weeks before signup. Only people who signed up more than 4 weeks ago, with 20 or more days of data on each side.",
                         example: (r) => {
                             const up = (r.row("Up 5-20%") ?? 0) + (r.row("Up 20%+") ?? 0);
                             return r.total > 0
                                 ? `${r.count(up, "person walks", "people walk")} at least 5% more since joining, out of ${r.format(r.total)}.`
                                 : null;
                         },
-                        note: "People by their 4 weeks after signup vs the 4 weeks before (7+ days of data each side).",
+                        note: "People by their 4 full weeks after signup vs the 4 weeks before (20+ days of data each side).",
                         query: sql`
                             with compared as (
-                                select 100.0 * (avg(steps) filter (where day >= joined_day and day < joined_day + 28)
+                                select 100.0 * (avg(steps) filter (where day > joined_day and day <= joined_day + 28)
                                     / nullif(avg(steps) filter (where day >= joined_day - 28 and day < joined_day), 0) - 1) as change
-                                from (${history}) as h group by user_id
-                                having count(*) filter (where day >= joined_day - 28 and day < joined_day) >= 7
-                                    and count(*) filter (where day >= joined_day and day < joined_day + 28) >= 7
+                                from (${history}) as h
+                                where joined_day + 28 < ${w.today}::date
+                                group by user_id
+                                having count(*) filter (where day >= joined_day - 28 and day < joined_day) >= 20
+                                    and count(*) filter (where day > joined_day and day <= joined_day + 28) >= 20
                             )
                             select band.x, count(compared.change)::float8 as y from (values
                                 (1, 'Down 20%+', -1000000, -20), (2, 'Down 5-20%', -20, -5), (3, 'About the same', -5, 5),
@@ -1555,32 +1691,34 @@ function definitions(
                     {
                         id: "rounds_finished", title: "Weekly rounds finished", unit: "count", better: true,
                         note: "Last 7 days vs the 7 before.",
-                        definition: "Fight rounds that ended with results in the last 7 days, up to now, compared with the 7 days before. Every round of a repeating Fight counts, the app-wide Fight included.",
+                        definition: "Fight rounds with two or more fighters that ended with results in the last 7 days, up to now, compared with the 7 days before. Every round of a repeating Fight counts, the app-wide Fight included. Rounds with one fighter, founder Fights and friend Fights do not. A round counts once its final sync is done.",
                         example: (r) => `${r.count(r.value, "round", "rounds")} finished in the last 7 days${r.against("in the 7 days before")}.`,
-                        query: eventCard(sql, w, 7, sql`select ends_at as at from public.fights where state = 'final'`, count),
+                        query: eventCard(sql, w, 7, sql`select f.ends_at as at from (${rounds}) as f where f.state = 'final'`, count),
                     },
                     {
                         id: "joins", title: "Weekly fight joins", unit: "count", better: true,
-                        note: "People joining someone else's Fight, app-wide ones excluded. Last 7 days vs the 7 before.",
-                        definition: "How many times people joined someone else's Fight in the last 7 days, up to now, compared with the 7 days before. The app-wide Fight and suggested Fights do not count.",
+                        note: "People joining someone else's Fight, app-wide, founder and friend ones excluded. Last 7 days vs the 7 before.",
+                        definition: "How many times people joined someone else's Fight in the last 7 days, up to now, compared with the 7 days before. A repeating Fight carries its fighters into each new round; that is not a join. The app-wide Fight, suggested Fights, founder Fights and friend Fights do not count.",
                         example: (r) => `People joined someone else's fight ${r.count(r.value, "time", "times")} in the last 7 days${r.against("in the 7 days before")}.`,
                         query: eventCard(sql, w, 7, joins, count),
                     },
                     {
                         id: "people_in_fights", title: "Users in a live fight", unit: "percent", better: true,
-                        note: "Share of all users, now vs 7 days ago.",
-                        definition: "The share of all users who are in a live Fight now, compared with 7 days ago. The app-wide Fight counts.",
+                        note: "Share of all users, now vs 7 days ago. App-wide and suggested Fights excluded.",
+                        definition: "The share of all users who are in a live Fight now, compared with 7 days ago. A Fight counts once someone besides its owner joins it. The app-wide Fight and suggested Fights do not count; the App-wide and suggested fights chart shows them. Founder Fights count for the challenger only, and friend Fights do not count.",
                         example: (r) => `${r.format(r.value)} of users are in a live fight now${r.against("a week ago")}.`,
                         query: sql`
                             select 100.0 * (select count(distinct m.user_id) from public.fight_members as m
-                                    join public.fights as f on f.id = m.fight_id
-                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
-                                        and f.starts_at <= ${w.now} and f.ends_at > ${w.now})
+                                    join (${userContests}) as f on f.id = m.fight_id
+                                    join public.profiles as p on p.user_id = m.user_id and p.deleted_at is null
+                                    where m.state = 'accepted' and m.user_id::text is distinct from f.host and f.starts_at <= ${w.now} and f.ends_at > ${w.now})
                                     / nullif((select count(*) from public.profiles
                                         where deleted_at is null and created_at < ${w.now}), 0) as value,
                                 100.0 * (select count(distinct m.user_id) from public.fight_members as m
-                                    join public.fights as f on f.id = m.fight_id
-                                    where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
+                                    join (${userContests}) as f on f.id = m.fight_id
+                                    join public.profiles as p on p.user_id = m.user_id and p.deleted_at is null
+                                        and p.created_at < ${ago(7)}
+                                    where m.state = 'accepted' and m.user_id::text is distinct from f.host and m.accepted_at <= ${ago(7)}
                                         and f.starts_at <= ${ago(7)} and f.ends_at > ${ago(7)})
                                     / nullif((select count(*) from public.profiles
                                         where deleted_at is null and created_at < ${ago(7)}), 0) as previous
@@ -1589,24 +1727,25 @@ function definitions(
                     {
                         id: "fighters_per_fight", title: "Monthly fighters per fight", unit: "count", better: true,
                         note: "Average accepted fighters in Fights that started in the last 30 days, vs the 30 before.",
-                        definition: "The average number of accepted fighters in the Fights that started in the last 30 days, up to now, compared with the 30 days before. Every round counts. Cancelled Fights, the app-wide Fight and suggested Fights do not.",
+                        definition: "The average number of accepted fighters in the Fights that started in the last 30 days, up to now, compared with the 30 days before. Every round counts. Fights nobody else joined, cancelled Fights, the app-wide Fight, suggested Fights, founder Fights and friend Fights do not.",
                         example: (r) => `Fights that started in the last 30 days had ${r.count(r.value, "fighter", "fighters")} on average${r.against("in the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select f.starts_at as at, (select count(*) from public.fight_members as m
                                 where m.fight_id = f.id and m.state = 'accepted') as fighters
-                            from (${realFights}) as f where f.state <> 'cancelled'
+                            from (${contests}) as f
                         `, sql`avg(e.fighters)`),
                     },
                     {
                         id: "invite_acceptance", title: "Monthly invite acceptance", unit: "percent", better: true,
-                        note: "Share of people invited in the last 30 days who are now in the Fight, vs the 30 before.",
-                        definition: "Of the invitations sent in the last 30 days, up to now, the share whose invited person is in the Fight now, compared with the 30 days before. The app-wide Fight and suggested Fights do not count.",
+                        note: "Share of people invited in the last 30 days who are now in the Fight, vs the 30 before. Invites are logged since 26 Sep 2026.",
+                        definition: "Of the invitations sent in the last 30 days, up to now, the share whose invited person is in any round of the Fight now, compared with the 30 days before. Invites are logged since 26 Sep 2026, and joining by code is not an invite, so this rests on few invitations. The app-wide Fight, suggested Fights, founder Fights and friend Fights do not count.",
                         example: (r) => `${r.format(r.value)} of the people invited in the last 30 days are in the fight now${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select event.occurred_at as at, bool_or(m.state = 'accepted') as accepted
                             from private.fight_membership_events as event
                             join (${realFights}) as f on f.id = event.fight_id
-                            left join public.fight_members as m on m.fight_id = event.fight_id and m.user_id = event.user_id
+                            left join public.fights as round on round.series_id = f.series_id
+                            left join public.fight_members as m on m.fight_id = round.id and m.user_id = event.user_id
                             where event.state = 'invited' and event.occurred_at is not null
                             group by event.fight_id, event.user_id, event.occurred_at
                         `, sql`avg(case when e.accepted then 100.0 else 0 end)`),
@@ -1614,25 +1753,28 @@ function definitions(
                     {
                         id: "cancel_rate", title: "Monthly cancel rate", unit: "percent", better: false,
                         note: "Share of Fights starting in the last 30 days that were cancelled, vs the 30 before.",
-                        definition: "Of the Fights due to start in the last 30 days, up to now, the share that were cancelled, compared with the 30 days before. Every round counts. The app-wide Fight and suggested Fights do not.",
+                        definition: "Of the Fights due to start in the last 30 days, up to now, the share that were cancelled, compared with the 30 days before. Every round counts. A cancelled Fight counts even when nobody joined it (every cancellation so far is of that kind); a Fight nobody else joined that ran is left out. The app-wide Fight, suggested Fights, founder Fights and friend Fights do not count.",
                         example: (r) => `${r.format(r.value)} of the fights due to start in the last 30 days were cancelled${r.against("for the 30 days before")}.`,
-                        query: eventCard(sql, w, 30, sql`select starts_at as at, state from (${realFights}) as f`,
+                        query: eventCard(sql, w, 30, sql`
+                            select f.starts_at as at, f.state from (${realFights}) as f
+                            where f.state = 'cancelled' or f.id in (select contest.id from (${contests}) as contest)
+                        `,
                             sql`avg(case when e.state = 'cancelled' then 100.0 else 0 end)`),
                     },
                     {
                         id: "recurring_share", title: "Monthly recurring share", unit: "percent", better: null,
                         note: "Share of new Fights created as recurring, last 30 days vs the 30 before.",
-                        definition: "The share of new Fights created as recurring in the last 30 days, up to now, compared with the 30 days before. A recurring Fight starts a new round when one ends. The app-wide Fight and suggested Fights do not count.",
+                        definition: "The share of new Fights created as recurring in the last 30 days, up to now, compared with the 30 days before. A recurring Fight starts a new round when one ends. A Fight counts once someone besides its owner joins it. Cancelled Fights, the app-wide Fight, suggested Fights, founder Fights and friend Fights do not count.",
                         example: (r) => `${r.format(r.value)} of the fights created in the last 30 days are recurring${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
-                            select series.created_at as at, series.recurring from public.fight_series as series
-                            where series.join_code <> 'PGG7' and not series.suggested
+                            select created.at, series.recurring from (${firstRounds}) as created
+                            join public.fight_series as series on series.id = created.series_id
                         `, sql`avg(case when e.recurring then 100.0 else 0 end)`),
                     },
                     {
                         id: "winning_margin", title: "Monthly winning margin", unit: "percent", better: null,
                         note: "Median lead of the winner over second place, Fights finished in the last 30 days vs the 30 before.",
-                        definition: "How far the winner was ahead of second place, as a share of the winner's steps, in the median Fight that finished in the last 30 days, up to now, compared with the 30 days before. Only Fights with two or more fighters count. The app-wide Fight counts.",
+                        definition: "How far the winner was ahead of second place, as a share of the winner's steps, in the median Fight that finished in the last 30 days, up to now, compared with the 30 days before. Only Fights with two or more fighters count. The app-wide Fight counts. Founder and friend Fights do not.",
                         example: (r) => `In half of the fights that finished in the last 30 days, the winner led second place by ${r.format(r.value)} or less${r.against("for the 30 days before")}.`,
                         query: eventCard(sql, w, 30, sql`
                             select f.ends_at as at, 100.0 * (ranked.first - ranked.second) / nullif(ranked.first, 0) as margin
@@ -1642,7 +1784,8 @@ function definitions(
                                     max(m.final_value) filter (where m.rank = 2) as second
                                 from public.fight_members as m where m.fight_id = f.id and m.state = 'accepted'
                             ) as ranked
-                            where f.state = 'final' and ranked.second is not null
+                            where f.state = 'final' and (to_jsonb(f) ->> 'host_id') is null and (to_jsonb(f) ->> 'friends') is distinct from 'true'
+                                and ranked.second is not null
                         `, sql`percentile_cont(0.5) within group (order by e.margin)`),
                     },
                 ],
@@ -1650,15 +1793,15 @@ function definitions(
                     fightsCreatedChart,
                     {
                         id: "live_fights_over_time", title: "Live fights", kind: "line", unit: "count", x: "date",
-                        definition: `Fights running at the end of each ${w.bucket}, and now for the last point. The app-wide Fight counts.`,
+                        definition: `Fights running with two or more fighters at the end of each ${w.bucket}, and now for the last point. The app-wide Fight counts. Founder Fights, friend Fights and rounds with one fighter do not.`,
                         example: (r) => {
                             const n = r.latest();
                             return n === undefined ? null : `${r.count(n, "fight is", "fights are")} live now.`;
                         },
-                        note: `At the end of each ${w.bucket}, now for the last one. App-wide Fight included.`,
+                        note: `At the end of each ${w.bucket}, now for the last one. App-wide Fight included, founder and friend Fights and solo rounds not.`,
                         query: sql`
                             select point.bucket::text as x, (
-                                select count(*) from public.fights as f
+                                select count(*) from (${rounds}) as f
                                 where f.state not in ('draft', 'cancelled') and f.starts_at <= point.at and f.ends_at > point.at
                             )::float8 as y
                             from (${instants}) as point order by point.bucket
@@ -1666,17 +1809,18 @@ function definitions(
                     },
                     {
                         id: "people_in_fights_over_time", title: "Users in a live fight", kind: "line", unit: "percent", x: "date",
-                        definition: `Share of all users who are in a live Fight, at the end of each ${w.bucket} and now for the last point.`,
+                        definition: `Share of all users who are in a live Fight, at the end of each ${w.bucket} and now for the last point. A Fight counts once someone besides its owner joins it. The app-wide Fight and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count.`,
                         example: (r) => {
                             const n = r.latest();
                             return n === undefined ? null : `${r.format(n)} of users are in a live fight now.`;
                         },
-                        note: `Share of all users, at the end of each ${w.bucket}, now for the last one.`,
+                        note: `Share of all users, at the end of each ${w.bucket}, now for the last one. App-wide and suggested Fights excluded.`,
                         query: sql`
                             select point.bucket::text as x, (100.0 * (
                                 select count(distinct m.user_id) from public.fight_members as m
-                                join public.fights as f on f.id = m.fight_id
-                                where m.state = 'accepted' and f.state not in ('draft', 'cancelled')
+                                join (${userContests}) as f on f.id = m.fight_id
+                                join public.profiles as p on p.user_id = m.user_id and p.deleted_at is null and p.created_at < point.at
+                                where m.state = 'accepted' and m.user_id::text is distinct from f.host and m.accepted_at <= point.at
                                     and f.starts_at <= point.at and f.ends_at > point.at
                             ) / users.total)::float8 as y
                             from (${instants}) as point
@@ -1689,23 +1833,23 @@ function definitions(
                     },
                     {
                         id: "rounds_finished_per_bucket", title: `Rounds finished ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Fight rounds that ended with results, in each ${w.bucket}. Every round of a repeating Fight counts.`,
+                        definition: `Fight rounds with two or more fighters that ended with results, in each ${w.bucket}. Every round of a repeating Fight counts, the app-wide Fight included. Rounds with one fighter, founder Fights and friend Fights do not. A round counts once its final sync is done, so the latest days can still grow.`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `${r.count(n, "round", "rounds")} finished ${r.when}.`;
                         },
-                        query: perBucket(sql, w, sql`select ends_at as at from public.fights where state = 'final'`, count),
+                        query: perBucket(sql, w, sql`select f.ends_at as at from (${rounds}) as f where f.state = 'final'`, count),
                     },
                     {
                         id: "invites_and_joins", title: `Invites and joins ${per}`, kind: "line", unit: "count", x: "date",
-                        definition: `Invitations sent to Fights, and people who joined someone else's Fight, in each ${w.bucket}. App-wide and suggested Fights are not counted.`,
+                        definition: `Invitations sent to Fights, and people who joined someone else's Fight, in each ${w.bucket}. A repeating Fight carries its fighters into each new round; that is not a join. Invites are logged since 26 Sep 2026, and joining by code is not an invite. App-wide, suggested, founder and friend Fights are not counted.`,
                         example: (r) => {
                             const sent = r.at("Invites sent");
                             const joined = r.at("People joining");
                             return sent === undefined || joined === undefined ? null
                                 : `${r.count(sent, "invite was", "invites were")} sent ${r.when}, and ${r.count(joined, "person", "people")} joined a fight.`;
                         },
-                        note: "App-wide and suggested Fights excluded.",
+                        note: "App-wide, suggested, founder and friend Fights excluded. Invites logged since 26 Sep 2026.",
                         query: perBucket(sql, w, sql`
                             select event.occurred_at as at, 'Invites sent' as series
                             from private.fight_membership_events as event
@@ -1717,17 +1861,18 @@ function definitions(
                     },
                     {
                         id: "fight_sizes", title: "Fight sizes, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Fights that started in the last 30 days, by their number of accepted fighters. Cancelled Fights are not counted.",
+                        definition: "Fights with a round that started in the last 30 days, by the accepted fighters in their latest such round. A repeating Fight counts once. Solo means nobody else joined. Cancelled, app-wide, suggested, founder and friend Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0
-                            ? `${r.top.x}${/^\d/.test(r.top.x) ? " fighters" : ""} is the most common size: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.`
+                            ? `${r.top.x}${/^\d+(-\d+|\+)$/.test(r.top.x) ? " fighters" : ""} is the most common size: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.`
                             : null),
-                        note: "Fights that started in the last 30 days, by accepted fighters.",
+                        note: "Fights with a round started in the last 30 days, by accepted fighters. Each Fight once.",
                         query: sql`
                             with sizes as (
-                                select (select count(*) from public.fight_members as m
+                                select distinct on (f.series_id) (select count(*) from public.fight_members as m
                                     where m.fight_id = f.id and m.state = 'accepted') as fighters
                                 from (${realFights}) as f
                                 where f.state <> 'cancelled' and f.starts_at >= ${ago(30)} and f.starts_at < ${w.now}
+                                order by f.series_id, f.starts_at desc
                             )
                             select size.x, count(sizes.fighters)::float8 as y from (values
                                 (1, 'Solo', 0, 1), (2, '1v1', 2, 2), (3, '3-5', 3, 5), (4, '6-10', 6, 10), (5, '11+', 11, 1000000)
@@ -1738,7 +1883,7 @@ function definitions(
                     },
                     {
                         id: "durations", title: "Fight durations, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "How long Fights last, all time. App-wide and suggested Fights are not counted.",
+                        definition: "How long Fights last, all time. A Fight counts once someone besides its owner joins it. Cancelled, app-wide, suggested, founder and friend Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} is the most common length: ${r.count(r.top.y, "fight", "fights")} out of ${r.format(r.total)}.` : null),
                         query: sql`
                             select duration.x, count(series.id)::float8 as y from (values
@@ -1746,13 +1891,13 @@ function definitions(
                                 (4, '8-14 days', 604801, 1209600), (5, '15-31 days', 1209601, 2678400), (6, 'Longer', 2678401, 2147483647)
                             ) as duration(position, x, low, high)
                             left join public.fight_series as series on series.duration_seconds between duration.low and duration.high
-                                and series.join_code <> 'PGG7' and not series.suggested
+                                and series.id in (select contest.series_id from (${contests}) as contest)
                             group by duration.position, duration.x order by duration.position
                         `,
                     },
                     {
                         id: "margins", title: "How close fights end, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "Finished Fights with two or more fighters, by how far the winner was ahead of second place, as a share of the winner's steps.",
+                        definition: "Finished Fights with two or more fighters, by how far the winner was ahead of second place, as a share of the winner's steps. The app-wide Fight counts. Founder and friend Fights do not.",
                         example: (r) => {
                             const close = r.row("Under 5%") ?? 0;
                             return r.total > 0
@@ -1769,7 +1914,8 @@ function definitions(
                                         max(m.final_value) filter (where m.rank = 2) as second
                                     from public.fight_members as m where m.fight_id = f.id and m.state = 'accepted'
                                 ) as ranked
-                                where f.state = 'final' and ranked.second is not null
+                                where f.state = 'final' and (to_jsonb(f) ->> 'host_id') is null and (to_jsonb(f) ->> 'friends') is distinct from 'true'
+                                and ranked.second is not null
                             )
                             select band.x, count(margins.margin)::float8 as y from (values
                                 (1, 'Under 5%', 0, 5), (2, '5-15%', 5, 15), (3, '15-30%', 15, 30),
@@ -1781,45 +1927,45 @@ function definitions(
                     },
                     {
                         id: "time_to_first_fight", title: "Time from signup to first fight, all users", kind: "bar", unit: "count", x: "label",
-                        definition: "Every user by the time between signing up and first joining a fight. Not yet means they have not joined one.",
+                        definition: "Every user by the time between signing up and first joining a fight. Not yet means they have not joined one, even if they are in the app-wide Fight. Creating a fight counts once someone else joins it. Cancelled, app-wide and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count.",
                         example: (r) => {
-                            const same = r.row("Same day") ?? 0;
+                            const soon = r.row("Under 1 day") ?? 0;
                             const waiting = r.row("Not yet") ?? 0;
                             return r.total > 0
-                                ? `${r.count(same, "person", "people")} joined a fight on the day they signed up, and ${r.format(waiting)} have not joined one yet.`
+                                ? `${r.count(soon, "person", "people")} joined a fight within a day of signing up, and ${r.format(waiting)} have not joined one yet.`
                                 : null;
                         },
                         query: sql`
                             with waits as (
                                 select extract(epoch from (
                                     select min(m.accepted_at) from public.fight_members as m
-                                    join (${realFights}) as f on f.id = m.fight_id
-                                    where m.user_id = p.user_id and m.state = 'accepted'
+                                    join (${userContests}) as f on f.id = m.fight_id
+                                    where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host
                                 ) - p.created_at) / 86400 as days
                                 from public.profiles as p where p.deleted_at is null
                             )
                             select band.x, (case when band.position = 6 then (select count(*) from waits where days is null)
                                 else (select count(*) from waits where greatest(days, 0) >= band.low and days < band.high) end)::float8 as y
                             from (values
-                                (1, 'Same day', 0, 1), (2, '1-3 days', 1, 4), (3, '4-7 days', 4, 8),
+                                (1, 'Under 1 day', 0, 1), (2, '1-3 days', 1, 4), (3, '4-7 days', 4, 8),
                                 (4, '8-30 days', 8, 31), (5, '31+ days', 31, 1000000), (6, 'Not yet', 0, 0)
                             ) as band(position, x, low, high) order by band.position
                         `,
                     },
                     {
                         id: "top_fighters", title: "Most fights joined, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People who joined the most Fights, all time. App-wide and suggested Fights are not counted.",
+                        definition: "People who joined the most Fights, all time. A repeating Fight counts once, and creating a fight counts once someone else joins it. Cancelled, app-wide, suggested, founder and friend Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} joined ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
-                            select '@' || p.handle as x, count(*)::float8 as y
-                            from public.fight_members as m join (${realFights}) as f on f.id = m.fight_id
+                            select '@' || p.handle as x, count(distinct f.series_id)::float8 as y
+                            from public.fight_members as m join (${contests}) as f on f.id = m.fight_id
                             join public.profiles as p on p.user_id = m.user_id
                             where m.state = 'accepted' group by p.handle order by 2 desc, 1 limit 10
                         `,
                     },
                     {
                         id: "top_winners", title: "Most wins, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "People who won the most finished Fights that had at least two fighters, all time.",
+                        definition: "People who won the most finished Fights that had at least two fighters, all time. App-wide, suggested, founder and friend Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} won ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
                             select '@' || p.handle as x, count(*)::float8 as y
@@ -1833,13 +1979,14 @@ function definitions(
                     },
                     {
                         id: "loser_actions", title: "Most common loser actions, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "The actions losers most often have to do, as people typed them, all time.",
+                        definition: "The actions losers most often have to do, as people typed them, all time. Most are typed once, so ties show the newest first. A Fight counts once someone besides its owner joins it. Cancelled, app-wide, suggested, founder and friend Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common action, in ${r.count(r.top.y, "fight", "fights")}.` : null),
                         query: sql`
-                            select left(lower(trim(action_text)), 40) as x, count(*)::float8 as y
-                            from public.fight_series where action_text is not null and trim(action_text) <> ''
-                                and join_code <> 'PGG7' and not suggested
-                            group by 1 order by 2 desc, 1 limit 10
+                            select left(lower(trim(series.action_text)), 40) as x, count(*)::float8 as y
+                            from public.fight_series as series
+                            where series.action_text is not null and trim(series.action_text) <> ''
+                                and series.id in (select contest.series_id from (${contests}) as contest)
+                            group by 1 order by 2 desc, max(series.created_at) desc limit 10
                         `,
                     },
                     {
@@ -1884,7 +2031,7 @@ function definitions(
                     },
                     {
                         id: "reactions", title: "Weekly reactions", unit: "count", better: true, note: weekly,
-                        definition: "Emoji reactions left on Fight feed posts in the last 7 days, up to now, compared with the 7 days before.",
+                        definition: "Emoji reactions left on Fight feed posts in the last 7 days, up to now, compared with the 7 days before. Only reactions still on posts count: a removed reaction is gone, and changing the emoji dates it again.",
                         example: (r) => `People left ${r.count(r.value, "reaction", "reactions")} in the last 7 days${r.against("in the 7 days before")}.`,
                         query: eventCard(sql, w, 7, reactions, count),
                     },
@@ -1903,13 +2050,13 @@ function definitions(
                     },
                     {
                         id: "feedback_votes", title: "Weekly feedback votes", unit: "count", better: true, note: weekly,
-                        definition: "Votes on bugs and requests on the Feedback tab in the last 7 days, up to now, compared with the 7 days before.",
+                        definition: "Votes on bugs and requests on the Feedback tab in the last 7 days, up to now, compared with the 7 days before. Only votes still standing count: an undone vote is gone.",
                         example: (r) => `People cast ${r.count(r.value, "vote", "votes")} on bugs and requests in the last 7 days${r.against("in the 7 days before")}.`,
                         query: eventCard(sql, w, 7, sql`select user_id, created_at as at from public.feedback_votes`, count),
                     },
                     {
                         id: "friendships", title: "Weekly new friendships", unit: "count", better: true, note: weekly,
-                        definition: "Friend requests accepted in the last 7 days, up to now, compared with the 7 days before.",
+                        definition: "Friend requests accepted in the last 7 days, up to now, compared with the 7 days before. Only friendships still in place count: a removed friendship is gone.",
                         example: (r) => `${r.count(r.value, "new friendship", "new friendships")} started in the last 7 days${r.against("in the 7 days before")}.`,
                         query: eventCard(sql, w, 7, friendships, count),
                     },
@@ -1962,7 +2109,7 @@ function definitions(
                     },
                     {
                         id: "top_emojis", title: "Top reactions, last 30 days", kind: "bar", unit: "count", x: "label",
-                        definition: "The most used reactions in the last 30 days.",
+                        definition: "The most used reactions in the last 30 days, among reactions still on posts.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} is the most used reaction: ${r.count(r.top.y, "time", "times")} in 30 days.` : null),
                         query: sql`
                             select emoji as x, count(*)::float8 as y from (${reactions}) as r
@@ -1993,23 +2140,256 @@ function definitions(
                     },
                     {
                         id: "posts_by_fight", title: "Fights with the most posts, all time", kind: "bar", unit: "count", x: "label",
-                        definition: "Fights with the most posts in their feed, all time.",
+                        definition: "Fights with the most posts in their feed, all time, with their join code. A repeating Fight counts once, with the posts of every round, and a post shared to several Fights counts in each. Founder Fights are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has ${r.count(r.top.y, "post", "posts")}.` : null),
                         query: sql`
-                            select left(f.name, 40) as x, count(*)::float8 as y
-                            from public.fight_posts as post join public.fights as f on f.id = post.fight_id
-                            group by f.id, f.name order by 2 desc, 1 limit 10
+                            select left(series.name, 32) || ' · ' || series.join_code as x, count(distinct shown.post_id)::float8 as y
+                            from (
+                                select channel.post_id, posted.series_id from public.fight_post_channels as channel
+                                join public.fights as posted on posted.id = channel.fight_id
+                                union
+                                select post.id, origin.series_id from public.fight_posts as post
+                                join public.fights as origin on origin.id = post.fight_id
+                                where post.audience = 'fight'
+                            ) as shown
+                            join public.fight_series as series on series.id = shown.series_id
+                            where (to_jsonb(series) ->> 'host_id') is null
+                            group by series.id, series.name, series.join_code order by 2 desc, 1 limit 10
+                        `,
+                    },
+                ],
+            };
+        }
+        case "friends": {
+            // NOTE: declining or removing a friend deletes the pair's row, so requests only count the
+            // rows still here: pending or accepted. Deleted accounts and blocked pairs are left out,
+            // like the app's friends list.
+            const pairs = sql`
+                select friendship.user_low, friendship.user_high, friendship.state, friendship.created_at,
+                    friendship.accepted_at
+                from private.profile_friendships as friendship
+                join public.profiles as low on low.user_id = friendship.user_low and low.deleted_at is null
+                join public.profiles as high on high.user_id = friendship.user_high and high.deleted_at is null
+                where not exists (
+                    select 1 from (
+                        select blocker_id, blocked_id from private.profile_blocks
+                        union all select blocker_id, blocked_id from private.feed_blocks
+                        union all select blocker_id, blocked_id from private.feedback_blocks
+                    ) as block
+                    where (block.blocker_id = friendship.user_low and block.blocked_id = friendship.user_high)
+                        or (block.blocker_id = friendship.user_high and block.blocked_id = friendship.user_low)
+                )
+            `;
+            const friendships = sql`select * from (${pairs}) as pair where pair.state = 'accepted'`;
+            // Every user's friends now and 7 days ago.
+            const friendCounts = sql`
+                select p.user_id, p.created_at,
+                    count(*) filter (where side.state = 'accepted') as friends,
+                    count(*) filter (where side.accepted_at < ${ago(7)}) as friends_before
+                from (${profiles}) as p
+                left join (
+                    select user_low as user_id, state, accepted_at from (${pairs}) as pair
+                    union all select user_high, state, accepted_at from (${pairs}) as pair
+                ) as side on side.user_id = p.user_id
+                group by p.user_id, p.created_at
+            `;
+            const kept = "Declining or removing a friend deletes the request, so only requests still pending or accepted count";
+            return {
+                cards: [
+                    {
+                        id: "friendships_total", title: "Friendships", unit: "count", better: true,
+                        note: "Pairs of friends now, vs 7 days ago.",
+                        definition: "Pairs of friends now, each pair counted once, compared with 7 days ago. Deleted accounts and blocked pairs are not counted. Removing a friend deletes the pair, so 7 days ago only counts pairs that are still friends.",
+                        example: (r) => `FitFight has ${r.count(r.value, "pair of friends", "pairs of friends")} now${r.against("a week ago")}.`,
+                        query: sql`
+                            select count(*)::float8 as value, count(*) filter (where accepted_at < ${ago(7)})::float8 as previous
+                            from (${friendships}) as pair
+                        `,
+                    },
+                    {
+                        id: "new_friendships", title: "Weekly new friendships", unit: "count", better: true,
+                        note: "Requests accepted in the last 7 days, vs the 7 before.",
+                        definition: "Friend requests accepted in the last 7 days, up to now, compared with the 7 days before. Friendships removed since are not counted.",
+                        example: (r) => `${r.count(r.value, "new friendship", "new friendships")} started in the last 7 days${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, sql`select accepted_at as at from (${friendships}) as pair`, count),
+                    },
+                    {
+                        id: "average_friends", title: "Average friends per user", unit: "count", better: true,
+                        note: "All users, now vs 7 days ago.",
+                        definition: "The average number of friends per user now, people with no friends included, compared with 7 days ago. Deleted accounts and blocked pairs are not counted.",
+                        example: (r) => `The average user has ${r.count(r.value, "friend", "friends")} now${r.against("a week ago")}.`,
+                        query: sql`
+                            select avg(c.friends)::float8 as value,
+                                (avg(c.friends_before) filter (where c.created_at < ${ago(7)}))::float8 as previous
+                            from (${friendCounts}) as c
+                        `,
+                    },
+                    {
+                        id: "median_friends", title: "Median friends, people with friends", unit: "count", better: true,
+                        note: "Among users with at least one friend, now vs 7 days ago.",
+                        definition: "The median number of friends among the users who have at least one, now, compared with 7 days ago. Half of them have that many or more. People with no friends are left out here; the share of users with a friend is its own card.",
+                        example: (r) => `Half of the users with a friend have ${r.count(r.value, "friend", "friends")} or more${r.against("a week ago")}.`,
+                        query: sql`
+                            select (percentile_cont(0.5) within group (order by c.friends) filter (where c.friends > 0))::float8 as value,
+                                (percentile_cont(0.5) within group (order by c.friends_before)
+                                    filter (where c.friends_before > 0))::float8 as previous
+                            from (${friendCounts}) as c
+                        `,
+                    },
+                    {
+                        id: "with_friend", title: "Users with a friend", unit: "percent", better: true,
+                        note: "Share of all users, now vs 7 days ago.",
+                        definition: "The share of all users with at least one friend now, compared with 7 days ago. Deleted accounts and blocked pairs are not counted.",
+                        example: (r) => `${r.format(r.value)} of users have at least one friend now${r.against("a week ago")}.`,
+                        query: sql`
+                            select 100.0 * count(*) filter (where c.friends > 0) / nullif(count(*), 0) as value,
+                                100.0 * count(*) filter (where c.friends_before > 0)
+                                    / nullif(count(*) filter (where c.created_at < ${ago(7)}), 0) as previous
+                            from (${friendCounts}) as c
+                        `,
+                    },
+                    {
+                        id: "requests_sent", title: "Weekly friend requests", unit: "count", better: true,
+                        note: "Sent in the last 7 days, vs the 7 before. Declined requests are gone.",
+                        definition: `Friend requests sent in the last 7 days, up to now, compared with the 7 days before. ${kept}.`,
+                        example: (r) => `People sent ${r.count(r.value, "friend request", "friend requests")} in the last 7 days that are still pending or accepted${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, sql`select created_at as at from (${pairs}) as pair`, count),
+                    },
+                    {
+                        id: "acceptance_rate", title: "Monthly acceptance rate", unit: "percent", better: true,
+                        note: "Share of the last 30 days' requests accepted now, vs the 30 before. Reads high.",
+                        definition: `Of the friend requests sent in the last 30 days, up to now, the share accepted now, compared with the 30 days before. ${kept}, so the rate reads high. Recent requests have had less time to be accepted.`,
+                        example: (r) => `${r.format(r.value)} of the friend requests sent in the last 30 days are accepted${r.against("for the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`select created_at as at, state from (${pairs}) as pair`,
+                            sql`avg(case when e.state = 'accepted' then 100.0 else 0 end)`),
+                    },
+                    {
+                        id: "time_to_accept", title: "Monthly median time to accept", unit: "hours", better: false,
+                        note: "Requests accepted in the last 30 days, vs the 30 before.",
+                        definition: "The median time from a friend request to its acceptance, for the requests accepted in the last 30 days, up to now, compared with the 30 days before. Half were accepted faster. Friendships removed since are not counted.",
+                        example: (r) => `Half of the friend requests accepted in the last 30 days were accepted within ${r.format(r.value)}${r.against("for the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`
+                            select accepted_at as at, extract(epoch from accepted_at - created_at) / 3600 as waited
+                            from (${friendships}) as pair
+                        `, sql`percentile_cont(0.5) within group (order by e.waited)`),
+                    },
+                    {
+                        id: "pending_requests", title: "Pending friend requests", unit: "count", better: null,
+                        note: "Waiting for an answer now, vs 7 days ago.",
+                        definition: "Friend requests waiting for an answer now, compared with 7 days ago. Declining a request deletes it, so 7 days ago only counts requests that were later accepted or are still pending.",
+                        example: (r) => `${r.count(r.value, "friend request is", "friend requests are")} waiting for an answer now${r.against("a week ago")}.`,
+                        query: sql`
+                            select count(*) filter (where state = 'pending')::float8 as value,
+                                count(*) filter (
+                                    where created_at < ${ago(7)} and (accepted_at is null or accepted_at >= ${ago(7)})
+                                )::float8 as previous
+                            from (${pairs}) as pair
+                        `,
+                    },
+                    {
+                        id: "live_friend_fights", title: "Live friend fights", unit: "count", better: true,
+                        note: "Now, vs 7 days ago.",
+                        definition: "Monthly friend Fights running now, one per pair of friends, compared with 7 days ago. Every friendship gets one automatically. A friend Fight ended by removing the friend is cancelled and counts in neither number.",
+                        example: (r) => `${r.count(r.value, "friend fight is", "friend fights are")} live now${r.against("a week ago")}.`,
+                        query: sql`
+                            select count(*) filter (where starts_at <= ${w.now} and ends_at > ${w.now})::float8 as value,
+                                count(*) filter (where starts_at <= ${ago(7)} and ends_at > ${ago(7)})::float8 as previous
+                            from public.fights as f where (to_jsonb(f) ->> 'friends') = 'true' and state not in ('draft', 'cancelled')
+                        `,
+                    },
+                    {
+                        id: "friend_fight_syncs", title: "Monthly friend fight sync", unit: "percent", better: true,
+                        note: "Fighters with complete steps in friend Fights finished in the last 30 days, vs the 30 before.",
+                        definition: "Of the fighters in friend Fights that ended with results in the last 30 days, up to now, the share whose steps were complete through the last day, compared with the 30 days before. Friend Fights all end at the end of the month, so a span usually holds one month's results.",
+                        example: (r) => `${r.format(r.value)} of the fighters in friend fights that finished in the last 30 days had complete steps${r.against("for the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`
+                            select f.ends_at as at, m.final_steps_complete as complete
+                            from public.fights as f
+                            join public.fight_members as m on m.fight_id = f.id and m.state = 'accepted'
+                            where (to_jsonb(f) ->> 'friends') = 'true' and f.state = 'final'
+                        `, sql`avg(case when e.complete then 100.0 else 0 end)`),
+                    },
+                ],
+                charts: [
+                    {
+                        id: "new_friendships_per_bucket", title: `New friendships ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `Friend requests accepted in each ${w.bucket}. Friendships removed since are not counted.`,
+                        example: (r) => {
+                            const n = r.at();
+                            return n === undefined ? null : `${r.count(n, "new friendship", "new friendships")} started ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, sql`select accepted_at as at from (${friendships}) as pair`, count),
+                    },
+                    {
+                        id: "requests_and_accepts", title: `Friend requests and accepts ${per}`, kind: "line", unit: "count", x: "date",
+                        definition: `Friend requests sent, and friend requests accepted, in each ${w.bucket}. ${kept}.`,
+                        example: (r) => {
+                            const sent = r.at("Requests sent");
+                            const accepted = r.at("Accepted");
+                            return sent === undefined || accepted === undefined ? null
+                                : `${r.count(sent, "friend request was", "friend requests were")} sent ${r.when}, and ${r.format(accepted)} accepted.`;
+                        },
+                        note: "Only requests still pending or accepted: declined ones are deleted.",
+                        query: perBucket(sql, w, sql`
+                            select created_at as at, 'Requests sent' as series from (${pairs}) as pair
+                            union all
+                            select accepted_at, 'Accepted' from (${friendships}) as pair
+                        `, count, { series: ["Requests sent", "Accepted"] }),
+                    },
+                    {
+                        id: "friends_per_user", title: "Friends per user, now", kind: "bar", unit: "count", x: "label",
+                        definition: "Every user by their number of friends now. Deleted accounts and blocked pairs are not counted.",
+                        example: (r) => {
+                            const none = r.row("None");
+                            return none === undefined || r.total === 0 ? null
+                                : `${r.count(r.total - none, "user has", "users have")} at least one friend, out of ${r.format(r.total)}.`;
+                        },
+                        query: sql`
+                            select band.x, count(c.user_id)::float8 as y from (values
+                                (1, 'None', 0, 0), (2, '1', 1, 1), (3, '2', 2, 2), (4, '3-5', 3, 5), (5, '6-10', 6, 10),
+                                (6, '11+', 11, 1000000)
+                            ) as band(position, x, low, high)
+                            left join (${friendCounts}) as c on c.friends between band.low and band.high
+                            group by band.position, band.x order by band.position
+                        `,
+                    },
+                    {
+                        id: "friendships_over_time", title: "Total friendships", kind: "line", unit: "count", x: "date",
+                        definition: `Pairs of friends at the end of each ${w.bucket}, and now for the last point. Removing a friend deletes the pair, so earlier points only count pairs that are still friends.`,
+                        example: (r) => {
+                            const now = r.latest();
+                            const start = r.first();
+                            return now === undefined || !start ? null
+                                : `FitFight has ${r.count(now, "pair of friends", "pairs of friends")} now, against ${r.format(start.y)} at the end of ${r.period(start.x)}.`;
+                        },
+                        note: `At the end of each ${w.bucket}, now for the last one.`,
+                        query: sql`
+                            select point.bucket::text as x, count(pair.user_low)::float8 as y
+                            from (${samplePoints(sql, w)}) as point
+                            left join (${friendships}) as pair on (pair.accepted_at at time zone 'Europe/Paris')::date <= point.day
+                            group by point.bucket order by point.bucket
                         `,
                     },
                 ],
             };
         }
         case "app": {
+            // NOTE: build 210 reports every HealthKit observer wake, and most only join a sync already
+            // running and record no stage. A Steps sync reads Steps (local_state or today_total); the
+            // other-activity import and Fights-only refreshes are separate traces with their own rows.
             const attempts = sql`
-                select user_id, started_at as at, trigger, outcome, error_code, total_ms, app_version, app_build
+                select user_id, started_at as at, trigger, outcome, error_code, total_ms, app_version, app_build,
+                    case
+                        when stages @> '[{"stage":"today_total"}]' or stages @> '[{"stage":"local_state"}]' then 'steps'
+                        when stages @> '[{"stage":"healthkit_activity"}]' then 'activity'
+                    end as work
                 from private.healthkit_sync_attempts
             `;
-            const errors = sql`select user_id, created_at as at, path, status from private.server_error_logs`;
+            const syncs = sql`select * from (${attempts}) as a where a.work = 'steps'`;
+            // NOTE: total_ms is wall-clock time, so it includes iOS pausing the app mid-sync. Syncs over 2
+            // minutes (1-3% of completed Steps syncs a day, some genuinely slow) are left out of timing only.
+            const timed = sql`select * from (${syncs}) as s where s.outcome <> 'cancelled' and s.total_ms <= 120000`;
+            const errors = sql`select user_id, created_at as at, action, status from private.server_error_logs`;
             const sent = sql`
                 select user_id, coalesce(processed_at, created_at) as at, kind
                 from private.notification_intents where status = 'sent'
@@ -2017,45 +2397,45 @@ function definitions(
             return {
                 cards: [
                     {
-                        id: "health_share", title: "Apple Health connected", unit: "percent", better: true,
-                        note: "Share of users, now vs 7 days ago.",
-                        definition: "The share of all users with Apple Health connected now, compared with 7 days ago. A connection that is off now is not counted in either number.",
-                        example: (r) => `${r.format(r.value)} of users have Apple Health connected now${r.against("a week ago")}.`,
+                        id: "health_share", title: "Weekly share syncing Health", unit: "percent", better: true,
+                        note: "Share of users whose phone synced Apple Health in the last 7 days, vs the 7 before.",
+                        definition: "The share of all users whose phone synced Apple Health at least once in the last 7 days, compared with the 7 days before, out of the users who had signed up by then. iOS does not tell FitFight when someone turns Health off or deletes the app, so a phone that stops syncing is how a lost connection shows.",
+                        example: (r) => `${r.format(r.value)} of users had their phone sync Apple Health in the last 7 days${r.against("in the 7 days before")}.`,
                         query: sql`
-                            select 100.0 * (select count(distinct user_id) from public.data_sources
-                                    where provider = 'apple_health' and revoked_at is null and connected_at < ${w.now})
+                            select 100.0 * (select count(distinct user_id) from (${syncs}) as s
+                                    where s.outcome = 'succeeded' and s.at >= ${ago(7)} and s.at < ${w.now})
                                     / nullif((select count(*) from public.profiles where deleted_at is null and created_at < ${w.now}), 0) as value,
-                                100.0 * (select count(distinct user_id) from public.data_sources
-                                    where provider = 'apple_health' and revoked_at is null and connected_at < ${ago(7)})
+                                100.0 * (select count(distinct user_id) from (${syncs}) as s
+                                    where s.outcome = 'succeeded' and s.at >= ${ago(14)} and s.at < ${ago(7)})
                                     / nullif((select count(*) from public.profiles where deleted_at is null and created_at < ${ago(7)}), 0) as previous
                         `,
                     },
                     {
                         id: "sync_success", title: "Weekly sync success", unit: "percent", better: true,
-                        note: "Share of syncs that succeeded, last 7 days vs the 7 before.",
-                        definition: "The share of Apple Health syncs that succeeded in the last 7 days, up to now, compared with the 7 days before. Background syncs, app opens and pulls to refresh all count.",
-                        example: (r) => `${r.format(r.value)} of syncs succeeded in the last 7 days${r.against("in the 7 days before")}.`,
-                        query: eventCard(sql, w, 7, attempts, sql`avg(case when e.outcome = 'succeeded' then 100.0 else 0 end)`),
+                        note: "Share of Steps syncs that succeeded, last 7 days vs the 7 before.",
+                        definition: "The share of Apple Health Steps syncs that succeeded in the last 7 days, up to now, compared with the 7 days before. Background syncs, app opens and manual refreshes all count. Wakes that only joined a sync already running, the separate other-activity import and Fights-only refreshes do not.",
+                        example: (r) => `${r.format(r.value)} of Steps syncs succeeded in the last 7 days${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, syncs, sql`avg(case when e.outcome = 'succeeded' then 100.0 else 0 end)`),
                     },
                     {
                         id: "background_syncs", title: "Weekly background syncs", unit: "count", better: true,
-                        note: "Syncs Apple Health started without an open. Last 7 days vs the 7 before.",
-                        definition: "Syncs that Apple Health started in the background, without an app open, in the last 7 days, up to now, compared with the 7 days before.",
-                        example: (r) => `Apple Health started ${r.count(r.value, "background sync", "background syncs")} in the last 7 days${r.against("in the 7 days before")}.`,
-                        query: eventCard(sql, w, 7, sql`select * from (${attempts}) as a where a.trigger = 'observer'`, count),
+                        note: "Steps syncs Apple Health started without an open. Last 7 days vs the 7 before.",
+                        definition: "Steps syncs that Apple Health started in the background, without an app open, in the last 7 days, up to now, compared with the 7 days before. A wake that only joined a sync already running is not a sync.",
+                        example: (r) => `Apple Health started ${r.count(r.value, "background Steps sync", "background Steps syncs")} in the last 7 days${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, sql`select * from (${syncs}) as a where a.trigger = 'observer'`, count),
                     },
                     {
                         id: "sync_time", title: "Weekly median sync time", unit: "seconds", better: false,
-                        note: "Last 7 days vs the 7 before.",
-                        definition: "The median time an Apple Health sync took in the last 7 days, up to now, compared with the 7 days before. Half of the syncs were faster.",
-                        example: (r) => `Half of the syncs in the last 7 days took ${r.format(r.value)} or less${r.against("in the 7 days before")}.`,
-                        query: eventCard(sql, w, 7, attempts, sql`percentile_cont(0.5) within group (order by e.total_ms / 1000.0)`),
+                        note: "Last 7 days vs the 7 before. Syncs over 2 minutes left out.",
+                        definition: "The median time an Apple Health Steps sync took in the last 7 days, up to now, compared with the 7 days before. Half of the syncs were faster. Cancelled syncs and syncs that ran over 2 minutes are left out: that time is iOS pausing the app, not the sync.",
+                        example: (r) => `Half of the Steps syncs in the last 7 days took ${r.format(r.value)} or less${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, timed, sql`percentile_cont(0.5) within group (order by e.total_ms / 1000.0)`),
                     },
                     {
-                        id: "push_share", title: "Push notifications on", unit: "percent", better: true,
-                        note: "Share of users with an authorized device, now.",
-                        definition: "The share of all users with at least one device that allows FitFight notifications now. There is no comparison.",
-                        example: (r) => `${r.format(r.value)} of users can get push notifications now.`,
+                        id: "push_share", title: "Registered for push", unit: "percent", better: true,
+                        note: "Share of users with a registered device, now.",
+                        definition: "The share of all users with at least one device registered for FitFight notifications, now. A phone registers only after its owner allows notifications, and the app does not report turning them off later in iOS Settings, so this is an upper bound. There is no comparison.",
+                        example: (r) => `${r.format(r.value)} of users have a device registered for push notifications now.`,
                         query: sql`
                             select 100.0 * (select count(distinct user_id) from private.device_installations
                                     where revoked_at is null and permission_status in ('authorized', 'provisional', 'ephemeral'))
@@ -2073,7 +2453,7 @@ function definitions(
                     {
                         id: "server_errors", title: "Weekly server errors", unit: "count", better: false,
                         note: "Last 7 days vs the 7 before.",
-                        definition: "Server requests that failed with an error in the last 7 days, up to now, compared with the 7 days before.",
+                        definition: "API requests the server logged as failing with a server error (HTTP 5xx) in the last 7 days, up to now, compared with the 7 days before.",
                         example: (r) => `The server logged ${r.count(r.value, "error", "errors")} in the last 7 days${r.against("in the 7 days before")}.`,
                         query: eventCard(sql, w, 7, errors, count),
                     },
@@ -2097,62 +2477,62 @@ function definitions(
                         `,
                     },
                     {
-                        id: "sync_issue_users", title: "Sync errors now", unit: "count", better: false,
-                        note: "People whose latest sync report has an error.",
-                        definition: "People whose latest Apple Health sync report has an error, now. There is no comparison.",
-                        example: (r) => `${r.count(r.value, "person has", "people have")} an error in their latest sync report.`,
+                        id: "sync_issue_users", title: "Steps sync failing now", unit: "count", better: false,
+                        note: "People whose latest Steps sync failed.",
+                        definition: "People whose latest Apple Health Steps sync failed, however long ago it ran. Failures of the separate other-activity import are in Sync errors by code. There is no comparison.",
+                        example: (r) => `The latest Steps sync failed for ${r.count(r.value, "person", "people")}.`,
                         query: sql`
-                            select count(*)::float8 as value, null::float8 as previous
-                            from private.healthkit_sync_diagnostics where error_code is not null
+                            select (count(*) filter (where latest.outcome = 'failed'))::float8 as value, null::float8 as previous
+                            from (select distinct on (user_id) user_id, outcome from (${syncs}) as s order by user_id, s.at desc) as latest
                         `,
                     },
                 ],
                 charts: [
                     {
                         id: "sync_outcomes", title: `Sync outcomes ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Apple Health syncs in each ${w.bucket}, by result.`,
+                        definition: `Apple Health Steps syncs in each ${w.bucket}, by result. Wakes that only joined a sync already running, the separate other-activity import and Fights-only refreshes are not counted.`,
                         example: (r) => {
                             const ok = r.at("Succeeded") ?? 0;
                             const all = ok + (r.at("Failed") ?? 0) + (r.at("Cancelled") ?? 0);
                             const part = r.share(ok, all);
-                            return part ? `${part} of syncs succeeded ${r.when}: ${r.format(ok)} of ${r.format(all)}.` : null;
+                            return part ? `${part} of Steps syncs succeeded ${r.when}: ${r.format(ok)} of ${r.format(all)}.` : null;
                         },
-                        query: perBucket(sql, w, sql`select at, initcap(outcome) as series from (${attempts}) as a`, count, {
+                        query: perBucket(sql, w, sql`select at, initcap(outcome) as series from (${syncs}) as a`, count, {
                             gaps: true, series: ["Succeeded", "Failed", "Cancelled"],
                         }),
                     },
                     {
                         id: "sync_triggers", title: `Syncs by trigger ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: "Why each sync ran: Apple Health woke the app in the background, the app opened, or someone pulled to refresh.",
+                        definition: "Why each Steps sync ran: Apple Health woke the app in the background, the app opened, or someone refreshed by hand (pull to refresh, or creating, editing or joining a Fight). Wakes that only joined a sync already running and syncs without a Steps read, such as the other-activity import and Fights-only refreshes, are not counted.",
                         example: (r) => {
                             const background = r.at("Background") ?? 0;
-                            const all = background + (r.at("App opened") ?? 0) + (r.at("Pull to refresh") ?? 0);
+                            const all = background + (r.at("App opened") ?? 0) + (r.at("Manual") ?? 0);
                             const part = r.share(background, all);
-                            return part ? `${part} of syncs ran in the background ${r.when}: ${r.format(background)} of ${r.format(all)}.` : null;
+                            return part ? `${part} of Steps syncs ran in the background ${r.when}: ${r.format(background)} of ${r.format(all)}.` : null;
                         },
                         query: perBucket(sql, w, sql`
                             select at, case trigger when 'foreground' then 'App opened' when 'observer' then 'Background'
-                                else 'Pull to refresh' end as series
-                            from (${attempts}) as a
-                        `, count, { gaps: true, series: ["Background", "App opened", "Pull to refresh"] }),
+                                else 'Manual' end as series
+                            from (${syncs}) as a
+                        `, count, { gaps: true, series: ["Background", "App opened", "Manual"] }),
                     },
                     {
                         id: "sync_durations", title: "Sync time: P10 to P99", kind: "line", unit: "seconds", x: "date",
-                        definition: "How long a sync takes. Each line is a percentile: P10 means 10% of syncs were faster, P50 is the typical sync, and P99 means only 1% were slower.",
+                        definition: "How long a Steps sync takes. Each line is a percentile: P10 means 10% of syncs were faster, P50 is the typical sync, and P99 means only 1% were slower. Cancelled syncs and syncs that ran over 2 minutes are left out: that time is iOS pausing the app, not the sync.",
                         example: (r) => {
                             const fast = r.at("P10");
                             const typical = r.at("P50");
                             const slow = r.at("P99");
                             return fast === undefined || typical === undefined || slow === undefined ? null
-                                : `A typical sync took ${r.format(typical)} ${r.when}. The fastest 10% took ${r.format(fast)} or less, and the slowest 1% took ${r.format(slow)} or more.`;
+                                : `A typical Steps sync took ${r.format(typical)} ${r.when}. The fastest 10% took ${r.format(fast)} or less, and the slowest 1% took ${r.format(slow)} or more.`;
                         },
-                        note: `Across each ${w.bucket}'s syncs.`,
+                        note: `Across each ${w.bucket}'s Steps syncs.`,
                         query: sql`
                             with bucketed as (
                                 select date_trunc(${w.bucket}::text, (at at time zone 'Europe/Paris')::date::timestamp)::date as bucket,
                                     percentile_cont(array[0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99])
                                         within group (order by total_ms / 1000.0) as times
-                                from (${attempts}) as a
+                                from (${timed}) as a
                                 where (a.at at time zone 'Europe/Paris')::date >= ${w.start}::date group by 1
                             )
                             select bucketed.bucket::text as x, value.y::float8 as y, value.series
@@ -2164,7 +2544,7 @@ function definitions(
                     },
                     {
                         id: "errors_per_bucket", title: `Server errors ${per}`, kind: "bar", unit: "count", x: "date",
-                        definition: `Server requests that failed with an error, in each ${w.bucket}.`,
+                        definition: `API requests the server logged as failing with a server error (HTTP 5xx), in each ${w.bucket}.`,
                         example: (r) => {
                             const n = r.at();
                             return n === undefined ? null : `The server logged ${r.count(n, "error", "errors")} ${r.when}.`;
@@ -2183,7 +2563,7 @@ function definitions(
                     {
                         id: "builds_in_use", title: "Builds in use, last 7 days", kind: "bar", unit: "count", x: "label",
                         definition: "People by the newest app build they used in the last 7 days.",
-                        example: (r) => (r.top && r.top.y > 0 ? `${r.count(r.top.y, "person uses", "people use")} ${r.top.x}: ${r.top.share} of people active in the last 7 days.` : null),
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.count(r.top.y, "person uses", "people use")} ${r.top.x}: ${r.top.share} of people whose phone synced in the last 7 days.` : null),
                         note: "People by the newest build they used.",
                         query: sql`
                             select version as x, count(*)::float8 as y from (
@@ -2195,21 +2575,23 @@ function definitions(
                     },
                     {
                         id: "sync_error_codes", title: "Sync errors by code, last 7 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Failed syncs in the last 7 days, by error.",
+                        definition: "Failed Apple Health syncs in the last 7 days, by error. Steps is the Steps sync; Other activity is the separate import of workouts and other activity. Cancelled syncs and Fights-only refreshes are not counted.",
                         example: (r) => (r.top && r.top.y > 0 ? `"${r.top.x}" is the most common sync error: ${r.count(r.top.y, "time", "times")} in 7 days.` : null),
                         query: sql`
-                            select replace(error_code, '_', ' ') as x, count(*)::float8 as y
+                            select case a.work when 'steps' then 'Steps: ' else 'Other activity: ' end
+                                || replace(error_code, '_', ' ') as x, count(*)::float8 as y
                             from (${attempts}) as a
-                            where a.error_code is not null and a.at >= ${ago(7)} and a.at < ${w.now}
+                            where a.outcome = 'failed' and a.work is not null and a.error_code is not null
+                                and a.at >= ${ago(7)} and a.at < ${w.now}
                             group by 1 order by 2 desc
                         `,
                     },
                     {
                         id: "errors_by_path", title: "Server errors by route, last 7 days", kind: "bar", unit: "count", x: "label",
-                        definition: "Server errors in the last 7 days, by API route.",
+                        definition: "Server errors (HTTP 5xx) in the last 7 days, by method and API route.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} failed the most: ${r.count(r.top.y, "error", "errors")} in 7 days.` : null),
                         query: sql`
-                            select left(path, 48) as x, count(*)::float8 as y from (${errors}) as e
+                            select e.action as x, count(*)::float8 as y from (${errors}) as e
                             where e.at >= ${ago(7)} and e.at < ${w.now} group by 1 order by 2 desc, 1 limit 10
                         `,
                     },
@@ -2247,8 +2629,8 @@ function definitions(
                         `,
                     },
                     {
-                        id: "push_permissions", title: "Push permission on devices, now", kind: "bar", unit: "count", x: "label",
-                        definition: "Devices by notification permission, now.",
+                        id: "push_permissions", title: "Registered push devices, now", kind: "bar", unit: "count", x: "label",
+                        definition: "Devices registered for notifications, by permission, now. A device registers only after its owner allows notifications, and the app does not report turning them off later, so every device shows Authorized.",
                         example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "device", "devices")}, ${r.top.share} of all.` : null),
                         query: sql`
                             select initcap(replace(coalesce(permission_status, 'unknown'), '_', ' ')) as x, count(*)::float8 as y
@@ -2257,8 +2639,8 @@ function definitions(
                     },
                     {
                         id: "background_refresh", title: "Background App Refresh, now", kind: "bar", unit: "count", x: "label",
-                        definition: "Phones by their Background App Refresh setting, which background syncs need.",
-                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "phone", "phones")}, ${r.top.share} of all.` : null),
+                        definition: "Accounts by the Background App Refresh setting their phone last reported, which background syncs need.",
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x}: ${r.count(r.top.y, "account", "accounts")}, ${r.top.share} of all.` : null),
                         query: sql`
                             select initcap(coalesce(background_refresh_status, 'unknown')) as x, count(*)::float8 as y
                             from private.healthkit_sync_diagnostics group by 1 order by 2 desc
@@ -2288,6 +2670,121 @@ function definitions(
                                 (7, 'Never', 0, 0)
                             ) as band(position, x, low, high) order by band.position
                         `,
+                    },
+                ],
+            };
+        }
+        case "metrics": {
+            // NOTE: Fights score each member's Apple Health Steps (fight_members.selected_source_id). Every
+            // other source and metric is stored and listed here, and scores nothing.
+            const scoring = "Fights score Steps from Apple Health. Other sources are collected only.";
+            // A new provider also needs its name in the chart's series to get its own bars over time.
+            const sourceName = sql`
+                case source.provider when 'apple_health' then 'Apple Health' when 'whoop' then 'WHOOP' else source.provider end
+            `;
+            const raw = sql`
+                select raw.user_id, raw.received_at as at, source.provider, ${sourceName} as series
+                from private.activity_raw as raw
+                join public.data_sources as source on source.id = raw.source_id
+            `;
+            return {
+                cards: [
+                    {
+                        id: "whoop_connected", title: "WHOOP connected", unit: "count", better: true,
+                        note: "People with a working WHOOP login, now. Collected only: Fights do not score WHOOP.",
+                        definition: "People whose WHOOP login FitFight can use now. A login WHOOP stopped accepting does not count. WHOOP records are collected only: Fights do not score them. There is no comparison.",
+                        example: (r) => `${r.count(r.value, "person has", "people have")} WHOOP connected now.`,
+                        // NOTE: access_token_expires_at is set exactly when the sealed tokens are
+                        // (whoop_connections_tokens), so the dashboard never reads the token columns.
+                        query: sql`
+                            select count(*) filter (where access_token_expires_at is not null)::float8 as value,
+                                null::float8 as previous
+                            from private.whoop_connections
+                        `,
+                    },
+                    {
+                        id: "apple_health_people", title: "Weekly people sending Apple Health", unit: "count", better: true,
+                        note: "Sent new Apple Health records in the last 7 days, vs the 7 before.",
+                        definition: `People whose phone sent at least one new Apple Health record in the last 7 days, up to now, compared with the 7 days before. Each person counts once. ${scoring}`,
+                        example: (r) => `${r.count(r.value, "person's phone", "people's phones")} sent new Apple Health records in the last 7 days${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, sql`select * from (${raw}) as raw where raw.provider = 'apple_health'`, people),
+                    },
+                    {
+                        id: "raw_received", title: "Weekly raw records received", unit: "count", better: null,
+                        note: "Every source, last 7 days vs the 7 before.",
+                        definition: "New raw records FitFight stored from every source in the last 7 days, up to now, compared with the 7 days before. A record counts when it first arrives: the same content sent again does not count, and content that changed counts as a new record.",
+                        example: (r) => `FitFight received ${r.count(r.value, "new raw record", "new raw records")} in the last 7 days${r.against("in the 7 days before")}.`,
+                        query: eventCard(sql, w, 7, raw, count),
+                    },
+                    {
+                        id: "raw_pending", title: "Raw records pending", unit: "count", better: null,
+                        note: "Waiting to be cleaned into metrics, now.",
+                        definition: "Raw records from every source still waiting to be cleaned into metrics, now. WHOOP records are collected only, so they stay pending. Records that failed to clean are not counted. There is no comparison.",
+                        example: (r) => `${r.count(r.value, "raw record is", "raw records are")} waiting to be cleaned now.`,
+                        query: sql`
+                            select count(*)::float8 as value, null::float8 as previous
+                            from private.activity_raw where processing_state = 'pending'
+                        `,
+                    },
+                ],
+                charts: [
+                    {
+                        id: "raw_by_type", title: "Raw records by source and type, all time", kind: "table", unit: "count", x: "label",
+                        definition: `Every type of raw record FitFight has stored, by source: how many records, how many people sent them, and how many hours ago the newest arrived. ${scoring}`,
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has the most raw records: ${r.format(r.top.y)}, ${r.top.share} of all.` : null),
+                        note: scoring,
+                        query: sql`
+                            select grouped.x, cell.y, cell.series
+                            from (
+                                select ${sourceName} || ': ' || raw.record_type as x, count(*) as total,
+                                    count(distinct raw.user_id) as people, max(raw.received_at) as newest
+                                from private.activity_raw as raw
+                                join public.data_sources as source on source.id = raw.source_id
+                                group by 1
+                            ) as grouped
+                            cross join lateral (values
+                                (1, 'Records', grouped.total::float8),
+                                (2, 'People', grouped.people::float8),
+                                (3, 'Hours since last', extract(epoch from ${w.now} - grouped.newest)::float8 / 3600)
+                            ) as cell(position, series, y)
+                            order by grouped.total desc, grouped.x, cell.position
+                        `,
+                    },
+                    {
+                        id: "metrics_by_source", title: "Cleaned metrics by source, all time", kind: "table", unit: "count", x: "label",
+                        definition: `Every metric cleaned from raw records, by source: how many rows, how many people they belong to, and how many days ago the latest one was. The metric Fights score is marked. ${scoring}`,
+                        example: (r) => (r.top && r.top.y > 0 ? `${r.top.x} has the most cleaned rows: ${r.format(r.top.y)}, ${r.top.share} of all.` : null),
+                        note: scoring,
+                        query: sql`
+                            select grouped.x, cell.y, cell.series
+                            from (
+                                select ${sourceName} || ': ' || metric.metric || case
+                                        when source.provider = 'apple_health' and metric.metric = 'steps' then ' (scores Fights)' else ''
+                                    end as x,
+                                    count(*) as total, count(distinct metric.user_id) as people,
+                                    max(coalesce(metric.day, (metric.observed_through at time zone 'Europe/Paris')::date)) as latest
+                                from private.activity_metrics as metric
+                                join public.data_sources as source on source.id = metric.source_id
+                                group by 1
+                            ) as grouped
+                            cross join lateral (values
+                                (1, 'Rows', grouped.total::float8),
+                                (2, 'People', grouped.people::float8),
+                                (3, 'Days since latest', greatest(${w.today}::date - grouped.latest, 0)::float8)
+                            ) as cell(position, series, y)
+                            order by grouped.total desc, grouped.x, cell.position
+                        `,
+                    },
+                    {
+                        id: "raw_per_bucket", title: `Raw records ${per}`, kind: "bar", unit: "count", x: "date",
+                        definition: `New raw records FitFight stored in each ${w.bucket}, by source. A record counts when it first arrives.`,
+                        example: (r) => {
+                            const apple = r.at("Apple Health");
+                            const whoop = r.at("WHOOP");
+                            return apple === undefined || whoop === undefined ? null
+                                : `FitFight received ${r.count(apple, "new Apple Health record", "new Apple Health records")} and ${r.count(whoop, "new WHOOP record", "new WHOOP records")} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, raw, count, { series: ["Apple Health", "WHOOP"] }),
                     },
                 ],
             };

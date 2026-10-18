@@ -57,6 +57,13 @@ export async function createInvite(
             "Cannot invite after the fight has closed",
         );
     }
+    if (fight.host_id || fight.friends) {
+        throw new ApiError(
+            409,
+            ERROR_CODES.conflict,
+            fight.friends ? "A friend fight stays one on one" : "A founder fight stays one on one",
+        );
+    }
 
     const profile = await lookupProfileByHandle(admin, rawHandle);
     if (profile.user_id === ownerId) {

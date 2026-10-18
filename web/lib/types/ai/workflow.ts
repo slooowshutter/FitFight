@@ -5,8 +5,17 @@ import {
     blendWorkflowVersionSchema,
 } from "@/lib/types/blend/workflow";
 
-export const aiWorkflowValues = ["avatar", "fitness", "group_photo"] as const;
+export const aiWorkflowValues = ["avatar", "fitness", "group_photo", "companion_lines", "prompt_check"] as const;
 export const aiWorkflowSchema = z.enum(aiWorkflowValues);
+export const companionLanguageValues = ["en", "fr"] as const;
+const singleLinePattern = /^[^\n\r\u2028\u2029]*$/;
+/** A custom companion's name and line, suggested by Blend or typed by its owner. */
+export const companionLabelSchema = z.object({
+    name: z.string().trim().min(1).max(24).regex(singleLinePattern, "Use one line"),
+    line: z.string().trim().min(1).max(60).regex(singleLinePattern, "Use one line"),
+});
+/** Saved suggestions are read as stored, so tightening the limits above never breaks reading earlier batches. */
+export const storedCompanionLabelSchema = z.object({ name: z.string(), line: z.string() });
 export const aiGroupCharacterSchema = z
     .object({
         avatar_request_id: z.string().uuid().toLowerCase(),
@@ -26,6 +35,30 @@ export const createAiRunRequestSchema = z.discriminatedUnion("workflow", [
         .object({
             workflow: z.literal("fitness"),
             parameters: aiGroupCharacterSchema,
+        })
+        .strict(),
+    z
+        .object({
+            workflow: z.literal("companion_lines"),
+            parameters: z
+                .object({
+                    avatar_request_id: z.string().uuid().toLowerCase(),
+                    description: z.string().trim().min(1).max(1000),
+                    language: z.enum(companionLanguageValues),
+                    avoid: z.array(companionLabelSchema).max(12),
+                })
+                .strict(),
+        })
+        .strict(),
+    z
+        .object({
+            workflow: z.literal("prompt_check"),
+            parameters: z
+                .object({
+                    description: z.string().trim().min(1).max(1000),
+                    language: z.enum(companionLanguageValues),
+                })
+                .strict(),
         })
         .strict(),
     z
@@ -91,6 +124,8 @@ export const blendConfiguration: {
         },
         fitness: { workflowId: "fa770c5b-25ba-46cc-a758-a08aeebc1c92" },
         group_photo: { workflowId: "f740d71e-06fe-41d4-a92d-a85c90abd3f9" },
+        companion_lines: { workflowId: "8df8fe50-aefb-4855-b421-7bfc89f7e825" },
+        prompt_check: { workflowId: "6d906477-6606-436e-95aa-b627d7fafbde" },
     },
 };
 
@@ -120,6 +155,14 @@ export const aiFitnessResultSchema = z.object({
     fit: aiImageUrlSchema,
     strong: aiImageUrlSchema,
 });
+export const aiCompanionLinesResultSchema = z.object({
+    options: z.array(companionLabelSchema).length(4),
+});
+/** A description checked before buying: an optional question or warning, and three rewrites to pick from. */
+export const aiPromptCheckResultSchema = z.object({
+    note: z.string().trim().max(300).nullable().transform((note) => note || null),
+    variations: z.array(z.string().trim().min(1).max(1000)).length(3),
+});
 export const blendSingleImageSchema = z
     .array(
         z.object({
@@ -144,6 +187,42 @@ export const blendFitnessOutputSchema = z.object({
 export const blendGroupPhotoOutputSchema = z
     .object({ group_photo: blendSingleImageSchema })
     .transform(({ group_photo }) => ({ image_url: group_photo }));
+/** An LLM node's one result: a JSON part, or text that holds the JSON, sometimes in a ```json fence. */
+function blendLlmJson<T extends z.ZodTypeAny>(result: T) {
+    return z
+        .array(
+            z.object({
+                status: z.literal("completed"),
+                parts: z.tuple([
+                    z
+                        .discriminatedUnion("type", [
+                            z.object({ type: z.literal("json"), data: z.unknown() }),
+                            z.object({ type: z.literal("text"), text: z.string() }),
+                        ])
+                        .transform((part, context) => {
+                            if (part.type === "json") return part.data;
+                            const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(part.text.trim());
+                            try {
+                                const parsed: unknown = JSON.parse(fenced ? fenced[1] : part.text);
+                                return parsed;
+                            } catch {
+                                context.addIssue({ code: z.ZodIssueCode.custom, message: "The result is not JSON" });
+                                return z.NEVER;
+                            }
+                        })
+                        .pipe(result),
+                ]),
+            }),
+        )
+        .length(1)
+        .transform((items) => items[0].parts[0]);
+}
+export const blendCompanionLinesOutputSchema = z
+    .object({ options: blendLlmJson(aiCompanionLinesResultSchema) })
+    .transform(({ options }) => options);
+export const blendPromptCheckOutputSchema = z
+    .object({ check: blendLlmJson(aiPromptCheckResultSchema) })
+    .transform(({ check }) => check);
 
 export const aiRunResponseSchema = z.union([
     z.discriminatedUnion("status", [
@@ -200,11 +279,24 @@ export const aiRunResponseSchema = z.union([
             status: z.literal("completed"),
             data: aiAvatarResultSchema,
         }),
+        z.object({
+            request_id: z.string().uuid(),
+            workflow: z.literal("companion_lines"),
+            status: z.literal("completed"),
+            data: aiCompanionLinesResultSchema,
+        }),
+        z.object({
+            request_id: z.string().uuid(),
+            workflow: z.literal("prompt_check"),
+            status: z.literal("completed"),
+            data: aiPromptCheckResultSchema,
+        }),
     ]),
 ]);
 
 export type AiWorkflow = z.infer<typeof aiWorkflowSchema>;
 export type AiGroupCharacter = z.infer<typeof aiGroupCharacterSchema>;
+export type CompanionLabel = z.infer<typeof companionLabelSchema>;
 export type CreateAiRunRequest = z.infer<typeof createAiRunRequestSchema>;
 export type BlendEnvironment = z.infer<typeof blendEnvironmentSchema>;
 export type AiWorkflowConfiguration = z.infer<
@@ -212,9 +304,13 @@ export type AiWorkflowConfiguration = z.infer<
 >;
 export type AiAvatarResult = z.infer<typeof aiAvatarResultSchema>;
 export type AiFitnessResult = z.infer<typeof aiFitnessResultSchema>;
+export type AiCompanionLinesResult = z.infer<typeof aiCompanionLinesResultSchema>;
+export type AiPromptCheckResult = z.infer<typeof aiPromptCheckResultSchema>;
 export type AiRunResponse = z.infer<typeof aiRunResponseSchema>;
 export type AiImageUrl = z.infer<typeof aiImageUrlSchema>;
 export type BlendSingleImage = z.infer<typeof blendSingleImageSchema>;
 export type BlendAvatarOutput = z.infer<typeof blendAvatarOutputSchema>;
 export type BlendFitnessOutput = z.infer<typeof blendFitnessOutputSchema>;
 export type BlendGroupPhotoOutput = z.infer<typeof blendGroupPhotoOutputSchema>;
+export type BlendCompanionLinesOutput = z.infer<typeof blendCompanionLinesOutputSchema>;
+export type BlendPromptCheckOutput = z.infer<typeof blendPromptCheckOutputSchema>;

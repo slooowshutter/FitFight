@@ -36,8 +36,7 @@ struct NewFightView: View {
     @FocusState private var joinCodeFocused: Bool
 
     init(opening: NewFightOpening = .choose, initialStep: Int = 0) {
-        let capturing = CompanionPreview.isEnabled && ScreenshotExport.isEnabled
-        _opening = State(initialValue: capturing ? .create : opening)
+        _opening = State(initialValue: opening)
         _step = State(initialValue: initialStep)
     }
 
@@ -87,8 +86,9 @@ struct NewFightView: View {
         let action = actionText.trimmingCharacters(in: .whitespacesAndNewlines)
         return session.isSignedIn
             && (steps.hasAsked || CompanionPreview.isEnabled)
+            && !title.isEmpty
             && title.count <= 120
-            && action.count <= 120
+            && action.count <= 240
             && scheduleError == nil
             && !model.isCreatingFight
     }
@@ -141,7 +141,7 @@ struct NewFightView: View {
             FFButton(
                 title: lookingUp ? String(appLocalized: "Looking up…") : String(appLocalized: "Open fight"),
                 size: .large,
-                enabled: joinCode.count == 4,
+                enabled: AppModel.joinCodeLength.contains(joinCode.count),
                 busy: lookingUp,
                 fullWidth: true
             ) {
@@ -180,7 +180,13 @@ struct NewFightView: View {
                 FFNotice(text: scheduleError, tone: .ember, systemImage: "calendar")
             }
         } else {
-            FFButton(title: String(appLocalized: "Next"), size: .large, enabled: step != 1 || scheduleError == nil, fullWidth: true) {
+            FFButton(
+                title: String(appLocalized: "Next"),
+                size: .large,
+                enabled: (step != 1 || scheduleError == nil)
+                    && (step != 3 || !fightTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
+                fullWidth: true
+            ) {
                 step += 1
             }
         }
@@ -359,10 +365,7 @@ struct NewFightView: View {
                             .submitLabel(.go)
                             .onSubmit { lookupCode() }
                             .onChange(of: joinCode) { _, value in
-                                let allowed = CharacterSet(charactersIn: "23456789ABCDEFGHJKMNPQRSTVWXYZ")
-                                let cleaned = value.uppercased().unicodeScalars
-                                    .filter { allowed.contains($0) }
-                                joinCode = String(String.UnicodeScalarView(cleaned).prefix(4))
+                                joinCode = AppModel.typedJoinCode(value)
                             }
                     }
                 }
@@ -505,7 +508,7 @@ struct NewFightView: View {
     }
 
     private func lookupCode() {
-        guard joinCode.count == 4, !lookingUp else { return }
+        guard AppModel.joinCodeLength.contains(joinCode.count), !lookingUp else { return }
         lookingUp = true
         Task {
             await model.openJoinCode(joinCode, session: session)

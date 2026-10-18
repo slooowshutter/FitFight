@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { companionIdSchema } from "@/lib/types/companions/companion";
-import { recordTimestampSchema } from "./profile-results";
-import { profileStepStatisticsSchema } from "./profile-step-statistics";
+import { headToHeadResultValues, recordTimestampSchema } from "./profile-results";
+import { friendComparisonSchema, profileStepStatisticsSchema, tenKStreakSchema } from "./profile-step-statistics";
 
 export const profileCountRowSchema = z.object({ n: z.number().int().nonnegative() });
 export const profileIdentifierRowSchema = z.object({ id: z.string().uuid() });
@@ -72,6 +72,15 @@ export const rivalryRecordSchema = z.object({
     }).nullable(),
 });
 
+/** Every finished Fight both people are still members of, 1v1 and group, from the viewer's side. */
+export const headToHeadSchema = z.object({
+    wins: z.number().int().nonnegative(),
+    draws: z.number().int().nonnegative(),
+    losses: z.number().int().nonnegative(),
+    /** The last ten results, oldest first. */
+    form: z.array(z.enum(headToHeadResultValues)).max(10),
+});
+
 export const profileRivalrySummarySchema = z.object({ identity: sharedIdentitySchema, rivalry: rivalryRecordSchema });
 
 export const activityDaySchema = z.object({
@@ -97,6 +106,13 @@ export const sharedProfileSchema = z.object({
     step_statistics: profileStepStatisticsSchema.nullable().optional(),
     artwork: z.object({ id: z.string().uuid(), image_path: z.string() }).nullable(),
     view_measurement_enabled: z.boolean(),
+    /** An equipped custom character's name and line. Stock companions and Specials send none. */
+    companion_name: z.string().optional(),
+    companion_line: z.string().optional(),
+    member_since: z.string().date().optional(),
+    head_to_head: headToHeadSchema.nullable().optional(),
+    ten_k_streak: tenKStreakSchema.nullable().optional(),
+    friend_comparison: friendComparisonSchema.nullable().optional(),
 });
 
 export const profileLookupSchema = z.object({
@@ -108,6 +124,8 @@ export const profileViewRequestSchema = z.object({
     event_id: z.string().uuid(),
     source: z.enum(profileEntryPointValues),
 }).strict();
+
+export const profileViewResponseSchema = z.object({ recorded: z.boolean() });
 
 export const profileReportRequestSchema = z.object({
     reason: z.string().trim().min(1).max(1000),
@@ -151,6 +169,7 @@ export type SharedIdentity = z.infer<typeof sharedIdentitySchema>;
 export type ProfileCounts = z.infer<typeof profileCountsSchema>;
 export type ProfileRecord = z.infer<typeof profileRecordSchema>;
 export type RivalryRecord = z.infer<typeof rivalryRecordSchema>;
+export type HeadToHead = z.infer<typeof headToHeadSchema>;
 export type SharedProfile = z.infer<typeof sharedProfileSchema>;
 export type ProfileViewRequest = z.infer<typeof profileViewRequestSchema>;
 export type ProfilePageQuery = z.infer<typeof profilePageQuerySchema>;

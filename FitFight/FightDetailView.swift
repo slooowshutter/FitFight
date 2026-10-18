@@ -37,9 +37,15 @@ struct FightDetailView: View {
     @State private var canAdminister = false
     @State private var adminBusy = false
     @State private var confirmOwnerLeave = false
+    @State private var confirmFriendLeave = false
     @State private var adminAction: String? = nil
     @StateObject private var fightFeed = FeedStore()
     @State private var isRefreshingFeed = false
+    @State private var expandedRounds: Set<String> = []
+    @State private var board: SeriesBoard = .wins
+    @State private var showsWholeBoard = false
+    @State private var placeRound: Fight?
+    @AppStorage("fight.dismissedLastRounds") private var dismissedLastRounds = ""
 
     init(fight: Fight, pane: FightDetailPane = .stats) {
         initialFight = fight
@@ -102,6 +108,11 @@ struct FightDetailView: View {
                 )
                 .id(fightsRevision)
             } else {
+                if let lastRound = model.lastRound(before: fight), !dismissedLastRounds.contains(lastRound.id) {
+                    lastRoundNotice(lastRound)
+                        .contentShape(Rectangle())
+                        .onTapGesture { pane = .history }
+                }
                 FFSegmented(items: panes, selection: $pane) { item in
                     item.title
                 }
@@ -180,6 +191,14 @@ struct FightDetailView: View {
                 ? String(appLocalized: "You are the only one in this fight. Deleting it can’t be undone.")
                 : String(appLocalized: "You own this fight. Pick who takes over, then you leave."))
         }
+        .confirmationDialog(String(appLocalized: "Leave this fight?"), isPresented: $confirmFriendLeave, titleVisibility: .visible) {
+            Button(String(appLocalized: "Leave fight"), role: .destructive) {
+                Task { await model.leaveFight(id: fight.id) }
+            }
+            Button(String(appLocalized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(appLocalized: "fight.friend-leave", defaultValue: "This pauses your monthly fight with \(fight.listTitle)."))
+        }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -196,6 +215,9 @@ struct FightDetailView: View {
                     await fightFeed.load(session: session, fightID: fightID)
                 } else {
                     await model.refreshFights(session: session, steps: steps, trigger: .manual)
+                    if model.hostedRounds.contains(where: { $0.id == fight.id }) {
+                        try? await model.refreshHostedRounds()
+                    }
                 }
             }
         )
@@ -225,11 +247,15 @@ struct FightDetailView: View {
 
         if canLeave {
             FFButton(
-                title: isOwner && otherMembers.isEmpty ? String(appLocalized: "Delete fight") : String(appLocalized: "Leave fight"),
+                title: isOwner && otherMembers.isEmpty && fight.friends != true
+                    ? String(appLocalized: "Delete fight") : String(appLocalized: "Leave fight"),
                 kind: .ghost,
                 fullWidth: true
             ) {
-                if isOwner {
+                // A friend round has no owner to hand over: either friend can leave, which pauses it.
+                if fight.friends == true {
+                    confirmFriendLeave = true
+                } else if isOwner {
                     confirmOwnerLeave = true
                 } else {
                     Task { await model.leaveFight(id: fight.id) }
@@ -262,33 +288,332 @@ struct FightDetailView: View {
         }
     }
 
+    @ViewBuilder
     private var historyPane: some View {
-        ForEach(model.seriesHistory(for: fight)) { window in
+        let history = model.seriesHistory(for: fight)
+        let stats = SeriesStats(rounds: ([fight] + history).sorted { $0.windowStart > $1.windowStart })
+        let ranked = stats.entries.sorted { ($0.value(board), $0.steps) > ($1.value(board), $1.steps) }
+        let shown = Array(ranked.enumerated()).filter { showsWholeBoard || $0.offset < 3 || $0.element.person.isYou }
+
+        // Same type as the Stats tab's summary, so History reads like the rest of the fight.
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text([
+                    String(appLocalized: "series.rounds", defaultValue: "\(stats.rounds) rounds"),
+                    stats.since.map { since in
+                        String(appLocalized: "series.since", defaultValue: "since \(since.formatted(Date.FormatStyle.dateTime.day().month(.abbreviated).locale(AppLocalization.locale)))")
+                    },
+                ].compactMap { $0 }.joined(separator: " · "))
+                    .ffType(.label)
+                    .foregroundStyle(theme.textSecondary)
+                Spacer(minLength: 0)
+                Text(String(appLocalized: "series.racers", defaultValue: "\(stats.entries.count) racers"))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(fullNumber(stats.together))
+                    .font(.custom("Nunito-ExtraBold", size: 34, relativeTo: .largeTitle))
+                    .monospacedDigit()
+                    .foregroundStyle(theme.text)
+                Text(String(appLocalized: "steps together"))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+            }
+            .padding(.bottom, 8)
+            if !stats.yourPlaces.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(stats.yourPlaces.count > 10
+                        ? String(appLocalized: "Your place, last 10 rounds")
+                        : String(appLocalized: "Your place each round"))
+                        .ffType(.eyebrow)
+                        .foregroundStyle(theme.textTertiary)
+                    HStack(spacing: 6) {
+                        ForEach(Array(stats.yourPlaces.prefix(10).enumerated()), id: \.offset) { _, place in
+                            let medal: (ink: Color, wash: Color)? = switch place.rank {
+                            case 1: (theme.medalGold, theme.medalGoldWash)
+                            case 2: (theme.medalSilver, theme.medalSilverWash)
+                            case 3: (theme.medalBronze, theme.medalBronzeWash)
+                            default: nil
+                            }
+                            Button {
+                                placeRound = place.round
+                            } label: {
+                                Text("\(place.rank)")
+                                    .font(.ff(14, 800))
+                                    .monospacedDigit()
+                                    .foregroundStyle(medal?.ink ?? theme.textDim)
+                                    .frame(width: 30, height: 32)
+                                    .background(
+                                        medal?.wash ?? theme.control,
+                                        in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
+                                    )
+                            }
+                            .buttonStyle(FFHapticPlainStyle())
+                            .accessibilityLabel(dateSpan(place.round.windowStart, place.round.windowEnd.addingTimeInterval(-1)))
+                            .accessibilityValue("\(place.rank)")
+                        }
+                    }
+                }
+                .sheet(item: $placeRound) { round in
+                    roundSummary(round)
+                        .fitFightTheme(theme)
+                        .presentationBackground(theme.bg)
+                        .presentationDetents([.medium, .large])
+                }
+            }
+        }
+        .padding(.top, 4)
+
+        FFSection(title: String(appLocalized: "All time")) {
+            FFSegmented(items: SeriesBoard.allCases, selection: $board, fill: true) { item in
+                switch item {
+                case .wins: return String(appLocalized: "Wins")
+                case .podiums: return String(appLocalized: "Podiums")
+                case .steps: return String(appLocalized: "Steps")
+                }
+            }
+            ForEach(shown, id: \.element.id) { index, entry in
+                ProfileIdentityLink(userID: UUID(uuidString: entry.person.id), source: "standings") {
+                    FFLeaderboardRow(
+                        rank: index + 1,
+                        monogram: entry.person.initials,
+                        name: entry.person.name,
+                        value: board == .steps
+                            ? model.formatScore(entry.steps, metric: fight.metric)
+                            : "\(Int(entry.value(board)))",
+                        isYou: entry.person.isYou,
+                        avatar: AnyView(CompanionAvatar(entry.person, size: 38)),
+                        captionAt: { _ in
+                            String(appLocalized: "series.rounds", defaultValue: "\(entry.rounds) rounds")
+                        }
+                    )
+                }
+            }
+            if ranked.count > shown.count || showsWholeBoard {
+                showAllButton(expanded: showsWholeBoard, count: ranked.count) { showsWholeBoard.toggle() }
+            }
+        }
+
+        let records: [(title: String, holder: Person, value: Double, when: String?, mine: String?)] = [
+            (String(appLocalized: "Best day"), stats.bestDay),
+            (String(appLocalized: "Best round"), stats.bestRound),
+        ].compactMap { (title: String, record: SeriesStats.Record) in
+            guard let holder = record.holder, record.value > 0 else { return nil }
+            let mine = holder.isYou ? nil : record.you.map { value in
+                String(appLocalized: "series.your-best", defaultValue: "Your best: \(fullNumber(value))")
+            }
+            let when = record.start.flatMap { start in record.end.map { dateSpan(start, $0) } }
+            return (title, holder, record.value, when, mine)
+        }
+        let finishes = [
+            (String(appLocalized: "Closest finish"), stats.closestFinish),
+            (String(appLocalized: "Biggest win"), stats.biggestWin),
+        ].compactMap { title, finish in finish.map { (title, $0) } }
+
+        FFSection(title: String(appLocalized: "Records")) {
+            FFCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(Array(records.enumerated()), id: \.offset) { index, record in
+                        if index > 0 { FFDivider(inset: 0) }
+                        recordRow(
+                            record.title,
+                            holder: record.holder,
+                            headline: record.holder.isYou ? String(appLocalized: "You") : record.holder.name,
+                            value: record.value,
+                            when: record.when,
+                            mine: record.mine
+                        )
+                    }
+                    ForEach(Array(finishes.enumerated()), id: \.offset) { _, item in
+                        FFDivider(inset: 0)
+                        recordRow(
+                            item.0,
+                            holder: item.1.winner,
+                            headline: String(
+                                appLocalized: "series.over",
+                                defaultValue: "\(item.1.winner.isYou ? String(appLocalized: "You") : item.1.winner.name) over \(item.1.runnerUp.isYou ? String(appLocalized: "You") : item.1.runnerUp.name)"
+                            ),
+                            value: item.1.margin,
+                            when: dateSpan(item.1.start, item.1.end)
+                        )
+                    }
+                }
+            }
+        }
+
+        ForEach(history) { window in
             historyWindowCard(window)
         }
     }
 
+    /// One round at a glance, opened from Your place each round.
+    private func roundSummary(_ round: Fight) -> some View {
+        let racers = round.standings
+            .filter { !$0.invited && !$0.deferred }
+            .sorted { ($0.rank ?? .max) < ($1.rank ?? .max) }
+        let you = racers.first { $0.person.isYou }
+        let detail = { (title: String, value: String) in
+            FFGroupedRow(
+                title: title,
+                trailing: AnyView(
+                    Text(value)
+                        .font(.ff(17, 800))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.text)
+                )
+            )
+        }
+        return ScrollView {
+            VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                FFSheetHeader(title: dateSpan(round.windowStart, round.windowEnd.addingTimeInterval(-1))) { placeRound = nil }
+                if let rank = you?.rank {
+                    Text(String(appLocalized: "series.place-of", defaultValue: "Your place: \(rank) of \(racers.count)"))
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                }
+                // The top three, plus you when you finished lower.
+                ForEach(Array(racers.enumerated()).filter { $0.offset < 3 || $0.element.person.isYou }, id: \.element.id) { index, row in
+                    FFLeaderboardRow(
+                        rank: row.rank ?? index + 1,
+                        monogram: row.person.initials,
+                        name: row.person.name,
+                        value: fullNumber(row.score),
+                        isYou: row.person.isYou,
+                        avatar: AnyView(CompanionAvatar(row.person, size: 38))
+                    )
+                }
+                FFGroupedRows {
+                    detail(String(appLocalized: "Racers"), "\(racers.count)")
+                    FFDivider()
+                    detail(String(appLocalized: "Steps together"), fullNumber(racers.reduce(0) { $0 + $1.score }))
+                    if racers.count > 1 {
+                        FFDivider()
+                        detail(String(appLocalized: "Won by"), fullNumber(racers[0].score - racers[1].score))
+                    }
+                    if let you {
+                        FFDivider()
+                        detail(String(appLocalized: "Your steps"), fullNumber(you.score))
+                    }
+                }
+            }
+            .padding(20)
+        }
+    }
+
+    /// The record and when it was set, then its holder and your own best.
+    private func recordRow(_ title: String, holder: Person, headline: String, value: Double, when: String?, mine: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(when.map { "\(title) · \($0)" } ?? title)
+                .ffType(.eyebrow)
+                .foregroundStyle(theme.textTertiary)
+            HStack(spacing: 12) {
+                CompanionAvatar(holder, size: 38)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(headline)
+                        .ffType(.rowTitle)
+                        .foregroundStyle(theme.text)
+                    if let mine {
+                        Text(mine)
+                            .ffType(.caption)
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                }
+                Spacer(minLength: 8)
+                Text(fullNumber(value))
+                    .font(.ff(20, 800))
+                    .foregroundStyle(holder.isYou ? theme.mossText : theme.text)
+            }
+        }
+    }
+
+    private func fullNumber(_ value: Double) -> String {
+        Int(value.rounded()).formatted(.number.locale(AppLocalization.locale))
+    }
+
+    private func dateSpan(_ start: Date, _ end: Date) -> String {
+        let day = Date.FormatStyle.dateTime.day().month(.abbreviated).locale(AppLocalization.locale)
+        if Calendar.current.isDate(start, inSameDayAs: end) {
+            return start.formatted(day.weekday(.abbreviated))
+        }
+        return "\(start.formatted(day)) - \(end.formatted(day))"
+    }
+
+    private func showAllButton(expanded: Bool, count: Int, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(expanded
+                ? String(appLocalized: "Show less")
+                : String(appLocalized: "series.show-all", defaultValue: "Show all \(count)"))
+                .ffType(.label)
+                .foregroundStyle(theme.mossText)
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(FFHapticPlainStyle())
+    }
+
+    private func lastRoundNotice(_ round: Fight) -> some View {
+        let tied = round.rank == 1 && round.isTiedForFirst
+        let text: String
+        if round.of == 2,
+           let you = model.youStanding(in: round),
+           let rival = round.standings.first(where: { !$0.person.isYou && !$0.invited && !$0.deferred }) {
+            let yours = Int(you.score).formatted(.number.locale(AppLocalization.locale))
+            let theirs = Int(rival.score).formatted(.number.locale(AppLocalization.locale))
+            text = tied
+                ? String(appLocalized: "fight.last-round-draw", defaultValue: "Last round: a draw, \(yours) to \(theirs). New round started. See more in History.")
+                : round.rank == 1
+                    ? String(appLocalized: "fight.last-round-won", defaultValue: "Last round: you won \(yours) to \(theirs). New round started. See more in History.")
+                    : String(appLocalized: "fight.last-round-lost", defaultValue: "Last round: you lost \(yours) to \(theirs). New round started. See more in History.")
+        } else {
+            text = tied
+                ? String(appLocalized: "fight.last-round-tied-place", defaultValue: "Last round: you tied for 1st of \(round.of). New round started. See more in History.")
+                : String(appLocalized: "fight.last-round-place", defaultValue: "Last round: you came \(AppModel.ordinal(round.rank)) of \(round.of). New round started. See more in History.")
+        }
+        // Stored on this phone only, keyed by the finished round's id.
+        return FFNotice(text: text, tone: tied ? .neutral : round.rank == 1 ? .moss : .ember, onDismiss: {
+            dismissedLastRounds += round.id + " "
+        })
+    }
+
+    /// `expandable` is a History round: a plain ranking, the top three plus you until Show all.
     @ViewBuilder
-    private func standingsBands(for fight: Fight) -> some View {
+    private func standingsBands(for fight: Fight, expandable: Bool = false) -> some View {
         let racing = fight.standings.filter { !$0.invited && !$0.deferred }
         let winners = winnerStandings(in: racing, fight: fight)
         let losers = racing.filter { row in !winners.contains(where: { $0.id == row.id }) }
 
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
-            VStack(alignment: .leading, spacing: theme.space.cardGap) {
-                ForEach(Array(winners.enumerated()), id: \.element.id) { index, row in
-                    standingRow(index: index, row: row, contextFight: fight, inWinnerBand: true)
+            if expandable {
+                let expanded = expandedRounds.contains(fight.id)
+                let shown = Array((winners + losers).enumerated()).filter { expanded || $0.offset < 3 || $0.element.person.isYou }
+                ForEach(shown, id: \.element.id) { index, row in
+                    standingRow(index: index, row: row, contextFight: fight)
                 }
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 4)
-            .background(theme.mossWash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
-            .ffBorder(theme.mossEdge, radius: theme.radius.card)
+                if expanded || racing.count > shown.count {
+                    showAllButton(expanded: expanded, count: racing.count) {
+                        if expanded {
+                            expandedRounds.remove(fight.id)
+                        } else {
+                            expandedRounds.insert(fight.id)
+                        }
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                    ForEach(Array(winners.enumerated()), id: \.element.id) { index, row in
+                        standingRow(index: index, row: row, contextFight: fight, inWinnerBand: true)
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
+                .background(theme.mossWash, in: RoundedRectangle(cornerRadius: theme.radius.card, style: .continuous))
+                .ffBorder(theme.mossEdge, radius: theme.radius.card)
 
-            if !losers.isEmpty {
-                standingsSeparator(for: fight)
-                ForEach(Array(losers.enumerated()), id: \.element.id) { index, row in
-                    standingRow(index: index + winners.count, row: row, contextFight: fight, inWinnerBand: false)
+                if !losers.isEmpty {
+                    standingsSeparator(for: fight)
+                    ForEach(Array(losers.enumerated()), id: \.element.id) { index, row in
+                        standingRow(index: index + winners.count, row: row, contextFight: fight, inWinnerBand: false)
+                    }
                 }
             }
         }
@@ -340,17 +665,14 @@ struct FightDetailView: View {
                         }
                         Spacer(minLength: 0)
                     }
-                    standingsBands(for: window)
+                    standingsBands(for: window, expandable: true)
                 }
             }
         }
     }
 
     private func historyWindowTitle(_ window: Fight) -> String {
-        String(
-            appLocalized: "fight.history-window",
-            defaultValue: "\(Fight.deadlineStamp(window.windowStart)) - \(Fight.deadlineStamp(window.windowEnd))"
-        )
+        dateSpan(window.windowStart, window.windowEnd.addingTimeInterval(-1))
     }
 
     private func historyWindowResult(_ window: Fight) -> String {
@@ -426,7 +748,7 @@ struct FightDetailView: View {
                         Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44).foregroundStyle(theme.mossText)
                     }.disabled(adminBusy).accessibilityLabel(String(appLocalized: "Manage Fight"))
                 }
-                if fight.canOwnerEdit, !pendingJoin {
+                if fight.canOwnerEdit || (fight.friends == true && fight.status == .live), !pendingJoin {
                     Button {
                         model.createError = nil
                         showingEdit = true
@@ -498,9 +820,10 @@ struct FightDetailView: View {
     }
 
     private var settlementTitleColor: Color {
-        guard you?.finalStepsComplete == true else { return theme.emberText }
-        let submitted = fight.standings.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
-        return submitted.first?.person.isYou == true ? theme.mossText : theme.emberText
+        guard let you, you.finalStepsComplete == true else { return theme.emberText }
+        let racers = fight.standings.filter { !$0.invited && !$0.deferred && $0.person.id != you.person.id }
+        if racers.contains(where: { $0.score > you.score }) { return theme.emberText }
+        return racers.contains { $0.score == you.score } ? theme.text : theme.mossText
     }
 
     private var deferredHero: some View {
@@ -573,7 +896,7 @@ struct FightDetailView: View {
                     subtitleTone: .neutral
                 )
             }
-            if fight.joinCode != nil {
+            if fight.joinCode != nil, fight.friends != true {
                 FFSection(title: String(appLocalized: "Share")) {
                     shareCard
                 }
@@ -603,6 +926,8 @@ struct FightDetailView: View {
                             Text(copiedCode ? String(appLocalized: "Copied") : code)
                                 .ffType(.heading)
                                 .foregroundStyle(theme.mossText)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
                                 .frame(minHeight: 44)
                         }
                         .buttonStyle(FFHapticPlainStyle())
@@ -681,7 +1006,7 @@ struct FightDetailView: View {
                     name: row.person.name,
                     value: model.formatScore(row.score, metric: contextFight.metric),
                     isYou: row.person.isYou,
-                    trophies: model.trophyStreak(for: contextFight).flatMap { $0.userId == row.person.id ? $0.count : nil } ?? 0,
+                    trophies: model.trophies(in: contextFight)[row.person.id] ?? 0,
                     avatar: AnyView(CompanionAvatar(row.person, size: 38)),
                     captionUrgent: !inWinnerBand && row.person.isYou && contextFight.status == .live,
                     captionAt: { now in
@@ -695,10 +1020,10 @@ struct FightDetailView: View {
 
     private func pendingStandingRow(_ row: Standing, contextFight: Fight, radius: CGFloat) -> some View {
         let needsSync = row.finalStepsComplete != true
-        let submitted = contextFight.standings.filter { !$0.invited && !$0.deferred && $0.finalStepsComplete == true }
-        let rank = submitted.firstIndex { $0.id == row.id }.map { $0 + 1 }
+        // A missing final sync keeps its last synced total, so it counts toward every rank.
+        let rank = contextFight.standings.filter { !$0.invited && !$0.deferred && $0.score > row.score }.count + 1
         return HStack(spacing: 13) {
-            Text(needsSync ? "-" : "\(rank ?? 0)")
+            Text(needsSync ? "-" : "\(rank)")
                 .ffType(.button)
                 .foregroundStyle(needsSync ? theme.textFaint : (rank == 1 ? theme.gold : theme.textTertiary))
                 .frame(width: 22)

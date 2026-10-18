@@ -35,6 +35,7 @@ import type {
 } from "@/lib/types/feedback/feedback";
 import { feedbackArchiveResponseSchema, feedbackOwnerRowSchema, feedbackCommentRowSchema, feedbackMetadataSchema, feedbackPostRowSchema } from "@/lib/types/feedback/feedback";
 import type { MediaObject } from "@/lib/types/media/media";
+import { endFriendFight } from "./friend-fights-supabase-query";
 
 const POST_LIMIT_PER_DAY = 8;
 const COMMENT_LIMIT_PER_DAY = 30;
@@ -598,10 +599,13 @@ export async function blockFeedbackAuthor(
             "That person is not on FitFight",
         );
     }
-    await database`
-        insert into private.feedback_blocks (blocker_id, blocked_id)
-        values (${userId}, ${blockedId})
-        on conflict (blocker_id, blocked_id) do nothing
-    `;
+    await database.begin("read write", async (sql) => {
+        await sql`
+            insert into private.feedback_blocks (blocker_id, blocked_id)
+            values (${userId}, ${blockedId})
+            on conflict (blocker_id, blocked_id) do nothing
+        `;
+        await endFriendFight(sql, userId, blockedId);
+    });
     return { blocked: true };
 }

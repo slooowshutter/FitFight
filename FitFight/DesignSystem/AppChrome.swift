@@ -115,7 +115,9 @@ struct FFScreen<Content: View>: View {
             body(content())
                 // Root screens are one viewport wide. Child HStacks can wrap or
                 // truncate, but can no longer widen the scroll view and rubber-band.
-                .containerRelativeFrame(.horizontal)
+                // The width the scroll view offers, not containerRelativeFrame: reading the live
+                // container width could feed back into its layout and freeze a cold launch.
+                .frame(minWidth: 0, maxWidth: .infinity)
                 .ffKeyboardDismissOnBackgroundTap()
                 .background(alignment: .top) {
                     if refresh != nil {
@@ -288,6 +290,8 @@ enum FFTab: Hashable {
 /// Equal square icon frames with six-point insets; the live tab takes the moss wash.
 struct FFTabBar: View {
     @Binding var tab: FFTab
+    /// New posts by others, shown as a count on Feed.
+    var feedBadge = 0
     /// iOS convention: tapping the already-selected tab returns that tab to its root.
     var onReselect: (() -> Void)? = nil
     @Environment(\.ffTheme) private var theme
@@ -335,6 +339,18 @@ struct FFTabBar: View {
                         on ? theme.tabPillOn : .clear,
                         in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
                     )
+                    .overlay(alignment: .topTrailing) {
+                        if value == .feed && feedBadge > 0 {
+                            Text(verbatim: feedBadge > 9 ? "9+" : "\(feedBadge)")
+                                .font(.ff(11, 800))
+                                .monospacedDigit()
+                                .foregroundStyle(theme.emberOn)
+                                .padding(.horizontal, 5)
+                                .frame(minWidth: 18, minHeight: 18)
+                                .background(theme.emberFill, in: Capsule())
+                                .offset(x: 6, y: -4)
+                        }
+                    }
                 Text(title)
                     .font(.ff(11, on ? 800 : 700))
                     .foregroundStyle(on ? theme.tabInkOn : theme.tabInkOff)
@@ -344,6 +360,11 @@ struct FFTabBar: View {
         }
         .buttonStyle(FFHapticPlainStyle())
         .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityValue(
+            value == .feed && feedBadge > 0
+                ? String(appLocalized: "feed.unread-count", defaultValue: "New posts: \(feedBadge)")
+                : ""
+        )
     }
 }
 

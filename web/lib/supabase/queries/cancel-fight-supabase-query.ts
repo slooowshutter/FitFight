@@ -10,6 +10,13 @@ export async function cancelFight(
     now: Date = new Date(),
 ) {
     const fight = await loadOwnedFight(fightId, userId, admin);
+    if (fight.friends) {
+        throw new ApiError(
+            409,
+            ERROR_CODES.fight_not_cancellable,
+            "A friend fight ends when you leave it or remove the friend",
+        );
+    }
 
     switch (fight.state) {
         case "final":

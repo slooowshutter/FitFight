@@ -1,0 +1,32 @@
+{
+    "challengers": [
+        {
+            "user_id": "4f7c2a1e-9b3d-4c6a-8e2f-1a2b3c4d5e6f",
+            "handle": "lea",
+            "display_name": "Lea",
+            "fight_id": "8a1b2c3d-4e5f-4a6b-9c7d-0e1f2a3b4c5d",
+            "day": 5,
+            "days": 30,
+            "steps": 41250,
+            "founder_steps": 52010,
+            "state": "live",
+            "wins": 1,
+            "losses": 0,
+            "draws": 0
+        },
+        {
+            "user_id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+            "handle": "tom",
+            "display_name": "Tom",
+            "fight_id": "c3d4e5f6-a7b8-4c9d-8e0f-2a3b4c5d6e7f",
+            "day": 30,
+            "days": 30,
+            "steps": 0,
+            "founder_steps": 0,
+            "state": "awaiting_final_sync",
+            "wins": 0,
+            "losses": 2,
+            "draws": 1
+        }
+    ]
+}

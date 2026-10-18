@@ -122,19 +122,56 @@ The TypeScript backend owns provider calls, credentials, persistence, and usage 
 
 ## Stage 5 — One group illustration per fight
 
-**Product decision pending:** the current app starts fights immediately, including with the owner alone, and accepts later joiners. “Generate at fight start” often produces a solo image before the group exists. This timing question does not block Stages 1–2.
+**Marc's decision (15 Oct 2026): automatic.** The server generates a new group image for a fight whenever its cast changes: the fight is created, someone joins it, or a member changes their companion. Each image shows every current participant's companion. Snapshot the accepted participants and their companion versions at each trigger; exclude pending invitees and people waiting for the next round. Scores, refreshes and standings never trigger a new image. The scoring start time and join rules do not change.
 
-Proposed rule, awaiting Marc's answer: the organizer requests the one group image when the lineup is ready. Snapshot currently accepted participants and their approved companion versions at that moment. Exclude pending invitees and people waiting for the next round. The existing scoring start time and join rules do not change.
+The newest completed image is the one shown. Earlier images stay saved (FitFight never deletes rows). A new recurring round has a new fight ID and gets its own image.
 
-Once generated, keep the image for that round. Late joiners still appear in the real roster/standings; the existing image is the cast at generation time. Do not silently regenerate it on a join, refresh, score change, or companion edit. A new recurring round has a new fight ID and can receive its own image under the same chosen rule. If Marc chooses automatic timing instead, record the exact trigger and roster snapshot before implementation.
+Marc's follow-up decisions (15 Oct 2026):
 
-The server authorizes the action, snapshots the input versions, and records a deduplicated job. Repeated taps or concurrent requests must reuse the same job/output. Enforce one published artwork per fight ID; do not equate that with a guarantee of only one provider charge when an attempt fails. Record attempts and use the provider's idempotency/reconciliation facilities where available before resubmitting ambiguous requests.
+- **Free for now.** FitFight absorbs the cost. Marc will stop it or add payment if the cost grows too much.
+- **At most two generations per fight per day.** A change after the second one waits until the limit allows another generation.
+- **At most 1,000 images a week across the app** (16 Oct 2026), up to 30 drawing at once. Images over the cap wait until it frees.
+- **One-hour batch.** The first change opens a one-hour window; joins and companion changes inside it are folded into one generation that uses the cast at the end of the window.
+- **Reference grid.** The model receives the cast as a grid image of companion references, at most 4 × 4 (16) per grid. A larger cast adds another grid image.
+- **Descriptions for every companion.** The prompt includes each character's description: the written description for a stock companion, the Special's description, or the user's custom description. The grid images are sent as references alongside that prompt.
+- **Names, not numbers.** Each character is named by its companion name plus what makes it recognisable ("Black Panther with the gold chain"); the same name captions its grid cell. No usernames.
+
+Approved look, 16 Oct 2026 (Marc: "this is production worthy"). One transparent image per fight, no splitting into several images. Everyone runs from left to right on a patch of trail with grass, wildflowers and stones under every runner; everything else is transparent so the image sits directly on the app background in Night and Day. Approved examples and a tappable lab: `source/kit/fight-group-image-proposals.html`.
+
+| Fight size | Layout | Blend workflow (draft, not yet published) | Who is drawn |
+| --- | --- | --- | --- |
+| 2 to 16 people | Straight trail: the group jogs across a level trail, side view | "FitFight Group Vignette" (`fdab3ded-dddc-4acb-b69f-c18d53d0c81e`) | Everyone, each counted |
+| 20 people and more | Race start seen from head height: a large front row of featured runners, the rest of the fight as a dense band behind them, spread evenly across the width | "FitFight Race Start Close" (`0f288714-6628-4d83-995e-d6d18adf9fa8`) | 12 featured runners, each checked; the others in the crowd, drawn only from the fight's own companions |
+
+17 to 19 people were not tested; use the race start from 17. Rejected on 16 Oct: rows of several images stitched together, a diagonal trail, a hillside slope, a deep trail receding into a corner, a full rectangular scene with sky, and a race start seen from above (5 of 10 passed the check).
+
+Generation pipeline:
+
+1. **Cast.** One entry per accepted participant: companion ID, roster name, description and reference art. Stock descriptions live in `source/companion/manifest.json` and Special descriptions in `source/companion/limited-editions.json` (`rosterName`, `description`), both written from the shipped art; a custom companion uses its saved image and the owner's description.
+2. **Featured runners (17 or more people).** At most 12. Proposed order, pending Marc's confirmation: the fight creator first, then custom companions, then Specials, then the rest by join order. The image is shared by every member, so it cannot depend on who is looking. Everyone else goes into the crowd as companion names with counts, e.g. "Badger x13, Fox x10".
+3. **Reference sheets.** One cell per drawn runner, so three people with the same Badger give three Badger cells; one cell per companion made the model merge duplicates. Each cell shows the art with the roster name printed under it, 4 columns by up to 4 rows (16 per sheet), white background.
+4. **Roster text.** `Total characters: N`, then one line per distinct companion: `Name (xN): description`.
+5. **Generate and check.** GPT Image 2.5 Sunburst draws the image on a transparent background (Marc chose Sunburst for the group image on 16 Oct 2026; other FitFight images default to GPT Image 2). A Claude Fable 5.1 node in the same run returns, as JSON, the runners it counts and how many face left. The server accepts the image only if every runner is present the right number of times (straight trail) or every featured runner is present (race start), and nobody faces left. Otherwise it regenerates, up to 3 attempts.
+6. **Finish in code.** Trim the transparent margins. No other post-processing.
+
+Tests, 16 Oct 2026: straight trail 12 of 12 accepted at 2 to 20 people (two 2-person images were regenerated because a runner faced left); race start close 8 of 8 accepted on the first try at 20, 30, 50 and 80 people. Each image costs about $0.10 to $0.19 including the check and takes 4 to 10 minutes. An 80-person fight costs about $0.18 per image.
+
+Earlier benchmark, 15 to 16 Oct 2026 (cut-out characters on a code-drawn floor, superseded by the approved look but still the evidence for model choice and counting reliability):
+
+| Model | Fights passed | First-try check pass | Fallbacks | Wrong images accepted | Cost per image | Style (1-5) | Magenta edge fringe |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| GPT Image 2 (two reps) | 93 / 93 | 127 / 144 | 4 | 0 | about $0.24 | 4.9 | median 4 px, 6 of 148 images over 200 px |
+| GPT Image 2.5 Sunburst | 51 / 51 | 92 / 100 | 2 | 0 | about $0.12 | 5.0 | none (true transparency) |
+
+The in-workflow count check never accepted an image that independent checkers found wrong. GPT Image 2 was requested because Marc has Azure credit for it; in Blend both models are served by Azure.
+
+The server authorizes the action, snapshots the input versions, and records a deduplicated job. Repeated or concurrent triggers for the same cast snapshot must reuse the same job/output. Enforce one current artwork per fight ID; do not equate that with a guarantee of only one provider charge when an attempt fails. Record attempts and use the provider's idempotency/reconciliation facilities where available before resubmitting ambiguous requests.
 
 The scene appears on fight detail as one image, with the actual score and standings rendered as native text outside it. Artwork generation must not block creating, joining, scoring, or viewing a fight. While artwork is absent, pending, or failed, the screen remains usable with the existing native layout and an honest image status.
 
 Reuse the existing private media/storage approach, with a dedicated companion/fight-art contract. The current media purpose set accepts only `profile` and `fight_post`; do not silently treat generated artwork as an ordinary post or add enum values that break installed clients. Store asset identifiers rather than expiring signed URLs. Artwork visibility must follow the fight's access rules. Account deletion must remove owned companion descriptions/references and invalidate shared generated artwork that includes the deleted companion; use the normal no-art state without automatically spending money regenerating it.
 
-**Complete when:** an authorized group gets one shared illustration with the intended cast, all authorized members receive the same saved output, duplicate requests do not create competing images, and late joins/new rounds follow the agreed rule.
+**Complete when:** an authorized group gets one shared illustration with the intended cast, all authorized members receive the same saved output, duplicate requests do not create competing images, and fight creation, joins, companion changes and new rounds follow the automatic rule.
 
 ## Verification and review gates
 
@@ -154,8 +191,8 @@ For identity and generation:
 
 ## Later decisions and deferred work
 
-Before generation implementation, settle the group-image trigger, provider/model, supported customization fields, generation allowance, and acceptable group-composition size. These choices do not delay the fixed-artwork Simulator review.
+Before generation implementation, settle the provider/model, supported customization fields, generation allowance, and acceptable group-composition size. These choices do not delay the fixed-artwork Simulator review.
 
-Paid customization, subscriptions, generated video, real-time effort-dependent artwork, additional activity types, and automatic image regeneration remain future product work. This plan records the direction without building those features.
+Paid customization, subscriptions, generated video, real-time effort-dependent artwork, and additional activity types remain future product work. This plan records the direction without building those features.
 
 PRs still require Marc's explicit request and target `develop`. Merges and releases require his instruction. A local Simulator review is independent of the `develop` → `preview` → `main` release train.

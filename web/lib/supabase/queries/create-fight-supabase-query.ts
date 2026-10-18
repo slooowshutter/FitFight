@@ -26,7 +26,7 @@ export function storedFightIdentity(
 const IDEMPOTENCY_WINDOW_MS = 2 * 60 * 1000;
 const JOIN_CODE_ATTEMPTS = 8;
 
-async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
+export async function allocateJoinCode(admin: SupabaseClient): Promise<string> {
     for (let attempt = 0; attempt < JOIN_CODE_ATTEMPTS; attempt += 1) {
         const code = randomJoinCode();
         const { data, error } = await admin
@@ -152,14 +152,14 @@ export async function createFight(
             insert into public.fights (
                 owner_id, name, state, starts_at, ends_at, time_zone, metric,
                 outcome_rule, goal_policy, default_goal_value, stake_kind,
-                stake_minor, currency, action_text, series_id
+                stake_minor, currency, action_text, series_id, closes_after_grace
             )
             values (
                 ${userId}, ${stored.name}, ${state}, ${startsAt}, ${endsAt}, ${input.timeZone}, 'steps',
                 ${input.outcomeRule}, ${input.goalPolicy}, ${input.defaultGoalValue ?? null}, ${input.stakeKind},
                 ${input.stakeMinor ?? null},
                 ${input.stakeKind === "money" ? input.currency : (input.currency ?? null)},
-                ${stored.actionText}, ${series.id}
+                ${stored.actionText}, ${series.id}, false
             )
             returning id, state::text as state
         `;

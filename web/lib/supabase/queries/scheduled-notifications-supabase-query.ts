@@ -19,12 +19,13 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
             '/fights/' || fight.id, reminder.kind
         from public.fights fight
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+            and member.user_id is distinct from fight.host_id
         left join private.notification_preferences prefs on prefs.user_id = member.user_id
         cross join (values
             ('ending_24h', 'before_24h', interval '24 hours'),
             ('ending_week', 'before_week', interval '7 days')
         ) reminder(kind, slot, notice)
-        where fight.state = 'live'
+        where fight.state = 'live' and not fight.friends
             and coalesce(prefs.enabled, true)
             and case when reminder.kind = 'ending_24h' then coalesce(prefs.ending_24h, true)
                 else coalesce(prefs.ending_week, false) end
@@ -49,8 +50,9 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
             '/fights/' || fight.id, 'final_sync'
         from public.fights fight
         join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+            and member.user_id is distinct from fight.host_id
         left join private.notification_preferences prefs on prefs.user_id = member.user_id
-        where fight.state = 'awaiting_final_sync' and not member.final_steps_complete
+        where fight.state = 'awaiting_final_sync' and not fight.friends and not member.final_steps_complete
             and coalesce(prefs.enabled, true) and coalesce(prefs.final_sync, true)
             and fight.ends_at + fight.final_sync_grace_seconds * interval '1 second' > ${at}::timestamptz
             and not exists (
@@ -59,6 +61,42 @@ export async function enqueueScheduledNotifications(database: Sql, now: Date): P
                     and previous.kind = 'fight_ended' and previous.copy_key = 'fight_ended_sync'
                     and previous.status = 'sent'
             )
+        on conflict (idempotency_key) do nothing
+    `;
+
+    // A friend round waiting on someone who stopped syncing never finalizes, and the results push
+    // waits for a person's last round. Once the month is over and the last of their rounds that
+    // started in it ended a day ago, anyone with a finished round from it gets it. A weekly round
+    // can end a week after the month, so the window counts from the month's end.
+    await database`
+        insert into private.notification_intents (
+            idempotency_key, user_id, fight_id, kind, slot,
+            not_before, expires_at, route, copy_key
+        )
+        select distinct on (member.user_id, month.key)
+            member.user_id || ':friends_results:' || month.key,
+            member.user_id, fight.id, 'friends_results', 'final',
+            ${at}::timestamptz, ${at}::timestamptz + interval '24 hours',
+            '/fights/' || fight.id || '?friends=1', 'friends_results'
+        from public.fights fight
+        cross join lateral (
+            select to_char(fight.starts_at at time zone fight.time_zone, 'YYYY-MM') as key,
+                (date_trunc('month', fight.starts_at at time zone fight.time_zone) + interval '1 month')
+                    at time zone fight.time_zone as ends_at
+        ) month
+        join public.fight_members member on member.fight_id = fight.id and member.state = 'accepted'
+        where fight.friends and fight.state = 'final'
+            and month.ends_at <= ${at}::timestamptz
+            and month.ends_at > ${at}::timestamptz - interval '9 days'
+            and not exists (
+                select 1 from public.fights round
+                join public.fight_members mine on mine.fight_id = round.id
+                    and mine.user_id = member.user_id and mine.state = 'accepted'
+                where round.friends and round.state <> 'cancelled'
+                    and to_char(round.starts_at at time zone round.time_zone, 'YYYY-MM') = month.key
+                    and round.ends_at > ${at}::timestamptz - interval '1 day'
+            )
+        order by member.user_id, month.key, fight.id
         on conflict (idempotency_key) do nothing
     `;
 

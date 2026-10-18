@@ -43,7 +43,7 @@ enum Stage { case session }
 }
 
 @MainActor final class RemoteImageLoader {
-    enum Kind { case avatar }
+    enum Kind { case avatar, photo }
     static let shared = RemoteImageLoader()
     func prefetch(_ urls: [URL], kind: Kind) {}
 }
@@ -59,6 +59,13 @@ enum Stage { case session }
     var cachedUserID: UUID?
     var you = Person(id: "you", name: "@you", handle: "@you", initials: "Y", isYou: true)
     var fights: [Fight] = []
+    var hosted: FitFightSnapshot.Hosted?
+    var hostedRounds: [Fight] = []
+    var friends: FitFightSnapshot.Friends?
+    var friendRounds: [Fight] = []
+    var showingFriends = false
+    func refreshFriendRounds() async throws {}
+    var refreshError: String?
     var pendingJoinable: Fight?
     static var fightsCachePrefix: String { "fitfight.localization-test.\(AppLocalization.languageCode)." }
 

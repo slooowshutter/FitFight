@@ -17,7 +17,7 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 - Never use em dashes (U+2014) or en dashes (U+2013). Use a comma, period, colon, or ASCII hyphen `-`. This applies to user-facing copy, docs, comments, and agent writing.
 - Version label shows at the **top of Profile** only (not the nav bar), e.g. `1.1.1 · build N · staging · 15 Sep`. Do not show it on Fights, New, Feed, or Feedback.
 - Permanent **Versions** button: under Profile → Settings. Keep the version label on Profile. Every user-facing ship adds a `ReleaseNote` in `FitFight/Changelog.swift` (same marketing version, new date/notes).
-- Marketing version is **1.1.3**, approved by Marc on 28 Sep 2026 after Apple closed the 1.1.2 train when 1.1.2 (210) was approved (altool 90062). Do not upload 1.1.2 or earlier. The TestFlight workflow's `FITFIGHT_RELEASE_VERSION` and Fastlane must equal 1.1.3. The App Store workflows name 1.1.3, the release Marc asked for on 14 Oct 2026 to ship the two in-app purchases. CI still increments the **build number**. Changelog rows reuse `1.1.3` until Marc asks for the next version.
+- Marketing version is **1.2.0**. Each new App Store version raises the **second** number and resets the third (1.1.3 → 1.2.0 → 1.3.0), as Marc asked on 15 Oct 2026. 1.1.3 (226) was submitted to App Review on 15 Oct 2026 with both in-app purchases; do not upload 1.1.3 or earlier. The TestFlight and App Store workflows' `FITFIGHT_RELEASE_VERSION` must equal 1.2.0. CI still increments the **build number**. Changelog rows reuse `1.2.0` until Marc asks for the next version.
 - Agents submit to the App Store for Marc. Before the next submission, update App Store Connect → App Privacy for PostHog analytics and session replay: see [privacy compliance](docs/app-store/privacy-compliance.md#app-privacy).
 - Every App Store version must **automatically release after Apple approves it** (`AFTER_APPROVAL`), as requested by Marc on 17 Sep 2026. Save that setting when preparing the version and verify it when submitting for review. Existing authorization requirements for PRs, merges, and review submission still apply.
 - Design tokens live in `docs/design/source/tokens.json` and are copied byte-for-byte into `FitFight/DesignSystem/tokens.json` for the app bundle. Don’t hardcode colours. The current system is **Night/Day with fixed semantic families**: Moss is you/winning, Ember is urgency/losing, and Gold is progress only. There is no accent picker.
@@ -44,7 +44,7 @@ Before changing an API, native API model, or database schema, read [API compatib
 Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-username Steps challenges, Apple Health aggregate sync, invitations, and standings work on staging.
 
 - Native SwiftUI iOS app, scheme `FitFight`, bundle ID `com.fitfight.mvp`.
-- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.1.3**. See `docs/status.md` for uploaded builds and availability.
+- First TestFlight upload **succeeded** (build `0.1.0 (1)`). Next prepared release/TestFlight marketing version: **1.2.0**. See `docs/status.md` for uploaded builds and availability.
 - Staging TestFlight only on push/merge to `preview` (optional manual `workflow_dispatch` on that branch). No daily cron. Feature branches and `develop` do not upload. `main` never uploads to TestFlight.
 - Simulator compile on every PR.
 - Approved design source remains in `docs/design/source/`. The app uses Night/Day and one fixed semantic palette.
@@ -56,25 +56,26 @@ Current map: [`docs/status.md`](docs/status.md). Sign-in, username, direct-usern
 
 Details: [docs/status.md](docs/status.md) · [docs/product.md](docs/product.md) · [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) · [docs/system-design.md](docs/system-design.md) · [docs/backend.md](docs/backend.md) · [docs/shipping.md](docs/shipping.md) · [docs/history.md](docs/history.md) · [docs/design/source/README.md](docs/design/source/README.md)
 
-[`docs/system-design.md`](docs/system-design.md) is the golden guide for production. Follow it so new work fits. Do **not** implement that document. Do **not** build Active Minutes, Workout Count, WHOOP, Strava, payments other than the approved Specials purchases, notifications, social, or a broader website until the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The privacy and support pages are the only approved public web surfaces.
+[`docs/system-design.md`](docs/system-design.md) is the golden guide for production. Follow it so new work fits. Do **not** implement that document. Do **not** build Active Minutes, Workout Count, Strava, payments other than the approved Specials purchases, notifications, social, or a broader website until the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The WHOOP connection (a raw pull of all WHOOP API data) was approved on 18 Oct 2026; WHOOP-based Fights and other WHOOP UI wait for the backlog. The approved web surfaces are the home, privacy, support, invite and referral pages, plus the signed-in web app at `/app` (the iPhone app in the browser, shadcn UI, same `/api/v1`), which Marc asked for on 15 Oct 2026.
 
 Right now the product is the minimum private Steps challenge. Do not restore old mock or experimental surfaces merely because historical design files or database columns still contain them.
 
 Product ideas go in the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) (FitFight rows only). Marc says “put X on the backlog”; add a FitFight row there. Do not open GitHub Issues.
 
-## When Marc asks for design options
+## The app mirror: every UI change starts here
 
-He asks for several designs of a screen. He wants to **tap them on his phone**, not read a description and not look at pictures.
+[`docs/design/source/kit/app.html`](docs/design/source/kit/app.html) is the whole iOS app in one HTML page: every tab, pushed screen, sheet, drawer, alert, dialog, menu and state, and every button working on fake data. The phone is on the left; the map on the right links straight to any screen or dialog. It must always match the native app on `develop`. How it works: [docs/design/app-mirror.md](docs/design/app-mirror.md).
 
-- **Never** answer with AI-generated images. A generated picture is not the product and cannot be tapped.
-- Build **one self-contained HTML page** under `docs/design/source/kit/`, named for the screen (`fights-home-proposals.html`). Plain HTML, CSS and vanilla JS in that one file. No build step, no framework, no npm.
-- Use the real kit: `tokens.json` colours, Nunito, 22pt cards, hairline borders, no shadows, and a 393×852 phone frame with the version line on Profile only and the Fights / New / Feed / Feedback / Profile tab bar.
-- Put every option in **one page** behind a picker, so he taps between them without leaving. Each option needs a short line saying when it is the right choice.
-- Feed every option the **same** fake fights, so he compares layouts and not data.
-- When Marc explicitly asks for a PR, commit, push, open it, then **give him a clickable link** in the reply:
-  `https://htmlpreview.github.io/?https://raw.githubusercontent.com/slooowshutter/FitFight/<branch>/docs/design/source/kit/<file>.html`
-- Touch **no** `.swift` file and nothing under `FitFight.xcodeproj/` while proposing. That keeps TestFlight quiet until he picks one. Port the winner separately; open its PR only when Marc explicitly asks for a PR.
-- These pages are proposals, not the approved spec. The approved spec is still `kit/FitFight Design System.dc.html`.
+- **New UI feature or design options:** build them **in `app.html`**, on top of what is there, on the feature branch. Never a new separate HTML page, never AI-generated images: Marc wants to tap the real app on his phone.
+- Options go through `variant(...)`: they appear in the map's **In progress** box, each with one line on when it is the right choice and links that open every screen, sheet or dialog the feature touches. Every option uses the same fake data. The first option is **Today** (the app as it is); each other option is today's screen plus one change. See [proposing a feature](docs/design/app-mirror.md#proposing-a-feature).
+- Touch **no** `.swift` file and nothing under `FitFight.xcodeproj/` while proposing. That keeps TestFlight quiet until he picks one.
+- **When Marc gives the go:** delete the losing options and the `variant(...)` entry so the winner is plain mirror code, then port it to Swift. Open a PR only when Marc explicitly asks for one.
+- **Every native UI change updates `app.html` in the same branch**, including fixes and copy changes, and bumps `MIRROR.matches`. When the two disagree, Swift is the truth: fix the mirror. A change with nothing visible (API, sync, models) leaves it alone.
+- Check the match with `scripts/app-mirror-check.sh`: it renders the real app in the Simulator and the mirror with the same fake people, side by side. The fake people and fights are `FitFight/CompanionPreview.swift`'s; change both together.
+- The phone is an iPhone 17 (402×874 pt, the Simulator's device), with the version line on Profile only and the Fights / New / Feed / Feedback / Profile tab bar.
+- When Marc explicitly asks for a PR, give him a clickable link that opens the exact screen (the part after `#` is any route from the map):
+  `https://htmlpreview.github.io/?https://raw.githubusercontent.com/slooowshutter/FitFight/<branch>/docs/design/source/kit/app.html#fights/fight?id=duel`
+- The other pages in `kit/` are older one-off proposals, kept for history. The design system reference is still `kit/FitFight Design System.dc.html`.
 
 ## Cursor Bugbot reviews
 
@@ -87,7 +88,7 @@ He asks for several designs of a screen. He wants to **tap them on his phone**, 
 
 1. Branch off `develop`. Only when Marc explicitly asks for a PR, open it **into `develop`**. Do not PR into `preview` or `main` unless Marc is cutting that release.
 2. Add new `.swift` files to `FitFight.xcodeproj/project.pbxproj` (explicit file list, not a synchronized group). JSON in `DesignSystem/` must also be in the Resources build phase.
-3. If users will see it: append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.1.3`). Do **not** change `MARKETING_VERSION` in `project.pbxproj` unless Marc asks or Apple closed the train. CI bumps the build number.
+3. If users will see it: update [the app mirror](docs/design/source/kit/app.html) to match, and append a `ReleaseNote` in `Changelog.swift` using the current `MARKETING_VERSION` (`1.2.0`). Do **not** change `MARKETING_VERSION` in `project.pbxproj` unless Marc asks or Apple closed the train. CI bumps the build number.
 4. Don’t ask Marc to open Xcode or his Mac. Feature-branch and `develop` pushes do not upload TestFlight. A staging build uploads when the change lands on `preview`. Then he opens TestFlight → Update. Do not ask him to Run workflow.
 5. Shipping to production is Marc merging `preview` → `main`. Agents do not do that unless he said so in that chat.
 6. Merged feature branches are deleted by CI. `main`, `develop`, `preview`, and `testflight-latest` stay. Do not enable GitHub’s “Automatically delete head branches.”

@@ -6,6 +6,7 @@ This folder contains the current approved design and the archived design dump it
 
 | File                                                                             | Purpose                                                                                                                  |
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [`kit/app.html`](./kit/app.html)                                                 | The app mirror: every screen of the native app with fake data, kept equal to `develop`. New designs start here. See [app-mirror.md](../app-mirror.md). |
 | [`kit/FitFight Design System.dc.html`](./kit/FitFight%20Design%20System.dc.html) | Approved visual specification and interactive component catalogue.                                                       |
 | [`kit/support.js`](./kit/support.js)                                             | Runtime used by the HTML source. Documentation only; it is not bundled in the iOS app.                                   |
 | [`tokens.json`](./tokens.json)                                                   | Machine-readable SwiftUI tokens. This must remain byte-for-byte identical to `FitFight/DesignSystem/tokens.json`.        |

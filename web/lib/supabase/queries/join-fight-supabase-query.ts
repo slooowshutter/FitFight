@@ -336,7 +336,7 @@ export async function getJoinableFightByCode(
         throw new ApiError(500, ERROR_CODES.db_error, "Could not load series");
     }
     const series = data as FightSeriesRow | null;
-    if (!series || !series.join_code || series.paused_at) {
+    if (!series || !series.join_code || series.paused_at || series.host_id || series.friend_low) {
         throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
     }
     const fight = await currentJoinableFight(series, admin, now);
@@ -409,7 +409,7 @@ export async function joinFight(
         series = await loadSeries(listed.series_id, admin);
     }
 
-    if (series.paused_at || !series.join_code) {
+    if (series.paused_at || !series.join_code || series.host_id || series.friend_low) {
         throw new ApiError(
             403,
             ERROR_CODES.fight_not_joinable,

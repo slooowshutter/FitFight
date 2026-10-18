@@ -9,7 +9,6 @@ enum ScreenshotExport {
     static let isEnabled = ProcessInfo.processInfo.environment["FF_SHOOT"] == "1"
 
     static let canvas = CGSize(width: 393, height: 852)
-    static let appStoreCanvas = CGSize(width: 440, height: 956)
     static let tallHeight: CGFloat = 1800
     static let designSystemSliceHeight: CGFloat = 2_600
     static let designSystemSlices = 4
@@ -24,17 +23,6 @@ enum ScreenshotExport {
         for shot in shots(model: model) {
             write(shot.view(themeStore, model), name: shot.name, height: canvas.height, to: folder)
             write(shot.view(themeStore, model), name: shot.name + "-full", height: tallHeight, to: folder)
-        }
-
-        for shot in appStoreShots(model: model) {
-            write(
-                shot.view(themeStore, model),
-                name: shot.name,
-                size: appStoreCanvas,
-                scale: 3,
-                jpeg: true,
-                to: folder
-            )
         }
 
         let light = ThemeStore(transient: .day)
@@ -293,6 +281,25 @@ enum ScreenshotExport {
             Shot(name: "05-notifications") { store, model in
                 sheet(NotificationSettingsView(), themeStore: store, model: model)
             },
+            Shot(name: "05-in-app-alert") { store, model in
+                let alert = InAppAlert(
+                    id: "start-first-fight",
+                    title: "Start your first fight",
+                    body: "Add a friend by username, pick 3 days to a month, and see who walks more. You can also set what the loser has to do.",
+                    imageURL: nil,
+                    buttons: [
+                        .init(title: "New fight", action: "new_fight", url: nil, primary: true),
+                        .init(title: "Not now", action: "dismiss", url: nil, primary: false),
+                    ]
+                )
+                return AnyView(
+                    frame(FightsListView(), tab: .fights, themeStore: store, model: model)
+                        .overlay {
+                            InAppAlertView(inAppAlert: alert, onChoose: { _ in }, onDismiss: {})
+                                .environment(\.ffTheme, store.theme)
+                        }
+                )
+            },
             Shot(name: "05-notifications-large-text") { store, model in
                 sheet(NotificationSettingsView().environment(\.dynamicTypeSize, .accessibility2), themeStore: store, model: model)
             },
@@ -311,30 +318,6 @@ enum ScreenshotExport {
             Shot(name: "08-request-compose") { store, model in
                 sheet(RequestsScreenshot.compose(), themeStore: store, model: model)
             },
-        ]
-    }
-
-    private static func appStoreShots(model: AppModel) -> [Shot] {
-        var fight = model.fights.first { $0.id == "sweat" }
-        fight?.id = "appstore-sweat"
-        fight?.days = []
-        let invited = model.fights.first { $0.id == "desk" }
-        return [
-            Shot(name: "appstore-01-fights") { store, model in
-                frame(FightsListView(), tab: .fights, themeStore: store, model: model)
-            },
-            Shot(name: "appstore-02-fight-detail") { store, model in
-                frame(detail(fight), tab: .fights, themeStore: store, model: model)
-            },
-            Shot(name: "appstore-03-new") { store, model in
-                frame(NewFightView(opening: .choose), tab: .newFight, themeStore: store, model: model)
-            },
-            Shot(name: "appstore-04-invitation") { store, model in
-                frame(detail(invited), tab: .fights, themeStore: store, model: model)
-            },
-            Shot(name: "appstore-05-you") { store, model in
-                frame(YouView(), tab: .you, themeStore: store, model: model)
-            }
         ]
     }
 
@@ -426,15 +409,12 @@ enum ScreenshotExport {
         name: String,
         size: CGSize,
         scale: CGFloat = 2,
-        jpeg: Bool = false,
         to folder: URL
     ) {
         let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height))
         renderer.scale = scale
-        guard let image = renderer.uiImage,
-              let data = jpeg ? image.jpegData(compressionQuality: 1) : image.pngData() else { return }
-        let fileExtension = jpeg ? "jpg" : "png"
-        try? data.write(to: folder.appendingPathComponent("\(name).\(fileExtension)"))
+        guard let data = renderer.uiImage?.pngData() else { return }
+        try? data.write(to: folder.appendingPathComponent("\(name).png"))
     }
 
     private static func write(

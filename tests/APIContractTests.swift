@@ -69,6 +69,18 @@ struct APIContractTests {
         let emptyReactions = try decoder.decode(FitFightFightPostReactionPeople.self, from: Data("{\"people\":[],\"next_cursor\":null}".utf8))
         precondition(emptyReactions.people.isEmpty && emptyReactions.nextCursor == nil)
 
+        let friendsPostJSON = """
+        {"id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","audience":"main","fight_id":null,"fight_name":"","broadcast":false,\
+        "to_friends":true,"channels":[],"body":"Lunch walk","created_at":"2026-10-15T12:00:00.000000Z",\
+        "author":{"user_id":"11111111-1111-4111-8111-111111111111","handle":"marc","display_name":"Marc","avatar":null,"companion_id":null},\
+        "media":[],"tags":[],"reactions":[],"comment_count":0,"mine":false}
+        """
+        let friendsPost = try decoder.decode(FitFightFightPost.self, from: Data(friendsPostJSON.utf8))
+        precondition(friendsPost.toFriends && friendsPost.channelLabel == "Friends", "Friends-only posts say Friends, not Public")
+        let olderPost = try decoder.decode(FitFightFightPost.self,
+            from: Data(friendsPostJSON.replacingOccurrences(of: "\"to_friends\":true,", with: "").utf8))
+        precondition(!olderPost.toFriends && olderPost.channelLabel == "Public", "Posts from an older backend still decode")
+
         let profileData = try Data(contentsOf: fixtures.appendingPathComponent("profile.json"))
         let profile = try decoder.decode(FitFightProfile.self, from: profileData)
         precondition(profile.userId.uuidString.lowercased() == "11111111-1111-4111-8111-111111111111")
@@ -123,6 +135,17 @@ struct APIContractTests {
             from: JSONSerialization.data(withJSONObject: withCompanionJSON))
         precondition(customCompanion.companionId == "custom")
         precondition(customCompanion.companionPrompt == "a cream frenchie with gold sunglasses")
+        precondition(profile.companionName == nil && customCompanion.companionLine == nil,
+                     "Profiles from servers without companion names remain decodable")
+        withCompanionJSON["companion_name"] = "Sir Waddles"
+        withCompanionJSON["companion_line"] = "Slow start. Strong finish."
+        let namedData = try JSONSerialization.data(withJSONObject: withCompanionJSON)
+        let namedCompanion = try decoder.decode(FitFightProfile.self, from: namedData)
+        precondition(namedCompanion.companionName == "Sir Waddles" && namedCompanion.companionLine == "Slow start. Strong finish.")
+        let cachedNamedCompanion = try decoder.decode(FitFightProfile.self, from: JSONEncoder().encode(namedCompanion))
+        precondition(cachedNamedCompanion == namedCompanion, "The cached profile keeps the companion name and line")
+        let releasedNamedCompanion = try decoder.decode(Build201Profile.self, from: namedData)
+        precondition(releasedNamedCompanion.companionId == "custom", "Released builds ignore the additive companion name and line")
 
         guard var extendedProfile = try JSONSerialization.jsonObject(with: profileData) as? [String: Any] else {
             preconditionFailure("Profile fixture must be a JSON object")
@@ -157,6 +180,12 @@ struct APIContractTests {
         let zonedSnapshot = try decoder.decode(FitFightSnapshot.self,
             from: JSONSerialization.data(withJSONObject: extendedSnapshot))
         precondition(zonedSnapshot.fights[0].timeZone == "Europe/Paris")
+        precondition(snapshot.hosted?.name == "Fight Marc" && snapshot.hosted?.rounds == 20
+                     && snapshot.hosted?.leading == 12)
+        extendedSnapshot.removeValue(forKey: "hosted")
+        let unhostedSnapshot = try decoder.decode(FitFightSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: extendedSnapshot))
+        precondition(unhostedSnapshot.hosted == nil, "Servers before the hosted summary remain decodable")
         precondition(snapshot.fights[0].name == "September Steps" && snapshot.fights[0].actionText == nil)
         precondition(snapshot.members[0].currentValue == 8500 && snapshot.members[0].rank == 1)
         precondition(snapshot.members[0].lastSyncedAt != nil && snapshot.members[0].finalValue == nil)
@@ -171,6 +200,35 @@ struct APIContractTests {
         let checkpoints = try decoder.decode(FitFightSnapshot.self, from: checkpointData)
         precondition(checkpoints.members[0].stepCheckpoints?.last?.steps == 8500)
         precondition(checkpoints.members[1].stepCheckpoints == nil)
+        precondition(checkpoints.hosted == nil, "Someone who hosts nothing gets a null hosted summary")
+        precondition(snapshot.friends == nil && snapshot.fights[0].friends == nil,
+                     "Servers before friend fights remain decodable")
+        let friendsData = try Data(contentsOf: fixtures.appendingPathComponent("fight-snapshot-friends.json"))
+        let friendRounds = try decoder.decode(FitFightSnapshot.self, from: friendsData)
+        precondition(friendRounds.friends?.rounds == 1 && friendRounds.friends?.leading == 1
+                     && friendRounds.friends?.requests == 2)
+        precondition(friendRounds.fights.count == 1 && friendRounds.fights[0].friends == true
+                     && friendRounds.fights[0].name == "Friends")
+        precondition(friendRounds.fights[0].groupImageUrl?.hasPrefix("https://supabase.tryblend.ai/") == true)
+        precondition(snapshot.fights[0].groupImageUrl == nil, "Servers before group images remain decodable")
+        guard var unflagged = try JSONSerialization.jsonObject(with: friendsData) as? [String: Any] else {
+            preconditionFailure("Friends snapshot fixture must be a JSON object")
+        }
+        unflagged.removeValue(forKey: "friends")
+        var unflaggedFights = unflagged["fights"] as! [[String: Any]]
+        unflaggedFights[0].removeValue(forKey: "friends")
+        unflagged["fights"] = unflaggedFights
+        let withoutFriends = try decoder.decode(FitFightSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: unflagged))
+        precondition(withoutFriends.friends == nil && withoutFriends.fights[0].friends == nil,
+                     "A snapshot without the friends summary or flag hides the Friends card")
+        precondition(friendRounds.series[0].friendRoundLength == nil, "Servers before round lengths remain decodable")
+        let history = try decoder.decode(FitFightSnapshot.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("fight-snapshot-friends-history.json")))
+        precondition(history.series[0].friendRoundLength == "week")
+        precondition(history.fights.map(\.state) == ["final", "final", "live"]
+                     && Set(history.fights.map(\.seriesId)).count == 1,
+                     "Every ended round of a friend pair comes with the live one, for History")
 
         // Same date handling as FitFightAPI.decoder: generated_at carries milliseconds.
         let serverDecoder = JSONDecoder()
@@ -201,11 +259,25 @@ struct APIContractTests {
         precondition(!dashboard.charts[0].series[0].previous && dashboard.charts[0].series[1].previous)
         precondition(dashboard.charts[1].xKind == "label" && dashboard.charts[1].cells.isEmpty)
         precondition(dashboard.charts[2].kind == "heatmap" && dashboard.charts[2].cells.count == 6)
-        let syncs = try serverDecoder.decode(FitFightRecentSyncs.self,
-            from: Data(contentsOf: fixtures.appendingPathComponent("admin-recent-syncs.json")))
-        precondition(syncs.people.map(\.handle) == ["marc", "lea"] && syncs.people[1].displayName == "Léa")
-        precondition(syncs.people[0].lastSyncedAt == parseServerDate("2026-10-12T09:15:00Z"))
-        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, recent syncs passed")
+        let founder = try serverDecoder.decode(FitFightFounderFights.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("admin-founder-fights.json")))
+        precondition(founder.challengers.map(\.handle) == ["lea", "tom"] && founder.challengers[0].displayName == "Lea")
+        precondition(founder.challengers[0].day == 5 && founder.challengers[0].days == 30)
+        precondition(founder.challengers[0].steps == 41250 && founder.challengers[0].founderSteps == 52010)
+        precondition(founder.challengers[1].state == "awaiting_final_sync")
+        precondition(founder.challengers[1].wins == 0 && founder.challengers[1].losses == 2 && founder.challengers[1].draws == 1)
+        let alerts = try decoder.decode(InAppAlertList.self,
+            from: Data(contentsOf: fixtures.appendingPathComponent("in-app-alerts.json"))).alerts
+        precondition(alerts.map(\.id) == ["make-your-character", "update-example"])
+        precondition(alerts[0].imageURL?.lastPathComponent == "companion-alpaca-1.webp" && alerts[1].imageURL == nil)
+        precondition(alerts[0].buttons.map(\.primary) == [true, false] && alerts[0].buttons[0].url == nil)
+        precondition(alerts[1].buttons[0].action == "update" && alerts[1].buttons[0].url?.host == "apps.apple.com")
+        let laterAction = try decoder.decode(InAppAlertList.self, from: Data(#"""
+            {"alerts":[{"id":"x","title":"T","body":"B","image_url":null,"extra":1,
+            "buttons":[{"title":"Go","action":"open_store","url":null,"primary":true}]}]}
+            """#.utf8))
+        precondition(laterAction.alerts[0].buttons[0].action == "open_store", "A newer server's action still decodes")
+        print("API contracts: comment likes, profile, onboarding, cached profiles, extra fields, Fight snapshot, admin dashboard, founder fights, in-app alerts passed")
     }
 }
 

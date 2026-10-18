@@ -4,13 +4,14 @@ import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { profileFriendListRowSchema, friendshipRowSchema, type FriendsPage, type FriendsQuery, type FriendshipAction, type FriendshipResponse } from "@/lib/types/friends/friendship";
 import { profileFeatureConfigSchema } from "@/lib/types/profiles/shared-profile";
+import { endFriendFight, ensureFriendFights } from "./friend-fights-supabase-query";
 import { signMediaUrl } from "./media-supabase-query";
 import { loadProfileAccess } from "./shared-profiles-supabase-query";
 
 /** A reverse request stays pending until its recipient explicitly accepts it. */
 export async function changeFriendship(viewerId: string, targetId: string, action: FriendshipAction, database: Sql = createDatabaseClient()): Promise<FriendshipResponse> {
     if (viewerId === targetId) throw new ApiError(400, "validation", "Choose another person");
-    return database.begin(async (sql) => {
+    const { accepted, ...response } = await database.begin(async (sql) => {
         await loadProfileAccess(sql, viewerId, targetId, true);
         const [low, high] = [viewerId.toLowerCase(), targetId.toLowerCase()].sort();
         const rows = await sql`select requester_id, state from private.profile_friendships where user_low = ${low} and user_high = ${high}`;
@@ -36,6 +37,7 @@ export async function changeFriendship(viewerId: string, targetId: string, actio
             }
             await sql`delete from private.profile_friendships where user_low = ${low} and user_high = ${high}`;
             await sql`update private.rivalry_artworks set hidden = true, state = 'cancelled' where user_low = ${low} and user_high = ${high}`;
+            await endFriendFight(sql, viewerId, targetId);
             state = "none";
         }
         if (event && profileFeatureConfigSchema.parse({ measurement: process.env.FITFIGHT_PROFILE_MEASUREMENT_ENABLED }).measurement) {
@@ -47,8 +49,10 @@ export async function changeFriendship(viewerId: string, targetId: string, actio
                 ))
             `;
         }
-        return { friendship: state };
+        return { friendship: state, accepted: event === "friend_accept" };
     });
+    if (accepted) await ensureFriendFights(database, viewerId, targetId);
+    return response;
 }
 
 export async function listProfileFriends(userId: string, query: FriendsQuery, database: Sql = createDatabaseClient()): Promise<FriendsPage> {
@@ -100,6 +104,7 @@ export async function blockProfile(userId: string, targetId: string, database: S
         const [low, high] = [userId.toLowerCase(), targetId.toLowerCase()].sort();
         await sql`delete from private.profile_friendships where user_low = ${low} and user_high = ${high}`;
         await sql`update private.rivalry_artworks set hidden = true, state = 'cancelled' where user_low = ${low} and user_high = ${high}`;
+        await endFriendFight(sql, userId, targetId);
         return { blocked: true };
     });
 }

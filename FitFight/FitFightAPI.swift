@@ -14,6 +14,8 @@ enum FitFightAPIError: LocalizedError {
             switch code {
             case "release_unavailable":
                 return String(appLocalized: "Couldn’t check for updates")
+            case "join_code_taken":
+                return String(appLocalized: "That code is taken. Try another.")
             case "handle_not_found":
                 return String(appLocalized: "That username does not have a FitFight account yet.")
             case "companion_taken":
@@ -28,6 +30,10 @@ enum FitFightAPIError: LocalizedError {
                 return String(appLocalized: "This purchase belongs to another FitFight account. Sign in to that account or contact support.")
             case "no_free_characters":
                 return String(appLocalized: "You have no free characters left.")
+            case "suggestions_limit":
+                return String(appLocalized: "No more ideas for this companion.")
+            case "label_validation":
+                return String(appLocalized: "Check the name and line, then try again.")
             case "already_member":
                 return String(appLocalized: "That person is already in this fight.")
             case "fight_not_joinable":
@@ -290,8 +296,13 @@ struct FitFightUpdateFight: Encodable, Equatable {
     var startsAt: Date?
     var endsAt: Date?
     var timeZone: String? = nil
+    var joinCode: String? = nil
     var inviteHandles: [String]?
     var removeUserIds: [UUID]?
+    /// On: the fight closes 24 hours after the end with last synced totals. Off: it waits for everyone.
+    var closesAfterGrace: Bool? = nil
+    /// Friend rounds only: "month" or "week", starting with the live round.
+    var friendRoundLength: String? = nil
 }
 
 struct FitFightJoinableFight: Decodable, Equatable, Identifiable {
@@ -600,6 +611,16 @@ struct FitFightReferralClaim: Decodable {
     let recorded: Bool
 }
 
+struct FitFightWhoopConnection: Decodable, Equatable {
+    let connected: Bool
+    let lastSyncedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case connected
+        case lastSyncedAt = "last_synced_at"
+    }
+}
+
 struct FitFightDailyStatusRecap: Decodable {
     let recap: String
     let sentAt: Date
@@ -694,14 +715,21 @@ struct FitFightAPI {
         )
     }
 
+    /// `hosted` returns only the caller's current hosted rounds, and `friends` only their current
+    /// friend rounds, instead of their own Fights.
     func fightsSnapshot(
-        accessToken: String, trace: HealthKitSyncTrace, performMaintenance: Bool = true
+        accessToken: String, trace: HealthKitSyncTrace?, performMaintenance: Bool = true, hosted: Bool = false,
+        friends: Bool = false
     ) async throws -> FitFightSnapshot {
         try await request(
             path: performMaintenance ? "fights/refresh" : "fights/snapshot",
             method: "POST",
             accessToken: accessToken,
-            body: Self.encoder.encode(["time_zone": Calendar.current.timeZone.identifier]),
+            body: Self.encoder.encode(
+                FightSnapshotRequest(
+                    timeZone: Calendar.current.timeZone.identifier, hosted: hosted ? true : nil, friends: friends ? true : nil
+                )
+            ),
             trace: trace,
             traceStage: .fightsRefresh
         )
@@ -840,6 +868,18 @@ struct FitFightAPI {
         return try await get(path: "friends?kind=\(kind)\(suffix)", accessToken: accessToken)
     }
 
+    /// People who shared a fight with you and are not friends or requested yet, at most 10.
+    func friendSuggestions(accessToken: String) async throws -> FriendSuggestionList {
+        try await get(path: "friends/suggestions", accessToken: accessToken)
+    }
+
+    /// Up to 8 people whose username starts with `query`, exact match first.
+    func searchProfiles(query: String, accessToken: String) async throws -> ProfileSearchList {
+        var items = URLComponents()
+        items.queryItems = [URLQueryItem(name: "q", value: query)]
+        return try await get(path: "profiles/search?\(items.percentEncodedQuery ?? "")", accessToken: accessToken)
+    }
+
     func lookupProfile(handle: String, accessToken: String) async throws -> SharedProfileIdentity {
         var query = URLComponents()
         query.queryItems = [URLQueryItem(name: "handle", value: handle)]
@@ -915,6 +955,35 @@ struct FitFightAPI {
                        idempotencyKey: idempotencyKey.uuidString.lowercased())
     }
 
+    func snakeRecord(accessToken: String) async throws -> SnakeRecord {
+        try await get(path: "snake/scores", accessToken: accessToken, expected: [200])
+    }
+
+    /// Keeps a finished Snake game and returns the record, this game included.
+    func recordSnakeScore(_ score: Int, milliseconds: Int, accessToken: String) async throws -> SnakeRecord {
+        try await post(path: "snake/scores", accessToken: accessToken, body: ["score": score, "duration_ms": milliseconds])
+    }
+
+    /// Starts the Blend review of a description before it is bought. `language` is `en` or `fr`.
+    func startPromptCheck(description: String, language: String, idempotencyKey: UUID, accessToken: String) async throws -> CharacterPromptCheckRun {
+        try await post(path: "ai/runs", accessToken: accessToken,
+                       body: PromptCheckRequest(parameters: .init(description: description, language: language)),
+                       idempotencyKey: idempotencyKey.uuidString.lowercased(), expected: [200, 202])
+    }
+
+    func promptCheck(requestID: UUID, accessToken: String) async throws -> CharacterPromptCheckRun {
+        try await get(path: "ai/runs/\(requestID.uuidString.lowercased())", accessToken: accessToken, expected: [200])
+    }
+
+    private struct PromptCheckRequest: Encodable {
+        struct Parameters: Encodable {
+            let description: String
+            let language: String
+        }
+        let workflow = "prompt_check"
+        let parameters: Parameters
+    }
+
     func advanceCustomCharacter(id: UUID, description: String?, retry: Bool, accessToken: String) async throws -> CustomCharacterProgress {
         try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/advance", accessToken: accessToken,
                        body: CustomCharacterAdvanceBody(description: description, retry: retry ? true : nil,
@@ -925,6 +994,21 @@ struct FitFightAPI {
     func chooseCustomCharacterPortrait(id: UUID, candidateID: UUID, accessToken: String) async throws -> CustomCharacterProgress {
         try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/choose", accessToken: accessToken,
                        body: ["candidate_id": candidateID.uuidString.lowercased()], expected: [200, 202])
+    }
+
+    func labelCustomCharacter(id: UUID, name: String, line: String, accessToken: String) async throws -> CustomCharacterProgress {
+        do {
+            return try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/label", accessToken: accessToken,
+                                  body: ["name": name, "line": line], expected: [200])
+        } catch FitFightAPIError.http(let status, "validation", _) {
+            // The server's validation text is English and technical; the shared "validation" fallback talks about titles.
+            throw FitFightAPIError.http(status: status, code: "label_validation", message: nil)
+        }
+    }
+
+    func suggestCustomCharacterLabels(id: UUID, attemptID: UUID, accessToken: String) async throws -> CustomCharacterProgress {
+        try await post(path: "me/custom-characters/\(id.uuidString.lowercased())/suggestions", accessToken: accessToken,
+                       body: ["attempt_id": attemptID.uuidString.lowercased()], expected: [200, 202])
     }
 
     func updateProfile(
@@ -1188,6 +1272,21 @@ struct FitFightAPI {
         try await get(path: "me/preferences", accessToken: accessToken)
     }
 
+    func inAppAlerts(accessToken: String) async throws -> [InAppAlert] {
+        let list: InAppAlertList = try await get(
+            path: "alerts?language=\(AppLocalization.languageCode)",
+            accessToken: accessToken
+        )
+        return list.alerts
+    }
+
+    /// `response` is `shown`, `tapped` (with the button's action), or `dismissed`.
+    func answerInAppAlert(id: String, response: String, action: String? = nil, accessToken: String) async throws {
+        var body = ["response": response]
+        body["action"] = action
+        let _: DiscardBody = try await post(path: "alerts/\(id)/responses", accessToken: accessToken, body: body)
+    }
+
     func updateAccountPreferences(
         _ preferences: AccountPreferencesUpdate,
         accessToken: String
@@ -1310,8 +1409,8 @@ struct FitFightAPI {
         )
     }
 
-    func recentSyncs(accessToken: String) async throws -> FitFightRecentSyncs {
-        try await get(path: "admin/recent-syncs", accessToken: accessToken)
+    func founderFights(accessToken: String) async throws -> FitFightFounderFights {
+        try await get(path: "admin/founder-fights", accessToken: accessToken)
     }
 
     /// Admin only. The newest referral characters.
@@ -1367,6 +1466,11 @@ struct FitFightAPI {
         )
         PostHogSDK.shared.capture("fight_joined")
         return fight
+    }
+
+    /// Starts the caller's repeating 30-day fight against the founder, or returns the one they have.
+    func joinFounderFight(accessToken: String) async throws -> FitFightSummary {
+        try await post(path: "founder-fight", accessToken: accessToken, body: EmptyJSON())
     }
 
     func leaveFight(fightID: UUID, newOwnerID: UUID? = nil, accessToken: String) async throws -> FitFightSummary {
@@ -1505,6 +1609,25 @@ struct FitFightAPI {
             path: "feedback/blocks",
             accessToken: accessToken,
             body: FeedBlockBody(userId: userID)
+        )
+    }
+
+    func whoopConnection(accessToken: String) async throws -> FitFightWhoopConnection {
+        try await get(path: "whoop/connection", accessToken: accessToken)
+    }
+
+    /// WHOOP's sign-in page. It ends on fitfight://whoop?code=...&state=..., or ?status=denied.
+    func startWhoopConnection(accessToken: String) async throws -> URL {
+        let response: WhoopConnectResponse = try await post(path: "whoop/connect", accessToken: accessToken, body: EmptyJSON())
+        return response.url
+    }
+
+    /// Links the WHOOP sign-in to this account. The server only accepts a state this account started.
+    func finishWhoopConnection(code: String, state: String, accessToken: String) async throws {
+        let _: DiscardBody = try await post(
+            path: "whoop/finish",
+            accessToken: accessToken,
+            body: WhoopFinishBody(code: code, state: state)
         )
     }
 
@@ -1692,6 +1815,28 @@ struct FitFightAPI {
 
 private struct EmptyJSON: Encodable {}
 
+private struct WhoopConnectResponse: Decodable {
+    let url: URL
+}
+
+private struct WhoopFinishBody: Encodable {
+    let code: String
+    let state: String
+}
+
+/// `hosted` and `friends` are left out unless set: older servers reject unknown snapshot fields.
+private struct FightSnapshotRequest: Encodable {
+    let timeZone: String
+    let hosted: Bool?
+    let friends: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case timeZone = "time_zone"
+        case hosted
+        case friends
+    }
+}
+
 private struct ProfileUpdate: Encodable {
     let handle: String?
     let displayName: String?
@@ -1751,6 +1896,7 @@ struct FeedPostDestination: Encodable, Hashable {
 
     static var main: FeedPostDestination { FeedPostDestination(type: "main", fightId: nil) }
     static var broadcast: FeedPostDestination { FeedPostDestination(type: "broadcast", fightId: nil) }
+    static var friends: FeedPostDestination { FeedPostDestination(type: "friends", fightId: nil) }
 
     static func fight(_ id: UUID) -> FeedPostDestination {
         FeedPostDestination(type: "fight", fightId: id)

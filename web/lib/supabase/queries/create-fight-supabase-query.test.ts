@@ -216,6 +216,7 @@ for (const start of ["now", "scheduled"] as const) {
             "highest_total", "shared", null, "action", null, "USD",
             base.actionText, seriesId,
         ]);
+        assert.match(fightInsert?.text ?? "", /closes_after_grace\s*\)[\s\S]*,\s*false\s*\)/, "a fight someone makes waits for everyone");
         const invitations = statements.filter(
             (statement) =>
                 statement.text.includes("insert into") &&

@@ -7,7 +7,7 @@ struct Standing {
     var finalStepsComplete: Bool? = nil; var rank: Int? = nil
 }
 // DAY_SCORE
-struct FightDay { var label: String; var scores: [DayScore] }
+struct FightDay { var label: String; var scores: [DayScore]; var day: String? = nil }
 struct MemberRow { var userId: UUID; var stepCheckpoints: [FightStepCheckpoint]? }
 enum FightStatus { case live, pending, finished }
 enum Color { case unused }

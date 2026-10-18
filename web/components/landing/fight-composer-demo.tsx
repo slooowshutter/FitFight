@@ -29,9 +29,7 @@ export function FightComposerDemo({ language }: { language: SiteLanguage }) {
                         <Icon name="check" size={36} weight={2.6} />
                     </span>
                     <h3 className="lp-cp-h">{text.doneTitle}</h3>
-                    <p className="lp-cp-p">
-                        {text.doneText(trimmedTitle || text.theFight)}
-                    </p>
+                    <p className="lp-cp-p">{text.doneText(trimmedTitle)}</p>
                     <div className="lp-card lp-cp-link">
                         <span>fitfight.app/j/{inviteCode}</span>
                         <b>{inviteCode}</b>
@@ -244,12 +242,7 @@ export function FightComposerDemo({ language }: { language: SiteLanguage }) {
                                 </div>
                                 <div>
                                     <b>{text.title}</b>
-                                    <span>
-                                        {trimmedTitle ||
-                                            (trimmedAction
-                                                ? text.usesAction
-                                                : text.none)}
-                                    </span>
+                                    <span>{trimmedTitle}</span>
                                 </div>
                                 <div>
                                     <b>{text.action}</b>
@@ -274,6 +267,7 @@ export function FightComposerDemo({ language }: { language: SiteLanguage }) {
                 <button
                     type="button"
                     className="lp-cp-button"
+                    disabled={step === 4 && !trimmedTitle}
                     onClick={() => setStep(step + 1)}
                 >
                     {step === 5 ? text.start : text.next}

@@ -18,9 +18,11 @@ export const POST = apiRoute(async (request, { timing }) => {
     const { userId } = await measureRequestStage(timing, "auth", () =>
         verifyUser(request),
     );
-    const { time_zone: timeZone } = fightSnapshotRequestSchema.parse(
-        await readJson(request),
-    );
+    const {
+        time_zone: timeZone,
+        hosted,
+        friends,
+    } = fightSnapshotRequestSchema.parse(await readJson(request));
     await measureRequestStage(timing, "app_wide_invite", () =>
         ensureAppWideFightInvite(
             userId,
@@ -31,7 +33,7 @@ export const POST = apiRoute(async (request, { timing }) => {
     );
     return json(
         await measureRequestStage(timing, "db", () =>
-            readFightSnapshot(userId, timeZone),
+            readFightSnapshot(userId, timeZone, undefined, hosted, friends),
         ),
     );
 }, "fights_snapshot");

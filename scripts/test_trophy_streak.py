@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the production series trophy streak over the real Fight models."""
+"""Run the production fight trophy counts over the real Fight models."""
 
 from pathlib import Path
 import subprocess

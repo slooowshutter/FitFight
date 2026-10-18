@@ -128,6 +128,14 @@ const copy: Record<
             body: "Quelqu’un t’a mentionné dans un commentaire.",
         },
     },
+    friends_sync: {
+        en: { title: "Your friend fights just ended", body: "Open FitFight to sync your last steps." },
+        fr: { title: "Tes défis entre amis viennent de se terminer", body: "Ouvre FitFight pour envoyer tes derniers pas." },
+    },
+    friends_results: {
+        en: { title: "Your friend fights are over", body: "Open FitFight to see every result." },
+        fr: { title: "Tes défis entre amis sont terminés", body: "Ouvre FitFight pour voir tous les résultats." },
+    },
 };
 
 const socialKinds = [
@@ -223,6 +231,27 @@ export function inviteNotificationAlert(
             language === "fr"
                 ? `${name} t'a invité à ${labeled}.`
                 : `${name} invited you to ${labeled}.`,
+    };
+}
+
+/** `month` is the friend rounds' calendar month as `YYYY-MM`. */
+export function friendsResultsNotificationAlert(
+    month: string,
+    won: number,
+    total: number,
+    locale: NotificationLocale,
+): { title: string; body: string } {
+    const name = new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-GB", {
+        month: "long",
+        timeZone: "UTC",
+    }).format(new Date(`${month}-01T00:00:00Z`));
+    const label = name.charAt(0).toUpperCase() + name.slice(1);
+    return {
+        title:
+            locale === "fr"
+                ? `${label} : tu as gagné ${won} ${won > 1 ? "défis" : "défi"} entre amis sur ${total}`
+                : `${label}: you won ${won} of ${total} friend ${total === 1 ? "fight" : "fights"}`,
+        body: copy.friends_results[locale].body,
     };
 }
 

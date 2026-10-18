@@ -108,6 +108,43 @@
                 { "x": "Afternoon", "y": "Tue", "value": 0 },
                 { "x": "Evening", "y": "Tue", "value": 5 }
             ]
+        },
+        {
+            "id": "raw_by_type",
+            "title": "Raw records by source and type, all time",
+            "kind": "table",
+            "unit": "count",
+            "x_kind": "label",
+            "note": "Fights score Steps from Apple Health. Other sources are collected only.",
+            "definition": "Every type of raw record FitFight has stored, by source: how many records, how many people sent them, and how many hours ago the newest arrived. Fights score Steps from Apple Health. Other sources are collected only.",
+            "example": "Apple Health: steps has the most raw records: 1,200, 80% of all.",
+            "series": [
+                {
+                    "name": "Records",
+                    "previous": false,
+                    "points": [
+                        { "x": "Apple Health: steps", "y": 1200 },
+                        { "x": "WHOOP: whoop_cycle", "y": 300 }
+                    ]
+                },
+                {
+                    "name": "People",
+                    "previous": false,
+                    "points": [
+                        { "x": "Apple Health: steps", "y": 40 },
+                        { "x": "WHOOP: whoop_cycle", "y": 2 }
+                    ]
+                },
+                {
+                    "name": "Hours since last",
+                    "previous": false,
+                    "points": [
+                        { "x": "Apple Health: steps", "y": 0.2 },
+                        { "x": "WHOOP: whoop_cycle", "y": 1.5 }
+                    ]
+                }
+            ],
+            "cells": []
         }
     ]
 }

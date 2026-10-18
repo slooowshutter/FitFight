@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct YouView: View {
     @EnvironmentObject private var model: AppModel
@@ -26,9 +25,11 @@ struct YouView: View {
     @State private var showingOnboardingPreview = false
     @State private var showingSlideHapticsLab = false
     @State private var showingBroadcastCompose = false
-    @State private var showingHealthDetails = false
+    @State private var showingAppleHealth = false
+    @State private var connector: Connector?
     @State private var showingCompanionPreviewControls = false
-    private static let profileCachePrefix = "fitfight.you."
+    @StateObject private var whoop = WhoopConnectionStore()
+    static let profileCachePrefix = "fitfight.you."
 
     var body: some View {
         FFScreen(top: AnyView(VersionBanner(onTap: versionBannerTap)), refresh: fightsRefresh) {
@@ -197,6 +198,18 @@ struct YouView: View {
                 headerButton("gearshape", label: String(appLocalized: "Settings")) { showingSettings = true }
             }
             .padding(.top, 12)
+            // A stock or Special companion's words ship in the app; a custom one's come with the profile.
+            let animal = companions.animal(for: session.profile?.userId.uuidString, companionID: session.profile?.companionId, isYou: true)
+            if let name = animal?.name ?? session.profile?.companionName {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: name).ffType(.label).foregroundStyle(theme.text)
+                    if let line = animal?.caption ?? session.profile?.companionLine {
+                        Text(verbatim: line).ffType(.caption).foregroundStyle(theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
         } else {
             SignInControls()
         }
@@ -244,8 +257,22 @@ struct YouView: View {
                     )
                 }
             }
-            FFSection(title: String(appLocalized: "Apple Health")) {
-                health
+            FFSection(title: String(appLocalized: "Connectors")) {
+                FFGroupedRows {
+                    AppleHealthRow { showingAppleHealth = true }
+                    ForEach(Connector.allCases) { connector in
+                        FFDivider()
+                        ConnectorRow(
+                            connector: connector,
+                            status: connector == .whoop && whoop.connected
+                                ? String(appLocalized: "Connected · Updates every hour") : nil
+                        ) { self.connector = connector }
+                    }
+                }
+                Text(String(appLocalized: "FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too."))
+                    .ffType(.caption)
+                    .foregroundStyle(theme.textSecondary)
+                    .padding(.horizontal, 16)
             }
             FFSection(title: String(appLocalized: "Activity")) {
                 FFGroupedRows {
@@ -275,6 +302,19 @@ struct YouView: View {
             }
         }
         .navigationTitle(String(appLocalized: "Settings"))
+        .task {
+            if !staticRender { await whoop.refresh(session: session) }
+        }
+        .sheet(isPresented: $showingAppleHealth) {
+            health
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
+        .sheet(item: $connector) { connector in
+            ConnectorGuideSheet(connector: connector, whoop: whoop, privacy: sitePage("privacy"))
+                .fitFightTheme(themeStore.theme)
+                .presentationBackground(themeStore.theme.bg)
+        }
     }
 
     private func refreshOwnProfile(trigger: HealthKitStepsStore.SyncTrigger, requestAccess: Bool = false) async {
@@ -322,142 +362,20 @@ struct YouView: View {
         }
     }
 
-    private var health: some View {
-        FFGroupedRows {
-            Button {
+    /// The Apple Health sheet. Its syncs run here so Profile reloads after the upload.
+    private var health: AppleHealthSheet {
+        AppleHealthSheet(
+            sync: {
                 Task {
                     await refreshOwnProfile(trigger: .manual, requestAccess: !steps.hasAsked)
                 }
-            } label: {
-                FFGroupedRow(
-                    title: String(appLocalized: "Apple Health activity"),
-                    subtitle: steps.detailText,
-                    systemImage: "heart",
-                    enabled: steps.status != .reading && !model.isRefreshingFights,
-                    subtitleTone: healthSubtitleTone,
-                    trailing: AnyView(healthPill)
-                )
-            }
-            .buttonStyle(FFHapticPlainStyle())
-            .disabled(steps.status == .reading || model.isRefreshingFights)
-            FFDivider()
-            FFGroupedRow(
-                title: showingHealthDetails ? String(appLocalized: "Fewer settings") : String(appLocalized: "More settings"),
-                systemImage: "slider.horizontal.3",
-                trailing: AnyView(
-                    Image(systemName: showingHealthDetails ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(theme.textFaint)
-                ),
-                action: { showingHealthDetails.toggle() }
-            )
-            if showingHealthDetails {
-                FFDivider()
-                FFGroupedRow(
-                    title: String(appLocalized: "Request Health access"),
-                    subtitle: String(appLocalized: "Ask for access to Health types you haven’t reviewed yet. Fights use Steps only."),
-                    systemImage: "heart.circle",
-                    enabled: steps.status != .reading && !model.isRefreshingFights,
-                    subtitleTone: .neutral,
-                    trailing: AnyView(
-                        FFPill(String(appLocalized: "Review"), style: .softMoss)
-                    ),
-                    action: {
-                        Task {
-                            await refreshOwnProfile(trigger: .manual, requestAccess: true)
-                        }
-                    }
-                )
-                .disabled(steps.status == .reading || model.isRefreshingFights)
-                FFDivider()
-                FFGroupedRow(
-                    title: String(appLocalized: "Change Health permissions"),
-                    subtitle: String(appLocalized: "In Health, tap your profile → Apps → FitFight to turn each type of access on or off."),
-                    systemImage: "hand.raised",
-                    subtitleTone: .neutral
-                )
-                FFDivider()
-                FFGroupedRow(
-                    title: String(appLocalized: "Background App Refresh"),
-                    subtitle: steps.backgroundRefreshText,
-                    systemImage: "arrow.clockwise",
-                    subtitleTone: steps.diagnostics.backgroundRefreshStatus == .available ? .moss : .neutral,
-                    trailing: steps.diagnostics.backgroundRefreshStatus == .denied
-                        ? AnyView(FFPill(String(appLocalized: "Open Settings"), style: .softMoss)) : nil,
-                    action: steps.diagnostics.backgroundRefreshStatus == .denied
-                        ? { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
-                        : nil
-                )
-                FFDivider()
-                FFGroupedRow(
-                    title: String(appLocalized: "HealthKit background delivery"),
-                    subtitle: steps.backgroundDeliveryText,
-                    systemImage: "heart.text.square",
-                    subtitleTone: steps.diagnostics.deliveryRegistrationStatus == .enabled ? .moss : .neutral
-                )
-                FFDivider()
-                FFGroupedRow(
-                    title: String(appLocalized: "Last automatic sync"),
-                    subtitle: diagnosticDate(steps.diagnostics.lastAutomaticSync),
-                    systemImage: "bolt"
-                )
-                FFDivider()
-                FFGroupedRow(
-                    title: String(appLocalized: "Last manual or foreground sync"),
-                    subtitle: diagnosticDate(steps.diagnostics.lastManualSync),
-                    systemImage: "hand.tap"
-                )
-                if let failure = steps.currentFailureText {
-                    FFDivider()
-                    FFGroupedRow(
-                        title: String(appLocalized: "Current sync issue"),
-                        subtitle: failure,
-                        systemImage: "exclamationmark.triangle",
-                        subtitleTone: .ember
-                    )
-                }
-                if let reference = steps.diagnostics.failureReference {
-                    FFDivider()
-                    FFGroupedRow(
-                        title: String(appLocalized: "Sync error reference"),
-                        subtitle: reference,
-                        systemImage: "number",
-                        subtitleTone: .neutral
-                    )
+            },
+            review: {
+                Task {
+                    await refreshOwnProfile(trigger: .manual, requestAccess: true)
                 }
             }
-        }
-    }
-
-    private var healthSubtitleTone: FFTone {
-        switch steps.connection {
-        case .syncFailed, .noAccessibleSteps: return .ember
-        case .upToDate: return steps.diagnostics.activitySyncFailed == true ? .ember : .moss
-        case .syncing, .notConnected: return .neutral
-        }
-    }
-
-    private var healthPill: FFPill {
-        switch steps.connection {
-        case .syncFailed:
-            return FFPill(String(appLocalized: "Retry"), style: .softEmber)
-        case .syncing:
-            return FFPill(String(appLocalized: "Syncing"), style: .neutral)
-        case .upToDate:
-            if steps.diagnostics.activitySyncFailed == true {
-                return FFPill(String(appLocalized: "Retry"), style: .softEmber)
-            }
-            return FFPill(String(appLocalized: "Connected"), style: .softMoss)
-        case .noAccessibleSteps:
-            return FFPill(String(appLocalized: "Connected"), style: .softMoss)
-        case .notConnected:
-            return FFPill(String(appLocalized: "Connect"), style: .solidMoss)
-        }
-    }
-
-    private func diagnosticDate(_ date: Date?) -> String {
-        guard let date else { return String(appLocalized: "Not yet") }
-        return date.formatted(.relative(presentation: .named).locale(AppLocalization.locale))
+        )
     }
 
     private var settings: some View {

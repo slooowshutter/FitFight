@@ -12,10 +12,33 @@ struct FightStepCheckpoint: Codable, Equatable {
 }
 
 struct FitFightSnapshot: Decodable {
+    /// One card for everything the caller hosts, such as Fight Marc. nil for everyone who hosts
+    /// nothing, and from servers before 14 Oct 2026.
+    struct Hosted: Decodable {
+        let name: String
+        /// Current rounds whose challenger is still in.
+        let rounds: Int
+        /// Rounds the host is strictly ahead in.
+        let leading: Int
+    }
+
+    /// The Friends card: one 1v1 per accepted friend, monthly unless the pair chose weekly. nil from servers before
+    /// 15 Oct 2026, which hides the card.
+    struct Friends: Decodable {
+        /// Current friend rounds.
+        let rounds: Int
+        /// Rounds the caller is strictly ahead in.
+        let leading: Int
+        /// Incoming friend requests.
+        let requests: Int
+    }
+
     let fights: [FightRow]
     let members: [MemberRow]
     let profiles: [FitFightProfile]
     let series: [SeriesRow]
+    let hosted: Hosted?
+    let friends: Friends?
 }
 
 struct SeriesRow: Decodable {
@@ -24,6 +47,8 @@ struct SeriesRow: Decodable {
     let visibility: String
     let recurring: Bool
     let suggested: Bool
+    /// "month" or "week" for a friend pair, nil for other series and from servers before 17 Oct 2026.
+    let friendRoundLength: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -31,6 +56,7 @@ struct SeriesRow: Decodable {
         case visibility
         case recurring
         case suggested
+        case friendRoundLength = "friend_round_length"
     }
 
     init(from decoder: Decoder) throws {
@@ -40,6 +66,7 @@ struct SeriesRow: Decodable {
         visibility = try container.decode(String.self, forKey: .visibility)
         recurring = try container.decode(Bool.self, forKey: .recurring)
         suggested = try container.decodeIfPresent(Bool.self, forKey: .suggested) ?? false
+        friendRoundLength = try container.decodeIfPresent(String.self, forKey: .friendRoundLength)
     }
 }
 
@@ -54,6 +81,11 @@ struct FightRow: Decodable {
     let actionText: String?
     let seriesId: UUID?
     let timeZone: String?
+    /// A monthly friend round. nil from servers before 15 Oct 2026.
+    let friends: Bool?
+    /// The fight's newest group image. A String so a malformed link never fails the whole snapshot;
+    /// nil until one is ready and from servers before 16 Oct 2026.
+    let groupImageUrl: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -66,6 +98,8 @@ struct FightRow: Decodable {
         case actionText = "action_text"
         case seriesId = "series_id"
         case timeZone = "time_zone"
+        case friends
+        case groupImageUrl = "group_image_url"
     }
 
     var startsAtDate: Date { parseServerDate(startsAt) ?? Date() }
@@ -236,14 +270,25 @@ struct FitFightAdminDashboard: Decodable {
     }
 }
 
-/// `GET /api/v1/admin/recent-syncs`: accounts whose Apple Health upload reached the server's
-/// database in the last 7 days, newest first. Here for tests/APIContractTests.swift, like the dashboard.
-struct FitFightRecentSyncs: Decodable {
-    struct Person: Decodable, Identifiable {
+/// `GET /api/v1/admin/founder-fights`: everyone fighting the founder, newest first. Here for
+/// tests/APIContractTests.swift, like the dashboard.
+struct FitFightFounderFights: Decodable {
+    struct Challenger: Decodable, Identifiable {
         let userId: UUID
         let handle: String
         let displayName: String
-        let lastSyncedAt: Date
+        let fightId: UUID
+        /// The current round's day, from 1, of `days`.
+        let day: Int
+        let days: Int
+        /// The challenger's Steps this round.
+        let steps: Double
+        let founderSteps: Double
+        let state: String
+        /// The founder's results against this challenger over finished rounds.
+        let wins: Int
+        let losses: Int
+        let draws: Int
 
         var id: UUID { userId }
 
@@ -251,9 +296,17 @@ struct FitFightRecentSyncs: Decodable {
             case userId = "user_id"
             case handle
             case displayName = "display_name"
-            case lastSyncedAt = "last_synced_at"
+            case fightId = "fight_id"
+            case day
+            case days
+            case steps
+            case founderSteps = "founder_steps"
+            case state
+            case wins
+            case losses
+            case draws
         }
     }
 
-    let people: [Person]
+    let challengers: [Challenger]
 }

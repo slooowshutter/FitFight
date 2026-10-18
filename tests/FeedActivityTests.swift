@@ -31,6 +31,12 @@ struct Fight {
     // MODEL_STATE
     var fights: [Fight] = []
     var pendingJoinable: Fight?
+    var hostedRounds: [Fight] = []
+    var showingHosted = false
+    var friendRounds: [Fight] = []
+    var showingFriends = false
+    var showingCharacter = false
+    var characterRouteID: UUID?
     var dailyRecapID: String?
     static let pendingFightRouteKey = "fitfight.tests.activity.route"
     static let pendingDailyStatusKey = "fitfight.tests.activity.daily"
@@ -119,6 +125,17 @@ struct Fight {
                              "Post, reaction, reply and mention taps must replace any previous post or comment target")
             }
         }
+
+        LegacyNotificationRoutes.storePendingFightRoute("/fights/\(fight)?friends=1")
+        legacy.consumeForTest()
+        precondition(legacy.openFightID == fight.uuidString, "Builds before friend fights open the named friend round")
+        model.tab = .feed
+        model.openFightID = pending.id
+        AppModel.storePendingFightRoute("/fights/\(fight)?friends=1")
+        model.consumeForTest()
+        for _ in 0..<20 { await Task.yield() }
+        precondition(model.tab == .fights && model.showingFriends && model.openFightID == nil,
+                     "A batched friend push opens the Friends screen")
 
         let fixture = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
         let decoded = try FitFightAPI.decodeActivityForTest(fixture)

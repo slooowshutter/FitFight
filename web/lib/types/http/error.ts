@@ -16,6 +16,7 @@ export const ERROR_CODES = {
     invite_wrong_user: "invite_wrong_user",
     handle_not_found: "handle_not_found",
     handle_taken: "handle_taken",
+    join_code_taken: "join_code_taken",
     companion_taken: "companion_taken",
     special_purchase_required: "special_purchase_required",
     special_limit: "special_limit",
@@ -28,6 +29,8 @@ export const ERROR_CODES = {
     character_portrait_chosen: "character_portrait_chosen",
     character_portrait_not_ready: "character_portrait_not_ready",
     character_retry_limit: "character_retry_limit",
+    suggestions_limit: "suggestions_limit",
+    snake_too_soon: "snake_too_soon",
     no_free_characters: "no_free_characters",
     already_member: "already_member",
     fight_not_joinable: "fight_not_joinable",
@@ -56,3 +59,9 @@ export const errorCodeSchema = z.union([
 ]);
 
 export type ErrorCode = z.infer<typeof errorCodeSchema>;
+
+/** The body of every `/api/v1` failure (`jsonError` and `errorResponse`). An unknown code still keeps its message. */
+export const apiErrorResponseSchema = z.object({
+    error: z.string(),
+    code: errorCodeSchema.optional().catch(undefined),
+});

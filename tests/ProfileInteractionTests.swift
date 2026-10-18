@@ -53,6 +53,10 @@ struct Fight {
     var session: SessionStore?
     var fights: [Fight] = []
     var pendingJoinable: Fight?
+    var hostedRounds: [Fight] = []
+    var showingHosted = false
+    var friendRounds: [Fight] = []
+    var showingFriends = false
     var snapshotLoads = 0
     var refreshTriggers: [SyncTrigger] = []
     var discoveryInvalidations = 0

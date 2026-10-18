@@ -27,6 +27,7 @@ struct AdminDashboardView: View {
     @State private var failure: String?
     /// Refresh and Retry bump this to rerun the load task.
     @State private var reloads = 0
+    @State private var showingFounderFights = false
 
     enum Server: String, CaseIterable {
         case production, staging
@@ -74,6 +75,15 @@ struct AdminDashboardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: theme.space.cardGap) {
             FreeCharactersRow()
+            FFGroupedRows {
+                FFGroupedRow(
+                    title: "Founder fights",
+                    subtitle: "Everyone fighting Marc on \(AppVersion.backend == "prod" ? "Production" : "Staging"), and his record.",
+                    subtitleTone: .neutral,
+                    trailing: AnyView(FFChevron()),
+                    action: { showingFounderFights = true }
+                )
+            }
             controls
             statusLine
             if let failure {
@@ -123,6 +133,7 @@ struct AdminDashboardView: View {
                 }
             }
         }
+        .navigationDestination(isPresented: $showingFounderFights) { FounderFightsView() }
     }
 
     @ViewBuilder
@@ -312,22 +323,23 @@ struct AdminDashboardView: View {
         }
     }
 
-    /// "+12% (+3)", or "+2.5 pts" on a percent card. Moss is good news and ember bad, by the
-    /// card's direction; a neutral card or no change stays secondary.
+    /// "+12% (+3)", "+3 from 0", or "+2.5 pts" on a percent card, and no line without a previous
+    /// number. Moss is good news and ember bad, by the card's direction; a neutral card or no
+    /// change stays secondary.
     private func changeLine(_ card: FitFightAdminDashboard.Card) -> (text: String, color: Color)? {
         guard let value = card.value, let previous = card.previous else { return nil }
         let delta = value - previous
         let deltaSign = delta > 0 ? "+" : ""
         let text: String
         if card.unit == "percent" {
-            text = "\(deltaSign)\(adminTenths(delta)) pts"
+            text = "\(deltaSign)\(adminNumber(delta)) pts"
         } else if previous == 0 {
-            guard value > 0 else { return (text: "No change", color: theme.textSecondary) }
-            text = "New"
+            guard delta != 0 else { return (text: "No change", color: theme.textSecondary) }
+            text = "\(deltaSign)\(adminValue(delta, unit: card.unit)) from 0"
         } else {
             let percent = delta / abs(previous) * 100
             let percentSign = percent > 0 ? "+" : ""
-            text = "\(percentSign)\(adminTenths(percent))% (\(deltaSign)\(adminValue(delta, unit: card.unit)))"
+            text = "\(percentSign)\(adminNumber(percent))% (\(deltaSign)\(adminValue(delta, unit: card.unit)))"
         }
         guard let better = card.higherIsBetter, delta != 0 else {
             return (text: text, color: theme.textSecondary)
@@ -551,93 +563,79 @@ struct FreeCharacterGiftCard: View {
     }
 }
 
-/// Fights on the staging build, admin only: how many people synced to staging in the last 7 days.
-/// They should be on the App Store version, so the admin can ask them to switch. Like the Admin
-/// tab, it reads the preview server, which always runs the newest `preview` backend on staging data.
-struct RecentSyncsCard: View {
+/// Everyone fighting Marc on this build's own data, like the free character gifts, newest first.
+/// The record is Marc's over finished rounds; the steps are the current round's.
+private struct FounderFightsView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.ffTheme) private var theme
-    @State private var people: [FitFightRecentSyncs.Person]?
+    @State private var challengers: [FitFightFounderFights.Challenger]?
+    @State private var loading = false
     @State private var failure: String?
-    @State private var showing = false
 
     var body: some View {
-        Button { showing = true } label: {
-            FFCard {
-                HStack(spacing: 13) {
-                    Text(verbatim: people.map { "\($0.count)" } ?? "-")
-                        .font(.ff(22, 800))
-                        .foregroundStyle(theme.text)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: "Synced on TestFlight").ffType(.heading).foregroundStyle(theme.text)
-                        Text(verbatim: failure ?? "Last 7 days. Tap for the names.")
-                            .ffType(.caption)
-                            .foregroundStyle(failure == nil ? theme.textSecondary : theme.emberText)
+        FFScreen(refresh: FFRefreshConfig(isRefreshing: loading, message: "Loading", error: failure, action: { await load() })) {
+            if let challengers {
+                FFCard {
+                    HStack {
+                        total(challengers.reduce(0) { $0 + $1.wins }, "Won", theme.mossText)
+                        total(challengers.reduce(0) { $0 + $1.draws }, "Drew", theme.textSecondary)
+                        total(challengers.reduce(0) { $0 + $1.losses }, "Lost", theme.emberText)
                     }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").foregroundStyle(theme.textTertiary)
                 }
+                if challengers.isEmpty {
+                    Text(verbatim: "No one is fighting Marc yet.").ffType(.body).foregroundStyle(theme.textSecondary)
+                } else {
+                    FFGroupedRows {
+                        ForEach(challengers) { row in
+                            if row.id != challengers.first?.id { FFDivider() }
+                            FFGroupedRow(
+                                title: row.displayName,
+                                subtitle: "@\(row.handle) · Day \(row.day) of \(row.days)" + (row.state == "live" ? "" : " · \(row.state)"),
+                                subtitleTone: .neutral,
+                                trailing: AnyView(
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text(verbatim: adminValue(row.steps, unit: "steps", exact: true) + " vs "
+                                            + adminValue(row.founderSteps, unit: "steps", exact: true))
+                                            .ffType(.label).monospacedDigit().foregroundStyle(theme.text)
+                                        Text(verbatim: "Marc \(row.wins)-\(row.losses)" + (row.draws > 0 ? "-\(row.draws)" : ""))
+                                            .ffType(.caption).foregroundStyle(theme.textSecondary)
+                                    }
+                                )
+                            )
+                        }
+                    }
+                }
+            } else if loading {
+                FFLoadingBlock()
             }
         }
-        .buttonStyle(FFHapticPlainStyle())
-        .disabled(people?.isEmpty ?? true)
+        .navigationTitle(Text(verbatim: "Founder fights"))
+        .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .sheet(isPresented: $showing) {
-            RecentSyncsSheet(people: people ?? [])
-                .fitFightTheme(theme)
-                .presentationBackground(theme.overlay)
-                .presentationCornerRadius(theme.radius.shell)
-                .presentationDragIndicator(.visible)
-                .presentationDetents([.medium, .large])
+    }
+
+    private func total(_ value: Int, _ label: String, _ color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(verbatim: "\(value)").font(.ff(44, 800)).monospacedDigit().foregroundStyle(color)
+            Text(verbatim: label).ffType(.caption).foregroundStyle(theme.textSecondary)
         }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     private func load() async {
+        loading = true
+        defer { loading = false }
         do {
-            let token = try await session.freshAccessToken()
-            people = try await FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
-                .recentSyncs(accessToken: token).people
+            let api = AppVersion.backend == "prod" ? FitFightAPI() : FitFightAPI(baseURL: AdminDashboardView.Server.staging.baseURL)
+            challengers = try await api.founderFights(accessToken: try await session.freshAccessToken()).challengers
             failure = nil
+        } catch FitFightAPIError.http(let status, _, _) where status == 403 {
+            failure = "This account isn't the FitFight admin."
         } catch {
             guard !Task.isCancelled else { return }
             failure = error.localizedDescription
         }
-    }
-}
-
-private struct RecentSyncsSheet: View {
-    let people: [FitFightRecentSyncs.Person]
-    @EnvironmentObject private var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            FFSheetHeader(title: "Synced on TestFlight") { dismiss() }
-            Text(verbatim: "Last 7 days, newest first. They should use the App Store version.")
-                .ffType(.caption)
-                .foregroundStyle(theme.textSecondary)
-            ScrollView {
-                FFGroupedRows {
-                    ForEach(people) { person in
-                        if person.id != people.first?.id { FFDivider() }
-                        FFGroupedRow(
-                            title: person.displayName,
-                            subtitle: "@\(person.handle)",
-                            subtitleTone: .neutral,
-                            trailing: AnyView(
-                                Text(verbatim: model.formatLastSync(person.lastSyncedAt))
-                                    .ffType(.caption)
-                                    .foregroundStyle(theme.textSecondary)
-                            )
-                        )
-                    }
-                }
-            }
-        }
-        .foregroundStyle(theme.text)
-        .padding(.horizontal, theme.space.screenPadding)
-        .padding(.top, 16)
     }
 }
 
@@ -1099,13 +1097,13 @@ private func adminBucketLabel(_ day: Date, unit: Calendar.Component) -> String {
     }
 }
 
-/// Marc's rule: round down, never up. 999,999 is "999K" and 1,099,999 is "1M".
+/// Marc's rule: round down, never up. 999,999 is "999K", 1,099,999 is "1M" and 2.68 is "2.6".
 private func adminNumber(_ value: Double) -> String {
     let magnitude = abs(value)
     let tier = [(1e15, "Q"), (1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")].first { magnitude >= $0.0 }
     let scaled = magnitude / (tier?.0 ?? 1)
     let digits: String
-    if tier != nil, scaled < 100 {
+    if scaled < (tier == nil ? 10 : 100) {
         // The epsilon stops floating error from truncating 1.1M to 1M.
         let tenths = Int((scaled * 10 + 1e-9).rounded(.down))
         digits = tenths % 10 == 0 ? "\(tenths / 10)" : "\(tenths / 10).\(tenths % 10)"
@@ -1114,14 +1112,6 @@ private func adminNumber(_ value: Double) -> String {
     }
     let sign = value < 0 && digits != "0" ? "-" : ""
     return sign + digits + (tier?.1 ?? "")
-}
-
-/// Truncated toward zero with one decimal under 10 ("4.5", "4"), a smart number from 10 up.
-private func adminTenths(_ value: Double) -> String {
-    guard abs(value) < 10 else { return adminNumber(value) }
-    let tenths = Int((abs(value) * 10 + 1e-9).rounded(.down))
-    let digits = tenths % 10 == 0 ? "\(tenths / 10)" : "\(tenths / 10).\(tenths % 10)"
-    return value < 0 && tenths != 0 ? "-" + digits : digits
 }
 
 /// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead, whole for steps.
@@ -1138,5 +1128,5 @@ private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> S
     if exact {
         return value.formatted(.number.precision(.fractionLength(unit == "steps" ? 0...0 : 0...1))) + suffix
     }
-    return (unit == "percent" ? adminTenths(value) : adminNumber(value)) + suffix
+    return adminNumber(value) + suffix
 }

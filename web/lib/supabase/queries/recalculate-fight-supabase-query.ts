@@ -1,6 +1,6 @@
 import type { Sql } from "postgres";
 import { nextFightState } from "@/lib/scoring/fight-clock";
-import { scoreFight, scoreFightAtFinal } from "@/lib/scoring/score-fight";
+import { scoreFight } from "@/lib/scoring/score-fight";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     fightCalculationRowSchema,
@@ -10,6 +10,8 @@ import {
 import {
     enqueueAwaitingFinalSyncNotifications,
     enqueueFightFinalizedNotifications,
+    enqueueFriendsResultsNotifications,
+    enqueueFriendsSyncNotifications,
     supersedeGraceNotifications,
 } from "./notification-intents-supabase-query";
 
@@ -20,9 +22,12 @@ export async function recalculateFight(
     database: Sql = createDatabaseClient(),
 ): Promise<void> {
     await database.begin("read write", async (sql) => {
+        // Without closes_after_grace the Fight has no deadline: it waits for everyone's final Steps.
         const fights = await sql`
             select state::text, starts_at::text, ends_at::text,
-                final_sync_grace_seconds, outcome_rule::text, stake_minor, default_goal_value::text
+                (case when closes_after_grace
+                    then ends_at + final_sync_grace_seconds * interval '1 second' end)::text as grace_ends_at,
+                outcome_rule::text, stake_minor, default_goal_value::text, host_id, friends
             from public.fights where id = ${fightId}
             for update
         `;
@@ -56,24 +61,6 @@ export async function recalculateFight(
             snapshots.map((snapshot) => [snapshot.user_id, snapshot]),
         );
         const endsAtMs = Date.parse(fight.ends_at);
-        const allComplete =
-            members.length > 0 &&
-            members.every((member) => {
-                const snapshot = byUser.get(member.user_id);
-                return (
-                    snapshot !== undefined &&
-                    Date.parse(snapshot.cutoff_at) === endsAtMs
-                );
-            });
-        const nextState = nextFightState({
-            state: fight.state,
-            nowMs: now.getTime(),
-            startsAtMs: Date.parse(fight.starts_at),
-            endsAtMs,
-            graceEndsMs: endsAtMs + fight.final_sync_grace_seconds * 1000,
-            allSourcesCompleteThroughEnd: allComplete,
-        });
-        const final = nextState === "final";
         const scoreInput = {
             outcomeRule: fight.outcome_rule,
             stakeMinor: fight.stake_minor,
@@ -90,9 +77,30 @@ export async function recalculateFight(
                 };
             }),
         };
-        const scores = final
-            ? scoreFightAtFinal(scoreInput)
-            : scoreFight(scoreInput);
+        // Members without final Steps keep their last synced total. Steps only go up, so a lone
+        // missing member already ahead of everyone else cannot change any rank.
+        // NOTE: awaitingDueAt in the closer mirrors this rule to pick which Fights to recalculate.
+        const missing = scoreInput.members.filter((member) => !member.complete);
+        const nextState = nextFightState({
+            state: fight.state,
+            nowMs: now.getTime(),
+            startsAtMs: Date.parse(fight.starts_at),
+            endsAtMs,
+            graceEndsMs: fight.grace_ends_at === null ? null : Date.parse(fight.grace_ends_at),
+            resultSettled:
+                members.length > 0 &&
+                (missing.length === 0 ||
+                    (fight.outcome_rule === "highest_total" &&
+                        missing.length === 1 &&
+                        scoreInput.members.length > 1 &&
+                        scoreInput.members.every(
+                            (member) =>
+                                member === missing[0] ||
+                                member.value < missing[0].value,
+                        ))),
+        });
+        const final = nextState === "final";
+        const scores = scoreFight(scoreInput);
         const revision =
             Math.max(
                 0,
@@ -133,25 +141,35 @@ export async function recalculateFight(
         }
         if (nextState !== fight.state) {
             await sql`update public.fights set state = ${nextState} where id = ${fightId}`;
-            const notificationMembers = scoredMembers.map((member) => ({
-                user_id: member.user_id,
-                final_steps_complete: member.final_steps_complete,
-            }));
+            const notificationMembers = scoredMembers
+                .filter((member) => member.user_id !== fight.host_id)
+                .map((member) => ({
+                    user_id: member.user_id,
+                    final_steps_complete: member.final_steps_complete,
+                }));
             if (nextState === "awaiting_final_sync") {
-                await enqueueAwaitingFinalSyncNotifications(
-                    sql,
-                    fightId,
-                    fight.ends_at,
-                    notificationMembers,
-                );
+                if (fight.friends) {
+                    await enqueueFriendsSyncNotifications(sql, fightId);
+                } else {
+                    await enqueueAwaitingFinalSyncNotifications(
+                        sql,
+                        fightId,
+                        fight.ends_at,
+                        notificationMembers,
+                    );
+                }
             } else if (nextState === "final") {
                 await supersedeGraceNotifications(sql, fightId);
-                await enqueueFightFinalizedNotifications(
-                    sql,
-                    fightId,
-                    now,
-                    notificationMembers,
-                );
+                if (fight.friends) {
+                    await enqueueFriendsResultsNotifications(sql, fightId, now);
+                } else {
+                    await enqueueFightFinalizedNotifications(
+                        sql,
+                        fightId,
+                        now,
+                        notificationMembers,
+                    );
+                }
             }
         }
     });

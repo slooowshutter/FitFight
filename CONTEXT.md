@@ -46,6 +46,10 @@ _Avoid_: Share link, request
 A public Fight selected by FitFight's administrator to be offered to Users, including during onboarding. The suggestion invites participation without making a User a Fight member.
 _Avoid_: Global leaderboard, automatic membership
 
+**Founder fight**:
+A repeating 1v1 Steps Fight between a User and FitFight's founder, started only by the User's consent. The founder is scored from stored daily Steps, and the Fight creates no Rivalry, Feed visibility, or profile access in either direction.
+_Avoid_: Bot fight, house fight
+
 **Fight window**:
 The exact interval during which qualifying activity contributes to a Fight.
 _Avoid_: Date range, duration

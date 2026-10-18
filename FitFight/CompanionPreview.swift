@@ -15,7 +15,7 @@ enum CompanionPreview {
         String(appLocalized: "Preview only. No fight, post, account or Health data is changed.")
     }
 
-    /// Marc's fixture account, so You and profiles load sample data in the preview.
+    /// Alex's fixture account, so You and profiles load sample data in the preview.
     static var youID: UUID? { isEnabled ? UUID(uuidString: "C0000000-0000-4000-8000-000000000001") : nil }
 
     struct WriteUnavailable: LocalizedError {
@@ -25,15 +25,16 @@ enum CompanionPreview {
 
 #if DEBUG && targetEnvironment(simulator)
 extension CompanionPreview {
+    /// The same sample people and companions as the fitfight.app phone, so App Store screenshots match the website.
     static let people = [
-        Person(id: "C0000000-0000-4000-8000-000000000001", name: "Marc", handle: "@marc", initials: "ML", isYou: true),
-        Person(id: "C0000000-0000-4000-8000-000000000002", name: "Bertille", handle: "@bertille", initials: "BE"),
-        Person(id: "C0000000-0000-4000-8000-000000000003", name: "Nico", handle: "@nico", initials: "NI"),
-        Person(id: "C0000000-0000-4000-8000-000000000004", name: "Léa", handle: "@lea", initials: "LE"),
-        Person(id: "C0000000-0000-4000-8000-000000000005", name: "Hugo", handle: "@hugo", initials: "HU"),
+        Person(id: "C0000000-0000-4000-8000-000000000001", name: "Alex", handle: "@alex", initials: "AL", isYou: true),
+        Person(id: "C0000000-0000-4000-8000-000000000002", name: "Leo", handle: "@leo", initials: "LE"),
+        Person(id: "C0000000-0000-4000-8000-000000000003", name: "Nina", handle: "@nina", initials: "NI"),
+        Person(id: "C0000000-0000-4000-8000-000000000004", name: "Sam", handle: "@sam", initials: "SA"),
+        Person(id: "C0000000-0000-4000-8000-000000000005", name: "Theo", handle: "@theo", initials: "TH"),
     ]
     static let animals: [String: StockCompanion] = Dictionary(uniqueKeysWithValues:
-        zip(people, [StockCompanion.badger, .fox, .turtle, .rabbit, .dog])
+        zip(people, [StockCompanion.limitedTiger, .limitedSilverback, .limitedCapybara, .limitedHedgehog, .limitedPanda])
             .map { ($0.id.lowercased(), $1) }
     )
     static let groupID = "F0000000-0000-4000-8000-000000000001"
@@ -66,6 +67,8 @@ extension CompanionPreview {
         let now = Date()
         let french = Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
         model.you = people[0]
+        let dayKey = DateFormatter()
+        dayKey.dateFormat = "yyyy-MM-dd"
 
         func fight(_ index: Int, name: String, code: String, totals: [Double], cast: [Person], length: Int, hoursLeft: Int) -> Fight {
             var fight = template
@@ -86,7 +89,7 @@ extension CompanionPreview {
             let gap = (totals.first ?? 0) - (totals.dropFirst().max() ?? 0)
             fight.kickerEmphasis = "\(gap >= 0 ? "+" : "−")\(abs(gap).formatted(.number.precision(.fractionLength(0))))"
             fight.listSubtitle = fight.timeLeftLabel
-            fight.actionText = french ? "Apporte des croissants pour tout le monde" : "Brings croissants for everyone"
+            fight.actionText = french ? "Acheter les croissants" : "Buy the croissants"
             let dayCount = min(length, max(1, length - hoursLeft / 24))
             let weights = (0..<dayCount).map { [0.8, 1.1, 1.3, 0.9][$0 % 4] }
             let weightTotal = weights.reduce(0, +)
@@ -97,21 +100,21 @@ extension CompanionPreview {
                     DayScore(person: person, value:
                         (total * (previousWeight + weights[day]) / weightTotal).rounded()
                         - (total * previousWeight / weightTotal).rounded())
-                })
+                }, day: dayKey.string(from: fight.windowStart.addingTimeInterval(Double(day) * 86_400)))
             }
             return fight
         }
 
-        var group = fight(1, name: french ? "La course aux croissants" : "The croissant run", code: "K7M2",
+        var group = fight(1, name: french ? "Accélère le pas" : "Step it Up", code: "K7M2",
                           totals: [28_430, 25_590, 22_340, 20_840], cast: Array(people.prefix(4)), length: 7, hoursLeft: 54)
         group.recurring = true
         group.seriesId = "A0000000-0000-4000-8000-000000000001"
         group.inviter = people[0]
-        var duel = fight(2, name: french ? "Sans ascenseur, sans pitié" : "No lift, no mercy", code: "H8P4",
+        var duel = fight(2, name: french ? "Prends ça" : "Eat it", code: "H8P4",
                          totals: [18_420, 19_680], cast: [people[0], people[4]], length: 7, hoursLeft: 124)
         duel.actionText = french ? "Prend les escaliers toute la semaine" : "Takes the stairs all next week"
-        var weekend = fight(3, name: french ? "Les marcheurs du week-end" : "Weekend wanderers", code: "R3V6",
-                            totals: [12_680, 11_820, 11_240, 10_740], cast: Array(people.prefix(4)), length: 3, hoursLeft: 32)
+        var weekend = fight(3, name: french ? "La guerre des pas" : "Walk Wars", code: "R3V6",
+                            totals: [12_680, 11_820, 11_240, 10_740], cast: [people[0], people[2], people[1], people[3]], length: 3, hoursLeft: 32)
         weekend.actionText = french ? "Organise la prochaine balade du dimanche" : "Plans our next Sunday walk"
         var invite = fight(4, name: french ? "Le club du petit-déjeuner" : "The breakfast club", code: "B4K9",
                            totals: [0, 0], cast: [people[0], people[3]], length: 3, hoursLeft: 60)
@@ -127,7 +130,7 @@ extension CompanionPreview {
         finished.status = .finished
         finished.serverState = "final"
         finished.standings = finished.standings.map { var row = $0; row.finalStepsComplete = true; return row }
-        // Five finished rounds won by Marc, so the live round shows a trophy ×5.
+        // Five finished rounds won by Alex, so the live round shows a trophy ×5.
         let history = (1...5).map { round in
             var history = group
             history.id = "F0000000-0000-4000-8000-\(String(format: "%012d", 5 + round))"
@@ -135,6 +138,11 @@ extension CompanionPreview {
             history.windowStart = history.windowEnd.addingTimeInterval(-7 * 86_400)
             history.status = .finished
             history.serverState = "final"
+            history.days = history.days.enumerated().map { index, day in
+                var day = day
+                day.day = dayKey.string(from: history.windowStart.addingTimeInterval(Double(index) * 86_400))
+                return day
+            }
             history.standings = history.standings.map { var row = $0; row.finalStepsComplete = true; return row }
             return history
         }
@@ -176,36 +184,45 @@ extension CompanionPreview {
     @MainActor
     static func posts(fightID: UUID? = nil) -> [FitFightFightPost] {
         let french = Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
-        let postFightID = fightID ?? UUID(uuidString: groupID)!
-        let fightName = model().fight(id: postFightID.uuidString)!.listTitle
-        let authors = [people[1], people[3], people[0]]
-        // Keep a French post in the English preview so the translation icon can be inspected.
+        let preview = model()
+        // The website's sample posts: Leo on the group fight, Nina on the weekend fight, Sam to everyone.
+        let authors = [people[1], people[2], people[3]]
+        let postFightIDs: [UUID?] = [fightID ?? UUID(uuidString: groupID)!, fightID ?? UUID(uuidString: "F0000000-0000-4000-8000-000000000003")!, fightID]
         let bodies = french
-            ? ["Le grand détour par la boulangerie valait le coup.", "Qui est partant pour une balade dimanche ?", "Une petite pause dehors entre deux réunions."]
-            : ["Le grand détour par la boulangerie valait le coup.", "Who’s up for a walk on Sunday?", "A little time outside between meetings."]
+            ? ["Neuf étages d’escaliers à midi. Profitez de votre avance tant qu’elle dure.", "Boucle du dimanche bouclée. 14 210 pas et zéro regret.", "Marché jusqu’à la boulangerie. Marché au retour. Mangé les preuves."]
+            : ["Nine floors of stairs at lunch. Enjoy the lead while it lasts.", "Sunday loop done. 14,210 steps and zero regrets.", "Walked to the bakery. Walked back. Ate the evidence."]
+        let reactions: [[FitFightFightPost.Reaction]] = [
+            [.init(emoji: "🔥", count: 4, mine: true), .init(emoji: "😂", count: 2, mine: false)],
+            [.init(emoji: "👏", count: 5, mine: false)],
+            [.init(emoji: "😂", count: 6, mine: false), .init(emoji: "🥐", count: 3, mine: false)],
+        ]
+        let minutesAgo = [12, 60, 180]
         return authors.enumerated().map { index, person in
-            FitFightFightPost(
+            let postFightID = postFightIDs[index]
+            let fightName = postFightID.flatMap { preview.fight(id: $0.uuidString)?.listTitle } ?? ""
+            return FitFightFightPost(
                 id: UUID(uuidString: "D0000000-0000-4000-8000-\(String(format: "%012d", index + 1))")!,
-                audience: "fight", fightId: postFightID,
+                audience: postFightID == nil ? "main" : "fight", fightId: postFightID,
                 fightName: fightName,
-                body: bodies[index], createdAt: Date().addingTimeInterval(-Double(index + 1) * 1_200).ISO8601Format(),
+                body: bodies[index], createdAt: Date().addingTimeInterval(-Double(minutesAgo[index]) * 60).ISO8601Format(),
                 author: .init(userId: UUID(uuidString: person.id)!, handle: String(person.handle.dropFirst()), displayName: person.name, avatar: nil),
-                media: [], tags: [], reactions: index == 0
-                    ? [.init(emoji: "🔥", count: 1, mine: true), .init(emoji: "👏", count: 3, mine: false)]
-                    : [.init(emoji: "👏", count: 3 - index, mine: false)],
+                media: [], tags: [], reactions: reactions[index],
                 commentCount: index == 0 ? 2 : 0, mine: person.isYou,
-                broadcast: false, channels: [.init(fightId: postFightID, name: fightName)]
+                broadcast: postFightID == nil, channels: postFightID.map { [FitFightFightPost.Channel(fightId: $0, name: fightName)] } ?? []
             )
         }
     }
 
     static func comments(postID: UUID) -> [FitFightFightPostComment] {
         let firstID = UUID(uuidString: "E0000000-0000-4000-8000-000000000001")!
+        let bodies = Bundle.main.preferredLocalizations.first?.hasPrefix("fr") == true
+            ? ["Profitez-en. Ce soir, je rentre par le chemin le plus long.", "L’ascenseur ne compte pas."]
+            : ["Enjoy it. I’m taking the long way home tonight.", "The elevator doesn’t count."]
         return [people[0], people[1]].enumerated().map { index, person in
             FitFightFightPostComment(
                 id: index == 0 ? firstID : UUID(uuidString: "E0000000-0000-4000-8000-000000000002")!,
                 postId: postID, parentId: index == 0 ? nil : firstID,
-                body: index == 0 ? String(appLocalized: "See you on Sunday! Let's take the longer route by the river.") : String(appLocalized: "Count me in!"),
+                body: bodies[index],
                 createdAt: Date().addingTimeInterval(-600).ISO8601Format(),
                 author: .init(userId: UUID(uuidString: person.id)!, handle: String(person.handle.dropFirst()), displayName: person.name, avatar: nil),
                 mine: person.isYou, likeCount: index == 0 ? 2 : 1, likedByMe: index == 1
@@ -301,6 +318,47 @@ extension CompanionPreview {
         }
         """
         return try? JSONDecoder().decode(SharedProfile.self, from: Data(json.utf8))
+    }
+}
+#endif
+
+#if DEBUG && targetEnvironment(simulator)
+/// The character creation screen in one state, from `FF_CHARACTER`: describe, checking, review, portraits, choosing, poses or done.
+extension CompanionPreview {
+    static var characterState: String? { isEnabled ? ProcessInfo.processInfo.environment["FF_CHARACTER"] : nil }
+
+    static let characterPromptCheck = CharacterPromptCheck(
+        note: "What colour is the hat? A colour or two makes the portraits closer to what you imagine.",
+        variations: [
+            "A cowboy pig with a chunky tan hat, a shiny silver sheriff star on a red vest and a confident grin.",
+            "A cowboy pig with a wide black hat, a blue bandana and a lasso over one shoulder, looking determined.",
+            "A tiny cowboy pig in huge boots and a sand-coloured hat, with a gold sheriff star and rosy cheeks.",
+        ]
+    )
+
+    static func characterSnapshot(_ state: String) -> CustomCharacterStoreSnapshot? {
+        // The public repo's sample portrait, so the Simulator loads a real image.
+        let pig = "\"https://raw.githubusercontent.com/slooowshutter/FitFight/develop/FitFight/Assets.xcassets/CharacterIdea-pig.imageset/image.png\""
+        func candidate(_ slot: Int, _ status: String) -> String {
+            #"{"id":"44444444-4444-4444-8444-44444444444\#(slot)","slot":\#(slot),"status":"\#(status)","image_url":\#(status == "completed" ? pig : "null"),"selected":false}"#
+        }
+        let suggestions = #"[{"name":"Sheriff Snout","line":"Rounds up steps before breakfast."},{"name":"Hambone","line":"Slow draw. Fast feet."},{"name":"Dusty","line":"Leaves a dust cloud on every walk."},{"name":"Boots","line":"Born to walk the frontier."}]"#
+        let character: String? = switch state {
+        case "portraits":
+            #"{"phase":"portraits","status":"generating","stage":"portrait","portrait_url":null,"candidates":[\#(candidate(1, "completed")),\#(candidate(2, "pending")),\#(candidate(3, "pending"))],"suggestions":[]}"#
+        case "choosing":
+            #"{"phase":"choosing","status":"generating","stage":"portrait","portrait_url":null,"candidates":[\#(candidate(1, "completed")),\#(candidate(2, "completed")),\#(candidate(3, "completed"))],"suggestions":[]}"#
+        case "poses":
+            #"{"phase":"poses","status":"generating","stage":"fitness","portrait_url":\#(pig),"candidates":[\#(candidate(1, "completed"))],"suggestions":\#(suggestions),"more_suggestions_left":2}"#
+        case "done":
+            #"{"phase":"complete","status":"complete","stage":"fitness","portrait_url":\#(pig),"candidates":[\#(candidate(1, "completed"))],"suggestions":\#(suggestions),"more_suggestions_left":2}"#
+        default: nil
+        }
+        let characters = character.map {
+            "[" + $0.replacingOccurrences(of: "{\"phase\"", with: #"{"id":"22222222-2222-4222-8222-222222222222","description":"A cowboy pig with a big hat and a sheriff star.","request_id":"33333333-3333-4333-8333-333333333333","poll_after_seconds":3,"phase""#) + "]"
+        } ?? "[]"
+        let json = #"{"app_account_token":"11111111-1111-4111-8111-111111111111","environment":"Sandbox","purchases_enabled":true,"product_id":"com.fitfight.mvp.custom_character","free_characters":0,"characters":\#(characters)}"#
+        return try? JSONDecoder().decode(CustomCharacterStoreSnapshot.self, from: Data(json.utf8))
     }
 }
 #endif

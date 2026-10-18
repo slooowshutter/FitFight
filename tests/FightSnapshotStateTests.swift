@@ -8,8 +8,8 @@ struct TestAvatar { let url: URL }
 struct TestProfile { let userId: UUID; var avatar: TestAvatar? = nil }
 struct Person: Codable { var photoURL: URL? = nil }
 struct Standing: Codable { var person = Person() }
-struct Fight: Codable { let score: Int; var standings: [Standing] = []; var days: [Int] = [] }
-struct FightRow { let id = UUID(); let score: Int; var seriesId: UUID? = nil }
+struct Fight: Codable { let score: Int; var standings: [Standing] = []; var days: [Int] = []; var groupImageURL: URL? = nil }
+struct FightRow { let id = UUID(); let score: Int; var seriesId: UUID? = nil; var groupImageUrl: String? = nil }
 struct MemberRow { let fightId: UUID; let userId: UUID }
 struct SeriesRow { let id: UUID }
 struct TestSnapshot {
@@ -18,7 +18,10 @@ struct TestSnapshot {
     var members: [MemberRow] = []
     var series: [SeriesRow] = []
     var stepDays: [Int] = []
+    var hosted: Int? = nil
+    var friends: Int? = nil
 }
+typealias FitFightSnapshot = TestSnapshot
 enum Failure: Error { case offline }
 enum CompanionPreview { static let isEnabled = false }
 enum Stage { case session }
@@ -53,7 +56,7 @@ enum Stage { case session }
     }
 }
 @MainActor final class RemoteImageLoader {
-    enum Kind { case avatar }
+    enum Kind { case avatar, photo }
     static let shared = RemoteImageLoader()
     func prefetch(_ urls: [URL], kind: Kind) {}
 }
@@ -64,6 +67,13 @@ enum Stage { case session }
     var cachedUserID: UUID?
     var you = Person()
     var fights: [Fight] = []
+    var hosted: Int?
+    var hostedRounds: [Fight] = []
+    var friends: Int?
+    var friendRounds: [Fight] = []
+    var showingFriends = false
+    func refreshFriendRounds() async throws {}
+    var refreshError: String?
     static let fightsCachePrefix = "fitfight.live-test."
     static func person(from profile: TestProfile, isYou: Bool) -> Person { Person() }
     static func mapFight(_ row: FightRow, members: [MemberRow], mine: MemberRow?, profiles: [UUID: TestProfile],

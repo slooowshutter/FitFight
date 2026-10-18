@@ -3,10 +3,11 @@ import { recordTimestampSchema } from "@/lib/types/profiles/profile-results";
 
 export const recurringRoundSchema = z.object({
     id: z.string().uuid(), series_id: z.string().uuid().nullable(), state: z.string(),
-    starts_at: recordTimestampSchema, ends_at: recordTimestampSchema,
+    starts_at: recordTimestampSchema, ends_at: recordTimestampSchema, time_zone: z.string(), friends: z.boolean(),
 });
 export const recurringSeriesSchema = z.object({
     recurring: z.boolean(), paused_at: z.coerce.date().nullable(), current_fight_id: z.string().uuid().nullable(),
+    duration_seconds: z.number().int(),
 });
 export type RecurringRound = z.infer<typeof recurringRoundSchema>;
 export type RecurringSeries = z.infer<typeof recurringSeriesSchema>;

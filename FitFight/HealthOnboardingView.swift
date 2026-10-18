@@ -40,7 +40,7 @@ struct HealthOnboardingView: View {
                         } else {
                             Text(String(appLocalized: "No accessible step data"))
                                 .ffType(.heading)
-                            Text(String(appLocalized: "Connect later from Profile → Settings → Apple Health."))
+                            Text(String(appLocalized: "Connect later from Profile → Settings → Connectors."))
                                 .ffType(.body).foregroundStyle(theme.textSecondary)
                         }
                     }

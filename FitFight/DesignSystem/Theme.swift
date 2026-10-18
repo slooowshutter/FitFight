@@ -33,6 +33,7 @@ struct Palette {
 
     var bg: Color { value(for: "bg") }
     var overlay: Color { value(for: "overlay") }
+    var scrim: Color { value(for: "scrim") }
     var card: Color { value(for: "card") }
     var control: Color { value(for: "control") }
 
@@ -66,6 +67,14 @@ struct Palette {
 
     var gold: Color { value(for: "gold") }
     var goldInk: Color { value(for: "goldInk") }
+
+    // Medals mark your place on a round's podium: 1st, 2nd, 3rd.
+    var medalGold: Color { value(for: "medalGold") }
+    var medalGoldWash: Color { value(for: "medalGoldWash") }
+    var medalSilver: Color { value(for: "medalSilver") }
+    var medalSilverWash: Color { value(for: "medalSilverWash") }
+    var medalBronze: Color { value(for: "medalBronze") }
+    var medalBronzeWash: Color { value(for: "medalBronzeWash") }
 
     var tabBar: Color { value(for: "tabBar") }
     var chipInk: Color { value(for: "chipInk") }

@@ -6,7 +6,7 @@ import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { defaultNotificationPreferences, updateNotificationPreferencesRequestSchema } from "@/lib/types/notifications/notification-preferences";
 import { notificationDeliveryRowSchema } from "@/lib/types/notifications/notification-delivery";
 import { readNotificationPreferences, updateNotificationPreferences } from "./notification-preferences-supabase-query";
-import { enqueueFightFeedPostNotifications, enqueueFightFeedReactionNotifications, enqueueFightFeedCommentNotifications } from "./feed-social-notifications-supabase-query";
+import { enqueueFightFeedPostNotifications, enqueueFightFeedReactionNotifications, enqueueFightFeedCommentNotifications, enqueueMentionNotifications } from "./feed-social-notifications-supabase-query";
 import { enqueueScheduledNotifications } from "./scheduled-notifications-supabase-query";
 import { enqueueAwaitingFinalSyncNotifications } from "./notification-intents-supabase-query";
 import { readNotificationContent } from "./notification-content-supabase-query";
@@ -79,17 +79,17 @@ test("notification controls preserve old clients and batch activity without losi
     const digests = await database`select * from private.notification_intents where user_id = ${owner} and kind = 'social_digest'`;
     assert.equal(digests.length, 1, "Concurrent jobs must create only one evening summary");
     const delivery = notificationDeliveryRowSchema.parse({
-        ...digests[0], fight_state: "live", fight_name: "Weekend Warriors", owner_handle: "owner",
+        ...digests[0], fight_state: "live", fight_host_id: null, fight_friends: false, fight_name: "Weekend Warriors", owner_handle: "owner",
         ends_at: "2026-09-21T17:00:00Z", sync_deadline: "2026-09-22T17:00:00Z", time_zone: "Europe/Paris",
         member_state: "accepted", final_steps_complete: false, preferences: await readNotificationPreferences(owner, database),
     });
     const content = await readNotificationContent(delivery, "en", database);
     assert.ok(content?.body.includes("and 1 other reacted"));
-    assert.ok(content?.body.includes("1 new post"));
+    assert.ok(content?.body.includes(`@notif_${peer.slice(0, 8)} posted in Weekend Warriors.`));
     assert.ok(content?.route.endsWith("activity=1"));
     assert.equal(content?.imageUrl, null);
     const reactionOnly = await readNotificationContent({ ...delivery, preferences: { ...delivery.preferences, feed_post: false } }, "en", database);
-    assert.ok(!reactionOnly?.body.includes("new post"));
+    assert.ok(!reactionOnly?.body.includes("posted in"));
     assert.ok(reactionOnly?.route.includes(`post=${postId}`));
     await database`insert into private.feed_blocks (blocker_id, blocked_id) values (${owner}, ${peer}), (${owner}, ${third})`;
     assert.equal(await readNotificationContent(delivery, "en", database), null, "Delayed pushes must recheck blocks");
@@ -139,4 +139,36 @@ test("notification controls preserve old clients and batch activity without losi
     assert.equal(dst.digest_on, "2026-10-25");
     assert.equal(dst.not_before.toISOString(), "2026-10-25T19:00:00.000Z", "The evening cutoff must follow the saved zone across daylight-saving changes");
 
+});
+
+test("the host of a founder fight gets no feed post or reaction intents and mentions skip his founder fights", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [founder, challenger, friend] = users;
+    // The fallback picks the lowest fight ID, so the founder fight sorts first.
+    const [fightId, realFightId] = [randomUUID(), randomUUID()].sort();
+    const hostPostId = randomUUID(), challengerPostId = randomUUID(), mainPostId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id in (${fightId}, ${realFightId})`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    for (const user of users) await database`insert into auth.users (id) values (${user})`;
+    await updateNotificationPreferences(founder, { feed_post: true }, database);
+    await database`insert into public.fights (id, owner_id, host_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${challenger}, ${founder}, 'Fight Marc', 'live', now(), now() + interval '30 days', 'UTC', 'highest_total', 'shared'),
+            (${realFightId}, ${friend}, null, 'Real fight', 'live', now(), now() + interval '7 days', 'UTC', 'highest_total', 'shared')`;
+    await database`insert into public.fight_members (fight_id, user_id, state) values
+        (${fightId}, ${challenger}, 'accepted'), (${fightId}, ${founder}, 'accepted'),
+        (${realFightId}, ${friend}, 'accepted'), (${realFightId}, ${founder}, 'accepted')`;
+    await database`insert into public.fight_posts (id, fight_id, audience, author_id, body) values
+        (${hostPostId}, ${fightId}, 'fight', ${founder}, 'Catch me'),
+        (${challengerPostId}, ${fightId}, 'fight', ${challenger}, 'Round one'),
+        (${mainPostId}, null, 'main', ${challenger}, 'Hello Main')`;
+
+    await enqueueFightFeedReactionNotifications(database, { postId: hostPostId, actorId: challenger });
+    await enqueueFightFeedPostNotifications(database, { fightId, postId: challengerPostId, actorId: challenger });
+    const [hostIntents] = await database`select count(*)::int as n from private.notification_intents where user_id = ${founder}`;
+    assert.equal(hostIntents.n, 0);
+    await enqueueMentionNotifications(database, { actorId: challenger, postId: mainPostId, userIds: [founder], preferredFightId: null });
+    const mentions = await database`select fight_id from private.notification_intents where user_id = ${founder} and kind = 'mention'`;
+    assert.deepEqual(mentions.map((row) => row.fight_id), [realFightId]);
 });

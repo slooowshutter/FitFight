@@ -7168,16 +7168,17 @@
     // FitFight reads only Apple Health. Each connector is a watch or app and how it gets into Apple Health.
     variant("connectors", {
         title: "Connectors",
-        note: "Settings lists Apple Health and Garmin as connectors. Apple Health opens its access and sync; Garmin shows how to send it to Apple Health. The sync diagnostics stay in the admin Debug menu.",
+        note: "Settings lists Apple Health, Garmin and WHOOP as connectors. Apple Health opens its access and sync; Garmin and WHOOP show how to send them to Apple Health. The sync diagnostics stay in the admin Debug menu.",
         options: [
             { id: "today", name: "Today", when: "The app as it is now: Apple Health and More settings." },
-            { id: "connectors", name: "Connectors", when: "Marc's pick: Apple Health first, then Garmin. Other watches and apps come later." },
+            { id: "connectors", name: "Connectors", when: "Marc's pick: Apple Health first, then Garmin and WHOOP. Other watches and apps come later." },
         ],
         links: [
             ["Settings", "#you/settings"],
             ["Apple Health", "#you/settings/~appleHealth"],
             ["Apple Health, not connected", "#you/settings/~appleHealth?health=notConnected"],
             ["Garmin", "#you/settings/~sourceGuide?id=garmin"],
+            ["WHOOP", "#you/settings/~sourceGuide?id=whoop"],
         ],
     });
     const SOURCES = [
@@ -7185,6 +7186,7 @@
             why: "Garmin stopped letting new apps connect to its data, so FitFight can’t link to Garmin directly. Your Garmin steps still count: Garmin Connect sends them to Apple Health, and FitFight reads them there.",
             setup: "In Garmin Connect, tap More → Settings → Connected Apps → Apple Health, then turn on Steps.",
             sync: "Garmin sends steps to Apple Health only while Garmin Connect is open. After your watch syncs, open Garmin Connect, then FitFight. Do it once more before a fight ends." },
+        { id: "whoop", name: "WHOOP", app: "WHOOP", gives: "Steps and workouts", setup: "In the WHOOP app, turn on Apple Health and allow Steps." },
     ];
     // What HealthKitActivityAggregates.readTypes asks for, grouped the way people say it.
     const HEALTH_READS = [
@@ -7227,8 +7229,8 @@
         title: "Connector",
         render: (p) => {
             const s = SOURCES.find((x) => x.id === p.id) || SOURCES[0];
-            const body = FF.notice(s.why, { tone: "neutral", icon: "info.circle" })
-                + guideSteps([[`Turn on Apple Health in ${s.app}`, s.setup], [`Open ${s.app} to sync`, s.sync], [`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]])
+            const body = (s.why ? FF.notice(s.why, { tone: "neutral", icon: "info.circle" }) : `<p class="t-body c-2">${esc(`${s.app} sends your ${s.gives.toLowerCase()} to Apple Health, and FitFight reads them there.`)}</p>`)
+                + guideSteps([[`Turn on Apple Health in ${s.app}`, s.setup], ...(s.sync ? [[`Open ${s.app} to sync`, s.sync]] : []), [`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]])
                 + FF.grouped([openHealthRow()]);
             return FF.screen(body, { top: sheetHead(s.name), clearance: false, bodyStyle: "padding-top:0" });
         },

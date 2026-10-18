@@ -8,8 +8,8 @@ struct TestAvatar { let url: URL }
 struct TestProfile { let userId: UUID; var avatar: TestAvatar? = nil }
 struct Person: Codable { var photoURL: URL? = nil }
 struct Standing: Codable { var person = Person() }
-struct Fight: Codable { let score: Int; var standings: [Standing] = []; var days: [Int] = [] }
-struct FightRow { let id = UUID(); let score: Int; var seriesId: UUID? = nil }
+struct Fight: Codable { let score: Int; var standings: [Standing] = []; var days: [Int] = []; var groupImageURL: URL? = nil }
+struct FightRow { let id = UUID(); let score: Int; var seriesId: UUID? = nil; var groupImageUrl: String? = nil }
 struct MemberRow { let fightId: UUID; let userId: UUID }
 struct SeriesRow { let id: UUID }
 struct TestSnapshot {
@@ -56,7 +56,7 @@ enum Stage { case session }
     }
 }
 @MainActor final class RemoteImageLoader {
-    enum Kind { case avatar }
+    enum Kind { case avatar, photo }
     static let shared = RemoteImageLoader()
     func prefetch(_ urls: [URL], kind: Kind) {}
 }

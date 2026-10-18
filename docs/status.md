@@ -37,6 +37,98 @@ have a WHOOP section, effective 18 Oct 2026. Routes, table and sync model:
 
 ---
 
+## Web app Staging / Production switch, prepared 18 Oct 2026
+
+Marc asked to see production's Feedback, Feed and Profile from the staging web
+app, signed in automatically, Production by default, admins only.
+
+**Code:** the sidebar of `/app` on a staging (or local) server has a Database
+switch, Staging or Production, only for the accounts in
+`productionAccountByStagingAccount` (`web/lib/types/admin/fitfight-admin.ts`):
+Marc's staging account `87434630…` opens his production account `854ed9b9…`.
+Account IDs, not usernames, because a username can change hands; rad is not
+listed until his two IDs are added. Production is always the default: the
+admin's first visit marks the browser, and every visit opens Production;
+picking Staging lasts for that tab. In Production the browser keeps its staging
+login and trades it for a production one: `POST /api/v1/admin/production-sign-in`
+checks the staging login, looks up its production account in that list and
+returns a one-time magic-link token for it (nothing is emailed, no account is
+created). Every screen then calls production's own API through a
+same-origin rewrite, `/api/production/v1/*` to `https://fitfight.app/api/v1/*`
+(`web/next.config.ts`), so production code checks the production login and
+reads and writes its own database. Anything done in Production is real
+production data. Anyone else gets 403 and stays on Staging. The route answers
+only `next dev` on localhost (`isLocalDevRequest`), even if the key ever reaches
+a deployed server, and needs `PRODUCTION_SUPABASE_SECRET_KEY` (see Setup). A production server shows no
+switch. No release note (admin only, web only).
+
+**Setup:** the key is production's existing secret key; nothing new is created.
+Vercel keeps production's `SUPABASE_SECRET_KEY` Sensitive, so `vercel env pull`
+returns it empty; `supabase projects api-keys --project-ref pvqntpteehdvhqyctwum
+--reveal` reads it. It lives only in `web/.env.local` as
+`PRODUCTION_SUPABASE_SECRET_KEY` (done 18 Oct in the provo-v2 workspace). Marc
+chose on 18 Oct not to add it to Vercel, so the switch works from `next dev`
+only. On staging.fitfight.app, Production shows a card explaining that (503)
+with Back to Staging; the Admin page still reads production there through its
+read-only connection.
+
+**Pictures:** the web app's avatars for the 12 original animals (badger, bear,
+boar, dog, fox, goat, otter, rabbit, raccoon, red panda, sloth, turtle) were
+removed from `web/public/landing` in #387, so people wearing them showed
+initials on staging too. They are back as 128 px WebP copies of the app's
+avatar art.
+
+**Contract:** none changed. No database, migration or iPhone change; one new
+admin route.
+
+**Version skew:** the staging web app is newer than production's API (`main`,
+14 Oct). The web app now accepts the snapshot's `hosted` and a post's
+`to_friends` as absent (older responses), so Fights, Feed, Feedback and Profile
+load in Production. Username search and friend suggestions on New fight fail
+there until the next `preview` to `main` release (routes not on `main`).
+
+**Verification (local, 18 Oct):** web typecheck and all 549 unit tests pass. On
+`next dev`: the switch shows for Marc's account, which opens on Production with
+no saved choice, Back to Staging sticks, the rewrite reaches production (`/me`
+answers production's 401), and with a dummy key the route passes the staging
+login and account check and is refused by production ("Invalid API key"). The
+route answers 401 without a login or with a bad one. With the real key, a fresh
+`next dev` opens Production signed in as Marc's production `@marc` with no
+sign-in screen: Fights (10 live), Feed and Feedback (9 open posts) load, with
+every avatar. Staging in one tab, a new tab opens Production.
+
+---
+
+## Feed photo picker and named evening summary, prepared 17 Oct 2026
+
+From production feedback. @rad (13 Oct, build 210): adding a photo to a Feed post "doesn't
+work", then worked. Production had no upload row for the failed try, so it never left the
+phone: the composer opened the library only after its "Add media" dialog closed, behind a
+450 ms wait, and that sometimes showed nothing. @marc (19 Sep): "Fighter posted in the feed"
+did not say who or where.
+
+**App:** "Photo or video" is now a Menu (Take Photo, Photo Library). Menu actions run after
+the menu has closed, so they set the existing `.photosPicker` and camera cover directly, as
+Apple recommends; without a camera the button opens the library directly. The dialog, the
+wait and the "Add media" string are gone. Mirror updated; its shared menu now opens to the
+right of a left-side button instead of running off the screen.
+
+**Backend:** the evening summary names the posters and the fight: "@a and 2 others posted in
+Weekend Warriors." (several fights: "in 3 fights"), French too. It used to say "N new posts in
+your fights." Single-post pushes already named both since #300.
+
+**Contract:** no API, schema or migration change; only push text changes.
+**Deployment order:** backend and app are independent.
+
+**Verification (local, 17 Oct, on develop at 27871a51):** web typecheck clean, 546 of 546
+unit tests, localization check, Simulator compile (no Simulator runtime on this Mac, so the
+picker was not tapped). `test:database` on a private disposable Supabase: notification
+controls 2 of 2; whole suite 140 of 144, the 4 failures unrelated (three
+`complete_through cannot be in the future` clock checks, one realtime test with realtime not
+started). Not deployed.
+
+---
+
 ## User feedback: username search, required title, longer loser action, Feed count, prepared 17 Oct 2026
 
 From the production Feedback tab (@fabi and @claire). Marc picked option B in

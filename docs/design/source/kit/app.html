@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 5f36e5e7", updated: "18 Oct 2026" };
+            const MIRROR = { matches: "develop 27871a51", updated: "18 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 2;
@@ -741,7 +741,7 @@
                 const phoneBox = phone.getBoundingClientRect();
                 const box = el.getBoundingClientRect();
                 const zoom = phoneBox.width / phone.offsetWidth;
-                S.menu = { items, x: (box.right - phoneBox.left) / zoom, y: (box.bottom - phoneBox.top) / zoom };
+                S.menu = { items, x: (box.right - phoneBox.left) / zoom, left: (box.left - phoneBox.left) / zoom, y: (box.bottom - phoneBox.top) / zoom };
                 render();
             };
             const uiOf = (key) => (S.ui[key] ||= {});
@@ -873,7 +873,7 @@
                         html += `<div class="layer sheet ${kind === "cover" ? "cover" : ""} ${enter}"><div class="scrim" ${(typeof def?.dismissable === "function" ? def.dismissable(entry.p || {}, uiOf(keyOf(entry))) : def?.dismissable !== false) ? 'data-on="close"' : ""}></div><div class="sheet-card ${coveredBySheet ? "recessed" : ""}">${def?.grabber ? '<div class="sheet-grabber"></div>' : ""}${screenHTML(entry)}</div></div>`;
                     }
                 });
-                if (S.menu) html += `<div class="sys-menu" style="right:${Math.max(8, 402 - S.menu.x)}px;top:${Math.min(S.menu.y + 6, 600)}px">${S.menu.items.map((item) => (item === "-" ? '<div class="sep"></div>' : item.note ? `<div class="note">${esc(item.note)}</div>` : `<button type="button" class="${item.destructive ? "destructive" : ""}" data-on="${esc(item.on || "")}"${item.disabled ? " disabled" : ""}><span>${esc(item.title)}</span>${item.icon ? icon(item.icon) : ""}</button>`)).join("")}</div>`;
+                if (S.menu) html += `<div class="sys-menu" style="${S.menu.left < 120 ? `left:${Math.max(8, S.menu.left)}px` : `right:${Math.max(8, 402 - S.menu.x)}px`};top:${Math.min(S.menu.y + 6, 600)}px">${S.menu.items.map((item) => (item === "-" ? '<div class="sep"></div>' : item.note ? `<div class="note">${esc(item.note)}</div>` : `<button type="button" class="${item.destructive ? "destructive" : ""}" data-on="${esc(item.on || "")}"${item.disabled ? " disabled" : ""}><span>${esc(item.title)}</span>${item.icon ? icon(item.icon) : ""}</button>`)).join("")}</div>`;
                 if (S.toast) html += `<div class="toast-layer">${FF.toast({ ...S.toast, close: "dismissToast" })}</div>`;
                 for (const overlay of OVERLAYS) html += overlay() || "";
                 html += statusBar();
@@ -5608,7 +5608,7 @@
         const mediaDisabled = ui.images.length >= 4 || ui.video || ui.saving;
         return `<div class="fd-composeblock">
             ${FF.card(`<div class="fd-compose-row">${avatar(you(), 36)}<div class="fd-compose-col"><div class="fd-mention-field">${mentionList(ui.text, people, "text")}${textarea("text", ui.text, "Add a note or some proof…", key, ui, [3, 6], 500)}</div>${thumbs}${video}</div></div>`)}
-            <div class="hstack" style="gap:10px"><button type="button" class="fd-mediabtn"${on("present:feedAddMedia")}${mediaDisabled ? " disabled" : ""}>${icon("photo.on.rectangle.angled")}Photo or video</button></div>
+            <div class="hstack" style="gap:10px"><button type="button" class="fd-mediabtn"${on("feedMediaMenu")}${mediaDisabled ? " disabled" : ""}>${icon("photo.on.rectangle.angled")}Photo or video</button></div>
             ${destination}
             ${FF.button(ui.saving ? "Posting…" : "Post", { size: "large", full: true, on: "feedSubmit", enabled: !!canPost })}
         </div>`;
@@ -5627,11 +5627,6 @@
             : `<p class="t-caption c-2">${plural(st.audience.length, "Seen by %d person", "Seen by %d people")}</p>`;
         return `<div class="fd-audience"><span class="t-label c-text">Who sees this</span>${FF.segmented([[true, "Everyone"], [false, "Choose"]], ui.everyone, { on: "feedAudience:pick", fill: true })}${picker}${footer}</div>`;
     }
-    // "Add media": shown when the phone has a camera (a real iPhone does).
-    screen("feedAddMedia", {
-        kind: "actions",
-        alert: () => ({ title: "Add media", buttons: [{ title: "Take Photo", on: "close ; feedPickMedia:camera" }, { title: "Photo Library", on: "close ; feedPickMedia:library" }, { title: "Cancel", role: "cancel", on: "close" }] }),
-    });
 
     // ═══ ACTIONS ═══
     action("feedNoop", () => {});
@@ -5786,6 +5781,10 @@
         render();
     });
     action("feedRemovePhoto", (index, ctx) => { ctx.ui.images.splice(Number(index), 1); render(); });
+    // A Menu on the button when the phone has a camera (a real iPhone does).
+    action("feedMediaMenu", (_, ctx) => {
+        menu([{ title: "Take Photo", icon: "camera", on: "feedPickMedia:camera" }, { title: "Photo Library", icon: "photo", on: "feedPickMedia:library" }], ctx.el);
+    });
     action("feedPickMedia", (kind) => {
         const ui = uiOf(activeComposer);
         pendingPick = { key: activeComposer, kind };
@@ -6041,7 +6040,6 @@
         ["New post: no friends or fights", "#feed/~feedCompose", { scenario: "empty" }],
         ["New post to a fight", "#feed/~feedCompose?fightId=group"],
         ["Broadcast (admin)", "#feed/~feedCompose?broadcast=1", { admin: true }],
-        ["Add media", "#feed/~feedCompose/~feedAddMedia"],
     ]);
     links("Profile: Activity", [
         ["Activity", "#you/activity"],

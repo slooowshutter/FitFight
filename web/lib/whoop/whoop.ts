@@ -165,13 +165,14 @@ async function requestWhoopTokens(
     });
     if (!response.ok) {
         const body: unknown = await response.json().catch(() => null);
-        if (whoopTokenErrorSchema.safeParse(body).success) {
+        const error = whoopTokenErrorSchema.safeParse(body).data?.error;
+        if (error === "invalid_grant") {
             return null;
         }
         throw new ApiError(
             502,
             ERROR_CODES.internal,
-            `WHOOP token request returned ${response.status}`,
+            `WHOOP token request returned ${response.status}${error ? ` ${error}` : ""}`,
         );
     }
     return whoopTokenResponseSchema.parse(await response.json());

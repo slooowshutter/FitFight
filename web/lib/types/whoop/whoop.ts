@@ -19,7 +19,7 @@ export const whoopTokenResponseSchema = z.object({
 });
 
 export const whoopTokenErrorSchema = z.object({
-    error: z.literal("invalid_grant"),
+    error: z.string(),
 });
 
 export const whoopTokensSchema = z.object({

@@ -23,10 +23,16 @@ jobs:
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Create the 1.2.0 draft with its listing, review notes and screenshots
+            - name: Select 1.2.0 build 232 and submit it for App Review
               env:
                   FITFIGHT_RELEASE_VERSION: "1.2.0"
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-              run: bundle exec ruby scripts/app-store-release-audit.rb draft
+              run: bundle exec ruby scripts/app-store-release-audit.rb submit 232
+            - name: Admit the submitted build as the production review build
+              env:
+                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+              run: bash scripts/publish-app-releases.sh

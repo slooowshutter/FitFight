@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
     title: "Politique de confidentialité | FitFight",
     description:
-        "Comment FitFight collecte, utilise, partage et supprime les données de compte, de défis et de pas de Santé d’Apple.",
+        "Comment FitFight collecte, utilise, partage et supprime les données de compte, de défis, de pas de Santé d’Apple et de WHOOP.",
     robots: { index: true, follow: true },
 };
 
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 12 octobre 2026</p>
+                <p className="legal-updated">En vigueur le 18 octobre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -78,6 +78,13 @@ export default function PrivacyPage() {
                             des entraînements supprimés. Seuls les pas
                             comptent pour les défis actuels. Les autres
                             activités restent privées sur votre compte.
+                        </li>
+                        <li>
+                            <strong>WHOOP :</strong> si vous connectez WHOOP,
+                            votre identifiant WHOOP et les données d’effort, de
+                            récupération, de sommeil, d’entraînement, de
+                            fréquence cardiaque et de mesures corporelles que
+                            WHOOP partage avec FitFight. Voir WHOOP ci-dessous.
                         </li>
                         <li>
                             <strong>Photos, vidéos et publications :</strong>{" "}
@@ -137,10 +144,11 @@ export default function PrivacyPage() {
                         de synchronisation. L’app conserve aussi les totaux
                         quotidiens fusionnés, les résumés d’entraînement et les
                         suppressions explicites. FitFight ne lit ni itinéraires
-                        GPS ni fréquences cardiaques. Les points de reprise
-                        restent sur votre téléphone. Les échantillons bruts
-                        restent privés et ne sont jamais ajoutés au score de
-                        pas fusionné par Apple ni montrés aux participants.
+                        GPS ni fréquences cardiaques dans Santé d’Apple. Les
+                        points de reprise restent sur votre téléphone. Les
+                        échantillons bruts restent privés et ne sont jamais
+                        ajoutés au score de pas fusionné par Apple ni montrés
+                        aux participants.
                     </p>
                     <p>
                         Les participants d’un même défi privé peuvent voir les
@@ -150,6 +158,53 @@ export default function PrivacyPage() {
                         les échantillons Santé bruts. Les pas quotidiens hors du
                         Fight ne sont partagés qu’avec les réglages séparés
                         décrits ci-dessous.
+                    </p>
+                </section>
+
+                <section id="whoop">
+                    <h2>WHOOP</h2>
+                    <p>
+                        La connexion à WHOOP est facultative. Vous la lancez sous
+                        Profil → Réglages → Connexions → WHOOP, puis vous vous
+                        connectez à WHOOP pour autoriser l’accès. En connectant
+                        WHOOP, vous acceptez cette politique de confidentialité.
+                    </p>
+                    <p>
+                        FitFight lit alors tout ce que l’API WHOOP propose pour
+                        votre compte : votre identifiant d’utilisateur WHOOP ;
+                        les cycles quotidiens (effort, calories, fréquence
+                        cardiaque moyenne et maximale, pas) ; la récupération
+                        (score de récupération, fréquence cardiaque au repos,
+                        variabilité de la fréquence cardiaque, oxygène sanguin,
+                        température cutanée) ; le sommeil (performance,
+                        régularité, efficacité, durée de chaque phase,
+                        perturbations, fréquence respiratoire, besoin de
+                        sommeil) ; les entraînements (sport, heures de début et
+                        de fin, effort, fréquence cardiaque, zones cardiaques,
+                        calories, distance, dénivelé) ; et les mesures
+                        corporelles (taille, poids, fréquence cardiaque
+                        maximale). FitFight copie tout votre historique WHOOP à
+                        la connexion, puis vérifie les nouvelles données toutes
+                        les heures et chaque fois que WHOOP nous signale un
+                        changement.
+                    </p>
+                    <p>
+                        Les pas des défis viennent toujours uniquement de Santé
+                        d’Apple. Nous pouvons montrer vos statistiques WHOOP à
+                        vous-même et aux personnes que vous affrontez. Nous ne
+                        vendons pas les données WHOOP et ne les utilisons ni
+                        pour la publicité ni pour entraîner des modèles d’IA.
+                        Vos jetons de connexion WHOOP sont stockés chiffrés sur
+                        notre serveur.
+                    </p>
+                    <p>
+                        Nous conservons les données WHOOP, historique compris,
+                        tant que votre compte existe. Vous pouvez demander à
+                        l’assistance de supprimer vos données WHOOP à tout
+                        moment, et la suppression du compte les efface. Si WHOOP
+                        met fin à l’accès de FitFight à son API, nous supprimons
+                        les données WHOOP comme l’exigent les conditions de
+                        WHOOP.
                     </p>
                 </section>
 
@@ -302,9 +357,9 @@ export default function PrivacyPage() {
                     </ul>
                     <p>
                         FitFight ne vend pas de données personnelles, n’affiche
-                        pas de publicité et n’utilise pas les données du compte
-                        ou de Santé pour la publicité, le suivi entre apps ou le
-                        courtage de données.
+                        pas de publicité et n’utilise pas les données du compte,
+                        de Santé ou de WHOOP pour la publicité, le suivi entre
+                        apps ou le courtage de données.
                     </p>
                 </section>
 
@@ -350,6 +405,14 @@ export default function PrivacyPage() {
                         échantillon Santé brut ne figure dans cette requête.
                     </p>
                     <p>
+                        Lorsque vous connectez WHOOP, WHOOP transmet à FitFight
+                        les données décrites ci-dessus via son API. FitFight
+                        n’envoie à WHOOP que ce qui est nécessaire pour vous
+                        connecter et demander ces données. La politique de
+                        confidentialité de WHOOP couvre les données que WHOOP
+                        conserve.
+                    </p>
+                    <p>
                         Nous pouvons également communiquer des informations
                         lorsque la loi l’exige, pour protéger les utilisateurs
                         ou le service, ou dans le cadre d’un transfert
@@ -373,9 +436,16 @@ export default function PrivacyPage() {
                         l’autorisation dans les Réglages iOS.
                     </p>
                     <p>
+                        La connexion à WHOOP est votre choix. Vous pouvez
+                        demander à tout moment à{" "}
+                        <a href="mailto:marc@marclamy.com">marc@marclamy.com</a>{" "}
+                        de déconnecter WHOOP et de supprimer vos données WHOOP.
+                    </p>
+                    <p>
                         Nous conservons les données du compte, des défis, des
-                        publications, des médias, des bugs et demandes, et les
-                        données de Santé envoyées tant que votre compte existe.
+                        publications, des médias, des bugs et demandes, les
+                        données de Santé envoyées et les données WHOOP tant que
+                        votre compte existe.
                         Les e-mails d’assistance sont conservés le temps
                         nécessaire au traitement de la demande. Les journaux
                         limités de sécurité et de requêtes suivent les durées de
@@ -401,7 +471,7 @@ export default function PrivacyPage() {
                         fichiers envoyés, les publications et commentaires, les
                         totaux de pas et d’activité, les échantillons
                         individuels et les résumés d’entraînement, les
-                        relations d’amitié, les
+                        données WHOOP, les relations d’amitié, les
                         invitations, participations et scores, les bugs et
                         demandes que vous avez publiés, ainsi que tous les défis
                         que vous avez créés. Elle vous retire également des
@@ -422,8 +492,8 @@ export default function PrivacyPage() {
                         déconnecte. Si la révocation automatique est
                         indisponible, l’app explique comment déconnecter
                         FitFight dans les réglages Apple. La suppression
-                        n’efface aucune donnée stockée dans Santé d’Apple et ne
-                        supprime pas votre identifiant Apple.
+                        n’efface aucune donnée stockée dans Santé d’Apple ou
+                        chez WHOOP et ne supprime pas votre identifiant Apple.
                     </p>
                 </section>
 

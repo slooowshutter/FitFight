@@ -21,11 +21,15 @@ iOS command API only. No marketing pages. Node.js runtime, never Edge.
 | `APPLE_SIGN_IN_TOKEN_ENCRYPTION_KEY` | separate base64 32-byte key                                                   | separate base64 32-byte key             |
 | `NOTION_TOKEN`                       | Notion internal integration token with access to Product Backlog              | same token                              |
 | `CURSOR_API_KEY`                     | Cursor Cloud Agents API key (Dashboard → API Keys) for admin “Send to Cursor” | same key                                |
+| `WHOOP_CLIENT_SECRET`                | WHOOP developer dashboard client secret                                       | same secret (one WHOOP app)             |
+| `WHOOP_TOKEN_ENCRYPTION_KEY`         | separate base64 32-byte AES-256-GCM key                                       | separate base64 32-byte AES-256-GCM key |
 
 Preview deployments must use the **develop** Supabase project. Never point Preview at production.
 The Sign in with Apple key must be enabled for the FitFight App ID. It is not the
 App Store Connect API key. Keep the staging and production token-encryption keys stable,
-because changing one makes already stored revocation tokens unreadable.
+because changing one makes already stored revocation tokens unreadable. The same goes for
+`WHOOP_TOKEN_ENCRYPTION_KEY`: changing it makes stored WHOOP tokens unreadable, so
+people must connect WHOOP again.
 
 Use Supavisor transaction mode (port `6543`) for `DATABASE_URL`, with prepared statements disabled by the backend. The password stays in Vercel. The `private` schema does not need to be exposed through the Data API.
 

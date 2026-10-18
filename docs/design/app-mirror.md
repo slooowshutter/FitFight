@@ -90,9 +90,6 @@ shared card can appear on several screens (search for its helper). Every option 
 
 ## Checking your work
 
-- `node scripts/app-mirror-sweep.mjs` opens every map link in headless Chrome and taps every button, for every design
-  option too, and reports exceptions, "Not mirrored yet" screens and unknown actions. Run it before pushing a mirror
-  change; it must say "No problems". `--no-clicks` only opens the links (seconds instead of minutes).
 - To look at one screen like the Simulator does (402×874 at 3x):
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars --force-device-scale-factor=3 --window-size=402,874 --screenshot=/tmp/screen.png "file://$PWD/docs/design/source/kit/app.html?shot=1&theme=day#fights"`
 

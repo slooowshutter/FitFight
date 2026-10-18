@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { browserSupabase } from "@/lib/supabase/browser-client";
+import { apiBase, browserSupabase } from "@/lib/supabase/browser-client";
 import { apiErrorResponseSchema, type ErrorCode } from "@/lib/types/http/error";
 
 /** Calls the same `/api/v1` the iPhone app uses, as the signed-in person, and parses the answer with its schema. */
@@ -22,7 +22,7 @@ export async function fitfightApi<Schema extends z.ZodTypeAny>(
     if (options.body !== undefined)
         headers.set("content-type", "application/json");
     if (options.idempotent) headers.set("idempotency-key", crypto.randomUUID());
-    const response = await fetch(`/api/v1/${path}`, {
+    const response = await fetch(`${apiBase}/${path}`, {
         method: options.method ?? (options.body === undefined ? "GET" : "POST"),
         headers,
         body:

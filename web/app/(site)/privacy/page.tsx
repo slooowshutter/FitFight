@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
     title: "Privacy Policy | FitFight",
     description:
-        "How FitFight collects, uses, shares, and deletes account, Fight, and Apple Health data.",
+        "How FitFight collects, uses, shares, and deletes account, Fight, Apple Health, and WHOOP data.",
     robots: { index: true, follow: true },
 };
 
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 12 October 2026</p>
+                <p className="legal-updated">Effective 18 October 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -74,6 +74,12 @@ export default function PrivacyPage() {
                             workout deletion IDs. Only Steps score current
                             Fights. Other activity stays private to your
                             account.
+                        </li>
+                        <li>
+                            <strong>WHOOP:</strong> if you connect WHOOP, your
+                            WHOOP user ID and the strain, recovery, sleep,
+                            workout, heart rate, and body measurement data WHOOP
+                            shares with FitFight. See WHOOP below.
                         </li>
                         <li>
                             <strong>Photos, videos, and posts:</strong> your
@@ -128,7 +134,8 @@ export default function PrivacyPage() {
                         available, and selected sync identifiers. It also stores
                         merged daily totals, workout summaries, and explicit
                         record deletions. FitFight does not read GPS routes or
-                        heart rate. Sync checkpoints stay on your phone. Raw
+                        heart rate from Apple Health. Sync checkpoints stay on
+                        your phone. Raw
                         samples are private and never added to Apple&apos;s
                         merged Steps score or shown to Fight participants.
                     </p>
@@ -140,6 +147,45 @@ export default function PrivacyPage() {
                         They never receive another participant&apos;s raw Apple
                         Health samples. Daily Steps beyond the Fight are shared
                         only through the separate choices described below.
+                    </p>
+                </section>
+
+                <section id="whoop">
+                    <h2>WHOOP</h2>
+                    <p>
+                        Connecting WHOOP is optional. You start it under Profile
+                        → Settings → Connectors → WHOOP and sign in to WHOOP to
+                        approve access. By connecting, you agree to this Privacy
+                        Policy.
+                    </p>
+                    <p>
+                        FitFight then reads everything the WHOOP API offers for
+                        your account: your WHOOP user ID; daily cycles (strain,
+                        calories, average and maximum heart rate, and steps);
+                        recovery (recovery score, resting heart rate, heart rate
+                        variability, blood oxygen, and skin temperature); sleep
+                        (sleep performance, consistency, efficiency, time in
+                        each stage, disturbances, respiratory rate, and sleep
+                        need); workouts (sport, start and end times, strain,
+                        heart rate, heart rate zones, calories, distance, and
+                        elevation); and body measurements (height, weight, and
+                        maximum heart rate). It copies your full WHOOP history
+                        when you connect, then checks for new data every hour
+                        and whenever WHOOP tells us something changed.
+                    </p>
+                    <p>
+                        Fight Steps still come only from Apple Health. We may
+                        show your WHOOP stats to you and to the people you
+                        fight. We do not sell WHOOP data, use it for
+                        advertising, or use it to train AI models. Your WHOOP
+                        login tokens are stored encrypted on our server.
+                    </p>
+                    <p>
+                        We keep WHOOP data, including past history, while your
+                        account exists. You can ask support to delete your WHOOP
+                        data at any time, and deleting your account deletes it.
+                        If WHOOP ends FitFight&apos;s access to its API, we
+                        delete WHOOP data as WHOOP&apos;s terms require.
                     </p>
                 </section>
 
@@ -279,8 +325,8 @@ export default function PrivacyPage() {
                     </ul>
                     <p>
                         FitFight does not sell personal data, show advertising,
-                        or use account or Health data for advertising, cross-app
-                        tracking, or data brokerage.
+                        or use account, Health, or WHOOP data for advertising,
+                        cross-app tracking, or data brokerage.
                     </p>
                 </section>
 
@@ -319,6 +365,13 @@ export default function PrivacyPage() {
                         Fight title, exact Steps totals, or raw Health samples.
                     </p>
                     <p>
+                        When you connect WHOOP, WHOOP sends FitFight the data
+                        described above through its API. FitFight sends WHOOP
+                        only what it needs to sign you in and request that
+                        data. WHOOP&apos;s own privacy policy covers the data
+                        WHOOP keeps.
+                    </p>
+                    <p>
                         We may also disclose information when required by law,
                         to protect users or the service, or as part of a
                         business transfer subject to appropriate safeguards.
@@ -340,14 +393,20 @@ export default function PrivacyPage() {
                         iOS Settings.
                     </p>
                     <p>
+                        Connecting WHOOP is your choice. You can ask{" "}
+                        <a href="mailto:marc@marclamy.com">marc@marclamy.com</a>{" "}
+                        at any time to disconnect WHOOP and delete your WHOOP
+                        data.
+                    </p>
+                    <p>
                         We keep account, Fight, posts, media, bugs and
-                        feature-request, and uploaded Health data while your
-                        account exists. Support emails are kept only as long as
-                        needed to answer the request. Limited security and
-                        request logs follow Supabase&apos;s and Vercel&apos;s
-                        configured retention periods. Deleted data may remain
-                        temporarily in routine backups until those backups
-                        expire, or longer when required by law.
+                        feature-request, uploaded Health data, and WHOOP data
+                        while your account exists. Support emails are kept only
+                        as long as needed to answer the request. Limited
+                        security and request logs follow Supabase&apos;s and
+                        Vercel&apos;s configured retention periods. Deleted data
+                        may remain temporarily in routine backups until those
+                        backups expire, or longer when required by law.
                     </p>
                     <p>
                         We keep sync timing reports while your account exists.
@@ -364,10 +423,10 @@ export default function PrivacyPage() {
                         profile, username, uploaded photos, videos, files, Fight
                         posts and comments, uploaded Apple Health Fight and
                         daily totals, individual samples, workout summaries,
-                        friendships, invitations, Fight memberships, scores,
-                        bugs and feature requests you posted, and every Fight
-                        you created. It also removes your participation from
-                        Fights created by someone else.
+                        WHOOP data, friendships, invitations, Fight memberships,
+                        scores, bugs and feature requests you posted, and every
+                        Fight you created. It also removes your participation
+                        from Fights created by someone else.
                     </p>
                     <p>
                         In-app deletion does not automatically remove report
@@ -383,10 +442,10 @@ export default function PrivacyPage() {
                         If automatic revocation is unavailable, the app tells
                         you how to disconnect FitFight in Apple settings.
                         Deletion does not remove information stored in Apple
-                        Health or delete your Apple ID or Google account. For
-                        Google sign-in, the app also attempts to revoke its
-                        locally saved Google authorization. You can remove
-                        FitFight access in your Google Account&apos;s
+                        Health or WHOOP, or delete your Apple ID or Google
+                        account. For Google sign-in, the app also attempts to
+                        revoke its locally saved Google authorization. You can
+                        remove FitFight access in your Google Account&apos;s
                         third-party connections settings.
                     </p>
                 </section>

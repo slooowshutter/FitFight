@@ -948,7 +948,7 @@ paths:
                     "required": true,
                     "schema": {
                         "type": "string",
-                        "enum": ["overview", "retention", "churn", "users", "engagement", "steps", "fights", "social", "friends", "app"]
+                        "enum": ["overview", "retention", "churn", "users", "engagement", "steps", "fights", "social", "friends", "app", "metrics"]
                     }
                 },
                 {
@@ -1035,7 +1035,7 @@ paths:
                                             "properties": {
                                                 "id": { "type": "string" },
                                                 "title": { "type": "string" },
-                                                "kind": { "type": "string", "enum": ["line", "bar", "heatmap"] },
+                                                "kind": { "type": "string", "enum": ["line", "bar", "heatmap", "table"], "description": "A table lists one row per point x and one column per series. Clients that do not know a kind may draw it as bars." },
                                                 "unit": { "type": "string" },
                                                 "x_kind": { "type": "string", "enum": ["date", "label"] },
                                                 "note": { "type": ["string", "null"] },
@@ -1127,6 +1127,28 @@ paths:
                     description: Missing or invalid session
                 "403":
                     description: Not the FitFight admin
+    /admin/production-sign-in:
+        post:
+            operationId: mintProductionSignIn
+            summary: Admin only. A one-time production login for the web app's Production switch.
+            description: Called by a staging web app with its staging login. Only the staging accounts in productionAccountByStagingAccount qualify; the token opens their fixed production account, and the browser trades it for a session with the production project's verifyOtp. Nothing is emailed and no account is created. Answers only Marc's local next dev (localhost, same-origin), with PRODUCTION_SUPABASE_SECRET_KEY from his web/.env.local.
+            security: [{ bearerAuth: [] }]
+            responses:
+                "200":
+                    description: One-time magic-link token hash for the production project.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [token_hash]
+                                properties:
+                                    token_hash: { type: string }
+                "401":
+                    description: Missing or invalid session
+                "403":
+                    description: Not an account listed for the Production switch
+                "503":
+                    description: Not a request from Marc's local next dev (every Vercel deployment), or no PRODUCTION_SUPABASE_SECRET_KEY
     /admin/founder-fights:
         get:
             operationId: readFounderChallengers
@@ -1833,6 +1855,84 @@ paths:
                     content:
                         application/json:
                             schema: { $ref: "#/components/schemas/DataSource" }
+    /whoop/connect:
+        post:
+            operationId: connectWhoop
+            summary: Start WHOOP OAuth for the authenticated User. Empty body. Added 18 Oct 2026.
+            description: >
+                Open the returned WHOOP sign-in URL in a browser session. WHOOP
+                redirects to /api/whoop/callback, which redirects to
+                fitfight://whoop?code=...&state=... (or ?status=denied). The app then
+                posts code and state to /whoop/finish.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: WHOOP authorization URL
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [url]
+                                properties:
+                                    url: { type: string, format: uri }
+    /whoop/finish:
+        post:
+            operationId: finishWhoop
+            summary: Save the WHOOP connection for the authenticated User. Added 18 Oct 2026.
+            description: >
+                Exchanges the code from the WHOOP redirect. The state must be one this
+                User started with /whoop/connect in the last ten minutes, and works once.
+                The full WHOOP history is pulled after the response.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            additionalProperties: false
+                            required: [code, state]
+                            properties:
+                                code: { type: string, minLength: 1, maxLength: 2048 }
+                                state: { type: string, minLength: 8, maxLength: 8 }
+            responses:
+                "200":
+                    description: Connected
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [connected]
+                                properties:
+                                    connected: { type: boolean }
+                "409":
+                    description: The sign-in expired, belongs to another account, or WHOOP refused the code
+    /whoop/connection:
+        get:
+            operationId: getWhoopConnection
+            summary: Read whether the authenticated User has connected WHOOP. Added 18 Oct 2026.
+            security: [{ bearerAuth: [] }]
+            parameters:
+                - { $ref: "#/components/parameters/AppVersion" }
+                - { $ref: "#/components/parameters/AppBuild" }
+            responses:
+                "200":
+                    description: Connection state. last_synced_at is null until the first sync; history_synced_at is null until the full history pull finishes.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [connected, last_synced_at, history_synced_at]
+                                properties:
+                                    connected: { type: boolean }
+                                    last_synced_at: { type: [string, "null"], format: date-time }
+                                    history_synced_at: { type: [string, "null"], format: date-time }
     /provider-uploads:
         post:
             operationId: createProviderUpload

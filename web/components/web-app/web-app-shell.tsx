@@ -43,6 +43,7 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
+    SidebarGroupLabel,
     SidebarHeader,
     SidebarInset,
     SidebarMenu,
@@ -52,14 +53,22 @@ import {
     SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PersonAvatar } from "@/components/web-app/person-avatar";
 import { FitFightApiError, useFitFightApi } from "@/hooks/use-fitfight-api";
 import {
-    browserProjectURL,
     browserSupabase,
+    canShowProduction,
+    ownProjectURL,
+    ownSupabase,
+    productionIsDefault,
+    showProduction,
+    showsProduction,
     signOut,
 } from "@/lib/supabase/browser-client";
-import { devSignInResponseSchema } from "@/lib/types/auth/dev-sign-in";
+import { productionAccountByStagingAccount } from "@/lib/types/admin/fitfight-admin";
+import { signInTokenResponseSchema } from "@/lib/types/auth/dev-sign-in";
+import { apiErrorResponseSchema } from "@/lib/types/http/error";
 import { profileSchema, type Profile } from "@/lib/types/profiles/profile";
 
 const MeContext = createContext<{ me: Profile; reload: () => void } | null>(
@@ -90,17 +99,52 @@ const tabs = [
 // The iPhone app's admin usernames (SessionStore.adminHandles). The dashboard API checks the real admin itself.
 const adminHandles = ["marc", "rad"];
 
+/** Production mode: trades this deployment's login for the admin's production one. Returns why it failed, or null. */
+async function signInToProduction(): Promise<string | null> {
+    if ((await browserSupabase.auth.getSession()).data.session) return null;
+    const own = (await ownSupabase.auth.getSession()).data.session;
+    if (!own) return null;
+    const response = await fetch("/api/v1/admin/production-sign-in", {
+        method: "POST",
+        headers: { authorization: `Bearer ${own.access_token}` },
+    });
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+        return (
+            apiErrorResponseSchema.safeParse(body).data?.error ??
+            `Request failed (${response.status})`
+        );
+    }
+    const { error } = await browserSupabase.auth.verifyOtp({
+        type: "email",
+        token_hash: signInTokenResponseSchema.parse(body).token_hash,
+    });
+    return error ? error.message : null;
+}
+
 export function WebAppShell({ children }: { children: ReactNode }) {
     const [session, setSession] = useState<Session | null | undefined>(
         undefined,
     );
     const [failed, setFailed] = useState(false);
     const [working, setWorking] = useState(false);
+    const [productionFailure, setProductionFailure] = useState<string | null>(
+        null,
+    );
     const me = useFitFightApi(session ? "me" : null, profileSchema);
     const pathname = usePathname();
+    const admin = me.data
+        ? adminHandles.includes(me.data.handle.toLowerCase())
+        : false;
+    // Both sides of the server's list: the staging account picks Production, the production one picks Staging.
+    const switches =
+        canShowProduction &&
+        Object.entries(productionAccountByStagingAccount)
+            .flat()
+            .some((id) => id === me.data?.user_id);
 
     useEffect(() => {
-        browserSupabase.auth.getSession().then(async ({ data }) => {
+        ownSupabase.auth.getSession().then(async ({ data }) => {
             // NOTE: `next dev` only (this branch is removed from production builds): sign in as DEV_AUTOLOGIN_EMAIL on
             // first load. After signing out, the next reload signs back in; remove the variable to stay signed out.
             if (!data.session && process.env.NODE_ENV === "development") {
@@ -108,21 +152,53 @@ export function WebAppShell({ children }: { children: ReactNode }) {
                     method: "POST",
                 });
                 if (response.ok) {
-                    await browserSupabase.auth.verifyOtp({
+                    await ownSupabase.auth.verifyOtp({
                         type: "email",
-                        token_hash: devSignInResponseSchema.parse(
+                        token_hash: signInTokenResponseSchema.parse(
                             await response.json(),
                         ).token_hash,
                     });
                 }
             }
+            if (showsProduction)
+                setProductionFailure(await signInToProduction());
             setSession((await browserSupabase.auth.getSession()).data.session);
         });
+        // The first session comes from getSession above, after the dev and production sign-ins.
         const { data } = browserSupabase.auth.onAuthStateChange(
-            (_event, next) => setSession(next),
+            (event, next) => event !== "INITIAL_SESSION" && setSession(next),
         );
         return () => data.subscription.unsubscribe();
     }, []);
+
+    // Production is always the admin's default; Staging lasts for the tab.
+    useEffect(() => {
+        if (switches && !productionIsDefault) showProduction(true);
+    }, [switches]);
+
+    if (showsProduction && productionFailure) {
+        return (
+            <div className="flex min-h-svh items-center justify-center p-6">
+                <Card className="w-full max-w-sm">
+                    <CardHeader>
+                        <CardTitle>Production did not open</CardTitle>
+                        <CardDescription>{productionFailure}</CardDescription>
+                    </CardHeader>
+                    <CardFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => showProduction(false)}
+                        >
+                            Back to Staging
+                        </Button>
+                        <Button onClick={() => location.reload()}>
+                            Try again
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+        );
+    }
 
     if (session === undefined || (session && !me.data && !me.error)) {
         return (
@@ -147,8 +223,8 @@ export function WebAppShell({ children }: { children: ReactNode }) {
                     </CardHeader>
                     <CardContent className="flex flex-col gap-3">
                         <SignInButtons
-                            supabase={browserSupabase}
-                            projectURL={browserProjectURL}
+                            supabase={ownSupabase}
+                            projectURL={ownProjectURL}
                             locale="en_US"
                             hidden={working}
                             className="flex flex-col gap-3 [&_#appleid-signin]:h-10 [&_#appleid-signin]:w-[300px] [&_#appleid-signin]:cursor-pointer"
@@ -156,7 +232,13 @@ export function WebAppShell({ children }: { children: ReactNode }) {
                                 setWorking(true);
                                 setFailed(false);
                             }}
-                            onSignedIn={async () => setWorking(false)}
+                            onSignedIn={async () => {
+                                if (showsProduction)
+                                    setProductionFailure(
+                                        await signInToProduction(),
+                                    );
+                                setWorking(false);
+                            }}
                             onFailed={() => {
                                 setWorking(false);
                                 setFailed(true);
@@ -231,9 +313,7 @@ export function WebAppShell({ children }: { children: ReactNode }) {
                                 <SidebarMenu>
                                     {[
                                         ...tabs,
-                                        ...(adminHandles.includes(
-                                            me.data.handle.toLowerCase(),
-                                        )
+                                        ...(admin
                                             ? [
                                                   {
                                                       href: "/app/admin",
@@ -270,6 +350,44 @@ export function WebAppShell({ children }: { children: ReactNode }) {
                                 </SidebarMenu>
                             </SidebarGroupContent>
                         </SidebarGroup>
+                        {switches ? (
+                            <SidebarGroup className="mt-auto group-data-[collapsible=icon]:hidden">
+                                <SidebarGroupLabel>Database</SidebarGroupLabel>
+                                <SidebarGroupContent>
+                                    <ToggleGroup
+                                        type="single"
+                                        variant="outline"
+                                        size="sm"
+                                        aria-label="Database"
+                                        className="w-full"
+                                        value={
+                                            showsProduction
+                                                ? "production"
+                                                : "staging"
+                                        }
+                                        onValueChange={(value) => {
+                                            if (value)
+                                                showProduction(
+                                                    value === "production",
+                                                );
+                                        }}
+                                    >
+                                        <ToggleGroupItem
+                                            value="staging"
+                                            className="flex-1"
+                                        >
+                                            Staging
+                                        </ToggleGroupItem>
+                                        <ToggleGroupItem
+                                            value="production"
+                                            className="flex-1"
+                                        >
+                                            Production
+                                        </ToggleGroupItem>
+                                    </ToggleGroup>
+                                </SidebarGroupContent>
+                            </SidebarGroup>
+                        ) : null}
                     </SidebarContent>
                     <SidebarFooter>
                         <SidebarMenu>

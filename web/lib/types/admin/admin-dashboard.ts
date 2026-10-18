@@ -12,6 +12,7 @@ export const adminDashboardSectionValues = [
     "social",
     "friends",
     "app",
+    "metrics",
 ] as const;
 export const adminDashboardUnitValues = [
     "count",
@@ -22,7 +23,8 @@ export const adminDashboardUnitValues = [
     "minutes",
     "seconds",
 ] as const;
-export const adminDashboardChartKindValues = ["line", "bar", "heatmap"] as const;
+/** A table lists one row per label and one column per series. */
+export const adminDashboardChartKindValues = ["line", "bar", "heatmap", "table"] as const;
 export const adminDashboardXKindValues = ["date", "label"] as const;
 export const adminDashboardEnvironmentValues = ["production", "staging"] as const;
 export const adminDashboardBucketValues = ["day", "week", "month"] as const;

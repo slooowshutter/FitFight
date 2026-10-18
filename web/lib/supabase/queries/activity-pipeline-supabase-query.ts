@@ -272,6 +272,8 @@ export async function processActivity(
                             or candidate.lease_expires_at < now())
                         and (candidate.processing_state <> 'failed'
                             or candidate.processing_attempts < ${MAX_PROCESSING_ATTEMPTS})
+                        -- WHOOP rows are stored raw and wait for their own cleaner; this resolver reads Apple Health.
+                        and not starts_with(candidate.record_type, 'whoop_')
                         and (${userId}::uuid is null or candidate.user_id = ${userId}::uuid)
                         and (${rawIds}::uuid[] is null or candidate.id = any(${rawIds}::uuid[]))
                     order by candidate.received_at, candidate.id
@@ -337,6 +339,7 @@ export async function processActivity(
         from private.activity_raw
         where user_id = ${userId}
             and (${rawIds}::uuid[] is null or id = any(${rawIds}::uuid[]))
+            and not starts_with(record_type, 'whoop_')
             and processing_state <> 'processed'
             and (processing_state <> 'failed'
                 or processing_attempts < ${MAX_PROCESSING_ATTEMPTS})

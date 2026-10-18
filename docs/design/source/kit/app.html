@@ -7777,21 +7777,18 @@
     // ─── Wall of Honor (proposal, not in the app) ───────────────────
     // A Feedback request, 19 Sep 2026: "a place where I can see all challenges I already won. Like medals on a wall.
     // With title and date of the challenge, what it was and whether I got 1st, second or third." Marc, 18 Oct: fights
-    // only, opened from a medal button next to Dashboard, and every medal visible at once, each at its own angle, like
-    // an Olympic champion wearing them all. 2nd place counts in fights of 3 or more people, 3rd in fights of 4 or more.
+    // only, opened from a medal button next to Dashboard, every medal visible at once like an Olympic champion's.
+    // The art in wall-of-honor/ is drawn like the companions (GPT Image 2, background keyed out). 2nd place counts in
+    // fights of 3 or more people, 3rd in fights of 4 or more.
     variant("wall", {
         title: "Wall of Honor · the page",
-        note: "Every medal you won, all at once. Tap one to see its fight. Same fights in every option.",
+        note: "Every medal you won, all at once. Tap a medal to see its fight. Same fights in every option.",
         options: [
             { id: "today", name: "Today", when: "The app as it is now: no Wall of Honor." },
+            { id: "hanger", name: "Medal hanger", when: "Right if it should look like the medal hanger runners keep at home: every medal on a hook, bunched and swinging." },
             { id: "neck", name: "Around your companion's neck", when: "Right if it should feel like an Olympic champion: your companion wears every medal." },
-            { id: "hanger", name: "Medal hanger", when: "Right if it should look like medals hung on rails at home, each swinging a little." },
-            { id: "nail", name: "All on one nail", when: "Right if it should look like a bunch of medals hung on one nail, fanning out." },
-            { id: "board", name: "Pinned to a wall", when: "Right if each medal should be pinned where it landed, a bit crooked." },
-            { id: "case", name: "Display case", when: "Right if it should feel precious: rows of medals laid in a frame." },
-            { id: "rail", name: "One long rail", when: "Right if the order matters: newest first along one rail you swipe." },
         ],
-        links: [["Profile", "#you"], ["Wall of Honor", "#you/honor"], ["One fight", "#you/honor/~honorFight?id=h0"], ["A 3rd place", "#you/honor/~honorFight?id=everybody"]],
+        links: [["Profile", "#you"], ["Wall of Honor", "#you/honor"], ["First three medals", "#you/honor?few=1"], ["One fight", "#you/honor/~honorFight?id=h0"], ["A 3rd place", "#you/honor/~honorFight?id=everybody"]],
     });
     variant("wall-button", {
         title: "Wall of Honor · the button",
@@ -7844,177 +7841,84 @@
     const longDay = (ms) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     const counts = (rows) => ({ 1: rows.filter((r) => r.place === 1).length, 2: rows.filter((r) => r.place === 2).length, 3: rows.filter((r) => r.place === 3).length });
 
-    // ─── Drawing a medal ────────────────────────────────────────────
-    // Metal and ribbons are drawn in the Night palette in both themes (data-theme="night" on the art only): gold
-    // should look like gold on a light screen too. Angles and lengths come from the fight id, so a medal keeps its
-    // place between visits.
-    const METAL = { 1: "var(--medalGold)", 2: "var(--medalSilver)", 3: "var(--medalBronze)" };
-    const metalHi = (m) => `color-mix(in srgb, ${m} 45%, var(--text))`;
-    const metalLo = (m) => `color-mix(in srgb, ${m} 55%, var(--canvas))`;
+    // ─── The medal art ──────────────────────────────────────────────
+    // Each cut-out is a medal on its folded ribbon: [file, width / height]. The disc and its ring fill the bottom 36%.
+    const WALL_ART = "wall-of-honor/";
+    const MEDAL_ART = {
+        1: [["medal-gold-a", 220 / 713], ["medal-gold-b", 220 / 797]],
+        2: [["medal-silver-a", 220 / 714]],
+        3: [["medal-bronze-a", 220 / 788]],
+    };
+    const DISC_SHARE = 0.36;
+    // Angles, sizes and which drawing a medal uses come from its fight id, so it keeps its place between visits.
     const seeded = (id, k) => { let h = 2166136261; for (const c of `${id}:${k}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 1000) / 1000; };
-    let medalSeq = 0;
-    function medalDisc(place) {
-        const id = `whm${medalSeq++}`;
-        const m = METAL[place];
-        const leaf = (deg) => {
-            const t = (deg * Math.PI) / 180;
-            return `<ellipse cx="${(22.6 * Math.cos(t)).toFixed(2)}" cy="${(22.6 * Math.sin(t)).toFixed(2)}" rx="3.5" ry="1.6" transform="rotate(${deg + 90} ${(22.6 * Math.cos(t)).toFixed(2)} ${(22.6 * Math.sin(t)).toFixed(2)})" style="fill:${metalLo(m)}" opacity="0.75"/>`;
-        };
-        const leaves = [110, 134, 158, 182, 206, 230, 70, 46, 22, -2, -26, -50].map(leaf).join("");
-        const text = (dx, dy, fill, op) => `<text x="${dx}" y="${7.2 + dy}" text-anchor="middle" font-size="21" font-weight="800" style="fill:${fill}" opacity="${op}">${place}</text>`;
-        return `<svg viewBox="-34 -34 68 68" aria-hidden="true">
-                <defs><radialGradient id="${id}" cx="36%" cy="30%" r="80%"><stop offset="0" style="stop-color:${metalHi(m)}"/><stop offset="0.5" style="stop-color:${m}"/><stop offset="1" style="stop-color:${metalLo(m)}"/></radialGradient></defs>
-                <rect x="-5" y="-34" width="10" height="7" rx="2.5" style="fill:${metalLo(m)}"/>
-                <circle r="29.5" fill="url(#${id})" style="stroke:${metalLo(m)}" stroke-width="1.5"/>
-                <circle r="25.5" fill="none" style="stroke:${metalHi(m)}" stroke-width="1" opacity="0.7"/>
-                <circle r="25" fill="none" style="stroke:${metalLo(m)}" stroke-width="0.7" opacity="0.5"/>
-                ${leaves}${text(0.6, 0.6, metalHi(m), 0.9)}${text(0, 0, metalLo(m), 1)}
-                <ellipse cx="-10" cy="-14" rx="10" ry="4.5" transform="rotate(-35 -10 -14)" style="fill:var(--text)" opacity="0.2"/>
-            </svg>`;
+    // One medal hanging from (x, y) by the top of its ribbon: turned `a` degrees around that point, `w` wide.
+    function hangingMedal(row, x, y, w, a, z) {
+        const options = MEDAL_ART[row.place];
+        const [file, ratio] = options[Math.floor(seeded(row.id, "art") * options.length)];
+        const h = w / ratio;
+        const flip = seeded(row.id, "flip") > 0.5 ? " flip" : "";
+        return `<div class="wh3-hang" style="left:${(x - w / 2).toFixed(1)}px;top:${y.toFixed(1)}px;width:${w.toFixed(1)}px;height:${h.toFixed(1)}px;transform:rotate(${a.toFixed(1)}deg);z-index:${z}">
+                <img class="wh3-medal${flip}" src="${WALL_ART}${file}.png" alt="">
+                <button type="button" class="wh3-hit" style="height:${(h * DISC_SHARE).toFixed(1)}px" data-on="present:honorFight?id=${row.id}" aria-label="${esc(`${row.name}, ${placeOf(row)}, ${monthDay(row.at)}`)}"></button>
+            </div>`;
     }
-    // A strap from (x1, y1) to (x2, y2): dark edges, the green ribbon, and a stripe in the medal's metal.
-    const strap = (x1, y1, x2, y2, place, w = 9) => {
-        const line = (stroke, width, op = 1) => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" style="stroke:${stroke}" stroke-width="${width}" opacity="${op}"/>`;
-        return line(metalLo("var(--mossFill)"), w) + line("var(--mossFill)", w - 2) + line(METAL[place], w * 0.26, 0.9);
-    };
-    // A folded ribbon above a medal laid flat (display case, the fight drawer), turned with it around its centre.
-    const band = (cx, cy, r, a, place, len = 42) => {
-        const t = (a * Math.PI) / 180;
-        const pt = (x, y) => `${(cx + x * Math.cos(t) - y * Math.sin(t)).toFixed(1)},${(cy + x * Math.sin(t) + y * Math.cos(t)).toFixed(1)}`;
-        const w = r * 0.5;
-        return `<polygon points="${[pt(-w, -r - len), pt(w, -r - len), pt(w * 0.42, -r + 3), pt(-w * 0.42, -r + 3)].join(" ")}" style="fill:var(--mossFill);stroke:${metalLo("var(--mossFill)")}" stroke-width="1"/>
-            <polygon points="${[pt(-w * 0.28, -r - len), pt(w * 0.28, -r - len), pt(w * 0.12, -r + 3), pt(-w * 0.12, -r + 3)].join(" ")}" style="fill:${METAL[place]}" opacity="0.9"/>`;
-    };
-    // Where a medal's loop sits when it hangs at angle `a` (degrees, CSS rotate) around its centre.
-    const loopOf = (x, y, r, a) => [x + r * 0.9 * Math.sin((a * Math.PI) / 180), y - r * 0.9 * Math.cos((a * Math.PI) / 180)];
-    // A medal hanging `len` below (px, py), swung by `a` degrees.
-    const hang = (px, py, len, a) => [px - len * Math.sin((a * Math.PI) / 180), py + len * Math.cos((a * Math.PI) / 180)];
     const WALL_W = 362;
-    function wallDisplay({ width = WALL_W, height, decor = "", ribbons = "", over = "", items }, o = {}) {
-        const buttons = items.map((it) => `<button type="button" class="wh2-m" data-theme="night" style="left:${(it.x - it.s / 2).toFixed(1)}px;top:${(it.y - it.s / 2).toFixed(1)}px;width:${it.s}px;height:${it.s}px;transform:rotate(${it.a.toFixed(1)}deg);z-index:${it.z || 1}" data-on="present:honorFight?id=${it.row.id}" aria-label="${esc(`${it.row.name}, ${placeOf(it.row)}`)}">${medalDisc(it.row.place)}</button>`).join("");
-        return `<div class="wh2-display ${o.cls || ""}" style="width:${width}px;height:${height}px">${decor}<div class="wh2-ribbons" data-theme="night"><svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${ribbons}</svg></div>${buttons}${over}</div>`;
-    }
-    const steelBar = (x, y, w, h = 12) => `<div class="wh2-bar" data-theme="night" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px"></div>`;
 
-    // ─── The six walls ──────────────────────────────────────────────
+    // ─── The walls ──────────────────────────────────────────────────
     const WALLS = {
-        // Your companion in the middle; every ribbon goes round its neck, medals in rows across its chest.
-        neck: (rows) => {
-            const art = 280, nx = WALL_W / 2, ny = 96, s = 44;
-            const items = [];
-            let ribbons = `<path d="M${nx - 34} ${ny - 10} Q${nx} ${ny + 16} ${nx + 34} ${ny - 10}" fill="none" style="stroke:${metalLo("var(--mossFill)")}" stroke-width="10"/><path d="M${nx - 34} ${ny - 10} Q${nx} ${ny + 16} ${nx + 34} ${ny - 10}" fill="none" style="stroke:var(--mossFill)" stroke-width="8"/>`;
-            let i = 0, j = 0;
-            while (i < rows.length) {
-                const n = Math.min(j % 2 ? 6 : 5, rows.length - i);
-                const y = ny + 74 + j * 42;
-                const spread = 128 + j * 40;
-                for (let k = 0; k < n; k++, i++) {
-                    const r = rows[i];
-                    const x = n === 1 ? nx : nx - spread / 2 + (k * spread) / (n - 1) + (seeded(r.id, 1) - 0.5) * 8;
-                    const a = (seeded(r.id, 2) - 0.5) * 24;
-                    const [lx, ly] = loopOf(x, y, s / 2, a);
-                    // Each ribbon leaves the collar above its medal, so they fan out instead of bunching at one point.
-                    const cx = nx + Math.max(-30, Math.min(30, (x - nx) * 0.24));
-                    ribbons += strap(cx, ny + 3 - 13 * ((cx - nx) / 34) ** 2, lx, ly, r.place, 7);
-                    items.push({ row: r, x, y, a, s, z: 50 - j });
-                }
-                j++;
-            }
-            const height = Math.max(art + 10, ny + 74 + (j - 1) * 42 + s / 2 + 16);
-            return wallDisplay({ height, items, ribbons, decor: `<span class="wh2-companion" style="left:${(WALL_W - art) / 2}px">${companionImg(you(), { w: art, h: art })}</span>` });
-        },
-        // Steel rails; each medal hangs on its own ribbon, long and short in turn so they interleave.
+        // The carved hanger with its six hooks; medals are shared out newest first, so the front of each hook is
+        // the latest fight, and the hooks are redrawn on top so each ribbon hangs on its hook.
         hanger: (rows) => {
-            const per = 8, gap = 196, s = 50;
-            const bars = Math.ceil(rows.length / per);
-            let ribbons = "", decor = "";
-            const items = rows.map((r, i) => {
-                const bar = Math.floor(i / per), k = i % per;
-                const px = 26 + (k * (WALL_W - 52)) / (per - 1) + (seeded(r.id, 1) - 0.5) * 6;
-                const py = 24 + bar * gap;
-                const a = (seeded(r.id, 2) - 0.5) * 18;
-                const [x, y] = hang(px, py, (k % 2 ? 104 : 60) + seeded(r.id, 3) * 16 + s / 2, a);
-                const [lx, ly] = loopOf(x, y, s / 2, a);
-                ribbons += strap(px, py, lx, ly, r.place);
-                return { row: r, x, y, a, s, z: k % 2 ? 2 : 1 };
-            });
-            for (let b = 0; b < bars; b++) decor += steelBar(0, 18 + b * gap, WALL_W);
-            return wallDisplay({ height: (bars - 1) * gap + 24 + 104 + 16 + s + 14, items, ribbons, decor });
-        },
-        // One nail; every ribbon starts there and the medals fan out in rings, the newest on top.
-        nail: (rows) => {
-            const nx = WALL_W / 2, ny = 18, s = 48;
-            let ribbons = "";
-            const items = [];
-            let i = 0, j = 0;
-            while (i < rows.length) {
-                const n = Math.min(j % 2 ? 6 : 5, rows.length - i);
-                const reach = 108 + j * 50;
-                const spread = 36 + j * 5;
-                for (let k = 0; k < n; k++, i++) {
-                    const r = rows[i];
-                    const a = (n === 1 ? 0 : spread - (k * 2 * spread) / (n - 1)) + (seeded(r.id, 1) - 0.5) * 6;
-                    const [x, y] = hang(nx, ny, reach + seeded(r.id, 2) * 10, a);
-                    const tilt = a + (seeded(r.id, 3) - 0.5) * 10;
-                    const [lx, ly] = loopOf(x, y, s / 2, tilt);
-                    ribbons = strap(nx, ny, lx, ly, r.place, 8) + ribbons;
-                    items.push({ row: r, x, y, a: tilt, s, z: 50 - j });
-                }
-                j++;
+            const per = 18;
+            const boardW = 340, inset = (WALL_W - boardW) / 2;
+            const hooks = [97, 272, 446, 615.5, 789.5, 961].map((x) => inset + (x * boardW) / 1086);
+            const plankH = (271 * boardW) / 1086;
+            const hookY = plankH - 7;
+            const boards = [];
+            for (let b = 0; b * per < rows.length; b++) {
+                const group = rows.slice(b * per, (b + 1) * per);
+                const onHook = hooks.map(() => []);
+                group.forEach((r, i) => onHook[i % hooks.length].push(r));
+                // Front medal highest, the ones behind hang a little lower and fan out, so every disc shows.
+                const fans = { 1: [0], 2: [-6, 7], 3: [1, -10, 11] };
+                const sizes = [0.84, 0.93, 1];
+                let medals = "";
+                onHook.forEach((list, hk) => list.forEach((r, k) => {
+                    const w = 66 * sizes[k] * (0.97 + seeded(r.id, "s") * 0.03);
+                    let a = fans[list.length][k] + (seeded(r.id, "a") - 0.5) * 4;
+                    // A disc that would leave the screen swings the other way.
+                    const reach = (w / MEDAL_ART[r.place][0][1]) * 0.82;
+                    const cx = hooks[hk] - reach * Math.sin((a * Math.PI) / 180);
+                    if (cx - w / 2 < 2 || cx + w / 2 > WALL_W - 2) a = -a;
+                    medals += hangingMedal(r, hooks[hk], hookY - 6, w, a, 20 - k);
+                }));
+                boards.push(`<div class="wh3-board" style="height:${(hookY + 262).toFixed(0)}px">
+                        <img class="wh3-plank" src="${WALL_ART}hanger.png" alt="Wall of Honor">
+                        ${medals}
+                        <img class="wh3-hooks" src="${WALL_ART}hanger.png" alt="" aria-hidden="true">
+                    </div>`);
             }
-            return wallDisplay({ height: ny + 108 + (j - 1) * 50 + 10 + s / 2 + 18, items, ribbons, over: `<span class="wh2-nail" data-theme="night" style="left:${nx - 7}px;top:${ny - 7}px"></span>` });
+            return `<div class="wh3-wall">${boards.join("")}</div>`;
         },
-        // A wooden wall; each medal hangs from its own pin, a bit crooked.
-        board: (rows) => {
-            const cols = 4, cell = WALL_W / cols, rowH = 106, s = 50;
-            let ribbons = "", pins = "";
-            const items = rows.map((r, i) => {
-                const c = i % cols, line = Math.floor(i / cols);
-                const x = c * cell + cell / 2 + (seeded(r.id, 1) - 0.5) * 16;
-                const y = line * rowH + 72 + (seeded(r.id, 2) - 0.5) * 12;
-                const a = (seeded(r.id, 3) - 0.5) * 30;
-                const [lx, ly] = loopOf(x, y, s / 2, a);
-                const [px, py] = loopOf(x, y, s / 2 + 34, a);
-                ribbons += strap(px, py, lx, ly, r.place, 8);
-                pins += `<span class="wh2-pin" data-theme="night" style="left:${(px - 5).toFixed(1)}px;top:${(py - 5).toFixed(1)}px"></span>`;
-                return { row: r, x, y, a, s };
-            });
-            const height = Math.ceil(rows.length / cols) * rowH + 28;
-            return wallDisplay({ height, items, ribbons, decor: `<div class="wh2-wall"></div>`, over: pins });
-        },
-        // A framed case: rows of medals laid flat, each under its folded ribbon, turned a little either way.
-        case: (rows) => {
-            const cols = 4, pad = 18, cell = (WALL_W - pad * 2) / cols, rowH = 114, s = 52;
-            let ribbons = "";
-            const items = rows.map((r, i) => {
-                const c = i % cols, line = Math.floor(i / cols);
-                const x = pad + c * cell + cell / 2;
-                const y = pad + line * rowH + 76;
-                const a = (c % 2 ? 6 : -6) + (seeded(r.id, 1) - 0.5) * 8;
-                ribbons += band(x, y, s / 2, a, r.place, 40);
-                return { row: r, x, y, a, s };
-            });
-            const height = pad * 2 + Math.ceil(rows.length / cols) * rowH + 6;
-            return wallDisplay({ height, items, ribbons, decor: `<div class="wh2-case"></div>` });
-        },
-        // One long rail, newest on the left; the month is written above where it starts.
-        rail: (rows) => {
-            const step = 46, s = 50, py = 34;
-            const width = Math.max(WALL_W, 40 + rows.length * step + 20);
-            let ribbons = "", labels = "", last = "";
-            const items = rows.map((r, i) => {
-                const px = 32 + i * step;
-                const a = (seeded(r.id, 2) - 0.5) * 16;
-                const [x, y] = hang(px, py, (i % 2 ? 100 : 58) + seeded(r.id, 3) * 14 + s / 2, a);
-                const [lx, ly] = loopOf(x, y, s / 2, a);
-                ribbons += strap(px, py, lx, ly, r.place);
-                const month = new Date(r.at).toLocaleDateString("en-US", { month: "short", year: "numeric" });
-                if (month !== last) { labels += `<span class="wh2-month t-micro c-2" style="left:${px - 8}px">${esc(month)}</span>`; last = month; }
-                return { row: r, x, y, a, s, z: i % 2 ? 2 : 1 };
-            });
-            return `<div class="wh2-scroll">${wallDisplay({ width, height: py + 100 + 14 + s + 18, items, ribbons, decor: steelBar(0, py - 6, width) + labels })}</div>`;
+        // Your companion wears them all: every ribbon starts under its chin, the latest medals in front.
+        neck: (rows) => {
+            const art = 300, top = 6;
+            const nx = WALL_W / 2 + 4, ny = top + art * 0.4;
+            const back = rows.slice(8), front = rows.slice(0, 8);
+            const fan = (list, spread, w, z0) => list.map((r, i) => {
+                const a = (list.length === 1 ? 0 : spread - (i * 2 * spread) / (list.length - 1)) + (seeded(r.id, "a") - 0.5) * 3;
+                return hangingMedal(r, nx, ny - 14, w * (0.94 + seeded(r.id, "s") * 0.06), a, z0 + (i < list.length / 2 ? i : list.length - i));
+            }).join("");
+            const who = you();
+            return `<div class="wh3-champ" style="height:${top + art + 70}px">
+                    <span class="wh3-champ-art" style="left:${(WALL_W - art) / 2}px;top:${top}px">${companionImg(who, { w: art, h: art })}</span>
+                    ${fan(back, 34, 60, 10)}${fan(front, 17, 50, 30)}
+                    <span class="wh3-champ-head" style="left:${(WALL_W - art) / 2}px;top:${top}px">${companionImg(who, { w: art, h: art })}</span>
+                </div>`;
         },
     };
+
     // ─── Profile: the medal next to Dashboard ───────────────────────
     function honorButton() {
         const rows = honorRows();
@@ -8026,16 +7930,19 @@
     screen("honor", {
         kind: "push",
         title: "Wall of Honor",
-        render: () => {
-            const rows = honorRows();
-            const design = V("wall") === "today" ? "neck" : V("wall");
+        render: (p) => {
+            // `few=1` shows a new player's wall: their first three medals.
+            const rows = p.few === "1" ? honorRows().slice(-3) : honorRows();
+            const design = V("wall") === "today" ? "hanger" : V("wall");
             const c = counts(rows);
-            const played = rows.length ? D().record.played + GROUP_PODIUMS.length : 0;
-            const tally = [[1, "gold"], [2, "silver"], [3, "bronze"]].filter(([p]) => c[p]).map(([p, word]) => `<span class="wh2-tally"><i class="wh2-dotm" data-theme="night" style="background:${METAL[p]}"></i>${c[p]} ${word}</span>`).join("");
+            const played = !rows.length ? 0 : p.few === "1" ? 5 : D().record.played + GROUP_PODIUMS.length;
+            const tally = [[1, "gold", "gold"], [2, "silver", "silver"], [3, "bronze", "bronze"]].filter(([p]) => c[p])
+                .map(([p, word, file]) => `<span class="wh3-tally"><img src="${WALL_ART}disc-${file}.png" alt="">${c[p]} ${word}</span>`).join("");
             const body = rows.length
-                ? `<p class="t-body c-2">${esc(`On the podium in ${rows.length} of your ${played} fights.`)}</p><div class="hstack" style="gap:14px;flex-wrap:wrap">${tally}</div>${WALLS[design](rows)}<p class="t-caption c-2" style="text-align:center">Tap a medal to see its fight.</p>`
-                : `<div class="wh-empty"><span class="wh2-ghost"></span><span class="t-heading">Your wall is empty</span><span class="t-body c-2">Finish a fight in the top 3 and its medal hangs here, with the date and your place.</span>${FF.button("Start a fight", { on: "tab:newFight" })}</div>`;
-            return `<div class="pf-push">${FF.screen(largeTitle("Wall of Honor") + body, { top: navBar("Wall of Honor") })}</div>`;
+                ? `${WALLS[design](rows)}
+                    <div class="wh3-foot"><div class="wh3-tallies">${tally}</div><p class="t-caption c-2">${esc(`On the podium in ${rows.length} of your ${played} fights. Tap a medal to see its fight.`)}</p></div>`
+                : `<div class="wh3-empty"><img class="wh3-plank" src="${WALL_ART}hanger.png" alt="Wall of Honor"><span class="t-heading">No medals yet</span><span class="t-body c-2">Finish a fight in the top 3 and its medal hangs here, with the date and your place.</span>${FF.button("Start a fight", { on: "tab:newFight" })}</div>`;
+            return `<div class="pf-push">${FF.screen(body, { top: navBar("Wall of Honor"), bodyStyle: "padding-top:4px" })}</div>`;
         },
     });
 
@@ -8052,10 +7959,10 @@
             if (!shown.some((s) => s.person === me)) shown.push(r.standings.find((s) => s.person === me));
             const loser = loserLine(r);
             const from = r.at - r.lengthDays * DAY;
-            const medal = wallDisplay({ width: 140, height: 170, items: [{ row: r, x: 70, y: 112, a: 0, s: 104 }], ribbons: band(70, 112, 52, 0, r.place, 52) }, { cls: "wh2-solo" });
+            const [file, ratio] = MEDAL_ART[r.place][Math.floor(seeded(r.id, "art") * MEDAL_ART[r.place].length)];
             return `<div class="fl-drawer wh-drawer" data-scroll>
                     <div class="vstack" style="align-items:center;gap:6px;text-align:center">
-                        ${medal}
+                        <div class="wh3-solo"><img src="${WALL_ART}${file}.png" alt="" style="width:120px;height:${(120 / ratio).toFixed(0)}px"></div>
                         <span class="wh-headline">${esc(placeOf(r))}</span>
                         <span class="t-title">${esc(r.name)}</span>
                         <span class="t-caption c-2">${esc(`${monthDay(from)} to ${longDay(r.at)}`)}</span>
@@ -8076,30 +7983,31 @@
         .wh-round { position: relative; }
         .wh-dot { position: absolute; top: -3px; right: -5px; min-width: 20px; padding: 0 5px; border-radius: 999px; background: var(--mossFill); color: var(--mossOn); font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--bg); }
         .wh-dot.gold { background: var(--medalGold); color: var(--goldInk); }
-        .wh2-display { position: relative; flex: none; margin: 4px auto 0; isolation: isolate; }
-        .wh2-ribbons { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-        .wh2-ribbons svg { display: block; overflow: visible; }
-        .wh2-m { position: absolute; display: block; padding: 0; transform-origin: 50% 50%; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35)); }
-        .wh2-m svg { display: block; width: 100%; height: 100%; overflow: visible; }
-        .wh2-m text { font-family: Nunito, sans-serif; }
-        .wh2-companion { position: absolute; top: 0; z-index: 0; }
-        .wh2-bar { position: absolute; z-index: 3; border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--medalSilver) 70%, var(--text)), var(--medalSilver) 40%, color-mix(in srgb, var(--medalSilver) 45%, var(--canvas))); box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
-        .wh2-nail, .wh2-pin { position: absolute; z-index: 60; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--medalSilver) 60%, var(--text)), var(--medalSilver) 45%, color-mix(in srgb, var(--medalSilver) 40%, var(--canvas))); box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-        .wh2-pin { width: 10px; height: 10px; z-index: 2; }
-        .wh2-wall { position: absolute; inset: 0; border-radius: 26px; background: repeating-linear-gradient(90deg, var(--card) 0 44px, color-mix(in srgb, var(--card) 80%, var(--canvas)) 44px 46px); box-shadow: inset 0 0 0 1px var(--hairline); }
-        .wh2-case { position: absolute; inset: 0; border-radius: 24px; border: 9px solid var(--controlAlt); background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--mossWash) 60%, var(--card)), var(--card)); box-shadow: inset 0 8px 18px rgba(0,0,0,0.28), 0 6px 18px rgba(0,0,0,0.18); }
-        .wh2-scroll { margin: 0 -20px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
-        .wh2-scroll::-webkit-scrollbar { display: none; }
-        .wh2-scroll .wh2-display { margin: 4px 0 0; }
-        .wh2-month { position: absolute; top: 4px; white-space: nowrap; }
-        .wh2-tally { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--text); }
-        .wh2-dotm { width: 12px; height: 12px; border-radius: 50%; }
-        .wh2-solo { margin: 0 auto -6px; }
-        .wh2-ghost { width: 88px; height: 88px; border-radius: 50%; border: 2px dashed var(--line); }
+        .wh3-wall { position: relative; margin: 0 -20px; padding: 18px 20px 0; isolation: isolate; background: radial-gradient(70% 38% at 50% 14%, color-mix(in srgb, var(--gold) 13%, transparent), transparent 80%); }
+        .wh3-board { position: relative; width: ${WALL_W}px; margin: 0 auto; }
+        .wh3-plank, .wh3-hooks { position: absolute; left: 11px; top: 0; width: 340px; height: auto; pointer-events: none; }
+        .wh3-plank { z-index: 1; filter: drop-shadow(0 10px 12px rgba(0,0,0,0.35)); }
+        .wh3-hooks { z-index: 40; clip-path: inset(68% 0 0 0); }
+        .wh3-hang { position: absolute; transform-origin: 50% 3%; pointer-events: none; }
+        .wh3-medal { display: block; width: 100%; height: 100%; filter: drop-shadow(0 9px 8px rgba(0,0,0,0.38)); }
+        .wh3-medal.flip { transform: scaleX(-1); }
+        .wh3-hit { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 50%; pointer-events: auto; }
+        .wh3-hit:active { background: radial-gradient(circle, color-mix(in srgb, var(--text) 18%, transparent), transparent 70%); }
+        .wh3-champ { position: relative; width: ${WALL_W}px; margin: 8px auto 0; isolation: isolate; background: radial-gradient(60% 50% at 50% 40%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 80%); }
+        .wh3-champ-art, .wh3-champ-head { position: absolute; pointer-events: none; }
+        .wh3-champ-art { z-index: 1; }
+        .wh3-champ-head { z-index: 60; clip-path: ellipse(25% 21% at 52% 21%); }
+        .wh3-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; text-align: center; }
+        .wh3-tallies { display: flex; gap: 16px; }
+        .wh3-tally { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: var(--text); }
+        .wh3-tally img { width: 22px; height: auto; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
+        .wh3-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 24px; text-align: center; }
+        .wh3-empty .wh3-plank { position: static; width: 100%; margin-bottom: 18px; }
+        .wh3-solo { height: 190px; width: 160px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34%); mask-image: linear-gradient(to bottom, transparent, #000 34%); }
+        .wh3-solo img { filter: drop-shadow(0 8px 8px rgba(0,0,0,0.35)); }
         .wh-stake { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 14px; background: var(--chip); color: var(--textDim); }
         .wh-stake svg { font-size: 14px; flex: none; color: var(--textSecondary); }
-        .wh-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 40px; text-align: center; }
-        .wh-drawer { gap: 16px; padding-top: 22px; padding-bottom: 28px; }
+        .wh-drawer { gap: 16px; padding-top: 14px; padding-bottom: 28px; }
         .wh-headline { font-size: 18px; font-weight: 800; color: var(--text); }
         .wh-stand { display: flex; align-items: center; gap: 10px; padding: 10px 16px; }
         .wh-stand.me { background: var(--mossWash); }
@@ -8107,6 +8015,7 @@
     `);
     links("Wall of Honor (proposal)", [
         ["Wall of Honor", "#you/honor"],
+        ["Wall of Honor, first three medals", "#you/honor?few=1"],
         ["Wall of Honor, new account", "#you/honor", { scenario: "empty" }],
         ["A 1v1 win", "#you/honor/~honorFight?id=h0"],
         ["2nd of 6", "#you/honor/~honorFight?id=office"],

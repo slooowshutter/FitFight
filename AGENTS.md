@@ -71,7 +71,7 @@ Product ideas go in the [Notion Product Backlog](https://app.notion.com/p/3d3890
 - Touch **no** `.swift` file and nothing under `FitFight.xcodeproj/` while proposing. That keeps TestFlight quiet until he picks one.
 - **When Marc gives the go:** delete the losing options and the `variant(...)` entry so the winner is plain mirror code, then port it to Swift. Open a PR only when Marc explicitly asks for one.
 - **Every native UI change updates `app.html` in the same branch**, including fixes and copy changes, and bumps `MIRROR.matches`. When the two disagree, Swift is the truth: fix the mirror. A change with nothing visible (API, sync, models) leaves it alone.
-- Before pushing a mirror change, run `node scripts/app-mirror-sweep.mjs` (opens every screen, taps every button, every option) until it says "No problems". Check the match with `scripts/app-mirror-check.sh`: it renders the real app in the Simulator and the mirror with the same fake people, side by side. The fake people and fights are `FitFight/CompanionPreview.swift`'s; change both together.
+- Check the match with `scripts/app-mirror-check.sh`: it renders the real app in the Simulator and the mirror with the same fake people, side by side. The fake people and fights are `FitFight/CompanionPreview.swift`'s; change both together.
 - The phone is an iPhone 17 (402×874 pt, the Simulator's device), with the version line on Profile only and the Fights / New / Feed / Feedback / Profile tab bar.
 - When Marc explicitly asks for a PR, give him a clickable link that opens the exact screen (the part after `#` is any route from the map):
   `https://htmlpreview.github.io/?https://raw.githubusercontent.com/slooowshutter/FitFight/<branch>/docs/design/source/kit/app.html#fights/fight?id=duel`

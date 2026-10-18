@@ -7,22 +7,26 @@ on:
             - "scripts/app-store-release-audit.rb"
             - ".github/workflows/app-store-release-tools.yml"
 
+concurrency:
+    group: ios-distribution
+    cancel-in-progress: false
+
 jobs:
     audit:
         runs-on: ubuntu-latest
-        timeout-minutes: 10
+        timeout-minutes: 20
         permissions:
-            contents: read
+            contents: write
         steps:
             - uses: actions/checkout@v4
             - uses: ruby/setup-ruby@v1
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Audit current release metadata and screenshots
+            - name: Create the 1.2.0 draft with its listing, review notes and screenshots
               env:
                   FITFIGHT_RELEASE_VERSION: "1.2.0"
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-              run: bundle exec ruby scripts/app-store-release-audit.rb audit
+              run: bundle exec ruby scripts/app-store-release-audit.rb draft

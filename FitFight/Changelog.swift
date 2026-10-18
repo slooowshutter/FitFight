@@ -29,6 +29,20 @@ enum Changelog {
             year: 2026,
             month: 10,
             day: 17,
+            notes: "New post: Photo or video shows Take Photo and Photo Library right under the button, so adding a photo no longer sometimes does nothing."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
+            notes: "The evening summary now says who posted and in which fight."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
+            day: 17,
             notes: "The Feed tab shows how many new posts people sent since you last opened it."
         ),
         ReleaseNote(

@@ -85,11 +85,11 @@ test("notification controls preserve old clients and batch activity without losi
     });
     const content = await readNotificationContent(delivery, "en", database);
     assert.ok(content?.body.includes("and 1 other reacted"));
-    assert.ok(content?.body.includes("1 new post"));
+    assert.ok(content?.body.includes(`@notif_${peer.slice(0, 8)} posted in Weekend Warriors.`));
     assert.ok(content?.route.endsWith("activity=1"));
     assert.equal(content?.imageUrl, null);
     const reactionOnly = await readNotificationContent({ ...delivery, preferences: { ...delivery.preferences, feed_post: false } }, "en", database);
-    assert.ok(!reactionOnly?.body.includes("new post"));
+    assert.ok(!reactionOnly?.body.includes("posted in"));
     assert.ok(reactionOnly?.route.includes(`post=${postId}`));
     await database`insert into private.feed_blocks (blocker_id, blocked_id) values (${owner}, ${peer}), (${owner}, ${third})`;
     assert.equal(await readNotificationContent(delivery, "en", database), null, "Delayed pushes must recheck blocks");

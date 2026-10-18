@@ -303,5 +303,10 @@
     "channel": "staging",
     "version": "1.2.0",
     "build": 230
+  },
+  {
+    "channel": "staging",
+    "version": "1.2.0",
+    "build": 231
   }
 ]

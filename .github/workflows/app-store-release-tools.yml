@@ -16,23 +16,17 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 20
         permissions:
-            contents: write
+            contents: read
         steps:
             - uses: actions/checkout@v4
             - uses: ruby/setup-ruby@v1
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Select 1.2.0 build 232 and submit it for App Review
+            - name: Audit current release metadata and screenshots
               env:
                   FITFIGHT_RELEASE_VERSION: "1.2.0"
                   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
                   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
                   APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-              run: bundle exec ruby scripts/app-store-release-audit.rb submit 232
-            - name: Admit the submitted build as the production review build
-              env:
-                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-                  APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-              run: bash scripts/publish-app-releases.sh
+              run: bundle exec ruby scripts/app-store-release-audit.rb audit

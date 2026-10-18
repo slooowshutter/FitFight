@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.2.0",
             year: 2026,
             month: 10,
+            day: 18,
+            notes: "Settings now has Connectors: Apple Health, Garmin and WHOOP. Tap Apple Health to sync, review what FitFight can read, and choose which device’s steps count. Garmin and WHOOP show how to send your steps to Apple Health, where FitFight reads them. The sync details are no longer in Settings."
+        ),
+        ReleaseNote(
+            version: "1.2.0",
+            year: 2026,
+            month: 10,
             day: 17,
             notes: "The Feed tab shows how many new posts people sent since you last opened it."
         ),

@@ -48,8 +48,10 @@ await sleep(1500);
 const links = await run(`LINKS.flatMap((g) => g.items.map(([title, hash, o = {}]) => ({ group: g.group, title, hash, o })))`);
 // Every option after each feature's first (the default) is swept on that feature's links, or on every link.
 const variantRuns = await run(`Object.entries(VARIANTS).flatMap(([key, f]) => f.options.slice(1).map((o) => ({ key, id: o.id, hashes: (f.links || []).map(([, hash]) => hash) })))`);
+// Copy from the map's own links only, or each option would also copy the options before it.
+const base = [...links];
 for (const v of variantRuns) {
-    const own = v.hashes.length ? links.filter((l) => v.hashes.includes(l.hash)) : links;
+    const own = v.hashes.length ? base.filter((l) => v.hashes.includes(l.hash)) : base;
     const extra = v.hashes.filter((h) => !links.some((l) => l.hash === h)).map((hash) => ({ group: "Variant", title: hash, hash, o: {} }));
     for (const l of [...own, ...extra]) links.push({ ...l, title: `${l.title} [${v.key}: ${v.id}]`, variants: { [v.key]: v.id } });
 }

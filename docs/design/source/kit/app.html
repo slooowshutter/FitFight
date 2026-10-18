@@ -7081,9 +7081,8 @@
     });
 
     // ─── Settings (pushed from You) ─────────────────────────────────
-    function healthGroup(p, ui) {
-        const h = healthState(p);
-        const more = ui.more ?? p.more === "1";
+    // The Apple Health status row. `onSpec` is what a tap does: sync today, open the Apple Health sheet as a connector.
+    function healthRow(h, onSpec) {
         const busy = h.connection === "syncing";
         const tone = h.connection === "syncFailed" || h.connection === "noAccessibleSteps" ? "ember" : h.connection === "upToDate" ? (h.activitySyncFailed ? "ember" : "moss") : "neutral";
         const detail = {
@@ -7093,9 +7092,14 @@
         }[h.connection];
         const healthPill = h.connection === "syncFailed" || (h.connection === "upToDate" && h.activitySyncFailed) ? pill("Retry", "softEmber")
             : h.connection === "syncing" ? pill("Syncing", "neutral") : h.connection === "notConnected" ? pill("Connect", "solidMoss") : pill("Connected", "softMoss");
+        return FF.groupedRow({ title: "Apple Health activity", subtitle: detail, icon: "heart", enabled: !busy, subtitleTone: tone, trailing: healthPill, on: onSpec });
+    }
+    function healthGroup(p, ui) {
+        const h = healthState(p);
+        const more = ui.more ?? p.more === "1";
+        const busy = h.connection === "syncing";
         return FF.grouped([
-            FF.groupedRow({ title: "Apple Health activity", subtitle: detail, icon: "heart", enabled: !busy, subtitleTone: tone, trailing: healthPill, on: busy ? null : `pfHealthSync:${h.hasAsked ? "" : "ask"}` }),
-            V("data-sources") === "page" ? FF.groupedRow({ title: "Watches and apps", subtitle: "Garmin, Strava, WHOOP, Oura and more", icon: "applewatch", subtitleTone: "neutral", trailing: FF.chevron(), on: "pfPush:dataSources" }) : "",
+            healthRow(h, busy ? null : `pfHealthSync:${h.hasAsked ? "" : "ask"}`),
             FF.groupedRow({ title: more ? "Fewer settings" : "More settings", icon: "slider.horizontal.3", trailing: `<span class="pf-updown">${icon(more ? "chevron.up" : "chevron.down")}</span>`, on: `set:more=${!more}` }),
             ...(more ? [
                 FF.groupedRow({ title: "Request Health access", subtitle: "Ask for access to Health types you haven’t reviewed yet. Fights use Steps only.", icon: "heart.circle", enabled: !busy, subtitleTone: "neutral", trailing: pill("Review", "softMoss"), on: busy ? null : "pfHealthSync:ask" }),
@@ -7133,8 +7137,7 @@
             ])) : "";
             const body = largeTitle("Settings")
                 + FF.section("Profile", profileRows, { extraTop: false })
-                + FF.section("Apple Health", healthGroup(p, ui))
-                + (V("data-sources") === "inline" ? sourceSections() : "")
+                + (V("connectors") === "connectors" ? FF.section("Connectors", connectorsGroup(p)) : FF.section("Apple Health", healthGroup(p, ui)))
                 + FF.section("Activity", FF.grouped([navRow("Notifications & activity", "push:activity")]))
                 + FF.section("App", appRows)
                 + developer;
@@ -7161,92 +7164,90 @@
     });
     action("pfOpenSettings", () => toast({ title: "Opens iPhone Settings", message: "Settings → FitFight", icon: "gearshape", tone: "neutral" }));
 
-    // ─── Watches and apps (proposal) ────────────────────────────────
-    // via "health": the vendor app writes Steps to Apple Health. "workouts": it writes workouts only.
-    // "direct": FitFight would connect to the vendor itself (none is built yet).
-    variant("data-sources", {
-        title: "Watches and apps",
-        note: "Where people see each watch or app, connect the ones FitFight can reach, and learn how the rest reach FitFight through Apple Health.",
+    // ─── Connectors (proposal) ──────────────────────────────────────
+    // FitFight reads only Apple Health. Each connector is a watch or app and how it gets into Apple Health.
+    variant("connectors", {
+        title: "Connectors",
+        note: "Settings lists Apple Health and every watch or app as connectors. Apple Health opens its access and sync; each watch or app shows how to send it to Apple Health. The sync diagnostics stay in the admin Debug menu.",
         options: [
-            { id: "today", name: "Today", when: "The app as it is now: Apple Health only." },
-            { id: "page", name: "Own page from Settings", when: "Right if the list should stay out of the way: one new row under Apple Health opens it." },
-            { id: "inline", name: "Listed in Settings", when: "Right if people should see every watch and app without another tap." },
+            { id: "today", name: "Today", when: "The app as it is now: Apple Health and More settings." },
+            { id: "connectors", name: "Connectors", when: "Marc's pick: one list, Apple Health first, then each watch or app." },
         ],
         links: [
             ["Settings", "#you/settings"],
-            ["Watches and apps", "#you/settings/dataSources"],
-            ["Garmin", "#you/settings/dataSources/~sourceGuide?id=garmin"],
-            ["Strava", "#you/settings/dataSources/~sourceGuide?id=strava"],
-            ["WHOOP", "#you/settings/dataSources/~sourceGuide?id=whoop"],
-            ["Which steps count", "#you/settings/dataSources/~sourceGuide?id=priority"],
+            ["Apple Health", "#you/settings/~appleHealth"],
+            ["Apple Health, not connected", "#you/settings/~appleHealth?health=notConnected"],
+            ["Garmin", "#you/settings/~sourceGuide?id=garmin"],
+            ["WHOOP", "#you/settings/~sourceGuide?id=whoop"],
+            ["Strava", "#you/settings/~sourceGuide?id=strava"],
+            ["Fitbit", "#you/settings/~sourceGuide?id=fitbit"],
         ],
     });
     const SOURCES = [
-        { id: "garmin", name: "Garmin", app: "Garmin Connect", via: "health",
+        { id: "garmin", name: "Garmin", app: "Garmin Connect", gives: "Steps and workouts",
             why: "Garmin stopped letting new apps connect to its data, so FitFight can’t link to Garmin directly. Your Garmin steps still count: Garmin Connect sends them to Apple Health, and FitFight reads them there.",
             setup: "In Garmin Connect, tap More → Settings → Connected Apps → Apple Health, then turn on Steps.",
             sync: "Garmin sends steps to Apple Health only while Garmin Connect is open. After your watch syncs, open Garmin Connect, then FitFight. Do it once more before a fight ends." },
-        { id: "polar", name: "Polar", app: "Polar Flow", via: "health", setup: "In Polar Flow, turn on Apple Health and allow Steps." },
-        { id: "coros", name: "COROS", app: "COROS", via: "health", setup: "In the COROS app, turn on Apple Health and allow Steps." },
-        { id: "strava", name: "Strava", app: "Strava", via: "workouts",
-            why: "Strava’s rules don’t let apps show your Strava data to friends, so it can’t count in fights. Strava sends the workouts it records to Apple Health, but not steps. Your steps come from your iPhone or watch.",
+        { id: "whoop", name: "WHOOP", app: "WHOOP", gives: "Steps and workouts", setup: "In the WHOOP app, turn on Apple Health and allow Steps." },
+        { id: "oura", name: "Oura", app: "Oura", gives: "Steps and workouts", setup: "In the Oura app, turn on Apple Health and allow Steps." },
+        { id: "polar", name: "Polar", app: "Polar Flow", gives: "Steps and workouts", setup: "In Polar Flow, turn on Apple Health and allow Steps." },
+        { id: "coros", name: "COROS", app: "COROS", gives: "Steps", setup: "In the COROS app, turn on Apple Health and allow Steps." },
+        { id: "strava", name: "Strava", app: "Strava", gives: "Workouts only", noSteps: true,
+            why: "Strava sends the workouts it records to Apple Health, but not steps, so it doesn’t change your step count. Your steps come from your iPhone or watch.",
             setup: "In Strava, tap You → Settings → Manage Apps and Devices → Health, then tap Connect." },
-        { id: "whoop", name: "WHOOP", via: "direct", reads: "Recovery, strain and sleep" },
-        { id: "oura", name: "Oura", via: "direct", reads: "Readiness, sleep and activity" },
-        { id: "fitbit", name: "Fitbit", via: "direct", reads: "Steps and workouts", why: "Fitbit doesn’t send steps to Apple Health. Connect it here so your fights count your Fitbit steps." },
+        { id: "fitbit", name: "Fitbit", gives: "Not available yet", unavailable: true,
+            why: "Fitbit doesn’t send your activity to Apple Health yet, so FitFight can’t read it." },
     ];
-    const connected = (id) => (PD().connectedSources ||= []).includes(id);
-    const openHealthRow = () => FF.groupedRow({ title: "Open Health", trailing: `<span class="pf-syschev" style="color:var(--text)">${icon("arrow.up.right")}</span>`, on: external("x-apple-health://") });
-    function sourceRow(s) {
-        const subtitle = s.via === "direct" ? s.reads : s.via === "health" ? "Steps through Apple Health" : "Workouts only, no steps";
-        const trailing = s.via !== "direct" ? FF.chevron() : connected(s.id) ? pill("Connected", "softMoss") : pill("Connect", "solidMoss");
-        return `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><span class="icon pf-mono">${esc(s.name[0])}</span><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(subtitle)}</span></span>${trailing}</button>`;
+    // What HealthKitActivityAggregates.readTypes asks for, grouped the way people say it.
+    const HEALTH_READS = [
+        ["shoeprints.fill", "Steps", "Used in your fights"], ["figure.run", "Workouts"], ["flame.fill", "Active and resting energy"],
+        ["figure.walk", "Distance and pushes"], ["clock", "Exercise, move and stand minutes"], ["arrow.up", "Flights climbed"],
+    ];
+    const openHealthRow = (title = "Open Health", subtitle = "") => FF.groupedRow({ title, subtitle, subtitleTone: "neutral", trailing: `<span class="pf-syschev" style="color:var(--text)">${icon("arrow.up.right")}</span>`, on: external("x-apple-health://") });
+    const guideSteps = (list) => FF.card(list.map(([title, text], i) => `<div class="pf-step"><span class="pf-step-num">${i + 1}</span><span class="vstack grow" style="gap:3px"><span class="t-rowTitle">${esc(title)}</span><span class="t-caption c-2">${esc(text)}</span></span></div>`).join(""), { padding: 16 });
+    function connectorsGroup(p) {
+        const rows = SOURCES.map((s) => `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><span class="icon pf-mono">${esc(s.name[0])}</span><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--${s.unavailable ? "textTertiary" : "textSecondary"})">${esc(s.gives)}</span></span>${FF.chevron()}</button>`);
+        return FF.grouped([healthRow(healthState(p), "pfHealthOpen"), ...rows])
+            + `<p class="t-caption c-2 pf-footer">FitFight reads Apple Health. Connect your watch or app to Apple Health and it counts here too.</p>`;
     }
-    function sourceSections() {
-        return FF.section("Through Apple Health", FF.grouped([
-            ...SOURCES.filter((s) => s.via !== "direct").map(sourceRow),
-            FF.groupedRow({ title: "Which steps count", subtitle: "When your iPhone and watch both count", icon: "arrow.up.arrow.down", subtitleTone: "neutral", trailing: FF.chevron(), on: "present:sourceGuide?id=priority" }),
-        ])) + FF.section("Connect to FitFight", FF.grouped(SOURCES.filter((s) => s.via === "direct").map(sourceRow)));
-    }
-    screen("dataSources", {
-        kind: "push",
-        title: "Watches and apps",
-        render: () => `<div class="pf-push">${FF.screen(largeTitle("Watches and apps") + `<p class="t-body c-2">FitFight counts your steps from Apple Health. Here is how each watch and app gets there.</p>` + sourceSections(), { top: navBar("Watches and apps") })}</div>`,
+    // Opening Apple Health from a link-only state (`settings?health=...`) carries that state into the sheet.
+    action("pfHealthOpen", () => {
+        const entry = topEntry();
+        if (entry?.p?.health) { Object.assign(PD().health, HEALTH_STATES[entry.p.health] || {}); delete entry.p.health; }
+        present("appleHealth");
     });
-    // One sheet per source, plus "Which steps count" (id=priority): Apple Health keeps the top source when two overlap.
-    screen("sourceGuide", {
+    screen("appleHealth", {
         kind: "sheet",
-        title: "Watch or app",
+        title: "Apple Health",
         render: (p) => {
-            const s = SOURCES.find((x) => x.id === p.id);
-            const steps = (list) => FF.card(list.map(([title, text], i) => `<div class="pf-step"><span class="pf-step-num">${i + 1}</span><span class="vstack grow" style="gap:3px"><span class="t-rowTitle">${esc(title)}</span><span class="t-caption c-2">${esc(text)}</span></span></div>`).join(""), { padding: 16 });
-            let body;
-            if (!s) {
-                body = `<p class="t-body c-2">Your iPhone counts steps, and so does your watch. When both count the same walk, Apple Health keeps one count, from the device at the top of its list. Put the one you wear all day at the top.</p>`
-                    + steps([["Open Health and tap Browse", "Then tap Activity → Steps → Data Sources & Access."], ["Tap Edit", "Drag the device you wear all day to the top, then tap Done."]])
-                    + FF.grouped([openHealthRow()]);
-            } else if (s.via === "direct") {
-                const on = connected(s.id);
-                body = (on ? FF.notice(`${s.name} is connected.`, { tone: "moss", icon: "checkmark" }) : "")
-                    + `<p class="t-body c-2">${esc(s.why || `Connect ${s.name} to use your ${s.reads.toLowerCase()} in FitFight. Your steps keep coming from Apple Health.`)}</p>`
-                    + (on ? FF.button(`Disconnect ${s.name}`, { kind: "ghost", full: true, on: `pfSource:${s.id}` }) : FF.cta(`Connect ${s.name}`, { on: `pfSourceConnect:${s.id}` }));
-            } else {
-                const list = [[`Turn on Apple Health in ${s.app}`, s.setup]];
-                if (s.sync) list.push([`Open ${s.app} to sync`, s.sync]);
-                if (s.via === "health") list.push([`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]);
-                body = (s.why ? FF.notice(s.why, { tone: "neutral", icon: "info.circle" }) : `<p class="t-body c-2">${esc(`${s.app} sends your steps to Apple Health, and FitFight reads them there.`)}</p>`)
-                    + steps(list) + FF.grouped([openHealthRow()]);
-            }
-            return FF.screen(body, { top: sheetHead(s ? s.name : "Which steps count"), clearance: false, bodyStyle: "padding-top:0" });
+            if (p.health) { Object.assign(PD().health, HEALTH_STATES[p.health] || {}); delete p.health; }
+            const h = PD().health;
+            const body = `<p class="t-body c-2">FitFight reads your activity from Apple Health. Any watch or app you connect to Apple Health counts too.</p>`
+                + FF.grouped([healthRow(h, h.connection === "syncing" ? null : `pfHealthSync:${h.hasAsked ? "" : "ask"}`)])
+                + FF.section("Access", FF.grouped([
+                    FF.groupedRow({ title: "Review access", subtitle: "Choose what FitFight can read.", icon: "heart.circle", subtitleTone: "neutral", trailing: FF.chevron(), on: "pfHealthSync:ask" }),
+                    openHealthRow("Change access in Health", "In Health, tap your profile → Apps → FitFight."),
+                ]))
+                + FF.section("FitFight asks to read", FF.grouped(HEALTH_READS.map(([glyph, title, note]) => FF.groupedRow({ title, subtitle: note, icon: glyph }))))
+                + FF.section("Which steps count", `<p class="t-body c-2">Your iPhone counts steps, and so does your watch. When both count the same walk, Apple Health keeps one count, from the device at the top of its list. Put the one you wear all day at the top.</p>`
+                    + guideSteps([["Open Health and tap Browse", "Then tap Activity → Steps → Data Sources & Access."], ["Tap Edit", "Drag the device you wear all day to the top, then tap Done."]]));
+            return FF.screen(body, { top: sheetHead("Apple Health"), clearance: false, bodyStyle: "padding-top:0" });
         },
     });
-    // Connecting signs in on the vendor's site (Safari), then comes back connected.
-    action("pfSourceConnect", (id) => present("sysExternal", { url: `https://${id}.com/oauth`, then: `pfSource:${id}` }));
-    action("pfSource", (id) => {
-        const list = (PD().connectedSources ||= []);
-        if (list.includes(id)) list.splice(list.indexOf(id), 1);
-        else list.push(id);
-        render();
+    screen("sourceGuide", {
+        kind: "sheet",
+        title: "Connector",
+        render: (p) => {
+            const s = SOURCES.find((x) => x.id === p.id) || SOURCES[0];
+            let body = s.why ? FF.notice(s.why, { tone: "neutral", icon: "info.circle" }) : `<p class="t-body c-2">${esc(`${s.app} sends your ${s.gives.toLowerCase()} to Apple Health, and FitFight reads them there.`)}</p>`;
+            if (!s.unavailable) {
+                const list = [[`Turn on Apple Health in ${s.app}`, s.setup]];
+                if (s.sync) list.push([`Open ${s.app} to sync`, s.sync]);
+                if (!s.noSteps) list.push([`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]);
+                body += guideSteps(list) + FF.grouped([openHealthRow()]);
+            }
+            return FF.screen(body, { top: sheetHead(s.name), clearance: false, bodyStyle: "padding-top:0" });
+        },
     });
     action("pfRestore", (_, ctx) => {
         const ui = ctx.ui;
@@ -8014,6 +8015,7 @@
         .pf-systoggle[aria-checked="true"]::after { transform: translateX(23px); }
         .pf-choice { display: inline-grid; place-items: center; font-size: 20px; color: var(--textFaint); }
         .pf-choice.on { color: var(--mossText); }
+        .pf-footer { margin: 8px 16px 0; }
         .pf-mono { font-size: 17px; font-weight: 800; color: var(--text); }
         .pf-step { display: flex; align-items: flex-start; gap: 12px; }
         .pf-step + .pf-step { margin-top: 16px; }

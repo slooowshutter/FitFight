@@ -90,18 +90,24 @@ export async function readNotificationContent(
             const reactions = contexts.filter((event) => event.kind === "post_reaction");
             const actors = [...new Set(reactions.map((event) => event.actor_handle))];
             const reactedPosts = new Set(reactions.map((event) => event.post_id)).size;
-            const newPosts = new Set(contexts.filter((event) => event.kind === "feed_post").map((event) => event.post_id)).size;
+            const posted = contexts.filter((event) => event.kind === "feed_post");
+            const posters = [...new Set(posted.map((event) => event.actor_handle))];
+            const newPosts = new Set(posted.map((event) => event.post_id)).size;
+            const named = (handles: string[]) => `@${handles[0]}` + (handles.length > 1
+                ? (fr ? ` et ${handles.length - 1} autre${handles.length > 2 ? "s" : ""}` : ` and ${handles.length - 1} other${handles.length > 2 ? "s" : ""}`) : "");
             const parts: string[] = [];
             if (actors.length > 0) {
-                const who = `@${actors[0]}` + (actors.length > 1
-                    ? (fr ? ` et ${actors.length - 1} autre${actors.length > 2 ? "s" : ""}` : ` and ${actors.length - 1} other${actors.length > 2 ? "s" : ""}`) : "");
                 parts.push(fr
-                    ? `${who} ${actors.length > 1 ? "ont" : "a"} réagi à ${reactedPosts === 1 ? "ta publication" : `${reactedPosts} de tes publications`}.`
-                    : `${who} reacted to ${reactedPosts === 1 ? "your post" : `${reactedPosts} of your posts`}.`);
+                    ? `${named(actors)} ${actors.length > 1 ? "ont" : "a"} réagi à ${reactedPosts === 1 ? "ta publication" : `${reactedPosts} de tes publications`}.`
+                    : `${named(actors)} reacted to ${reactedPosts === 1 ? "your post" : `${reactedPosts} of your posts`}.`);
             }
-            if (newPosts > 0) parts.push(fr
-                ? `${newPosts} nouvelle${newPosts > 1 ? "s" : ""} publication${newPosts > 1 ? "s" : ""} dans tes défis.`
-                : `${newPosts} new post${newPosts > 1 ? "s" : ""} in your fights.`);
+            if (newPosts > 0) {
+                const fights = new Set(posted.map((event) => event.fight_id)).size;
+                const where = fights === 1 ? posted[0].fight_name : (fr ? `${fights} défis` : `${fights} fights`);
+                parts.push(fr
+                    ? `${named(posters)} ${posters.length > 1 ? "ont" : "a"} publié dans ${where}.`
+                    : `${named(posters)} posted in ${where}.`);
+            }
             title = onePost ? first.fight_name : (fr ? "Ton résumé du soir" : "Your evening summary");
             body = parts.join(" ");
             if (onePost && newPosts === 1 && actors.length === 0) {

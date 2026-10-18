@@ -1127,6 +1127,28 @@ paths:
                     description: Missing or invalid session
                 "403":
                     description: Not the FitFight admin
+    /admin/production-sign-in:
+        post:
+            operationId: mintProductionSignIn
+            summary: Admin only. A one-time production login for the web app's Production switch.
+            description: Called by a staging web app with its staging login. Only the staging accounts in productionAccountByStagingAccount qualify; the token opens their fixed production account, and the browser trades it for a session with the production project's verifyOtp. Nothing is emailed and no account is created. Answers only Marc's local next dev (localhost, same-origin), with PRODUCTION_SUPABASE_SECRET_KEY from his web/.env.local.
+            security: [{ bearerAuth: [] }]
+            responses:
+                "200":
+                    description: One-time magic-link token hash for the production project.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                required: [token_hash]
+                                properties:
+                                    token_hash: { type: string }
+                "401":
+                    description: Missing or invalid session
+                "403":
+                    description: Not an account listed for the Production switch
+                "503":
+                    description: Not a request from Marc's local next dev (every Vercel deployment), or no PRODUCTION_SUPABASE_SECRET_KEY
     /admin/founder-fights:
         get:
             operationId: readFounderChallengers

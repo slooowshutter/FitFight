@@ -49,7 +49,8 @@ export const fightPostSchema = z
         fight_id: z.string().uuid().nullable(),
         fight_name: z.string(),
         broadcast: z.boolean(),
-        to_friends: z.boolean(),
+        /** Always sent by current servers; absent from older responses, such as production's on the Production switch. */
+        to_friends: z.boolean().optional(),
         channels: z.array(fightPostChannelSchema),
         body: z.string(),
         created_at: z.string().datetime({ offset: true }),

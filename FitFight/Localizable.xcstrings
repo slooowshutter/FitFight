@@ -462,6 +462,26 @@
                 }
             }
         },
+        "New post: Photo or video shows Take Photo and Photo Library right under the button, so adding a photo no longer sometimes does nothing.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouvelle publication : Photo ou vidéo affiche Prendre une photo et Photothèque juste sous le bouton, et ajouter une photo ne reste plus parfois sans effet."
+                    }
+                }
+            }
+        },
+        "The evening summary now says who posted and in which fight.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le résumé du soir dit maintenant qui a publié et dans quel défi."
+                    }
+                }
+            }
+        },
         "Name your companion": {
             "localizations": {
                 "fr": {
@@ -3815,16 +3835,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Médias"
-                    }
-                }
-            }
-        },
-        "Add media": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Ajouter un média"
                     }
                 }
             }

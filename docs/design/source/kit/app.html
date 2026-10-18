@@ -1847,7 +1847,7 @@
         kind: "alert", title: "Opens outside FitFight",
         alert: (p) => {
             const url = p.url || "https://fitfight.app";
-            const title = /^itms-beta:/.test(url) ? "Opens TestFlight" : /apps\.apple\.com/.test(url) ? "Opens the App Store" : /^mailto:/.test(url) ? "Opens Mail" : "Opens in Safari";
+            const title = /^itms-beta:/.test(url) ? "Opens TestFlight" : /apps\.apple\.com/.test(url) ? "Opens the App Store" : /^mailto:/.test(url) ? "Opens Mail" : /^x-apple-health:/.test(url) ? "Opens Health" : "Opens in Safari";
             return { title, message: url, buttons: [{ title: "OK", role: "cancel", on: "rootSysThen" }] };
         },
     });
@@ -7095,6 +7095,7 @@
             : h.connection === "syncing" ? pill("Syncing", "neutral") : h.connection === "notConnected" ? pill("Connect", "solidMoss") : pill("Connected", "softMoss");
         return FF.grouped([
             FF.groupedRow({ title: "Apple Health activity", subtitle: detail, icon: "heart", enabled: !busy, subtitleTone: tone, trailing: healthPill, on: busy ? null : `pfHealthSync:${h.hasAsked ? "" : "ask"}` }),
+            V("data-sources") === "page" ? FF.groupedRow({ title: "Watches and apps", subtitle: "Garmin, Strava, WHOOP, Oura and more", icon: "applewatch", subtitleTone: "neutral", trailing: FF.chevron(), on: "pfPush:dataSources" }) : "",
             FF.groupedRow({ title: more ? "Fewer settings" : "More settings", icon: "slider.horizontal.3", trailing: `<span class="pf-updown">${icon(more ? "chevron.up" : "chevron.down")}</span>`, on: `set:more=${!more}` }),
             ...(more ? [
                 FF.groupedRow({ title: "Request Health access", subtitle: "Ask for access to Health types you haven’t reviewed yet. Fights use Steps only.", icon: "heart.circle", enabled: !busy, subtitleTone: "neutral", trailing: pill("Review", "softMoss"), on: busy ? null : "pfHealthSync:ask" }),
@@ -7133,6 +7134,7 @@
             const body = largeTitle("Settings")
                 + FF.section("Profile", profileRows, { extraTop: false })
                 + FF.section("Apple Health", healthGroup(p, ui))
+                + (V("data-sources") === "inline" ? sourceSections() : "")
                 + FF.section("Activity", FF.grouped([navRow("Notifications & activity", "push:activity")]))
                 + FF.section("App", appRows)
                 + developer;
@@ -7158,6 +7160,94 @@
         later(1600, () => Object.assign(h, { connection: result === "denied" ? "noAccessibleSteps" : "upToDate", lastManualSync: iso(Date.now()), errorCode: null, failureDetail: null, failureReference: null, activitySyncFailed: false }));
     });
     action("pfOpenSettings", () => toast({ title: "Opens iPhone Settings", message: "Settings → FitFight", icon: "gearshape", tone: "neutral" }));
+
+    // ─── Watches and apps (proposal) ────────────────────────────────
+    // via "health": the vendor app writes Steps to Apple Health. "workouts": it writes workouts only.
+    // "direct": FitFight would connect to the vendor itself (none is built yet).
+    variant("data-sources", {
+        title: "Watches and apps",
+        note: "Where people see each watch or app, connect the ones FitFight can reach, and learn how the rest reach FitFight through Apple Health.",
+        options: [
+            { id: "today", name: "Today", when: "The app as it is now: Apple Health only." },
+            { id: "page", name: "Own page from Settings", when: "Right if the list should stay out of the way: one new row under Apple Health opens it." },
+            { id: "inline", name: "Listed in Settings", when: "Right if people should see every watch and app without another tap." },
+        ],
+        links: [
+            ["Settings", "#you/settings"],
+            ["Watches and apps", "#you/settings/dataSources"],
+            ["Garmin", "#you/settings/dataSources/~sourceGuide?id=garmin"],
+            ["Strava", "#you/settings/dataSources/~sourceGuide?id=strava"],
+            ["WHOOP", "#you/settings/dataSources/~sourceGuide?id=whoop"],
+            ["Which steps count", "#you/settings/dataSources/~sourceGuide?id=priority"],
+        ],
+    });
+    const SOURCES = [
+        { id: "garmin", name: "Garmin", app: "Garmin Connect", via: "health",
+            why: "Garmin stopped letting new apps connect to its data, so FitFight can’t link to Garmin directly. Your Garmin steps still count: Garmin Connect sends them to Apple Health, and FitFight reads them there.",
+            setup: "In Garmin Connect, tap More → Settings → Connected Apps → Apple Health, then turn on Steps.",
+            sync: "Garmin sends steps to Apple Health only while Garmin Connect is open. After your watch syncs, open Garmin Connect, then FitFight. Do it once more before a fight ends." },
+        { id: "polar", name: "Polar", app: "Polar Flow", via: "health", setup: "In Polar Flow, turn on Apple Health and allow Steps." },
+        { id: "coros", name: "COROS", app: "COROS", via: "health", setup: "In the COROS app, turn on Apple Health and allow Steps." },
+        { id: "strava", name: "Strava", app: "Strava", via: "workouts",
+            why: "Strava’s rules don’t let apps show your Strava data to friends, so it can’t count in fights. Strava sends the workouts it records to Apple Health, but not steps. Your steps come from your iPhone or watch.",
+            setup: "In Strava, tap You → Settings → Manage Apps and Devices → Health, then tap Connect." },
+        { id: "whoop", name: "WHOOP", via: "direct", reads: "Recovery, strain and sleep" },
+        { id: "oura", name: "Oura", via: "direct", reads: "Readiness, sleep and activity" },
+        { id: "fitbit", name: "Fitbit", via: "direct", reads: "Steps and workouts", why: "Fitbit doesn’t send steps to Apple Health. Connect it here so your fights count your Fitbit steps." },
+    ];
+    const connected = (id) => (PD().connectedSources ||= []).includes(id);
+    const openHealthRow = () => FF.groupedRow({ title: "Open Health", trailing: `<span class="pf-syschev" style="color:var(--text)">${icon("arrow.up.right")}</span>`, on: external("x-apple-health://") });
+    function sourceRow(s) {
+        const subtitle = s.via === "direct" ? s.reads : s.via === "health" ? "Steps through Apple Health" : "Workouts only, no steps";
+        const trailing = s.via !== "direct" ? FF.chevron() : connected(s.id) ? pill("Connected", "softMoss") : pill("Connect", "solidMoss");
+        return `<button type="button" class="ff-grow" data-on="present:sourceGuide?id=${s.id}"><span class="icon pf-mono">${esc(s.name[0])}</span><span class="grow vstack"><span class="title">${esc(s.name)}</span><span class="subtitle" style="color:var(--textSecondary)">${esc(subtitle)}</span></span>${trailing}</button>`;
+    }
+    function sourceSections() {
+        return FF.section("Through Apple Health", FF.grouped([
+            ...SOURCES.filter((s) => s.via !== "direct").map(sourceRow),
+            FF.groupedRow({ title: "Which steps count", subtitle: "When your iPhone and watch both count", icon: "arrow.up.arrow.down", subtitleTone: "neutral", trailing: FF.chevron(), on: "present:sourceGuide?id=priority" }),
+        ])) + FF.section("Connect to FitFight", FF.grouped(SOURCES.filter((s) => s.via === "direct").map(sourceRow)));
+    }
+    screen("dataSources", {
+        kind: "push",
+        title: "Watches and apps",
+        render: () => `<div class="pf-push">${FF.screen(largeTitle("Watches and apps") + `<p class="t-body c-2">FitFight counts your steps from Apple Health. Here is how each watch and app gets there.</p>` + sourceSections(), { top: navBar("Watches and apps") })}</div>`,
+    });
+    // One sheet per source, plus "Which steps count" (id=priority): Apple Health keeps the top source when two overlap.
+    screen("sourceGuide", {
+        kind: "sheet",
+        title: "Watch or app",
+        render: (p) => {
+            const s = SOURCES.find((x) => x.id === p.id);
+            const steps = (list) => FF.card(list.map(([title, text], i) => `<div class="pf-step"><span class="pf-step-num">${i + 1}</span><span class="vstack grow" style="gap:3px"><span class="t-rowTitle">${esc(title)}</span><span class="t-caption c-2">${esc(text)}</span></span></div>`).join(""), { padding: 16 });
+            let body;
+            if (!s) {
+                body = `<p class="t-body c-2">Your iPhone counts steps, and so does your watch. When both count the same walk, Apple Health keeps one count, from the device at the top of its list. Put the one you wear all day at the top.</p>`
+                    + steps([["Open Health and tap Browse", "Then tap Activity → Steps → Data Sources & Access."], ["Tap Edit", "Drag the device you wear all day to the top, then tap Done."]])
+                    + FF.grouped([openHealthRow()]);
+            } else if (s.via === "direct") {
+                const on = connected(s.id);
+                body = (on ? FF.notice(`${s.name} is connected.`, { tone: "moss", icon: "checkmark" }) : "")
+                    + `<p class="t-body c-2">${esc(s.why || `Connect ${s.name} to use your ${s.reads.toLowerCase()} in FitFight. Your steps keep coming from Apple Health.`)}</p>`
+                    + (on ? FF.button(`Disconnect ${s.name}`, { kind: "ghost", full: true, on: `pfSource:${s.id}` }) : FF.cta(`Connect ${s.name}`, { on: `pfSourceConnect:${s.id}` }));
+            } else {
+                const list = [[`Turn on Apple Health in ${s.app}`, s.setup]];
+                if (s.sync) list.push([`Open ${s.app} to sync`, s.sync]);
+                if (s.via === "health") list.push([`Put ${s.name} first in Health`, `Your iPhone counts steps too. In Health, tap Browse → Activity → Steps → Data Sources & Access → Edit, then drag ${s.name} to the top.`]);
+                body = (s.why ? FF.notice(s.why, { tone: "neutral", icon: "info.circle" }) : `<p class="t-body c-2">${esc(`${s.app} sends your steps to Apple Health, and FitFight reads them there.`)}</p>`)
+                    + steps(list) + FF.grouped([openHealthRow()]);
+            }
+            return FF.screen(body, { top: sheetHead(s ? s.name : "Which steps count"), clearance: false, bodyStyle: "padding-top:0" });
+        },
+    });
+    // Connecting signs in on the vendor's site (Safari), then comes back connected.
+    action("pfSourceConnect", (id) => present("sysExternal", { url: `https://${id}.com/oauth`, then: `pfSource:${id}` }));
+    action("pfSource", (id) => {
+        const list = (PD().connectedSources ||= []);
+        if (list.includes(id)) list.splice(list.indexOf(id), 1);
+        else list.push(id);
+        render();
+    });
     action("pfRestore", (_, ctx) => {
         const ui = ctx.ui;
         ui.purchase = { busy: true, message: "" };
@@ -7924,6 +8014,10 @@
         .pf-systoggle[aria-checked="true"]::after { transform: translateX(23px); }
         .pf-choice { display: inline-grid; place-items: center; font-size: 20px; color: var(--textFaint); }
         .pf-choice.on { color: var(--mossText); }
+        .pf-mono { font-size: 17px; font-weight: 800; color: var(--text); }
+        .pf-step { display: flex; align-items: flex-start; gap: 12px; }
+        .pf-step + .pf-step { margin-top: 16px; }
+        .pf-step-num { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--control); font-size: 13px; font-weight: 800; color: var(--text); }
 
     `);
 

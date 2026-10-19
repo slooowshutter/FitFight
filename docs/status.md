@@ -1,6 +1,6 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **18 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **19 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The WHOOP connection (raw data pull) was approved on 18 Oct 2026; WHOOP-based Fights and other WHOOP UI still wait for the backlog. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
 
@@ -27,6 +27,59 @@ friends are already walking."
   so the browser drew the arrows from another font, smaller and lower than the text.
 - **Live:** nothing deployed. Production gets it when `preview` merges to `main`. The
   App Store version with WHOOP is 1.2.1, still in review. 1.1.3 has no WHOOP.
+
+---
+
+## Sample fight names and home page line, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 to rename the sample fight Eat it and to reword the home page
+line that said "get" twice.
+
+- **Names:** Eat it is now Roommate Rumble (Duel de colocs in French). A fourth live fight,
+  Office Showdown (Le match du bureau), joins: Alex, Sam and Theo, 2 weeks, 4 days left,
+  Alex 430 steps behind Sam, loser brings donuts on Friday.
+- **Home page line:** "Choose a length, set the stakes, then start walking." French:
+  "Choisissez une durée, fixez l’enjeu, puis mettez-vous en marche."
+- **Where:** `web/components/landing/landing-copy.ts`, `FitFight/CompanionPreview.swift`
+  (debug simulator only, so no release note) and the mirror. The next Screenshots run
+  captures the App Store set with the new names. App Store Connect still has the 1.2.0 set
+  until a new set is uploaded with the next App Store version.
+
+---
+
+## Admin Users table and referral stats, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 for a table of the latest users on the admin dashboard's Users tab,
+and for stats on whether people refer their friends.
+
+**Code:** the web admin page (`/app/admin`), Users tab, has a **Newest users** table: 10 rows on
+load, then **Show 20 more**. Columns: Handle (sticky while the others scroll sideways), Name,
+Email, Joined, Friends, Everybody fight, Fights, Referred by, Referrals, Apple Health, Last sync,
+App, Notifications, Sign-in, Time zone. Hovering a header explains its rule. It reads the new
+`GET /api/v1/admin/users` ([backend](backend.md#admin-users-table-prepared-19-oct-2026)). The
+Users tab also has three referral tiles, in the app and on the web: **Monthly referrers**
+(people whose link brought a signup in the last 30 days), **Users who referred someone** (share
+of all users, now vs 7 days ago) and **Onboarding by referral, all users** (referred vs other
+users: picked a username, connected Apple Health, joined a fight, referred someone; groups under
+5 left out). No release note (admin only); the table is web only, so no iPhone or mirror change.
+
+**Contract:** additive. One new admin route and three new dashboard tiles; the dashboard's shape,
+ids, kinds and units are unchanged, and the iPhone app draws new tiles without an update. The
+dashboard route's Production / Staging code moved into `openAdminDatabase`, unchanged.
+
+**Database:** migration `20261019120000_account_auth` adds the view `private.account_auth` (no
+table, no data copied) and grants it to `fitfight_analytics` where that role exists (production).
+Staging gets it with the `develop` merge. Production gets it only with a `main` release; until
+then the Production table shows every column except Email and Sign-in, with a note.
+
+**Verification (local, 19 Oct):** web typecheck and all 550 unit tests passed. On a scratch
+Postgres 17 with Supabase stubs and all 78 migrations, the 21 database-only integration files
+passed (83 tests), including a new test for the table (rules, order, paging, and the no-view
+path). A role without `auth` access read emails through the view and was refused `auth.users`.
+`next dev` with recorded API answers showed the table at 402 and 1280 px wide: 10, 30, then 35
+rows, the sticky handle, and no page-wide sideways scroll.
+
+**Live deployment:** not deployed. PR into `develop`.
 
 ---
 

@@ -328,10 +328,10 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 1.2.1 release", updated: "19 Oct 2026" };
+            const MIRROR = { matches: "develop 1.2.1 release + sample fights", updated: "19 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
-            const DATA_VERSION = 2;
+            const DATA_VERSION = 3;
             const ROOT = "../../../../";
             const QUERY = new URLSearchParams(location.search);
 
@@ -561,8 +561,9 @@
                     };
                 }
                 const group = fight("group", "Step it Up", "K7M2", [28430, 25590, 22340, 20840], [alex, leo, nina, sam], 7, 54, { recurring: true, seriesId: "series-group", inviter: alex });
-                const duel = fight("duel", "Eat it", "H8P4", [18420, 19680], [alex, theo], 7, 124, { actionText: "Takes the stairs all next week" });
+                const duel = fight("duel", "Roommate Rumble", "H8P4", [18420, 19680], [alex, theo], 7, 124, { actionText: "Takes the stairs all next week" });
                 const weekend = fight("weekend", "Walk Wars", "R3V6", [12680, 11820, 11240, 10740], [alex, nina, leo, sam], 3, 32, { actionText: "Plans our next Sunday walk" });
+                const showdown = fight("showdown", "Office Showdown", "D6N3", [84960, 85390, 79120], [alex, sam, theo], 14, 100, { actionText: "Brings donuts on Friday" });
                 const invite = fight("invite", "The breakfast club", "B4K9", [0, 0], [alex, sam], 3, 60, { status: "invited", inviter: sam, invitePitch: "Sam invited you", recurring: true, offersJoinNext: true });
                 invite.standings.find((s) => s.person === alex).invited = true;
                 const finished = fight("finished", "Coffee is on you", "C9F2", [24100, 21900], [alex, theo], 3, -96);
@@ -572,7 +573,7 @@
                     const end = new Date(group.windowStart).getTime() - (round - 1) * 7 * DAY;
                     return { ...clone(group), id: `group-r${round}`, windowEnd: iso(end), windowStart: iso(end - 7 * DAY), status: "finished", serverState: "final", standings: group.standings.map((s) => ({ ...s, finalStepsComplete: true })) };
                 });
-                let fights = [group, duel, weekend, invite, finished, ...history];
+                let fights = [group, duel, weekend, showdown, invite, finished, ...history];
                 if (scenario === "empty" || scenario === "loading") fights = [];
                 if (scenario === "tied") { duel.standings.forEach((s) => { s.score = 18420; s.rank = 1; }); fights = [duel]; }
                 if (scenario === "solo") { duel.standings = duel.standings.filter((s) => s.person === alex); fights = [duel]; }
@@ -4143,9 +4144,10 @@
 
     // ─── Map links ──────────────────────────────────────────────────
     links("Fight detail", [
-        ["Eat it: 1 v 1, Stats", "#fights/fight?id=duel"],
+        ["Roommate Rumble: 1 v 1, Stats", "#fights/fight?id=duel"],
         ["Step it Up: group, last round notice, trophies", "#fights/fight?id=group"],
         ["Walk Wars: 4 racers", "#fights/fight?id=weekend"],
+        ["Office Showdown: 3 racers, 2 weeks", "#fights/fight?id=showdown"],
         ["History pane: rounds, All time, Records", "#fights/fight?id=group&pane=history"],
         ["Round summary", "#fights/fight?id=group&pane=history/~fightRound?id=group-r1"],
         ["A past round (from Past)", "#fights/fight?id=group-r2"],
@@ -5204,7 +5206,7 @@
     const REACTION_PAGE = 4;
     const OFFLINE = "The Internet connection appears to be offline.";
     // The server sends fight names with each post; these cover rounds that are not in your list.
-    const FIGHT_NAMES = { group: "Step it Up", duel: "Eat it", weekend: "Walk Wars", invite: "The breakfast club", finished: "Coffee is on you", lunch: "Lunch laps" };
+    const FIGHT_NAMES = { group: "Step it Up", duel: "Roommate Rumble", weekend: "Walk Wars", invite: "The breakfast club", finished: "Coffee is on you", lunch: "Lunch laps" };
     const PHOTO_ART = ["limited-capybara", "limited-panda", "limited-hedgehog", "limited-silverback", "limited-tiger"];
     const uid = () => `fd${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const plural = (n, one, other) => (n === 1 ? one : other).replace("%d", fmt.n(n));

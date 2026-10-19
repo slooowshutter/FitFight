@@ -17,8 +17,13 @@ const en = {
         titleAccent: "move you.",
         lede: "Join or start a challenge, let Apple Health keep score, and find out who really walks the most.",
         tryIt: "Try it",
-        meta: ["Free", "iPhone", "Apple Health"],
-        betaMeta: ["iPhone", "Tap the TestFlight link twice", "Apple Health"],
+        meta: ["Free", "iPhone", "Apple Health", "WHOOP"],
+        betaMeta: [
+            "iPhone",
+            "Tap the TestFlight link twice",
+            "Apple Health",
+            "WHOOP",
+        ],
         hint: "Tap the tabs. This is the real app.",
     },
     totalSteps: {
@@ -396,9 +401,9 @@ const en = {
             "Live standings and charts",
             "All 12 companions",
             "Feed, posts and reactions",
-            "Apple Health sync",
+            "Apple Health and WHOOP sync",
         ],
-        later: "Coming later, optional",
+        later: "Optional extras",
         extras: [
             [
                 "Special",
@@ -450,7 +455,11 @@ const en = {
             ],
             [
                 "How much does it cost?",
-                "Nothing. FitFight is free, with no ads. Optional Specials and custom companions are coming later.",
+                "Nothing. FitFight is free, with no ads. Specials and custom companions are optional purchases.",
+            ],
+            [
+                "Does it work with WHOOP?",
+                "Yes. In the app, open Profile, then Settings, then Connectors, and connect WHOOP. FitFight gets your sleep, recovery, strain and workouts, updated every hour. Fight steps still come from Apple Health, so turn on Apple Health in the WHOOP app to count your WHOOP steps.",
             ],
             [
                 "Is there an Android app?",
@@ -461,7 +470,7 @@ const en = {
     end: {
         title: "Your friends are already walking.",
         text: "Start a fight tonight. Settle it by Sunday.",
-        art: "Rabbit, Fox, Badger and Turtle playing tennis",
+        art: "Rabbit, Turtle, Fox and Badger jogging on a trail",
     },
     footer: {
         tagline: "Challenge friends. Move to win.",
@@ -531,11 +540,12 @@ const fr: typeof en = {
         titleAccent: "entre amis.",
         lede: "Rejoignez ou lancez un défi, laissez Santé d’Apple compter les pas et découvrez qui marche vraiment le plus.",
         tryIt: "Essayer",
-        meta: ["Gratuit", "iPhone", "Santé d’Apple"],
+        meta: ["Gratuit", "iPhone", "Santé d’Apple", "WHOOP"],
         betaMeta: [
             "iPhone",
             "Ouvrez le lien TestFlight deux fois",
             "Santé d’Apple",
+            "WHOOP",
         ],
         hint: "Touchez les onglets. C’est la vraie app.",
     },
@@ -958,9 +968,9 @@ const fr: typeof en = {
             "Classement et graphiques en direct",
             "Les 12 compagnons",
             "Fil, messages et réactions",
-            "Synchronisation avec Santé d’Apple",
+            "Synchronisation avec Santé d’Apple et WHOOP",
         ],
-        later: "Plus tard, en option",
+        later: "En option",
         extras: [
             [
                 "Spécial",
@@ -1012,7 +1022,11 @@ const fr: typeof en = {
             ],
             [
                 "Combien ça coûte ?",
-                "Rien. FitFight est gratuit et sans pub. Des Spéciaux et des compagnons personnalisés, en option, arriveront plus tard.",
+                "Rien. FitFight est gratuit et sans pub. Les Spéciaux et les compagnons personnalisés sont des achats en option.",
+            ],
+            [
+                "Est-ce que ça marche avec WHOOP ?",
+                "Oui. Dans l’app, ouvrez Profil, puis Réglages, puis Connexions, et connectez WHOOP. FitFight récupère votre sommeil, votre récupération, votre effort et vos entraînements, mis à jour toutes les heures. Les pas des défis viennent toujours de Santé d’Apple : activez Santé d’Apple dans l’app WHOOP pour que vos pas WHOOP comptent.",
             ],
             [
                 "Existe-t-il une app Android ?",
@@ -1023,7 +1037,7 @@ const fr: typeof en = {
     end: {
         title: "Vos amis marchent déjà.",
         text: "Lancez un défi ce soir. Réglez-le d’ici dimanche.",
-        art: "Lapin, Renard, Blaireau et Tortue jouent au tennis",
+        art: "Lapin, Tortue, Renard et Blaireau courent sur un sentier",
     },
     footer: {
         tagline: "Défiez vos amis. Bougez pour gagner.",

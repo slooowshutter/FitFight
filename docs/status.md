@@ -1,23 +1,85 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **18 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **19 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The WHOOP connection (raw data pull) was approved on 18 Oct 2026; WHOOP-based Fights and other WHOOP UI still wait for the backlog. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
 
 ---
 
-## App Store 1.2.1, 19 Oct 2026
+## Admin Users table and referral stats, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 for a table of the latest users on the admin dashboard's Users tab,
+and for stats on whether people refer their friends.
+
+**Code:** the web admin page (`/app/admin`), Users tab, has a **Newest users** table: 10 rows on
+load, then **Show 20 more**. Columns: Handle (sticky while the others scroll sideways), Name,
+Email, Joined, Friends, Everybody fight, Fights, Referred by, Referrals, Apple Health, Last sync,
+App, Notifications, Sign-in, Time zone. Hovering a header explains its rule. It reads the new
+`GET /api/v1/admin/users` ([backend](backend.md#admin-users-table-prepared-19-oct-2026)). The
+Users tab also has three referral tiles, in the app and on the web: **Monthly referrers**
+(people whose link brought a signup in the last 30 days), **Users who referred someone** (share
+of all users, now vs 7 days ago) and **Onboarding by referral, all users** (referred vs other
+users: picked a username, connected Apple Health, joined a fight, referred someone; groups under
+5 left out). No release note (admin only); the table is web only, so no iPhone or mirror change.
+
+**Contract:** additive. One new admin route and three new dashboard tiles; the dashboard's shape,
+ids, kinds and units are unchanged, and the iPhone app draws new tiles without an update. The
+dashboard route's Production / Staging code moved into `openAdminDatabase`, unchanged.
+
+**Database:** migration `20261019120000_account_auth` adds the view `private.account_auth` (no
+table, no data copied) and grants it to `fitfight_analytics` where that role exists (production).
+Staging gets it with the `develop` merge. Production gets it only with a `main` release; until
+then the Production table shows every column except Email and Sign-in, with a note.
+
+**Verification (local, 19 Oct):** web typecheck and all 550 unit tests passed. On a scratch
+Postgres 17 with Supabase stubs and all 78 migrations, the 21 database-only integration files
+passed (83 tests), including a new test for the table (rules, order, paging, and the no-view
+path). A role without `auth` access read emails through the view and was refused `auth.users`.
+`next dev` with recorded API answers showed the table at 402 and 1280 px wide: 10, 30, then 35
+rows, the sticky handle, and no page-wide sideways scroll.
+
+**Live deployment:** not deployed. PR into `develop`.
+
+---
+
+## Website Steps total matches the admin, prepared 19 Oct 2026
+
+On 19 Oct 2026 Marc saw 10.6M Steps recorded on fitfight.app and 12.4M in the admin
+All-time steps card.
+
+- **Cause:** the home page summed `public.step_days`. Since the activity pipeline (#306,
+  23 Sep), new builds write `step_days` only for days inside an open Fight, so most days
+  were missing.
+- **Code:** `readCachedTotalSteps` now sums the admin's `stepHistory`, now shared: complete
+  Apple Health days from each person's signup day to yesterday in Paris, with the Fight
+  fallback for 1.1.2 (210). The hourly cache is unchanged. No API, database, app or release
+  setting changed.
+- **Verification (local):** web typecheck and 550 unit tests passed. The new query gave the
+  expected total on a local Postgres 16 with a small fake schema. The Database workflow
+  (migrated schema, `npm run build` prerenders `/`) has not run on it. Not deployed.
+
+---
+
+## App Store 1.2.1 submitted for review, 19 Oct 2026
 
 Marc asked on 19 Oct 2026 to merge `develop` → `preview` → `main` and submit the new App
 Store version as **1.2.1**, with full control. The code is the 1.2.0 (232) release plus
-`develop`'s documentation commits; only the marketing version changes.
+`develop`'s documentation commits; only the marketing version changed.
 
 - **Version:** `MARKETING_VERSION`, the TestFlight, App Store and release-tools workflows,
-  every Versions row since 1.1.3 and the mirror say 1.2.1.
-- **App Store Connect plan:** cancel the 1.2.0 review submission, rename that same version
-  to 1.2.1 (listing, What's new, review notes, screenshots and `AFTER_APPROVAL` carry over),
-  select the production 1.2.1 build from `main`, submit, then admit it as `review` in
-  `/api/app-release`.
+  every Versions row since 1.1.3 and the mirror say 1.2.1 (#424).
+- **Merges:** #424 into `develop`; `develop` → `preview` (`677f60e`); #425 `preview` → `main`
+  (`06cce99`). No migration or backend change.
+- **Builds:** TestFlight 1.2.1 (233, staging) and App Store candidate 1.2.1 (234, `prod`).
+- **App Store Connect:** `scripts/app-store-release-audit.rb rename 1.2.0` cancelled the
+  1.2.0 (232) review submission and renamed that same version to 1.2.1, so the listing,
+  What's new, review notes, screenshots and `AFTER_APPROVAL` carried over. `submit 234`
+  selected build 234 and submitted it: `WAITING_FOR_REVIEW` on 19 Oct at about 00:30 UTC.
+  The release-tools workflow is back to a read-only audit.
+- **Release endpoint:** `testflight-latest/releases.json` admits prod review 1.2.1 (234),
+  latest stays 1.1.3 (226).
+- **App Privacy:** checked in App Store Connect on 19 Oct: 14 data types including Product
+  Interaction and Purchase History, published 14 Oct. Unchanged.
 
 ---
 

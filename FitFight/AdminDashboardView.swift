@@ -102,6 +102,10 @@ struct AdminDashboardView: View {
                         cardTile(card)
                     }
                 }
+                ForEach(dashboard.tables ?? []) { table in
+                    AdminTableCard(table: table, server: server)
+                        .id("\(server.rawValue)-\(table.id)")
+                }
                 // The server's first chart decides which group leads, so Retention keeps its curves on top.
                 if dashboard.charts.first?.xKind == "date" {
                     trendGroup(dashboard)
@@ -396,6 +400,134 @@ struct FitFightFreeCharacterGiftBody: Encodable {
 struct FitFightFreeCharacterGift: Decodable {
     let people: Int
     let quantity: Int
+}
+
+/// A server-defined table: its first rows come with the dashboard, and "Show more" reads the next
+/// ones. The first column stays put while the others scroll sideways. A new table or column needs
+/// no app update.
+private struct AdminTableCard: View {
+    let table: FitFightAdminDashboard.Table
+    let server: AdminDashboardView.Server
+    @EnvironmentObject private var session: SessionStore
+    @Environment(\.ffTheme) private var theme
+    /// The rows after the dashboard's first page.
+    @State private var more: [FitFightAdminDashboard.TableRow] = []
+    @State private var loading = false
+    @State private var failure: String?
+
+    private static let rowHeight: CGFloat = 36
+
+    /// A signup since the first page shifts the offsets by one, so a page can repeat a row.
+    private var rows: [FitFightAdminDashboard.TableRow] {
+        var seen = Set<String>()
+        return (table.rows + more).filter { seen.insert($0.id).inserted }
+    }
+
+    var body: some View {
+        let shown = rows
+        FFCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: table.title)
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                    Text(verbatim: "\(shown.count) of \(table.total)." + (table.description.map { " \($0)" } ?? ""))
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+                if !shown.isEmpty && !table.columns.isEmpty {
+                    grid(shown)
+                }
+                if let failure {
+                    Text(verbatim: failure)
+                        .ffType(.caption)
+                        .foregroundStyle(theme.emberText)
+                }
+                if shown.count < table.total {
+                    FFButton(
+                        title: "Show \(min(table.pageSize, table.total - shown.count)) more",
+                        kind: .secondary,
+                        size: .small,
+                        enabled: !loading,
+                        busy: loading
+                    ) {
+                        Task { await loadMore(offset: shown.count) }
+                    }
+                }
+                if let note = table.note {
+                    Text(verbatim: note)
+                        .ffType(.micro)
+                        .foregroundStyle(theme.textSecondary)
+                }
+            }
+        }
+    }
+
+    /// Column by column with one row height, so the rows line up across the fixed first column
+    /// and the scrolling ones.
+    private func grid(_ rows: [FitFightAdminDashboard.TableRow]) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            column(0, rows: rows)
+                .frame(width: 124)
+                .overlay(alignment: .trailing) {
+                    Rectangle().fill(theme.hairline).frame(width: 1)
+                }
+            ScrollView(.horizontal) {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(table.columns.indices.dropFirst()), id: \.self) { index in
+                        column(index, rows: rows)
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
+                }
+            }
+        }
+    }
+
+    private func column(_ index: Int, rows: [FitFightAdminDashboard.TableRow]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cell(table.columns[index].title, bold: true, muted: true)
+            ForEach(rows) { row in
+                // An older app can meet a row with more or fewer cells than it expects; never crash on it.
+                let value = row.cells.indices.contains(index) ? row.cells[index] : nil
+                cell(value?.text ?? "", bold: value?.bold ?? false, muted: value?.muted ?? false)
+            }
+        }
+    }
+
+    private func cell(_ text: String, bold: Bool, muted: Bool) -> some View {
+        Text(verbatim: text)
+            .ffType(.caption)
+            .fontWeight(bold ? .heavy : .regular)
+            .foregroundStyle(muted ? theme.textSecondary : theme.text)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: Self.rowHeight, maxHeight: Self.rowHeight, alignment: .leading)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(theme.hairline).frame(height: 1)
+            }
+    }
+
+    private func loadMore(offset: Int) async {
+        loading = true
+        defer { loading = false }
+        do {
+            let token = try await session.freshAccessToken()
+            let project = SupabaseConfig.projectURL.host?.components(separatedBy: ".").first ?? ""
+            let page = try await FitFightAPI(baseURL: server.baseURL).adminTable(
+                id: table.id,
+                environment: server.rawValue,
+                limit: table.pageSize,
+                offset: offset,
+                authProject: project,
+                accessToken: token
+            )
+            more += page.rows
+            failure = nil
+        } catch {
+            failure = error.localizedDescription
+        }
+    }
 }
 
 /// `GET /api/v1/admin/free-characters`: the newest referral characters. A deleted friend has no username.

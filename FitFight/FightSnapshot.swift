@@ -240,6 +240,56 @@ struct FitFightAdminDashboard: Decodable {
         let value: Double
     }
 
+    /// A server-defined table, drawn between the cards and the charts. The app draws any table, so
+    /// a new table or column needs no app update.
+    struct Table: Decodable, Identifiable {
+        struct Column: Decodable {
+            let title: String
+            let definition: String?
+        }
+
+        let id: String
+        let title: String
+        let description: String?
+        let columns: [Column]
+        /// Rows in the whole table. `rows` is the first page.
+        let total: Int
+        let rows: [TableRow]
+        let note: String?
+        /// Rows each "Show more" adds, read with `GET /api/v1/admin/table`.
+        let pageSize: Int
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case title
+            case description
+            case columns
+            case total
+            case rows
+            case note
+            case pageSize = "page_size"
+        }
+    }
+
+    /// One cell per column, already written for display. Muted reads secondary.
+    struct TableRow: Decodable, Identifiable {
+        struct Cell: Decodable {
+            let text: String
+            let muted: Bool
+            let bold: Bool
+        }
+
+        let id: String
+        let cells: [Cell]
+    }
+
+    /// `GET /api/v1/admin/table`: the next rows of one table.
+    struct TablePage: Decodable {
+        let total: Int
+        let rows: [TableRow]
+        let note: String?
+    }
+
     /// One chip. The server lists every section, so a new one needs no app update.
     struct Section: Decodable {
         let id: String
@@ -257,6 +307,8 @@ struct FitFightAdminDashboard: Decodable {
     let sections: [Section]?
     let cards: [Card]
     let charts: [Chart]
+    /// nil from servers before 19 Oct 2026.
+    let tables: [Table]?
 
     enum CodingKeys: String, CodingKey {
         case section
@@ -267,6 +319,7 @@ struct FitFightAdminDashboard: Decodable {
         case sections
         case cards
         case charts
+        case tables
     }
 }
 

@@ -1,11 +1,7 @@
-import type { Sql } from "postgres";
-import { ApiError, ERROR_CODES, apiRoute, corsPreflight, json } from "@/lib/http";
-import { createProductionAnalyticsClient } from "@/lib/supabase/postgres";
+import { openAdminDatabase } from "@/lib/admin/open-admin-database";
+import { apiRoute, corsPreflight, json } from "@/lib/http";
 import { readAdminDashboard } from "@/lib/supabase/queries/admin-dashboard-supabase-query";
-import {
-    verifyDashboardAdmin,
-    verifyProductionDashboardAdmin,
-} from "@/lib/supabase/queries/auth-supabase-query";
+import { verifyDashboardAdmin } from "@/lib/supabase/queries/auth-supabase-query";
 import { adminDashboardQuerySchema, type AdminDashboard } from "@/lib/types/admin/admin-dashboard";
 
 export const runtime = "nodejs";
@@ -27,33 +23,11 @@ export const GET = apiRoute(async (request) => {
     });
     if (!query.success) throw query.error;
     const { section, days, bucket } = query.data;
-    const own = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes("pvqntpteehdvhqyctwum")
-        ? "production"
-        : "staging";
-    const environment = query.data.environment ?? own;
-    let production: Sql | undefined;
-    if (environment !== own) {
-        if (environment !== "production") {
-            throw new ApiError(400, ERROR_CODES.validation, "This server only adds production data");
-        }
-        production = createProductionAnalyticsClient();
-        try {
-            await verifyProductionDashboardAdmin(admin, production);
-        } catch (error) {
-            if (error instanceof ApiError) throw error;
-            // The caller is the verified admin; the driver's message names the failing login,
-            // host or permission and never contains the connection password.
-            throw new ApiError(
-                502,
-                ERROR_CODES.db_error,
-                `Production database: ${error instanceof Error ? error.message : String(error)}`,
-            );
-        }
-    }
+    const { environment, database } = await openAdminDatabase(admin, query.data.environment);
     const key = `${environment}:${section}:${days}:${bucket ?? "auto"}`;
     const cached = recent.get(key);
     if (cached && Date.now() - cached.at < 5 * 60_000) return json(await cached.dashboard);
-    const dashboard = readAdminDashboard(section, days, environment, production, bucket);
+    const dashboard = readAdminDashboard(section, days, environment, database, bucket);
     recent.set(key, { at: Date.now(), dashboard });
     // A failed result is not reused: the next request retries.
     const result = await dashboard.catch((error: unknown) => {

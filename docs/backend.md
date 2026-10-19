@@ -226,6 +226,26 @@ query only marks its own tile with `Query failed: ...`.
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
 
+## Admin Users table (prepared 19 Oct 2026)
+
+`GET /api/v1/admin/users?[environment=production|staging]&limit=<1-100, default 10>&offset=<default 0>`
+feeds the **Newest users** table on the Users tab of the web admin page (`/app/admin`). It returns
+`{ environment, total, users, note }`, newest signup first, deleted accounts left out. A row has the
+username (and whether the person picked it), name, email, sign-in providers, signup time, friends,
+Everybody fight, fights joined, referrer, referrals, Apple Health connected, last sync, newest app
+build, push registration and time zone. Each column uses the dashboard's own rules (`peopleRules`
+in `admin-dashboard-supabase-query.ts`), so a person reads the same in the table and the tiles.
+Access and the Production / Staging choice are the dashboard's (`openAdminDatabase`).
+
+- **Emails:** they live in `auth.users`, which production's read-only `fitfight_analytics` user
+  cannot read. `private.account_auth` (migration `20261019120000_account_auth`) is a view of
+  `auth.users` (user ID, email, providers) that reads with its owner's rights and copies nothing.
+  Only `fitfight_analytics` gets SELECT on it; `anon`, `authenticated` and `service_role` do not.
+  A database without the view returns null emails and providers, with a `note` saying why:
+  production until this migration reaches `main`.
+- **Web only:** the iPhone dashboard does not show the table. The referral tiles added the same
+  day (Monthly referrers, Users who referred someone, Onboarding by referral) show in both.
+
 ## Recent syncs (prepared 12 Oct 2026)
 
 `GET /api/v1/admin/recent-syncs` returns `{ "people": [...] }` with `user_id`,

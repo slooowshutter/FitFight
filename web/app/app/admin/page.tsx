@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
     Bar,
     BarChart,
@@ -12,6 +12,7 @@ import {
     YAxis,
 } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
@@ -47,7 +48,11 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { FitFightApiError, useFitFightApi } from "@/hooks/use-fitfight-api";
+import {
+    FitFightApiError,
+    fitfightApi,
+    useFitFightApi,
+} from "@/hooks/use-fitfight-api";
 import { browserProjectURL } from "@/lib/supabase/browser-client";
 import {
     adminDashboardBucketSchema,
@@ -56,8 +61,13 @@ import {
     adminDashboardSectionSchema,
     type AdminDashboardCard,
     type AdminDashboardChart,
+    type AdminDashboardEnvironment,
     type AdminDashboardUnit,
 } from "@/lib/types/admin/admin-dashboard";
+import {
+    adminUsersSchema,
+    type AdminUser,
+} from "@/lib/types/admin/admin-users";
 
 const periods = [
     { days: "7", label: "7 days" },
@@ -205,20 +215,280 @@ export default function AdminPage() {
             ) : null}
 
             {data ? (
-                <>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {data.cards.map((card) => (
-                            <StatCard key={card.id} card={card} />
-                        ))}
-                    </div>
-                    <div className="grid gap-4 lg:grid-cols-2">
-                        {data.charts.map((chart) => (
-                            <ChartCard key={chart.id} chart={chart} />
-                        ))}
-                    </div>
-                </>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {data.cards.map((card) => (
+                        <StatCard key={card.id} card={card} />
+                    ))}
+                </div>
+            ) : null}
+            {section === "users" ? (
+                <UsersTable environment={environment} />
+            ) : null}
+            {data ? (
+                <div className="grid gap-4 lg:grid-cols-2">
+                    {data.charts.map((chart) => (
+                        <ChartCard key={chart.id} chart={chart} />
+                    ))}
+                </div>
             ) : null}
         </>
+    );
+}
+
+/** The handle stays in view while the other columns scroll sideways. */
+const sticky =
+    "sticky left-0 z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]";
+
+function dateTime(value: string) {
+    return new Date(value).toLocaleString(undefined, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
+function yesNo(value: boolean) {
+    return value ? "Yes" : <span className="text-muted-foreground">No</span>;
+}
+
+const none = <span className="text-muted-foreground">-</span>;
+
+/** One column each: its header, what it counts, and its cell. */
+const userColumns: {
+    title: string;
+    definition?: string;
+    cell: (user: AdminUser) => ReactNode;
+}[] = [
+    {
+        title: "Handle",
+        cell: (user) =>
+            user.handle_set ? (
+                <span
+                    className="block max-w-36 truncate font-bold"
+                    title={`@${user.handle}`}
+                >
+                    @{user.handle}
+                </span>
+            ) : (
+                <span
+                    className="text-muted-foreground"
+                    title={`@${user.handle}, generated at signup`}
+                >
+                    No username
+                </span>
+            ),
+    },
+    { title: "Name", cell: (user) => user.display_name },
+    { title: "Email", cell: (user) => user.email ?? none },
+    {
+        title: "Joined",
+        definition: "When the account was created, in this browser's time.",
+        cell: (user) => dateTime(user.created_at),
+    },
+    {
+        title: "Friends",
+        definition:
+            "Friends now. Blocked pairs and deleted accounts are not counted.",
+        cell: (user) => user.friends,
+    },
+    {
+        title: "Everybody fight",
+        definition:
+            "In the Everybody fight now: joined in onboarding or later, and not left.",
+        cell: (user) => yesNo(user.everybody_fight),
+    },
+    {
+        title: "Fights",
+        definition:
+            "Fights joined, a repeating Fight once. A Fight counts once someone else joins it. Cancelled, Everybody, suggested and friend Fights do not count. Founder Fights count for the challenger only.",
+        cell: (user) => user.fights,
+    },
+    {
+        title: "Referred by",
+        definition:
+            "Whose referral link they signed up with. A referral counts only when claimed within 7 days of signing up.",
+        cell: (user) => (user.referred_by ? `@${user.referred_by}` : none),
+    },
+    {
+        title: "Referrals",
+        definition: "People who signed up with their referral link.",
+        cell: (user) => user.referrals,
+    },
+    {
+        title: "Apple Health",
+        definition: "Their phone has sent at least one day with steps.",
+        cell: (user) => yesNo(user.health_connected),
+    },
+    {
+        title: "Last sync",
+        definition: "Their phone's last Apple Health upload.",
+        cell: (user) =>
+            user.last_synced_at ? dateTime(user.last_synced_at) : none,
+    },
+    {
+        title: "App",
+        definition: "The version and build of their newest Apple Health sync.",
+        cell: (user) => user.app_version ?? none,
+    },
+    {
+        title: "Notifications",
+        definition:
+            "A device registered for push notifications. Turning them off later in iOS Settings does not show here.",
+        cell: (user) => yesNo(user.notifications),
+    },
+    {
+        title: "Sign-in",
+        cell: (user) =>
+            user.providers?.length
+                ? user.providers
+                      .map(
+                          (provider) =>
+                              provider[0].toUpperCase() + provider.slice(1),
+                      )
+                      .join(", ")
+                : none,
+    },
+    { title: "Time zone", cell: (user) => user.time_zone ?? none },
+];
+
+/** The Users tab's newest accounts: 10 on load, then 20 more per tap. */
+function UsersTable({
+    environment,
+}: {
+    environment: AdminDashboardEnvironment;
+}) {
+    // `next dev` reads through the preview server, like the dashboard (app/api/v1/dev/admin-users).
+    const path =
+        process.env.NODE_ENV === "development"
+            ? "dev/admin-users"
+            : "admin/users";
+    const first = useFitFightApi(
+        `${path}?environment=${environment}&limit=10`,
+        adminUsersSchema,
+    );
+    // The pages after the first, for the database they came from.
+    const [more, setMore] = useState<{
+        environment: AdminDashboardEnvironment;
+        users: AdminUser[];
+    }>();
+    const [loading, setLoading] = useState(false);
+    const [failure, setFailure] = useState<string>();
+    // NOTE: a signup since the first page shifts the offsets by one, so a later page can repeat a row.
+    const users = first.data
+        ? [
+              ...new Map(
+                  [
+                      ...first.data.users,
+                      ...(more?.environment === environment ? more.users : []),
+                  ].map((user) => [user.user_id, user]),
+              ).values(),
+          ]
+        : [];
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-extrabold">Newest users</CardTitle>
+                <CardDescription>
+                    {first.data
+                        ? `${users.length} of ${first.data.total}, newest first. Deleted accounts are left out.`
+                        : "Newest first. Deleted accounts are left out."}
+                </CardDescription>
+            </CardHeader>
+            {/* NOTE: without inline-size containment the table's full width widens the whole page. */}
+            <CardContent className="[contain:inline-size]">
+                {first.error ? (
+                    <p className="text-sm text-ember-text">
+                        {first.error.message}
+                    </p>
+                ) : !first.data ? (
+                    <Skeleton className="h-64" />
+                ) : (
+                    <Table className="tabular-nums">
+                        <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                                {userColumns.map((column, index) => (
+                                    <TableHead
+                                        key={column.title}
+                                        title={column.definition}
+                                        className={cn(
+                                            "px-4",
+                                            index === 0 && sticky,
+                                        )}
+                                    >
+                                        {column.title}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {users.map((user) => (
+                                <TableRow
+                                    key={user.user_id}
+                                    className="hover:bg-transparent"
+                                >
+                                    {userColumns.map((column, index) => (
+                                        <TableCell
+                                            key={column.title}
+                                            className={cn(
+                                                "px-4",
+                                                index === 0 && sticky,
+                                            )}
+                                        >
+                                            {column.cell(user)}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+            {first.data ? (
+                <CardFooter className="flex-wrap gap-3 text-xs text-muted-foreground">
+                    {users.length < first.data.total ? (
+                        <Button
+                            variant="outline"
+                            disabled={loading}
+                            onClick={() => {
+                                setLoading(true);
+                                setFailure(undefined);
+                                fitfightApi(
+                                    `${path}?environment=${environment}&limit=20&offset=${users.length}`,
+                                    adminUsersSchema,
+                                )
+                                    .then(
+                                        (page) =>
+                                            setMore((current) => ({
+                                                environment,
+                                                users: [
+                                                    ...(current?.environment ===
+                                                    environment
+                                                        ? current.users
+                                                        : []),
+                                                    ...page.users,
+                                                ],
+                                            })),
+                                        (error: Error) =>
+                                            setFailure(error.message),
+                                    )
+                                    .finally(() => setLoading(false));
+                            }}
+                        >
+                            {loading
+                                ? "Loading"
+                                : `Show ${Math.min(20, first.data.total - users.length)} more`}
+                        </Button>
+                    ) : null}
+                    {failure ? (
+                        <span className="text-ember-text">{failure}</span>
+                    ) : null}
+                    {first.data.note ? <span>{first.data.note}</span> : null}
+                </CardFooter>
+            ) : null}
+        </Card>
     );
 }
 

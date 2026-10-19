@@ -23,6 +23,42 @@ line that said "get" twice.
 
 ---
 
+## Admin Users table and referral stats, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 for a table of the latest users on the admin dashboard's Users tab,
+and for stats on whether people refer their friends.
+
+**Code:** the web admin page (`/app/admin`), Users tab, has a **Newest users** table: 10 rows on
+load, then **Show 20 more**. Columns: Handle (sticky while the others scroll sideways), Name,
+Email, Joined, Friends, Everybody fight, Fights, Referred by, Referrals, Apple Health, Last sync,
+App, Notifications, Sign-in, Time zone. Hovering a header explains its rule. It reads the new
+`GET /api/v1/admin/users` ([backend](backend.md#admin-users-table-prepared-19-oct-2026)). The
+Users tab also has three referral tiles, in the app and on the web: **Monthly referrers**
+(people whose link brought a signup in the last 30 days), **Users who referred someone** (share
+of all users, now vs 7 days ago) and **Onboarding by referral, all users** (referred vs other
+users: picked a username, connected Apple Health, joined a fight, referred someone; groups under
+5 left out). No release note (admin only); the table is web only, so no iPhone or mirror change.
+
+**Contract:** additive. One new admin route and three new dashboard tiles; the dashboard's shape,
+ids, kinds and units are unchanged, and the iPhone app draws new tiles without an update. The
+dashboard route's Production / Staging code moved into `openAdminDatabase`, unchanged.
+
+**Database:** migration `20261019120000_account_auth` adds the view `private.account_auth` (no
+table, no data copied) and grants it to `fitfight_analytics` where that role exists (production).
+Staging gets it with the `develop` merge. Production gets it only with a `main` release; until
+then the Production table shows every column except Email and Sign-in, with a note.
+
+**Verification (local, 19 Oct):** web typecheck and all 550 unit tests passed. On a scratch
+Postgres 17 with Supabase stubs and all 78 migrations, the 21 database-only integration files
+passed (83 tests), including a new test for the table (rules, order, paging, and the no-view
+path). A role without `auth` access read emails through the view and was refused `auth.users`.
+`next dev` with recorded API answers showed the table at 402 and 1280 px wide: 10, 30, then 35
+rows, the sticky handle, and no page-wide sideways scroll.
+
+**Live deployment:** not deployed. PR into `develop`.
+
+---
+
 ## Website Steps total matches the admin, prepared 19 Oct 2026
 
 On 19 Oct 2026 Marc saw 10.6M Steps recorded on fitfight.app and 12.4M in the admin

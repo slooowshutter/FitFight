@@ -4,8 +4,9 @@ import { after, test } from "node:test";
 import postgres from "postgres";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { adminDashboardSectionValues } from "@/lib/types/admin/admin-dashboard";
+import type { AdminUser } from "@/lib/types/admin/admin-users";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
-import { readAdminDashboard } from "./admin-dashboard-supabase-query";
+import { readAdminDashboard, readAdminUsers } from "./admin-dashboard-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
 const database = postgres(env.DATABASE_URL, { max: 5 });
@@ -414,4 +415,151 @@ test("the metrics section lists every source, counts WHOOP as collected only and
     const today = after.points("raw_per_bucket", "WHOOP").at(-1);
     assert.ok(today);
     assert.equal(today.y - before.cell("raw_per_bucket", "WHOOP", today.x), 3);
+});
+
+test("the users table lists the newest accounts first, a page at a time, by the dashboard's rules", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [ada, ben, cleo] = users;
+    const sourceId = randomUUID(), seriesId = randomUUID(), fightId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from public.fight_series_members where user_id in ${database(users)}`;
+        await database`delete from public.fight_series where owner_id in ${database(users)}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    const referrersBefore = (await readAdminDashboard("users", 30, "staging", database)).cards
+        .find((card) => card.id === "monthly_referrers")?.value ?? 0;
+
+    // Ada signed up 3 days ago with Apple and later linked Google, Ben 2 days ago with Ada's link,
+    // and Cleo yesterday without an email or a username.
+    await database`
+        insert into auth.users(id, email, raw_app_meta_data, created_at) values
+            (${ada}, 'ada@example.com', ${database.json({ provider: "apple", providers: ["apple", "google"] })}, now() - interval '3 days'),
+            (${ben}, 'ben@example.com', ${database.json({ provider: "google", providers: ["google"] })}, now() - interval '2 days'),
+            (${cleo}, null, null, now() - interval '1 day')
+    `;
+    await database`
+        update public.profiles as p set created_at = u.created_at,
+            handle = case when p.user_id = ${cleo} then p.handle else 'u_' || left(replace(p.user_id::text, '-', ''), 12) end,
+            handle_set_at = case when p.user_id <> ${cleo} then u.created_at end,
+            time_zone = case when p.user_id = ${ada} then 'Europe/Paris' end
+        from auth.users as u where u.id = p.user_id and p.user_id in ${database(users)}
+    `;
+    await database`
+        insert into private.referrals(referred_user_id, referrer_user_id, created_at)
+        values (${ben}, ${ada}, now() - interval '2 days' + interval '1 hour')
+    `;
+    await database`
+        insert into private.profile_friendships(user_low, user_high, requester_id, state, created_at, accepted_at)
+        values (least(${ada}::uuid, ${ben}::uuid), greatest(${ada}::uuid, ${ben}::uuid), ${ada}, 'accepted',
+            now() - interval '1 day', now() - interval '1 day')
+    `;
+    // Ben is in the Everybody fight; Cleo joined it and left.
+    await database`
+        insert into public.fight_series (owner_id, join_code, duration_seconds, name, time_zone)
+        values (${ada}, 'PGG7', 2592000, 'Everybody', 'UTC')
+        on conflict do nothing
+    `;
+    await database`
+        insert into public.fight_series_members(series_id, user_id, state)
+        select series.id, member.user_id, member.state::public.fight_member_state
+        from public.fight_series as series
+        cross join (values (${ben}::uuid, 'accepted'), (${cleo}::uuid, 'withdrawn')) as member(user_id, state)
+        where series.join_code = 'PGG7'
+    `;
+    await database`
+        insert into public.fight_series (id, owner_id, name, visibility, recurring, duration_seconds, time_zone, join_code)
+        values (${seriesId}, ${ada}, 'Duel', 'invite_only', false, 604800, 'UTC', ${randomJoinCode()})
+    `;
+    await database`
+        insert into public.fights (id, owner_id, name, series_id, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${ada}, 'Duel', ${seriesId}, 'live', now() - interval '1 day', now() + interval '6 days',
+            'UTC', 'highest_total', 'shared')
+    `;
+    await database`insert into public.fight_members (fight_id, user_id, state, accepted_at) values
+        (${fightId}, ${ada}, 'accepted', now()), (${fightId}, ${ben}, 'accepted', now())`;
+    await database`
+        insert into public.data_sources(id, user_id, provider, source_label, connection_route, capabilities, status,
+            connected_at, last_success_at)
+        values (${sourceId}, ${ben}, 'apple_health', 'Apple Health', 'healthkit', array['steps'], 'healthy',
+            now() - interval '2 days', '2026-10-18T10:00:00Z')
+    `;
+    await database`
+        insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+            observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+        values (${ben}, ${sourceId}, 'day', 'day:' || (current_date - 1), 'steps', current_date - 1, current_date,
+            current_date, current_date - 1, 'Europe/Paris', 5000, 'count', array[gen_random_uuid()], 1)
+    `;
+    await database`
+        insert into private.healthkit_sync_attempts(user_id, attempt_id, trigger, started_at, received_at, outcome,
+            total_ms, stages, app_version, app_build)
+        values
+            (${ben}, gen_random_uuid(), 'foreground', now() - interval '1 day', now() - interval '1 day', 'succeeded',
+                900, '[]', '1.1.3', '226'),
+            (${ben}, gen_random_uuid(), 'foreground', now() - interval '1 hour', now() - interval '1 hour', 'succeeded',
+                900, '[]', '1.2.1', '234')
+    `;
+    // Ada allowed notifications; Ben's phone was revoked.
+    await database`
+        insert into private.device_installations(user_id, token_fingerprint, encrypted_token, encryption_iv,
+            encryption_tag, apns_environment, permission_status, revoked_at)
+        values
+            (${ada}, ${`fingerprint-${ada}`}, 'sealed', 'iv', 'tag', 'production', 'authorized', null),
+            (${ben}, ${`fingerprint-${ben}`}, 'sealed', 'iv', 'tag', 'production', 'authorized', now())
+    `;
+
+    const all = await readAdminUsers(100, 0, "staging", database);
+    const [{ total }] = await database<{ total: number }[]>`
+        select count(*)::int as total from public.profiles where deleted_at is null
+    `;
+    assert.equal(all.total, total);
+    assert.equal(all.environment, "staging");
+    assert.equal(all.note, null);
+    const mine = all.users.filter((user) => users.some((id) => id === user.user_id));
+    assert.deepEqual(mine.map((user) => user.user_id), [cleo, ben, ada], "Newest signup first");
+    assert.ok(mine.every((user) => /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(user.created_at)));
+    const columns = ({ user_id: _id, handle: _handle, display_name: _name, created_at: _created, ...rest }: AdminUser) => rest;
+    const handle = (id: string) => `u_${id.replaceAll("-", "").slice(0, 12)}`;
+    assert.deepEqual(mine.map(columns), [
+        {
+            handle_set: false, email: null, providers: [], friends: 0, everybody_fight: false, fights: 0,
+            referred_by: null, referrals: 0, health_connected: false, last_synced_at: null, app_version: null,
+            notifications: false, time_zone: null,
+        },
+        {
+            handle_set: true, email: "ben@example.com", providers: ["google"], friends: 1, everybody_fight: true,
+            fights: 1, referred_by: handle(ada), referrals: 0, health_connected: true,
+            last_synced_at: "2026-10-18T10:00:00Z", app_version: "1.2.1 (234)", notifications: false, time_zone: null,
+        },
+        {
+            handle_set: true, email: "ada@example.com", providers: ["apple", "google"], friends: 1,
+            everybody_fight: false, fights: 1, referred_by: null, referrals: 1, health_connected: false,
+            last_synced_at: null, app_version: null, notifications: true, time_zone: "Europe/Paris",
+        },
+    ]);
+
+    const at = all.users.findIndex((user) => user.user_id === cleo);
+    const pages = [await readAdminUsers(1, at, "staging", database), await readAdminUsers(2, at + 1, "staging", database)];
+    assert.deepEqual(
+        pages.flatMap((page) => page.users.map((user) => user.user_id)),
+        all.users.slice(at, at + 3).map((user) => user.user_id),
+        "Pages continue where the last one stopped",
+    );
+
+    // Production reads without the view until its migration reaches `main`.
+    const rollback = new Error("rollback");
+    await assert.rejects(database.begin(async (transaction) => {
+        await transaction`drop view private.account_auth`;
+        const before = await readAdminUsers(100, 0, "staging", transaction);
+        const ben = before.users.find((user) => user.user_id === users[1]);
+        assert.equal(ben?.email, null);
+        assert.equal(ben?.providers, null);
+        assert.equal(ben?.referred_by, handle(ada));
+        assert.match(before.note ?? "", /^Emails and sign-in methods show here once/);
+        throw rollback;
+    }), rollback);
+
+    const referrers = (await readAdminDashboard("users", 30, "staging", database)).cards
+        .find((card) => card.id === "monthly_referrers")?.value ?? 0;
+    assert.equal(referrers - referrersBefore, 1, "Ada's link brought Ben");
 });

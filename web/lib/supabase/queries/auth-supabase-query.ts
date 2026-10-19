@@ -147,10 +147,10 @@ export async function readAdminViewer(
 }
 
 /**
- * The dashboard reads aggregates only. A login from the other FitFight project (an App Store
- * build signs in to production) is accepted when the same Apple or Google account owns an
- * admin profile here, so Marc never signs in twice. Returns the admin's account here and its
- * Apple and Google accounts for `verifyProductionDashboardAdmin`.
+ * The dashboard reads aggregates and its Users table, read-only. A login from the other FitFight
+ * project (an App Store build signs in to production) is accepted when the same Apple or Google
+ * account owns an admin profile here, so Marc never signs in twice. Returns the admin's account
+ * here and its Apple and Google accounts for `verifyProductionDashboardAdmin`.
  */
 export async function verifyDashboardAdmin(request: Request): Promise<AdminDashboardAdmin> {
     const project = request.headers.get("x-fitfight-auth-project");

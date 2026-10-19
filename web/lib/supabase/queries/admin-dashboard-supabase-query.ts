@@ -20,6 +20,7 @@ import {
     type AdminDashboardUnit,
     type AdminDashboardWindow,
 } from "@/lib/types/admin/admin-dashboard";
+import { adminUsersCountRowSchema, adminUsersSchema, type AdminUsers } from "@/lib/types/admin/admin-users";
 
 /**
  * The last `span` days, rolling to now, against the `span` days before them; rows expose `at`.
@@ -236,23 +237,10 @@ function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): Adm
 }
 
 /**
- * Cards have fixed spans named in their titles, so the app's period never changes them. Charts
- * over time (`x` date) cover the chosen period. Other charts name their own fixed span.
+ * Who counts as connected to Apple Health, referred, in a Fight, or a friend. The dashboard's tiles
+ * and the Users table share these rules, so a person reads the same in both.
  */
-function definitions(
-    sql: Sql,
-    w: AdminDashboardWindow,
-    section: AdminDashboardSection,
-): { cards: AdminDashboardCardDefinition[]; charts: AdminDashboardChartDefinition[] } {
-    const count = sql`count(*)`;
-    const people = sql`count(distinct e.user_id)`;
-    const per = `per ${w.bucket}`;
-    const ago = (days: number) => new Date(w.now.getTime() - days * 86_400_000);
-    const profiles = sql`
-        select user_id, created_at as at, created_at, handle, handle_set_at, time_zone,
-            companion_id, (created_at at time zone 'Europe/Paris')::date as joined_day
-        from public.profiles where deleted_at is null
-    `;
+function peopleRules(sql: Sql) {
     // NOTE: iOS answers a denied Apple Health read with an empty success, so a person counts as
     // connected only once their phone has sent a day with steps.
     const stepPeople = sql`
@@ -272,6 +260,72 @@ function definitions(
         join public.profiles as referred on referred.user_id = r.referred_user_id
         where referred.deleted_at is null and r.created_at <= referred.created_at + interval '7 days'
     `;
+    // NOTE: the Production view runs this code on the preview server against production, which has no
+    // host_id or friends column until 20261014140000_founder_fights and 20261015210000_friend_fights
+    // reach it. to_jsonb(row) ->> 'column' reads null there and the column elsewhere; use the columns
+    // directly once production has the migrations.
+    // The app-wide and suggested Fights invite people automatically, and every friendship gets a
+    // friend Fight; they distort social metrics.
+    // A founder Fight counts for its challenger, who accepted a real 30-day Fight, but not for the
+    // founder, who is in every one: tiles about a person's own progress add
+    // `m.user_id::text is distinct from f.host`.
+    const userFights = sql`
+        select f.*, to_jsonb(f) ->> 'host_id' as host from public.fights as f
+        left join public.fight_series as series on series.id = f.series_id
+        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false)
+            and (to_jsonb(f) ->> 'friends') is distinct from 'true'
+    `;
+    // A Fight counts once someone besides its owner has accepted a round of it. A Fight nobody
+    // joined, such as a solo test, is not a contest.
+    const userContests = sql`
+        select f.* from (${userFights}) as f
+        where f.state not in ('draft', 'cancelled') and exists (
+            select 1 from public.fights as round
+            join public.fight_members as m on m.fight_id = round.id
+            where round.series_id = f.series_id and m.state = 'accepted' and m.user_id <> round.owner_id
+        )
+    `;
+    // NOTE: declining or removing a friend deletes the pair's row, so requests only count the
+    // rows still here: pending or accepted. Deleted accounts and blocked pairs are left out,
+    // like the app's friends list.
+    const friendPairs = sql`
+        select friendship.user_low, friendship.user_high, friendship.state, friendship.created_at,
+            friendship.accepted_at
+        from private.profile_friendships as friendship
+        join public.profiles as low on low.user_id = friendship.user_low and low.deleted_at is null
+        join public.profiles as high on high.user_id = friendship.user_high and high.deleted_at is null
+        where not exists (
+            select 1 from (
+                select blocker_id, blocked_id from private.profile_blocks
+                union all select blocker_id, blocked_id from private.feed_blocks
+                union all select blocker_id, blocked_id from private.feedback_blocks
+            ) as block
+            where (block.blocker_id = friendship.user_low and block.blocked_id = friendship.user_high)
+                or (block.blocker_id = friendship.user_high and block.blocked_id = friendship.user_low)
+        )
+    `;
+    return { stepPeople, referrals, userFights, userContests, friendPairs };
+}
+
+/**
+ * Cards have fixed spans named in their titles, so the app's period never changes them. Charts
+ * over time (`x` date) cover the chosen period. Other charts name their own fixed span.
+ */
+function definitions(
+    sql: Sql,
+    w: AdminDashboardWindow,
+    section: AdminDashboardSection,
+): { cards: AdminDashboardCardDefinition[]; charts: AdminDashboardChartDefinition[] } {
+    const count = sql`count(*)`;
+    const people = sql`count(distinct e.user_id)`;
+    const per = `per ${w.bucket}`;
+    const ago = (days: number) => new Date(w.now.getTime() - days * 86_400_000);
+    const profiles = sql`
+        select user_id, created_at as at, created_at, handle, handle_set_at, time_zone,
+            companion_id, (created_at at time zone 'Europe/Paris')::date as joined_day
+        from public.profiles where deleted_at is null
+    `;
+    const { stepPeople, referrals, userFights, userContests } = peopleRules(sql);
     // NOTE: an open (or a pull to refresh) is a "foreground" (or "manual") trace that reads Apple
     // Health, or only refreshes Fights for someone without it. Not opens: that Fights refresh within
     // a minute after a background sync, the activity import after any sync (activity stages only),
@@ -323,21 +377,6 @@ function definitions(
         select * from (${stepHistory(sql, w.today, sql`least(${w.start}::date, ${w.today}::date - 61)`)}) as history
         where history.day >= history.joined_day
     `;
-    // NOTE: the Production view runs this code on the preview server against production, which has no
-    // host_id or friends column until 20261014140000_founder_fights and 20261015210000_friend_fights
-    // reach it. to_jsonb(row) ->> 'column' reads null there and the column elsewhere; use the columns
-    // directly once production has the migrations.
-    // The app-wide and suggested Fights invite people automatically, and every friendship gets a
-    // friend Fight; they distort social metrics.
-    // A founder Fight counts for its challenger, who accepted a real 30-day Fight, but not for the
-    // founder, who is in every one: tiles about a person's own progress add
-    // `m.user_id::text is distinct from f.host`.
-    const userFights = sql`
-        select f.*, to_jsonb(f) ->> 'host_id' as host from public.fights as f
-        left join public.fight_series as series on series.id = f.series_id
-        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false)
-            and (to_jsonb(f) ->> 'friends') is distinct from 'true'
-    `;
     // Fight counts and social tiles leave founder Fights out entirely.
     const realFights = sql`select * from (${userFights}) as f where f.host is null`;
     const fightDays = sql`
@@ -355,16 +394,6 @@ function definitions(
                 )
         ) as in_fight
         from (${recentSteps}) as s
-    `;
-    // A Fight counts once someone besides its owner has accepted a round of it. A Fight nobody
-    // joined, such as a solo test, is not a contest.
-    const userContests = sql`
-        select f.* from (${userFights}) as f
-        where f.state not in ('draft', 'cancelled') and exists (
-            select 1 from public.fights as round
-            join public.fight_members as m on m.fight_id = round.id
-            where round.series_id = f.series_id and m.state = 'accepted' and m.user_id <> round.owner_id
-        )
     `;
     const contests = sql`select * from (${userContests}) as f where f.host is null`;
     // Rounds with one accepted fighter are not contests either.
@@ -620,6 +649,28 @@ function definitions(
                         example: (r) => `${r.count(r.value, "person", "people")} joined through a referral in the last 30 days${r.against("in the 30 days before")}.`,
                         query: eventCard(sql, w, 30, referrals, count),
                     },
+                    {
+                        id: "monthly_referrers", title: "Monthly referrers", unit: "count", better: true,
+                        note: "People whose link brought a signup in the last 30 days, vs the 30 before.",
+                        definition: "People whose referral link brought at least one signup in the last 30 days, up to now, compared with the 30 days before. Each person counts once, however many people they brought. A referral counts only when claimed within 7 days of signing up.",
+                        example: (r) => `${r.count(r.value, "person's link", "people's links")} brought someone to FitFight in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, referrals, people),
+                    },
+                    {
+                        id: "referrer_share", title: "Users who referred someone", unit: "percent", better: true,
+                        note: "Share of all users whose link brought a signup, now vs 7 days ago.",
+                        definition: "The share of all users whose referral link has brought at least one signup, now, compared with 7 days ago. A referral counts only when claimed within 7 days of signing up. Deleted accounts are not counted.",
+                        example: (r) => `${r.format(r.value)} of users have brought someone to FitFight${r.against("a week ago")}.`,
+                        query: sql`
+                            select 100.0 * count(*) filter (where p.user_id in (select r.user_id from (${referrals}) as r))
+                                    / nullif(count(*), 0) as value,
+                                100.0 * count(*) filter (where p.created_at < ${ago(7)} and p.user_id in (
+                                        select r.user_id from (${referrals}) as r where r.at < ${ago(7)}))
+                                    / nullif(count(*) filter (where p.created_at < ${ago(7)}), 0) as previous
+                            from public.profiles as p
+                            where p.deleted_at is null
+                        `,
+                    },
                 ],
                 charts: [
                     ...[
@@ -774,6 +825,44 @@ function definitions(
                             select '@' || p.handle as x, count(*)::float8 as y
                             from (${referrals}) as r join public.profiles as p on p.user_id = r.user_id
                             group by p.handle order by 2 desc, 1 limit 10
+                        `,
+                    },
+                    {
+                        id: "referred_vs_others", title: "Onboarding by referral, all users", kind: "table", unit: "percent", x: "label",
+                        definition: "All users in two groups: those who came through someone's referral link and the others. Each row is the share of the group who did that step, as of now. A referral counts only when claimed within 7 days of signing up. Connected Apple Health means their phone has sent at least one day with steps. Creating a fight counts once someone else joins it. Cancelled, app-wide and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count. A group with fewer than 5 people is left out, because one person would swing it.",
+                        example: (r) => {
+                            const fought = (group: string) => r.series.find((line) => line.name === group)
+                                ?.points.find((point) => point.x === "Joined a fight")?.y;
+                            const referred = fought("Referred");
+                            const others = fought("Not referred");
+                            return referred === undefined || others === undefined ? null
+                                : `${r.format(referred)} of referred users joined a fight, against ${r.format(others)} of the others.`;
+                        },
+                        note: "Share of each group, as of now. Groups under 5 people are left out.",
+                        query: sql`
+                            with cohort as (
+                                select p.user_id in (select r.referred_user_id from (${referrals}) as r) as referred,
+                                    p.handle_set_at is not null as named,
+                                    p.user_id in (${stepPeople}) as health,
+                                    exists (select 1 from public.fight_members as m
+                                        join (${userContests}) as f on f.id = m.fight_id
+                                        where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host) as fought,
+                                    p.user_id in (select r.user_id from (${referrals}) as r) as referring
+                                from public.profiles as p
+                                where p.deleted_at is null
+                            )
+                            select step.x, (100.0 * count(*) filter (where step.done) / count(*))::float8 as y,
+                                case when cohort.referred then 'Referred' else 'Not referred' end as series
+                            from cohort
+                            cross join lateral (values
+                                (1, 'Picked a username', cohort.named),
+                                (2, 'Connected Apple Health', cohort.health),
+                                (3, 'Joined a fight', cohort.fought),
+                                (4, 'Referred someone', cohort.referring)
+                            ) as step(position, x, done)
+                            group by cohort.referred, step.position, step.x
+                            having count(*) >= 5
+                            order by cohort.referred desc, step.position
                         `,
                     },
                 ],
@@ -2168,25 +2257,7 @@ function definitions(
             };
         }
         case "friends": {
-            // NOTE: declining or removing a friend deletes the pair's row, so requests only count the
-            // rows still here: pending or accepted. Deleted accounts and blocked pairs are left out,
-            // like the app's friends list.
-            const pairs = sql`
-                select friendship.user_low, friendship.user_high, friendship.state, friendship.created_at,
-                    friendship.accepted_at
-                from private.profile_friendships as friendship
-                join public.profiles as low on low.user_id = friendship.user_low and low.deleted_at is null
-                join public.profiles as high on high.user_id = friendship.user_high and high.deleted_at is null
-                where not exists (
-                    select 1 from (
-                        select blocker_id, blocked_id from private.profile_blocks
-                        union all select blocker_id, blocked_id from private.feed_blocks
-                        union all select blocker_id, blocked_id from private.feedback_blocks
-                    ) as block
-                    where (block.blocker_id = friendship.user_low and block.blocked_id = friendship.user_high)
-                        or (block.blocker_id = friendship.user_high and block.blocked_id = friendship.user_low)
-                )
-            `;
+            const pairs = peopleRules(sql).friendPairs;
             const friendships = sql`select * from (${pairs}) as pair where pair.state = 'accepted'`;
             // Every user's friends now and 7 days ago.
             const friendCounts = sql`
@@ -2900,5 +2971,78 @@ export async function readAdminDashboard(
         sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
         cards: cardTiles,
         charts: chartTiles,
+    });
+}
+
+/**
+ * The Users tab's table: the newest accounts first, `limit` of them from `offset`, each column by
+ * the dashboard's own rules. Deleted accounts are left out.
+ */
+export async function readAdminUsers(
+    limit: number,
+    offset: number,
+    environment: AdminDashboardEnvironment,
+    database: Sql = createDatabaseClient(),
+): Promise<AdminUsers> {
+    const sql = database;
+    const { stepPeople, referrals, userContests, friendPairs } = peopleRules(sql);
+    // NOTE: production has private.account_auth, the only way its read-only user reads emails, once
+    // 20261019120000_account_auth reaches `main`. Until then its emails and sign-in methods read null.
+    const { total, accounts } = adminUsersCountRowSchema.parse((await sql`
+        select count(*)::int as total, to_regclass('private.account_auth') is not null as accounts
+        from public.profiles where deleted_at is null
+    `)[0]);
+    const users = await sql`
+        with page as (
+            select user_id, handle, handle_set_at, display_name, created_at, time_zone
+            from public.profiles where deleted_at is null
+            order by created_at desc, user_id limit ${limit} offset ${offset}
+        ),
+        friends as (
+            select side.user_id, count(*)::int as friends
+            from (
+                select pair.user_low as user_id from (${friendPairs}) as pair where pair.state = 'accepted'
+                union all select pair.user_high from (${friendPairs}) as pair where pair.state = 'accepted'
+            ) as side
+            group by side.user_id
+        )
+        select p.user_id, p.handle, p.handle_set_at is not null as handle_set, p.display_name,
+            ${accounts ? sql`account.email, account.providers` : sql`null::text as email, null::text[] as providers`},
+            to_char(p.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as created_at,
+            coalesce(friends.friends, 0) as friends,
+            exists (
+                select 1 from public.fight_series_members as member
+                join public.fight_series as series on series.id = member.series_id
+                where member.user_id = p.user_id and member.state = 'accepted' and series.join_code = 'PGG7'
+            ) as everybody_fight,
+            (select count(distinct f.series_id)::int from public.fight_members as m
+                join (${userContests}) as f on f.id = m.fight_id
+                where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host) as fights,
+            (select referrer.handle from (${referrals}) as r
+                join public.profiles as referrer on referrer.user_id = r.user_id
+                where r.referred_user_id = p.user_id) as referred_by,
+            (select count(*)::int from (${referrals}) as r where r.user_id = p.user_id) as referrals,
+            p.user_id in (${stepPeople}) as health_connected,
+            (select to_char(max(source.last_success_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+                from public.data_sources as source
+                where source.user_id = p.user_id and source.provider = 'apple_health') as last_synced_at,
+            (select attempt.app_version || ' (' || attempt.app_build || ')' from private.healthkit_sync_attempts as attempt
+                where attempt.user_id = p.user_id order by attempt.received_at desc limit 1) as app_version,
+            exists (
+                select 1 from private.device_installations as device
+                where device.user_id = p.user_id and device.revoked_at is null
+                    and device.permission_status in ('authorized', 'provisional', 'ephemeral')
+            ) as notifications,
+            p.time_zone
+        from page as p
+        left join friends on friends.user_id = p.user_id
+        ${accounts ? sql`left join private.account_auth as account on account.user_id = p.user_id` : sql``}
+        order by p.created_at desc, p.user_id
+    `;
+    return adminUsersSchema.parse({
+        environment,
+        total,
+        users,
+        note: accounts ? null : "Emails and sign-in methods show here once this database has the 19 Oct 2026 migration.",
     });
 }

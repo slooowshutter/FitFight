@@ -6,7 +6,7 @@ import { randomJoinCode } from "@/lib/domain/fights/join-code";
 import { adminDashboardSectionValues } from "@/lib/types/admin/admin-dashboard";
 import type { AdminUser } from "@/lib/types/admin/admin-users";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
-import { readAdminDashboard, readAdminUsers } from "./admin-dashboard-supabase-query";
+import { readAdminDashboard, readAdminTablePage, readAdminUsers } from "./admin-dashboard-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
 const database = postgres(env.DATABASE_URL, { max: 5 });
@@ -86,7 +86,7 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
         const cardValues: string[] = [];
         for (const days of [1, 30, 3650]) {
             const dashboard = await readAdminDashboard(section, days, "staging", database);
-            const failed = [...dashboard.cards, ...dashboard.charts]
+            const failed = [...dashboard.cards, ...dashboard.charts, ...dashboard.tables]
                 .filter((tile) => tile.note?.startsWith("Query failed"))
                 .map((tile) => `${tile.id}: ${tile.note}`);
             assert.deepEqual(failed, [], `${section} over ${days} days`);
@@ -545,6 +545,24 @@ test("the users table lists the newest accounts first, a page at a time, by the 
         all.users.slice(at, at + 3).map((user) => user.user_id),
         "Pages continue where the last one stopped",
     );
+
+    // The Users tab draws the same rows as a server-defined table, in Paris time.
+    const dashboard = await readAdminDashboard("users", 30, "staging", database);
+    const table = dashboard.tables.find((item) => item.id === "newest_users");
+    assert.ok(table);
+    assert.equal(table.total, total);
+    assert.equal(table.page_size, 20);
+    assert.deepEqual(table.rows.map((row) => row.id), all.users.slice(0, 10).map((user) => user.user_id));
+    assert.ok(table.rows.every((row) => row.cells.length === table.columns.length), "One cell per column");
+    const tablePage = await readAdminTablePage("newest_users", 3, at, "staging", database);
+    assert.deepEqual(tablePage.rows.map((row) => row.id), [cleo, ben, ada]);
+    assert.deepEqual(tablePage.rows[0].cells[0], { text: "No username", muted: true, bold: false });
+    assert.deepEqual(tablePage.rows[1].cells.map((cell) => cell.text).filter((_, index) => index !== 1 && index !== 3), [
+        `@${handle(ben)}`, "ben@example.com", "1", "Yes", "1", `@${handle(ada)}`, "0", "Yes", "18 Oct 2026, 12:00",
+        "1.2.1 (234)", "No", "Google", "-",
+    ]);
+    assert.deepEqual(tablePage.rows[2].cells[13], { text: "Apple, Google", muted: false, bold: false });
+    await assert.rejects(readAdminTablePage("nothing", 1, 0, "staging", database), /No admin table has this id/);
 
     // Production reads without the view until its migration reaches `main`.
     const rollback = new Error("rollback");

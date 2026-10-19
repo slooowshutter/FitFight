@@ -226,25 +226,30 @@ query only marks its own tile with `Query failed: ...`.
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
 
-## Admin Users table (prepared 19 Oct 2026)
+## Admin dashboard tables (prepared 19 Oct 2026)
 
-`GET /api/v1/admin/users?[environment=production|staging]&limit=<1-100, default 10>&offset=<default 0>`
-feeds the **Newest users** table on the Users tab of the web admin page (`/app/admin`). It returns
-`{ environment, total, users, note }`, newest signup first, deleted accounts left out. A row has the
-username (and whether the person picked it), name, email, sign-in providers, signup time, friends,
-Everybody fight, fights joined, referrer, referrals, Apple Health connected, last sync, newest app
-build, push registration and time zone. Each column uses the dashboard's own rules (`peopleRules`
-in `admin-dashboard-supabase-query.ts`), so a person reads the same in the table and the tiles.
-Access and the Production / Staging choice are the dashboard's (`openAdminDatabase`).
+Tables are server-defined, like sections, cards and charts, so a new table or column needs no
+app build. Each `/admin/dashboard` payload has `tables` (drawn between the cards and the charts):
+`id`, `title`, `description`, `columns` (`title`, `definition`), `total`, the first page of `rows`
+(`id`, one `cells` entry per column: `text`, `muted`, `bold`, already written for display),
+`note` and `page_size`. The iPhone app (`AdminTableCard`) and the web page (`TableCard`) draw any
+table the same way: the first column stays put while the others scroll sideways, and **Show N
+more** reads `GET /api/v1/admin/table?id=<id>&[environment=…]&limit=<page_size>&offset=<rows shown>`
+(`{ total, rows, note }`). Tables live in `adminTables` in `admin-dashboard-supabase-query.ts`: add
+one there with its section, columns and a `read` that returns cells. Access and the Production /
+Staging choice are the dashboard's (`openAdminDatabase`). Builds before 19 Oct 2026 ignore `tables`.
 
+- **Newest users** (Users tab, `newest_users`): 10 rows, then 20 per tap, newest signup first,
+  deleted accounts left out, times in Paris. Columns: Handle, Name, Email, Joined, Friends,
+  Everybody fight, Fights, Referred by, Referrals, Apple Health, Last sync, App, Notifications,
+  Sign-in, Time zone. `readAdminUsers` reads them with the dashboard's own rules (`peopleRules`),
+  so a person reads the same in the table and the tiles.
 - **Emails:** they live in `auth.users`, which production's read-only `fitfight_analytics` user
   cannot read. `private.account_auth` (migration `20261019120000_account_auth`) is a view of
   `auth.users` (user ID, email, providers) that reads with its owner's rights and copies nothing.
   Only `fitfight_analytics` gets SELECT on it; `anon`, `authenticated` and `service_role` do not.
-  A database without the view returns null emails and providers, with a `note` saying why:
+  A database without the view shows "-" for Email and Sign-in, with a `note` saying why:
   production until this migration reaches `main`.
-- **Web only:** the iPhone dashboard does not show the table. The referral tiles added the same
-  day (Monthly referrers, Users who referred someone, Onboarding by referral) show in both.
 
 ## Recent syncs (prepared 12 Oct 2026)
 

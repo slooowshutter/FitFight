@@ -1,12 +1,6 @@
 import { z } from "zod";
 import { adminDashboardEnvironmentSchema } from "./admin-dashboard";
 
-export const adminUsersQuerySchema = z.object({
-    environment: adminDashboardEnvironmentSchema.optional(),
-    limit: z.coerce.number().int().min(1).max(100).default(10),
-    offset: z.coerce.number().int().min(0).default(0),
-});
-
 /** One account, read with the dashboard's own rules. Times are UTC ISO 8601. */
 export const adminUserSchema = z.object({
     user_id: z.string().uuid(),

@@ -259,6 +259,12 @@ struct APIContractTests {
         precondition(!dashboard.charts[0].series[0].previous && dashboard.charts[0].series[1].previous)
         precondition(dashboard.charts[1].xKind == "label" && dashboard.charts[1].cells.isEmpty)
         precondition(dashboard.charts[2].kind == "heatmap" && dashboard.charts[2].cells.count == 6)
+        let usersTable = dashboard.tables?.first
+        precondition(usersTable?.id == "newest_users" && usersTable?.pageSize == 20 && usersTable?.total == 123
+                     && usersTable?.columns.count == 3 && usersTable?.columns[2].definition == nil,
+                     "Server-defined tables decode, so a new one needs no app update")
+        precondition(usersTable?.rows.count == 2 && usersTable?.rows[0].cells[0].bold == true
+                     && usersTable?.rows[1].cells[2].muted == true && usersTable?.rows[1].cells[0].text == "No username")
         let founder = try serverDecoder.decode(FitFightFounderFights.self,
             from: Data(contentsOf: fixtures.appendingPathComponent("admin-founder-fights.json")))
         precondition(founder.challengers.map(\.handle) == ["lea", "tom"] && founder.challengers[0].displayName == "Lea")

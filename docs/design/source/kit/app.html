@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 1.2.1 release + sample fights", updated: "19 Oct 2026" };
+            const MIRROR = { matches: "develop sample fights + admin dashboard tables", updated: "19 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 3;
@@ -10329,7 +10329,7 @@
     function dashState(ui, o = {}) {
         if (ui.adServer) return;
         ui.adServer = o.server || "production";
-        ui.adSection = "overview";
+        ui.adSection = o.section || "overview";
         ui.adTimeframe = "month";
         ui.adBucket = "auto";
         ui.adLoading = o.state === "loading";
@@ -10356,7 +10356,7 @@
             render();
         }, delay);
     }
-    action("adServer", (value, ctx) => { ctx.ui.adServer = value; startLoad(ctx.ui); });
+    action("adServer", (value, ctx) => { ctx.ui.adServer = value; ctx.ui.adRows = 10; startLoad(ctx.ui); });
     action("adSection", (value, ctx) => { ctx.ui.adSection = value; startLoad(ctx.ui); });
     action("adTimeframe", (value, ctx) => { ctx.ui.adTimeframe = value; startLoad(ctx.ui); });
     action("adBucket", (value, ctx) => { ctx.ui.adBucket = value; startLoad(ctx.ui); });
@@ -10385,7 +10385,7 @@
             const dim = ui.adLoaded !== requestOf(ui);
             const trendGroup = trends.length ? groupTitle("Over time") + seg(TIMEFRAMES.map(([v, t]) => [v, t]), ui.adTimeframe, "adTimeframe") + seg(GRANULARITIES, ui.adBucket, "adBucket") + trends.map((c) => chartCard(c, dim)).join("") : "";
             const breakdownGroup = breakdowns.length ? groupTitle("Breakdowns") + breakdowns.map((c) => chartCard(c, false)).join("") : "";
-            groups = `<div class="ad-grid">${shown.cards.map(tile).join("")}</div>${shown.charts[0]?.xKind === "date" ? trendGroup + breakdownGroup : breakdownGroup + trendGroup}`;
+            groups = `<div class="ad-grid">${shown.cards.map(tile).join("")}</div>${ui.adSection === "users" ? adminTable(ui) : ""}${shown.charts[0]?.xKind === "date" ? trendGroup + breakdownGroup : breakdownGroup + trendGroup}`;
         }
         return `<div class="ad-dash">
             ${FF.card(`<div class="hstack" style="gap:13px"><span class="ad-gift">${icon("gift")}</span><span class="grow vstack" style="gap:2px"><span class="t-heading">Free characters</span><span class="t-caption c-2">${esc(`${referrals.total} from referrals. Tap to see them or give some.`)}</span></span><span class="ad-row-chev">${icon("chevron.right")}</span></div>`, { on: "present:adminFreeCharacters" })}
@@ -10399,12 +10399,71 @@
     }
     globalThis.ADMIN = { dashboardTab };
 
+    // ═══ ADMIN TABLES (AdminTableCard): server-defined, the first column stays while the others scroll ═══
+    const USER_COLUMNS = ["Handle", "Name", "Email", "Joined", "Friends", "Everybody fight", "Fights", "Referred by",
+        "Referrals", "Apple Health", "Last sync", "App", "Notifications", "Sign-in", "Time zone"];
+    // The server's Newest users table: 35 fake accounts, newest first, Paris times.
+    function newestUsers() {
+        const names = ["Leo Martin", "Nina Petit", "Sam Bernard", "Theo Durand", "Ivy Laurent", "Alex Moreau", "Camille Simon",
+            "Hugo Michel", "Lea Garcia", "Jules Roux", "Manon David", "Ines Bertrand", "Paul Fournier", "Zoe Girard", "Adam Bonnet",
+            "Emma Dupont", "Louis Lambert", "Chloe Fontaine", "Noah Rousseau", "Jade Vincent", "Lina Muller", "Tom Lefevre",
+            "Rose Faure", "Oscar Andre", "Anna Mercier", "Mila Blanc", "Eli Guerin", "Victor Boyer", "Alice Garnier", "Sarah Chevalier",
+            "Gabriel Francois", "Arthur Legrand", "Lucie Gauthier", "Nathan Perrin", "Tess Robin"];
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const paris = (ms) => {
+            const part = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+                .formatToParts(new Date(ms)).map((item) => [item.type, item.value]));
+            return `${Number(part.day)} ${months[Number(part.month) - 1]} ${part.year}, ${part.hour}:${part.minute}`;
+        };
+        const value = (text) => ({ text: text ?? "-", muted: text == null, bold: false });
+        const yesNo = (on) => ({ text: on ? "Yes" : "No", muted: !on, bold: false });
+        return names.map((name, i) => {
+            const [first, last] = name.toLowerCase().split(" ");
+            const handle = i % 5 === 0 ? first : `${first}_${last.slice(0, 3)}`;
+            const apple = i % 3 !== 1;
+            const health = i % 4 !== 3;
+            return { id: handle, cells: [
+                i % 7 === 3 ? { text: "No username", muted: true, bold: false } : { text: `@${handle}`, muted: false, bold: true },
+                value(name),
+                value(apple && i % 4 === 0 ? `${first}${i}x7@privaterelay.appleid.com` : `${first}.${last}@gmail.com`),
+                value(paris(Date.now() - (i * 19 + 2) * 3600000)),
+                value(String([4, 1, 3, 1, 3, 2, 2, 1, 3, 2][i % 10])),
+                yesNo(i % 5 !== 2),
+                value(String(i % 6 === 5 ? 0 : 1)),
+                value(i > 1 && i % 3 === 0 ? (i % 2 === 0 ? "@leo" : "@nina_pet") : null),
+                value(String(i === 0 ? 5 : i === 1 ? 6 : 0)),
+                yesNo(health),
+                value(health ? paris(Date.now() - (i * 37 + 3) * 60000) : null),
+                value(health ? (i % 5 === 1 ? "1.1.3 (226)" : "1.2.1 (234)") : null),
+                yesNo(health && i % 3 !== 2),
+                value(i % 9 === 0 ? "Apple, Google" : apple ? "Apple" : "Google"),
+                value(["Europe/Paris", "America/New_York", "Europe/London", null, "America/Los_Angeles"][i % 5]),
+            ] };
+        });
+    }
+    function adminTable(ui) {
+        const all = newestUsers();
+        const rows = all.slice(0, ui.adRows || 10);
+        const left = all.length - rows.length;
+        const cell = (c) => `<td class="${c.muted ? "c-2" : ""}${c.bold ? " ad-bold" : ""}">${esc(c.text)}</td>`;
+        return FF.card(`<div class="vstack" style="gap:12px">
+            <div class="vstack" style="gap:4px"><span class="t-heading">Newest users</span><span class="t-caption c-2">${esc(`${rows.length} of ${all.length}. Newest signup first. Deleted accounts are left out. Times are Paris time.`)}</span></div>
+            <div class="ad-table"><table><thead><tr>${USER_COLUMNS.map((title) => `<th>${esc(title)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.cells.map(cell).join("")}</tr>`).join("")}</tbody></table></div>
+            ${left > 0 ? `<div>${FF.button(`Show ${Math.min(20, left)} more`, { kind: "secondary", size: "small", on: "adMoreRows", busy: ui.adRowsBusy, enabled: !ui.adRowsBusy })}</div>` : ""}
+        </div>`, { padding: 16 });
+    }
+    action("adMoreRows", (_, ctx) => {
+        ctx.ui.adRowsBusy = true;
+        render();
+        setTimeout(() => { ctx.ui.adRowsBusy = false; ctx.ui.adRows = (ctx.ui.adRows || 10) + 20; render(); }, 500);
+    });
+
     // Profile > Dashboard with the Admin tab open (the Steps, Fights and Sports tabs belong to the profile area).
     screen("adminDashboard", {
         kind: "push", title: "Dashboard",
         render: (p, ui, ctx) => {
             // The profile area owns DashboardView; open it on the Admin tab when it is in the page.
-            dashState(ui, { state: p.state, server: p.server });
+            dashState(ui, { state: p.state, server: p.server, section: p.section });
             if (SCREENS.dashboard) { ui.tab ??= "admin"; return SCREENS.dashboard.render(p, ui, ctx); }
             return FF.screen(`${seg([["steps", "Steps"], ["fights", "Fights"], ["sports", "Sports"], ["admin", "Admin"]], "admin", "adDashTab")}${S.admin ? dashboardTab(ui, ctx.key) : ""}`, { top: navBar("Dashboard", { large: true }) });
         },
@@ -10822,6 +10881,13 @@
         .ad-small-spinner { width: 16px; height: 16px; color: var(--textSecondary); }
         .ad-loading { display: grid; place-items: center; padding: 40px 0; color: var(--textSecondary); }
         .ad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+        .ad-table { overflow-x: auto; }
+        .ad-table table { border-collapse: separate; border-spacing: 0; font-size: 12px; }
+        .ad-table th, .ad-table td { height: 36px; padding: 0 10px; text-align: left; white-space: nowrap; font-weight: 400; color: var(--text); box-shadow: inset 0 -1px 0 var(--hairline); }
+        .ad-table th { font-weight: 800; color: var(--textSecondary); }
+        .ad-table td.c-2 { color: var(--textSecondary); }
+        .ad-table td.ad-bold { font-weight: 800; }
+        .ad-table th:first-child, .ad-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--card); width: 124px; min-width: 124px; max-width: 124px; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--hairline), inset 0 -1px 0 var(--hairline); }
         .ad-grid .ff-card { min-width: 0; }
         .ad-clamp2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
         .ad-tile-value { font-size: 28px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
@@ -10888,6 +10954,7 @@
         ["Slide haptics, custom", "#you/~slideHaptics?tab=custom", A],
         ["Dashboard, Admin tab", "#you/adminDashboard", { ...A, note: "Profile > Dashboard > Admin" }],
         ["Admin tab, Staging", "#you/adminDashboard?server=staging", A],
+        ["Users tab: newest users table", "#you/adminDashboard?section=users", { ...A, note: "Show 20 more; the handle stays while the table scrolls" }],
         ["Admin tab, loading", "#you/adminDashboard?state=loading", { ...A, note: "Refresh finishes the load" }],
         ["Admin tab, not the admin", "#you/adminDashboard?state=error", { ...A, note: "Retry loads it" }],
         ["Card page", "#you/adminDashboard/adminDetail?metric=total_users", A],

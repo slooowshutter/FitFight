@@ -357,8 +357,11 @@ The native app uses Supabase directly for Auth and private Realtime invalidation
 and writes use the authenticated FitFight API. `GET /api/v1/me` returns
 `user_id`, `handle`, `display_name`, nullable `handle_set_at`, `referral_code`,
 and nullable `avatar` (the shared media object).
-`PATCH /api/v1/me` accepts a handle, display name, `avatar_media_id`, or any mix;
-omitted fields stay unchanged. `POST /api/v1/media` mints a private signed upload
+`PATCH /api/v1/me` accepts a handle, display name, or any mix; omitted fields stay
+unchanged. Your companion is your only picture (prepared 18 Oct 2026): every response sends
+`avatar: null`, and shared identities send `avatar_url` only for a custom character's art.
+`avatar_media_id` still accepts `null` for old builds, but a photo ID returns 400
+`validation` ("Profile photos are gone..."). Stored photos and their rows are kept. `POST /api/v1/media` mints a private signed upload
 for a photo or short video; `POST /api/v1/media/{id}/commit` verifies size and checksum.
 `GET /api/v1/feed` lists fight-audience posts from fights the caller is in. `GET /api/v1/feed?scope=all`
 is the older one Feed (Main and fight posts). `GET /api/v1/feed?scope=main`
@@ -1019,14 +1022,15 @@ and keep only the update toast.
    lowercase letters, digits, hyphens. Never reuse or rename one.
 2. Write `who` with the facts in `AlertFacts`
    (`web/lib/types/alerts/in-app-alert.ts`): `appVersion`, `latestRelease`,
-   `daysSinceSignup`, `fights`, `customCharacters`, `purchases`, `friends`,
-   `stepsLast7Days`, `answered`. Compare versions with `versionAtLeast`, never
+   `daysSinceSignup`, `fights`, `customCharacters`, `companionPicture`, `purchases`,
+   `friends`, `stepsLast7Days`, `answered`. Compare versions with `versionAtLeast`, never
    with `<` on strings.
 3. Write the title, body, and one or two buttons in English and French. The
    first button is the primary one. No en or em dashes; the test fails on them.
 4. Button actions: `update` (the App Store, or TestFlight on staging; the alert
-   waits while Apple's list is unavailable), `open_character`, `new_fight`,
-   `dismiss`. A new action needs app code: gate its alert with
+   waits while Apple's list is unavailable), `open_character`,
+   `choose_companion` (opens the companion picker; 1.3.0 and later),
+   `new_fight`, `dismiss`. A new action needs app code: gate its alert with
    `versionAtLeast(facts.appVersion, "<first build with it>")`. Older builds
    close the alert on an action they do not know.
 5. Optional `image`: a file under `web/public`, e.g.

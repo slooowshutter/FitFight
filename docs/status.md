@@ -24,6 +24,41 @@ All-time steps card.
 
 ---
 
+## Companion-only pictures and the Choose your companion alert, prepared 19 Oct 2026
+
+Marc asked (18 Oct 2026) that nobody can use a custom profile photo, that Profile does not
+offer one, and that anyone without a picture gets an in-app alert to choose a companion.
+
+**Code only, not deployed.**
+- **Backend:** no response carries an uploaded profile photo. `/me` and Fight snapshots send
+  `avatar: null`; Feed posts, comments, reactions and tag people send author `avatar: null`;
+  profiles, search, friends, suggestions and rivalries send `avatar_url` only for custom
+  character art. `PATCH /api/v1/me` refuses a photo ID with 400 `validation`: "Profile photos
+  are gone. Your companion is your profile picture." 1.1.3 and 1.2.1 have no photo option; a
+  phone still on 1.1.2 offers Edit profile → Change picture → Use a photo and now shows that
+  message. `avatar_media_id: null` still works. Nothing is deleted:
+  `profiles.avatar_media_id` and the files stay.
+- **Alert** `choose-your-companion`, first in priority, for apps on 1.3.0 or later whose
+  `companionPicture` fact is false (no companion, or a words-only custom animal). Choose
+  opens the picker. It waits for 1.3.0 because 1.2.1 (234), in review, does not know
+  `choose_companion`: there Choose would only close the alert.
+- **App:** the new `choose_companion` action opens the picker. While the required picker is
+  up (no companion at all), alerts wait for the next open, so nobody is asked twice. Alert
+  art stands free, with no box behind it, even while it loads.
+- **Mirror:** the alert, and three alerts in a row (the most per open).
+
+**Compatibility:** `avatar` and `avatar_url` were already nullable in every contract; older
+builds show the companion or initials. No build without `choose_companion` matches the alert.
+No migration.
+
+**Checks:** typecheck, all backend unit tests, localization check. Not run here:
+`alerts.integration.ts` (disposable database) and the iOS compile (CI).
+
+**Order:** backend first, then the app. Staging TestFlight builds say 1.2.1 until Marc names
+the next version, so nobody sees the alert before the app becomes 1.3.0.
+
+---
+
 ## App Store 1.2.1 submitted for review, 19 Oct 2026
 
 Marc asked on 19 Oct 2026 to merge `develop` → `preview` → `main` and submit the new App

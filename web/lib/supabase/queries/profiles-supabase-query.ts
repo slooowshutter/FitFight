@@ -9,44 +9,19 @@ import {
     type ProfileDatabaseRow,
     type UpdateProfileRequest,
 } from "@/lib/types/profiles/profile";
-import {
-    loadReadyMedia,
-    mapMedia,
-    signMediaUrl,
-    type MediaRow,
-} from "./media-supabase-query";
 
 const PROFILE_COLUMNS =
-    "id, handle, display_name, handle_set_at, referral_code, avatar_media_id, companion_id, companion_prompt, companion_image_url, time_zone";
+    "id, handle, display_name, handle_set_at, referral_code, companion_id, companion_prompt, companion_image_url, time_zone";
 
-async function asProfile(
-    row: ProfileDatabaseRow,
-    admin: SupabaseClient,
-): Promise<Profile> {
-    let avatar = null;
-    if (row.avatar_media_id) {
-        const { data, error } = await admin
-            .from("media_objects")
-            .select(
-                "id, owner_id, kind, purpose, status, object_path, original_filename, content_type, byte_size, width, height, duration_ms, sha256, created_at",
-            )
-            .eq("id", row.avatar_media_id)
-            .eq("status", "ready")
-            .maybeSingle();
-        if (error)
-            throw new ApiError(500, "db_error", "Could not load profile photo");
-        if (data) {
-            const media = data as MediaRow;
-            avatar = mapMedia(media, await signMediaUrl(media.object_path));
-        }
-    }
+async function asProfile(row: ProfileDatabaseRow): Promise<Profile> {
     return {
         user_id: row.id,
         handle: row.handle,
         display_name: row.display_name,
         handle_set_at: row.handle_set_at,
         referral_code: row.referral_code,
-        avatar,
+        // Your companion is your only picture: an uploaded photo is never shown.
+        avatar: null,
         companion_id: row.companion_id,
         companion_prompt: row.companion_prompt,
         ...(row.companion_id === "custom" && row.companion_image_url
@@ -76,7 +51,7 @@ export async function readProfile(
             "profile_missing",
             "Invalid or deleted account",
         );
-    return asProfile(profileDatabaseRowSchema.parse(data), admin);
+    return asProfile(profileDatabaseRowSchema.parse(data));
 }
 
 export async function updateProfile(
@@ -88,18 +63,11 @@ export async function updateProfile(
         ? await readAiCompanionImage(userId, input.companion_image)
         : null;
     if (input.avatar_media_id) {
-        const media = await loadReadyMedia(
-            userId,
-            [input.avatar_media_id],
-            "profile",
+        throw new ApiError(
+            400,
+            "validation",
+            "Profile photos are gone. Your companion is your profile picture.",
         );
-        if (media.length !== 1) {
-            throw new ApiError(
-                400,
-                "validation",
-                "Upload a profile photo first",
-            );
-        }
     }
     const { data, error } = await admin
         .from("profiles")
@@ -166,5 +134,5 @@ export async function updateProfile(
             "profile_missing",
             "Invalid or deleted account",
         );
-    return asProfile(profileDatabaseRowSchema.parse(data), admin);
+    return asProfile(profileDatabaseRowSchema.parse(data));
 }

@@ -11,8 +11,5 @@ export const profileSearchRequestSchema = z.object({
 export const profileSearchSchema = z.object({
     people: z.array(sharedIdentitySchema),
 });
-export const profileSearchRowSchema = sharedIdentitySchema.extend({
-    avatar_path: z.string().nullable(),
-});
 
 export type ProfileSearch = z.infer<typeof profileSearchSchema>;

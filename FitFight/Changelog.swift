@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.2.1",
             year: 2026,
             month: 10,
+            day: 19,
+            notes: "Your companion is your only profile picture: uploaded photos no longer show anywhere. If you have no companion picture yet, FitFight asks you to choose one."
+        ),
+        ReleaseNote(
+            version: "1.2.1",
+            year: 2026,
+            month: 10,
             day: 18,
             notes: "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour."
         ),

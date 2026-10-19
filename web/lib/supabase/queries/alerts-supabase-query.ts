@@ -26,6 +26,8 @@ export async function readAlertFacts(
                 join private.special_accounts as account on account.id = purchase.account_id
                 where account.user_id = p.user_id and purchase.revoked_at is null
             ) as custom_characters,
+            (p.companion_id is not null and (p.companion_id <> 'custom' or p.companion_image_url is not null))
+                as companion_picture,
             (select count(*) from private.custom_character_purchases as purchase
                 join private.special_accounts as account on account.id = purchase.account_id
                 where account.user_id = p.user_id and purchase.revoked_at is null and purchase.free_claim_key is null
@@ -56,6 +58,7 @@ export async function readAlertFacts(
         daysSinceSignup: facts.days_since_signup,
         fights: facts.fights,
         customCharacters: facts.custom_characters,
+        companionPicture: facts.companion_picture,
         purchases: facts.purchases,
         friends: facts.friends,
         stepsLast7Days: facts.steps_last_7_days,

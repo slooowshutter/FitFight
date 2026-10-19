@@ -21,7 +21,6 @@ import type {
     UpdateFightPostRequest,
 } from "@/lib/types/feed/fight-post";
 import { companionIdSchema } from "@/lib/types/companions/companion";
-import type { AvatarMediaColumns } from "@/lib/types/media/media";
 import {
     eligibleMentionUserIds,
     enqueueFightFeedPostNotifications,
@@ -32,7 +31,6 @@ import { endFriendFight } from "./friend-fights-supabase-query";
 import {
     isoUtc,
     loadReadyMedia,
-    mapAvatar,
     mapMedia,
     signMediaUrls,
     type MediaRow,
@@ -49,7 +47,7 @@ export type VisibleFightPost = {
     to_friends: boolean;
 };
 
-type PostRow = AvatarMediaColumns & {
+type PostRow = {
     id: string;
     audience: FeedAudience;
     fight_id: string | null;
@@ -301,12 +299,9 @@ async function mapPosts(
             )
         group by comment.post_id
     `;
-    const urls = await signMediaUrls([
-        ...rows.flatMap((row) =>
-            row.avatar_object_path ? [row.avatar_object_path] : [],
-        ),
-        ...attachments.map((attachment) => attachment.object_path),
-    ]);
+    const urls = await signMediaUrls(
+        attachments.map((attachment) => attachment.object_path),
+    );
 
     const tagsByPost = new Map<string, FightPostTag[]>();
     for (const tag of tags) {
@@ -394,7 +389,7 @@ async function mapPosts(
                 user_id: row.author_id,
                 handle: row.author_handle,
                 display_name: row.author_display_name,
-                avatar: mapAvatar(row, row.author_id, urls),
+                avatar: null,
                 companion_id: companionIdSchema
                     .nullable()
                     .parse(row.author_companion_id),
@@ -433,19 +428,11 @@ export async function listFightPosts(
                     to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
-                    profile.companion_image_url as author_companion_image_url,
-                    avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
-                    avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
-                    avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
-                    avatar.byte_size::text as avatar_byte_size, avatar.width as avatar_width,
-                    avatar.height as avatar_height, avatar.duration_ms as avatar_duration_ms,
-                    avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
+                    profile.companion_image_url as author_companion_image_url
                 from public.fight_posts as post
                 left join public.fights as fight on fight.id = post.fight_id
                 join public.profiles as profile
                     on profile.id = post.author_id and profile.deleted_at is null
-                left join public.media_objects as avatar
-                    on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where not exists (
                         select 1 from private.feed_blocks as blocked
                         where blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id
@@ -592,19 +579,11 @@ export async function listFightPosts(
                     to_char(post.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at,
                     post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
                     profile.companion_id as author_companion_id,
-                    profile.companion_image_url as author_companion_image_url,
-                    avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
-                    avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
-                    avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
-                    avatar.byte_size::text as avatar_byte_size, avatar.width as avatar_width,
-                    avatar.height as avatar_height, avatar.duration_ms as avatar_duration_ms,
-                    avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
+                    profile.companion_image_url as author_companion_image_url
                 from public.fight_posts as post
                 left join public.fights as fight on fight.id = post.fight_id
                 join public.profiles as profile
                     on profile.id = post.author_id and profile.deleted_at is null
-                left join public.media_objects as avatar
-                    on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
                 where not exists (
                         select 1 from private.feed_blocks as blocked
                         where blocked.blocker_id = ${userId} and blocked.blocked_id = post.author_id
@@ -811,19 +790,11 @@ async function loadPostRows(ids: string[], database: Sql): Promise<PostRow[]> {
             coalesce(fight.name, '') as fight_name, post.body, post.created_at,
             post.author_id, profile.handle as author_handle, profile.display_name as author_display_name,
             profile.companion_id as author_companion_id,
-                    profile.companion_image_url as author_companion_image_url,
-            avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
-            avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
-            avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
-            avatar.byte_size::text as avatar_byte_size, avatar.width as avatar_width,
-            avatar.height as avatar_height, avatar.duration_ms as avatar_duration_ms,
-            avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
+                    profile.companion_image_url as author_companion_image_url
         from public.fight_posts as post
         left join public.fights as fight on fight.id = post.fight_id
         join public.profiles as profile
             on profile.id = post.author_id and profile.deleted_at is null
-        left join public.media_objects as avatar
-            on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where post.id in ${database(ids)}
         order by post.created_at desc, post.id desc
     `;
@@ -1191,26 +1162,17 @@ export async function listFeedPeople(
     }
 
     const rows = await database<
-        (MediaRow &
-            AvatarMediaColumns & {
-                user_id: string;
-                handle: string;
-                display_name: string;
-                companion_id: string | null;
-                companion_image_url: string | null;
-            })[]
+        (MediaRow & {
+            user_id: string;
+            handle: string;
+            display_name: string;
+            companion_id: string | null;
+            companion_image_url: string | null;
+        })[]
     >`
         select distinct
-            profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, profile.companion_image_url,
-            avatar.id as avatar_id, avatar.kind::text as avatar_kind, avatar.purpose::text as avatar_purpose,
-            avatar.status::text as avatar_status, avatar.object_path as avatar_object_path,
-            avatar.original_filename as avatar_original_filename, avatar.content_type as avatar_content_type,
-            avatar.byte_size::text as avatar_byte_size, avatar.width as avatar_width,
-            avatar.height as avatar_height, avatar.duration_ms as avatar_duration_ms,
-            avatar.sha256 as avatar_sha256, avatar.created_at as avatar_created_at
+            profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, profile.companion_image_url
         from public.profiles as profile
-        left join public.media_objects as avatar
-            on avatar.id = profile.avatar_media_id and avatar.status = 'ready'
         where profile.deleted_at is null
             and profile.id <> ${userId}
             and not exists (
@@ -1261,18 +1223,13 @@ export async function listFeedPeople(
         limit 80
     `;
 
-    const urls = await signMediaUrls(
-        rows.flatMap((row) =>
-            row.avatar_object_path ? [row.avatar_object_path] : [],
-        ),
-    );
     const people = [];
     for (const row of rows) {
         people.push({
             user_id: row.user_id,
             handle: row.handle,
             display_name: row.display_name,
-            avatar: mapAvatar(row, row.user_id, urls),
+            avatar: null,
             companion_id: companionIdSchema.nullable().parse(row.companion_id),
             ...(row.companion_id === "custom" && row.companion_image_url ? { companion_image_url: row.companion_image_url } : {}),
         });

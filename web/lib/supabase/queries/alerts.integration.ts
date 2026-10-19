@@ -21,6 +21,7 @@ test("alert facts read the account, answered alerts stop counting as new, and re
         daysSinceSignup: 0,
         fights: 0,
         customCharacters: 0,
+        companionPicture: false,
         purchases: 0,
         friends: 0,
         stepsLast7Days: 0,
@@ -38,6 +39,11 @@ test("alert facts read the account, answered alerts stop counting as new, and re
     assert.equal(facts.daysSinceSignup, 4);
     assert.equal(facts.friends, 1);
     assert.deepEqual(facts.answered, new Set(), "Seeing an alert does not answer it");
+
+    await database`update public.profiles set companion_id = 'custom', companion_prompt = 'A fox in a tracksuit' where user_id = ${userId}`;
+    assert.equal((await readAlertFacts(userId, database)).companionPicture, false, "A words-only custom animal has no picture");
+    await database`update public.profiles set companion_id = 'fox', companion_prompt = null where user_id = ${userId}`;
+    assert.equal((await readAlertFacts(userId, database)).companionPicture, true);
 
     await recordAlertResponse(userId, "start-first-fight", { response: "tapped", action: "new_fight" }, "1.2.0", "300", database);
     await recordAlertResponse(userId, "make-your-character", { response: "dismissed" }, null, null, database);

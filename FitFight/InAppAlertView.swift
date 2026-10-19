@@ -16,9 +16,9 @@ struct InAppAlertView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 0) {
                 if let url = inAppAlert.imageURL {
-                    RemotePhoto(url: url) { theme.control }
+                    // Companion art stands free: no box behind it, even while it loads.
+                    RemotePhoto(url: url) { Color.clear }
                         .frame(width: 132, height: 150)
-                        .clipShape(RoundedRectangle(cornerRadius: theme.radius.field, style: .continuous))
                         .frame(maxWidth: .infinity)
                         .padding(.bottom, 18)
                 }

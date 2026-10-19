@@ -17,6 +17,7 @@ const newcomer: AlertFacts = {
     daysSinceSignup: 0,
     fights: 0,
     customCharacters: 0,
+    companionPicture: true,
     purchases: 0,
     friends: 0,
     stepsLast7Days: 0,
@@ -68,6 +69,23 @@ test("rules pick alerts in order, skip answered ones, and speak the requested la
 
     const [french] = alertsFor(dayThree, "fr", "https://fitfight.app");
     assert.equal(french?.title, "Lancez votre premier défi");
+});
+
+test("people without a companion picture are asked to choose one first, from 1.3.0", () => {
+    const pictureless = { ...newcomer, appVersion: "1.3.0", daysSinceSignup: 3, companionPicture: false };
+    const alerts = alertsFor(pictureless, "en", "https://fitfight.app");
+    assert.deepEqual(alerts.map((alert) => alert.id), ["choose-your-companion", "start-first-fight", "make-your-character"]);
+    assert.deepEqual(alerts[0]?.buttons.map((button) => [button.action, button.primary]), [
+        ["choose_companion", true],
+        ["dismiss", false],
+    ]);
+    assert.deepEqual(alertsFor({ ...pictureless, appVersion: "1.2.1" }, "en", "https://fitfight.app").map((alert) => alert.id), [
+        "start-first-fight",
+        "make-your-character",
+    ]);
+    assert.deepEqual(alertsFor({ ...newcomer, appVersion: "1.3.0", companionPicture: false }, "fr", "https://fitfight.app").map((alert) => alert.title), [
+        "Choisissez votre compagnon",
+    ]);
 });
 
 test("an update button links to Apple's installable build and hides without one", () => {

@@ -14,32 +14,19 @@ concurrency:
 jobs:
     audit:
         runs-on: ubuntu-latest
-        timeout-minutes: 45
+        timeout-minutes: 20
         permissions:
-            contents: write
-        env:
-            FITFIGHT_RELEASE_VERSION: "1.2.1"
-            APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-            APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-            APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+            contents: read
         steps:
             - uses: actions/checkout@v4
             - uses: ruby/setup-ruby@v1
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Wait until Apple has processed 1.2.1 build 234
-              run: |
-                  for attempt in $(seq 1 40); do
-                    bundle exec ruby scripts/app-store-release-audit.rb audit > /tmp/audit.txt 2>&1 || true
-                    grep -q '"version":"234","processingState":"VALID"' /tmp/audit.txt && exit 0
-                    sleep 30
-                  done
-                  grep '"builds"' /tmp/audit.txt
-                  exit 1
-            - name: Pull 1.2.0 back from review and rename it 1.2.1
-              run: bundle exec ruby scripts/app-store-release-audit.rb rename 1.2.0
-            - name: Select 1.2.1 build 234 and submit it for App Review
-              run: bundle exec ruby scripts/app-store-release-audit.rb submit 234
-            - name: Admit the submitted build as the production review build
-              run: bash scripts/publish-app-releases.sh
+            - name: Audit current release metadata and screenshots
+              env:
+                  FITFIGHT_RELEASE_VERSION: "1.2.1"
+                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+              run: bundle exec ruby scripts/app-store-release-audit.rb audit

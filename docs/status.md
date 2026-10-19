@@ -6,18 +6,26 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
-## App Store 1.2.1, 19 Oct 2026
+## App Store 1.2.1 submitted for review, 19 Oct 2026
 
 Marc asked on 19 Oct 2026 to merge `develop` → `preview` → `main` and submit the new App
 Store version as **1.2.1**, with full control. The code is the 1.2.0 (232) release plus
-`develop`'s documentation commits; only the marketing version changes.
+`develop`'s documentation commits; only the marketing version changed.
 
 - **Version:** `MARKETING_VERSION`, the TestFlight, App Store and release-tools workflows,
-  every Versions row since 1.1.3 and the mirror say 1.2.1.
-- **App Store Connect plan:** cancel the 1.2.0 review submission, rename that same version
-  to 1.2.1 (listing, What's new, review notes, screenshots and `AFTER_APPROVAL` carry over),
-  select the production 1.2.1 build from `main`, submit, then admit it as `review` in
-  `/api/app-release`.
+  every Versions row since 1.1.3 and the mirror say 1.2.1 (#424).
+- **Merges:** #424 into `develop`; `develop` → `preview` (`677f60e`); #425 `preview` → `main`
+  (`06cce99`). No migration or backend change.
+- **Builds:** TestFlight 1.2.1 (233, staging) and App Store candidate 1.2.1 (234, `prod`).
+- **App Store Connect:** `scripts/app-store-release-audit.rb rename 1.2.0` cancelled the
+  1.2.0 (232) review submission and renamed that same version to 1.2.1, so the listing,
+  What's new, review notes, screenshots and `AFTER_APPROVAL` carried over. `submit 234`
+  selected build 234 and submitted it: `WAITING_FOR_REVIEW` on 19 Oct at about 00:30 UTC.
+  The release-tools workflow is back to a read-only audit.
+- **Release endpoint:** `testflight-latest/releases.json` admits prod review 1.2.1 (234),
+  latest stays 1.1.3 (226).
+- **App Privacy:** checked in App Store Connect on 19 Oct: 14 data types including Product
+  Interaction and Purchase History, published 14 Oct. Unchanged.
 
 ---
 

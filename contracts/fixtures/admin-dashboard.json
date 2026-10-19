@@ -146,5 +146,38 @@
             ],
             "cells": []
         }
+    ],
+    "tables": [
+        {
+            "id": "newest_users",
+            "title": "Newest users",
+            "description": "Newest signup first. Deleted accounts are left out. Times are Paris time.",
+            "columns": [
+                { "title": "Handle", "definition": "No username: the account still has the one FitFight generated at signup." },
+                { "title": "Joined", "definition": "When the account was created." },
+                { "title": "Everybody fight", "definition": null }
+            ],
+            "total": 123,
+            "rows": [
+                {
+                    "id": "4d7f0b4e-8c1a-4f7e-9a51-2f3c6e1d9b20",
+                    "cells": [
+                        { "text": "@leo", "muted": false, "bold": true },
+                        { "text": "28 Sep 2026, 17:10", "muted": false, "bold": false },
+                        { "text": "Yes", "muted": false, "bold": false }
+                    ]
+                },
+                {
+                    "id": "9b2e6c11-3d4f-4a8b-b7e0-5c1f2a9d8e63",
+                    "cells": [
+                        { "text": "No username", "muted": true, "bold": false },
+                        { "text": "28 Sep 2026, 09:02", "muted": false, "bold": false },
+                        { "text": "No", "muted": true, "bold": false }
+                    ]
+                }
+            ],
+            "note": null,
+            "page_size": 20
+        }
     ]
 }

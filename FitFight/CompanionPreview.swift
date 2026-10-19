@@ -110,12 +110,15 @@ extension CompanionPreview {
         group.recurring = true
         group.seriesId = "A0000000-0000-4000-8000-000000000001"
         group.inviter = people[0]
-        var duel = fight(2, name: french ? "Prends ça" : "Eat it", code: "H8P4",
+        var duel = fight(2, name: french ? "Duel de colocs" : "Roommate Rumble", code: "H8P4",
                          totals: [18_420, 19_680], cast: [people[0], people[4]], length: 7, hoursLeft: 124)
         duel.actionText = french ? "Prend les escaliers toute la semaine" : "Takes the stairs all next week"
         var weekend = fight(3, name: french ? "La guerre des pas" : "Walk Wars", code: "R3V6",
                             totals: [12_680, 11_820, 11_240, 10_740], cast: [people[0], people[2], people[1], people[3]], length: 3, hoursLeft: 32)
         weekend.actionText = french ? "Organise la prochaine balade du dimanche" : "Plans our next Sunday walk"
+        var showdown = fight(11, name: french ? "Le match du bureau" : "Office Showdown", code: "D6N3",
+                           totals: [84_960, 85_390, 79_120], cast: [people[0], people[3], people[4]], length: 14, hoursLeft: 100)
+        showdown.actionText = french ? "Apporte les donuts vendredi" : "Brings donuts on Friday"
         var invite = fight(4, name: french ? "Le club du petit-déjeuner" : "The breakfast club", code: "B4K9",
                            totals: [0, 0], cast: [people[0], people[3]], length: 3, hoursLeft: 60)
         invite.status = .invited
@@ -149,7 +152,7 @@ extension CompanionPreview {
 
         switch state {
         case .populated, .offline:
-            model.fights = [group, duel, weekend, invite, finished] + history
+            model.fights = [group, duel, weekend, showdown, invite, finished] + history
         case .empty, .loading:
             model.fights = []
         case .tied:

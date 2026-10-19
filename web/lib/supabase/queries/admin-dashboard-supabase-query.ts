@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     adminDashboardCardRowSchema,
@@ -7,6 +8,7 @@ import {
     adminDashboardRangeRowSchema,
     adminDashboardSchema,
     adminDashboardSectionValues,
+    adminDashboardTablePageSchema,
     type AdminDashboard,
     type AdminDashboardBucket,
     type AdminDashboardCard,
@@ -17,6 +19,8 @@ import {
     type AdminDashboardExampleReader,
     type AdminDashboardQueryFragment,
     type AdminDashboardSection,
+    type AdminDashboardTable,
+    type AdminDashboardTablePage,
     type AdminDashboardUnit,
     type AdminDashboardWindow,
 } from "@/lib/types/admin/admin-dashboard";
@@ -189,11 +193,12 @@ function counted(value: number, one: string, many: string): string {
     return `${digits} ${digits === "1" ? one : many}`;
 }
 
+// NOTE: fixed names, because English short months differ by ICU version ("Sep" or "Sept").
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 /** Reads a built chart for its example sentence, in English like the rest of the dashboard. */
 function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): AdminDashboardExampleReader {
     const points = (name?: string) => (name ? chart.series.find((line) => line.name === name) : chart.series[0])?.points ?? [];
-    // NOTE: fixed names, because English short months differ by ICU version ("Sep" or "Sept").
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const date = (x: string) => new Date(`${x}T00:00:00Z`);
     const dayMonth = (x: string) => `${date(x).getUTCDate()} ${months[date(x).getUTCMonth()]}`;
     const end = (x: string) => {
@@ -2962,6 +2967,14 @@ export async function readAdminDashboard(
             }
         }))),
     ]);
+    const tables = await Promise.all(adminTables.filter((table) => table.section === section)
+        .map(async ({ section: _, read, first, ...table }): Promise<AdminDashboardTable> => {
+            try {
+                return { ...table, ...(await read(first, 0, environment, database)) };
+            } catch (error) {
+                return { ...table, total: 0, rows: [], note: failure(error) };
+            }
+        }));
     return adminDashboardSchema.parse({
         section,
         days,
@@ -2971,6 +2984,7 @@ export async function readAdminDashboard(
         sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
         cards: cardTiles,
         charts: chartTiles,
+        tables,
     });
 }
 
@@ -3045,4 +3059,93 @@ export async function readAdminUsers(
         users,
         note: accounts ? null : "Emails and sign-in methods show here once this database has the 19 Oct 2026 migration.",
     });
+}
+
+/**
+ * Tables by section. Each reads its rows already written as cells, so the apps draw a new table or
+ * column without an update. The dashboard holds the `first` rows; "Show more" reads `page_size` more.
+ */
+const adminTables: (Omit<AdminDashboardTable, "total" | "rows" | "note"> & {
+    section: AdminDashboardSection;
+    first: number;
+    read: (limit: number, offset: number, environment: AdminDashboardEnvironment, database: Sql) => Promise<AdminDashboardTablePage>;
+})[] = [
+    {
+        id: "newest_users", section: "users", title: "Newest users", first: 10, page_size: 20,
+        description: "Newest signup first. Deleted accounts are left out. Times are Paris time.",
+        columns: [
+            { title: "Handle", definition: "No username: the account still has the one FitFight generated at signup." },
+            { title: "Name", definition: null },
+            { title: "Email", definition: null },
+            { title: "Joined", definition: "When the account was created." },
+            { title: "Friends", definition: "Friends now. Blocked pairs and deleted accounts are not counted." },
+            { title: "Everybody fight", definition: "In the Everybody fight now: joined in onboarding or later, and not left." },
+            {
+                title: "Fights",
+                definition: "Fights joined, a repeating Fight once. A Fight counts once someone else joins it. Cancelled, Everybody, suggested and friend Fights do not count. Founder Fights count for the challenger only.",
+            },
+            { title: "Referred by", definition: "Whose referral link they signed up with. A referral counts only when claimed within 7 days of signing up." },
+            { title: "Referrals", definition: "People who signed up with their referral link." },
+            { title: "Apple Health", definition: "Their phone has sent at least one day with steps." },
+            { title: "Last sync", definition: "Their phone's last Apple Health upload." },
+            { title: "App", definition: "The version and build of their newest Apple Health sync." },
+            { title: "Notifications", definition: "A device registered for push notifications. Turning them off later in iOS Settings does not show here." },
+            { title: "Sign-in", definition: null },
+            { title: "Time zone", definition: null },
+        ],
+        read: async (limit, offset, environment, database) => {
+            const page = await readAdminUsers(limit, offset, environment, database);
+            const value = (text: string | null) => ({ text: text ?? "-", muted: text === null, bold: false });
+            const yesNo = (on: boolean) => ({ text: on ? "Yes" : "No", muted: !on, bold: false });
+            // "19 Oct 2026, 17:10" in Paris.
+            const time = (at: string) => {
+                const part = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "Europe/Paris", year: "numeric", month: "numeric", day: "numeric",
+                    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+                }).formatToParts(new Date(at)).map((item) => [item.type, item.value]));
+                return `${Number(part.day)} ${months[Number(part.month) - 1]} ${part.year}, ${part.hour}:${part.minute}`;
+            };
+            return {
+                total: page.total,
+                note: page.note,
+                rows: page.users.map((user) => ({
+                    id: user.user_id,
+                    cells: [
+                        user.handle_set
+                            ? { text: `@${user.handle}`, muted: false, bold: true }
+                            : { text: "No username", muted: true, bold: false },
+                        value(user.display_name),
+                        value(user.email),
+                        value(time(user.created_at)),
+                        value(String(user.friends)),
+                        yesNo(user.everybody_fight),
+                        value(String(user.fights)),
+                        value(user.referred_by && `@${user.referred_by}`),
+                        value(String(user.referrals)),
+                        yesNo(user.health_connected),
+                        value(user.last_synced_at && time(user.last_synced_at)),
+                        value(user.app_version),
+                        yesNo(user.notifications),
+                        value(user.providers?.length
+                            ? user.providers.map((provider) => provider[0].toUpperCase() + provider.slice(1)).join(", ")
+                            : null),
+                        value(user.time_zone),
+                    ],
+                })),
+            };
+        },
+    },
+];
+
+/** A page of one table's rows, for its "Show more". */
+export async function readAdminTablePage(
+    id: string,
+    limit: number,
+    offset: number,
+    environment: AdminDashboardEnvironment,
+    database: Sql = createDatabaseClient(),
+): Promise<AdminDashboardTablePage> {
+    const table = adminTables.find((item) => item.id === id);
+    if (!table) throw new ApiError(404, ERROR_CODES.not_found, "No admin table has this id");
+    return adminDashboardTablePageSchema.parse(await table.read(limit, offset, environment, database));
 }

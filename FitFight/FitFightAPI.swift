@@ -1409,6 +1409,22 @@ struct FitFightAPI {
         )
     }
 
+    /// Admin only. The next rows of a dashboard table, for its "Show more".
+    func adminTable(
+        id: String,
+        environment: String,
+        limit: Int,
+        offset: Int,
+        authProject: String,
+        accessToken: String
+    ) async throws -> FitFightAdminDashboard.TablePage {
+        try await get(
+            path: "admin/table?id=\(id)&environment=\(environment)&limit=\(limit)&offset=\(offset)",
+            accessToken: accessToken,
+            headers: ["X-FitFight-Auth-Project": authProject]
+        )
+    }
+
     func founderFights(accessToken: String) async throws -> FitFightFounderFights {
         try await get(path: "admin/founder-fights", accessToken: accessToken)
     }

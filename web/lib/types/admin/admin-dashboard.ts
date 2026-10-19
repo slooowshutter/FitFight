@@ -79,6 +79,39 @@ export const adminDashboardChartSchema = z.object({
     ),
 });
 
+/** One table cell, already written for display. Muted reads secondary: an empty value or a no. */
+export const adminDashboardTableCellSchema = z.object({
+    text: z.string(),
+    muted: z.boolean(),
+    bold: z.boolean(),
+});
+
+/** A page of a table's rows: the first in the dashboard, the next ones from `GET /admin/table`. */
+export const adminDashboardTablePageSchema = z.object({
+    /** Rows in the whole table. */
+    total: z.number().int(),
+    /** One cell per column, in column order. */
+    rows: z.array(z.object({ id: z.string(), cells: z.array(adminDashboardTableCellSchema) })),
+    note: z.string().nullable(),
+});
+
+/** A server-defined table. Apps draw any table, so a new one needs no app update. The first column stays put. */
+export const adminDashboardTableSchema = adminDashboardTablePageSchema.extend({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    columns: z.array(z.object({ title: z.string(), definition: z.string().nullable() })),
+    /** Rows each "Show more" adds. */
+    page_size: z.number().int(),
+});
+
+export const adminTableQuerySchema = z.object({
+    id: z.string(),
+    environment: adminDashboardEnvironmentSchema.optional(),
+    limit: z.coerce.number().int().min(1).max(100),
+    offset: z.coerce.number().int().min(0),
+});
+
 export const adminDashboardSchema = z.object({
     section: adminDashboardSectionSchema,
     days: z.number().int(),
@@ -90,6 +123,8 @@ export const adminDashboardSchema = z.object({
     sections: z.array(z.object({ id: adminDashboardSectionSchema, title: z.string() })),
     cards: z.array(adminDashboardCardSchema),
     charts: z.array(adminDashboardChartSchema),
+    /** Drawn between the cards and the charts. Servers before 19 Oct 2026 omit it. */
+    tables: z.array(adminDashboardTableSchema),
 });
 
 export const adminDashboardCardRowSchema = z.object({
@@ -143,6 +178,8 @@ export type AdminDashboardQuery = z.infer<typeof adminDashboardQuerySchema>;
 export type AdminDashboardCard = z.infer<typeof adminDashboardCardSchema>;
 export type AdminDashboardChart = z.infer<typeof adminDashboardChartSchema>;
 export type AdminDashboard = z.infer<typeof adminDashboardSchema>;
+export type AdminDashboardTable = z.infer<typeof adminDashboardTableSchema>;
+export type AdminDashboardTablePage = z.infer<typeof adminDashboardTablePageSchema>;
 
 export type AdminDashboardQueryFragment = PendingQuery<Row[]>;
 

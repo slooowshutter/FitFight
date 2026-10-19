@@ -34,7 +34,7 @@ export const GET = apiRoute(async (request) => {
         recent.delete(key);
         throw error;
     });
-    if ([...result.cards, ...result.charts].some((tile) => tile.note?.startsWith("Query failed"))) {
+    if ([...result.cards, ...result.charts, ...result.tables].some((tile) => tile.note?.startsWith("Query failed"))) {
         recent.delete(key);
     }
     return json(result);

@@ -16,7 +16,7 @@ the mirror, Marc taps it on his phone, then the winner is ported to Swift and th
 - On a phone, from a pushed branch:
   `https://htmlpreview.github.io/?https://raw.githubusercontent.com/slooowshutter/FitFight/<branch>/docs/design/source/kit/app.html#<route>`
 - The route after `#` is the navigation: the tab, then pushed screens, then `~` modals.
-  `#fights/fight?id=duel/~editFight?id=duel` is the Eat it fight with its Edit sheet open. The map writes every route.
+  `#fights/fight?id=duel/~editFight?id=duel` is the Roommate Rumble fight with its Edit sheet open. The map writes every route.
 - Query options: `?shot=1` (the bare phone, for screenshots), `theme=day`, `scenario=empty` (see below), `admin=1`,
   `account=welcome|onboarding|restoring|unavailable`, `variant=<feature>:<option>` (a design option, see below).
 - Fake data and settings persist in the browser. **Reset data** in the map restores them.
@@ -24,7 +24,7 @@ the mirror, Marc taps it on his phone, then the winner is ported to Swift and th
 ## Fake data
 
 The people and fights are the ones in `FitFight/CompanionPreview.swift` (Alex is you; Leo, Nina, Sam and Theo; Step it
-Up, Eat it, Walk Wars, The breakfast club, Coffee is on you). The map's data sets are the Companion preview display
+Up, Roommate Rumble, Walk Wars, Office Showdown, The breakfast club, Coffee is on you). The map's data sets are the Companion preview display
 states: Populated, Tied, Solo, Next round, Pending final sync, Finished, Empty, Loading, Cached / offline. Change the
 Swift fixture and the mirror's `makeData` together.
 

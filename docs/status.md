@@ -6,6 +6,72 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## Admin dashboard tables on iPhone and web, prepared 19 Oct 2026
+
+Marc saw no table on the iPhone Users tab: #431 built it on the web only. He wants every admin
+dashboard feature on both, always (now a hard rule in `AGENTS.md`), and the dashboard fully
+server-driven so it needs no TestFlight build.
+
+**Code:** tables are now server-defined like sections, cards and charts: the dashboard payload
+has `tables`, and "Show more" reads `GET /api/v1/admin/table`. The iPhone dashboard
+(`AdminTableCard`) and the web page (`TableCard`) draw any table: a fixed first column and
+scrolling columns. **Newest users** is the first table. `GET /api/v1/admin/users` (from #431,
+used only by the web page, never on `main`) is replaced by `/admin/table`. The mirror shows the
+table on the Users tab (map: "Users tab: newest users table"). No release note (admin only).
+See [backend](backend.md#admin-dashboard-tables-prepared-19-oct-2026).
+
+**Contract:** additive for installed apps: `tables` is a new optional field that builds before
+this one ignore. `/admin/users` had no app client. `contracts/fixtures/admin-dashboard.json`
+has a table, and `tests/APIContractTests.swift` decodes it.
+
+**Verification (local, 19 Oct):** web typecheck passed; the dashboard integration test passed on
+a migrated Postgres 17 copy, including the table's first page, its cells in Paris time, and the
+next pages. The mirror table rendered in Chrome: 10 rows, the fixed handle, then 30. Swift was
+not compiled here; the simulator build and contract tests run in CI.
+
+---
+
+## Home page: WHOOP, paid extras and closing art, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 for the home page to say FitFight has WHOOP too, to stop
+calling the companions "coming later", and to replace the tennis picture under "Your
+friends are already walking."
+
+- **Copy (English and French):** the hero line reads Free · iPhone · Apple Health ·
+  WHOOP, and the pricing list says "Apple Health and WHOOP sync". The card of paid extras
+  is titled "Optional extras" / "En option", and the FAQ cost answer calls Specials and custom
+  companions optional purchases. A new FAQ, "Does it work with WHOOP?", says that WHOOP
+  connects for sleep, recovery, strain and workouts and that Fight steps still come from Apple Health.
+- **Art:** the closing card shows `friends-running.webp`: Rabbit, Turtle, Fox and Badger
+  jogging on a trail, transparent, 786 x 404. It is the approved "FitFight Group
+  Vignette" Blend image `stb-s04-classic-race`, copied unchanged from
+  `docs/design/source/kit/fight-group-image-proposals.html`. The edge-fade mask that hid the
+  old opaque picture's box is removed. `tennis-night.webp` is removed. Marc found the
+  `raceNight.png` art ugly, and its background was black, not transparent.
+- **FAQ text:** the WHOOP answer names the screens in words. Nunito has no `→` glyph,
+  so the browser drew the arrows from another font, smaller and lower than the text.
+- **Live:** nothing deployed. Production gets it when `preview` merges to `main`. The
+  App Store version with WHOOP is 1.2.1, still in review. 1.1.3 has no WHOOP.
+
+---
+
+## Sample fight names and home page line, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 to rename the sample fight Eat it and to reword the home page
+line that said "get" twice.
+
+- **Names:** Eat it is now Roommate Rumble (Duel de colocs in French). A fourth live fight,
+  Office Showdown (Le match du bureau), joins: Alex, Sam and Theo, 2 weeks, 4 days left,
+  Alex 430 steps behind Sam, loser brings donuts on Friday.
+- **Home page line:** "Choose a length, set the stakes, then start walking." French:
+  "Choisissez une durée, fixez l’enjeu, puis mettez-vous en marche."
+- **Where:** `web/components/landing/landing-copy.ts`, `FitFight/CompanionPreview.swift`
+  (debug simulator only, so no release note) and the mirror. The next Screenshots run
+  captures the App Store set with the new names. App Store Connect still has the 1.2.0 set
+  until a new set is uploaded with the next App Store version.
+
+---
+
 ## Admin Users table and referral stats, prepared 19 Oct 2026
 
 Marc asked on 19 Oct 2026 for a table of the latest users on the admin dashboard's Users tab,
@@ -15,12 +81,12 @@ and for stats on whether people refer their friends.
 load, then **Show 20 more**. Columns: Handle (sticky while the others scroll sideways), Name,
 Email, Joined, Friends, Everybody fight, Fights, Referred by, Referrals, Apple Health, Last sync,
 App, Notifications, Sign-in, Time zone. Hovering a header explains its rule. It reads the new
-`GET /api/v1/admin/users` ([backend](backend.md#admin-users-table-prepared-19-oct-2026)). The
+`GET /api/v1/admin/users` (replaced the same day by [server-defined tables](backend.md#admin-dashboard-tables-prepared-19-oct-2026)). The
 Users tab also has three referral tiles, in the app and on the web: **Monthly referrers**
 (people whose link brought a signup in the last 30 days), **Users who referred someone** (share
 of all users, now vs 7 days ago) and **Onboarding by referral, all users** (referred vs other
 users: picked a username, connected Apple Health, joined a fight, referred someone; groups under
-5 left out). No release note (admin only); the table is web only, so no iPhone or mirror change.
+5 left out). No release note (admin only). This first version was web only; see the entry above.
 
 **Contract:** additive. One new admin route and three new dashboard tiles; the dashboard's shape,
 ids, kinds and units are unchanged, and the iPhone app draws new tiles without an update. The
@@ -38,7 +104,7 @@ path). A role without `auth` access read emails through the view and was refused
 `next dev` with recorded API answers showed the table at 402 and 1280 px wide: 10, 30, then 35
 rows, the sticky handle, and no page-wide sideways scroll.
 
-**Live deployment:** not deployed. PR into `develop`.
+**Live deployment:** #431 merged into `develop` and #432 into `preview` on 19 Oct; `preview` deployed.
 
 ---
 

@@ -1074,6 +1074,31 @@ paths:
                                                 }
                                             }
                                         }
+                                    },
+                                    "tables": {
+                                        "type": "array",
+                                        "description": "Server-defined tables, drawn between the cards and the charts, first column fixed. The first page of rows; GET /admin/table reads the next ones. Servers before 19 Oct 2026 omit it.",
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id", "title", "description", "columns", "total", "rows", "note", "page_size"],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "title": { "type": "string" },
+                                                "description": { "type": "string", "nullable": true },
+                                                "columns": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "required": ["title", "definition"],
+                                                        "properties": { "title": { "type": "string" }, "definition": { "type": "string", "nullable": true } }
+                                                    }
+                                                },
+                                                "total": { "type": "integer", "description": "Rows in the whole table" },
+                                                "rows": { "$ref": "#/components/schemas/AdminTableRows" },
+                                                "note": { "type": "string", "nullable": true },
+                                                "page_size": { "type": "integer", "description": "Rows each Show more adds" }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1127,57 +1152,37 @@ paths:
                     description: Missing or invalid session
                 "403":
                     description: Not the FitFight admin
-    /admin/users:
+    /admin/table:
         get:
-            operationId: readAdminUsers
-            summary: Admin only. The newest accounts, a page at a time, for the Users tab's table on the web admin page.
-            description: Same access and environment rule as /admin/dashboard. Each column uses the dashboard's own rules. Production returns null emails and sign-in providers until its database has the 20261019120000_account_auth migration.
+            operationId: readAdminTablePage
+            summary: Admin only. The next rows of a table from /admin/dashboard, for its Show more.
+            description: Same access and environment rule as /admin/dashboard. The newest_users table (Users tab) shows each account's email and sign-in providers only once its database has the 20261019120000_account_auth migration; until then they read "-" and the note says why.
             security: [{ bearerAuth: [] }]
             parameters:
+                - { name: id, in: query, required: true, description: "The table's id from /admin/dashboard, such as newest_users", schema: { type: string } }
                 - { name: environment, in: query, required: false, description: "Database to read. Defaults to the server's own; a staging server reads production through its read-only analytics connection.", schema: { type: string, enum: [production, staging] } }
-                - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 10 } }
-                - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+                - { name: limit, in: query, required: true, schema: { type: integer, minimum: 1, maximum: 100 } }
+                - { name: offset, in: query, required: true, schema: { type: integer, minimum: 0 } }
             responses:
                 "200":
-                    description: Newest signup first. Deleted accounts are left out. Times are UTC. Cache-Control is no-store.
+                    description: Rows from offset, in the table's order. Cache-Control is no-store.
                     content:
                         application/json:
                             schema:
                                 type: object
-                                required: [environment, total, users, note]
+                                required: [total, rows, note]
                                 properties:
-                                    environment: { type: string, enum: [production, staging] }
-                                    total: { type: integer, description: Every account, deleted ones left out }
-                                    note: { type: string, nullable: true, description: Why emails and providers are null, when they are }
-                                    users:
-                                        type: array
-                                        items:
-                                            type: object
-                                            required: [user_id, handle, handle_set, display_name, email, providers, created_at, friends, everybody_fight, fights, referred_by, referrals, health_connected, last_synced_at, app_version, notifications, time_zone]
-                                            properties:
-                                                user_id: { type: string, format: uuid }
-                                                handle: { type: string }
-                                                handle_set: { type: boolean, description: False while the account has the username generated at signup }
-                                                display_name: { type: string }
-                                                email: { type: string, nullable: true }
-                                                providers: { type: array, nullable: true, items: { type: string }, description: "Supabase Auth providers, such as apple or google" }
-                                                created_at: { type: string, format: date-time }
-                                                friends: { type: integer }
-                                                everybody_fight: { type: boolean, description: In the Everybody fight's series now }
-                                                fights: { type: integer, description: "Fights joined, a repeating Fight once, by the dashboard's joined-a-fight rule" }
-                                                referred_by: { type: string, nullable: true, description: The referrer's username }
-                                                referrals: { type: integer, description: Signups this account's referral link brought }
-                                                health_connected: { type: boolean, description: The phone has sent at least one Apple Health day with steps }
-                                                last_synced_at: { type: string, format: date-time, nullable: true }
-                                                app_version: { type: string, nullable: true, description: "Version and build of the newest Apple Health sync report, such as 1.2.1 (234)" }
-                                                notifications: { type: boolean, description: A device registered for push notifications now }
-                                                time_zone: { type: string, nullable: true }
+                                    total: { type: integer, description: Rows in the whole table }
+                                    rows: { $ref: "#/components/schemas/AdminTableRows" }
+                                    note: { type: string, nullable: true }
                 "400":
-                    description: Invalid limit or offset, or a production server asked for staging
+                    description: Invalid parameters, or a production server asked for staging
                 "401":
                     description: Missing or invalid session
                 "403":
                     description: Not the FitFight admin, or not the admin in production
+                "404":
+                    description: No admin table has this id
     /admin/production-sign-in:
         post:
             operationId: mintProductionSignIn
@@ -2635,6 +2640,23 @@ components:
             scheme: bearer
             bearerFormat: JWT
     schemas:
+        AdminTableRows:
+            type: array
+            description: One cell per column, in column order, already written for display.
+            items:
+                type: object
+                required: [id, cells]
+                properties:
+                    id: { type: string }
+                    cells:
+                        type: array
+                        items:
+                            type: object
+                            required: [text, muted, bold]
+                            properties:
+                                text: { type: string }
+                                muted: { type: boolean, description: Reads secondary, such as an empty value or a no }
+                                bold: { type: boolean }
         SharedProfileIdentity: {
             "type": "object",
             "required": [

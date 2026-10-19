@@ -132,6 +132,20 @@ class ReleaseAvailabilityTest < Minitest::Test
         assert_equal 153, manifest.dig("staging", "latest", "build")
     end
 
+    def test_a_build_without_beta_detail_is_skipped
+        @newer.build_beta_detail.external_build_state = "IN_BETA_TESTING"
+        released = OpenStruct.new(
+            id: "store", version: "170", app_version: "1.0.0", processing_state: "VALID", expired: false,
+            build_beta_detail: nil
+        )
+        @group.fetch_builds << released
+        policy = Spaceship::ConnectAPI::Build.stub(:all, [@older, @newer, released]) do
+            @lane.available_app_releases(@app, @registered, @previous)
+        end.fetch("staging")
+        assert_equal 160, policy.fetch("latest").fetch("build")
+        assert_nil policy.fetch("review")
+    end
+
     def test_production_review_does_not_replace_the_public_release
         @app.live = OpenStruct.new(version_string: "1.0.0", build: OpenStruct.new(version: "140"))
         @app.candidate = OpenStruct.new(version_string: "1.1.0", build: OpenStruct.new(version: "170"))

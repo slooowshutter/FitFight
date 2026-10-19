@@ -118,6 +118,62 @@ function samplePoints(sql: Sql, w: AdminDashboardWindow): AdminDashboardQueryFra
     `;
 }
 
+/**
+ * Every person's complete Apple Health Steps days before the Paris day `today`, with their Paris
+ * signup day. The website's Steps total adds the same days as the All-time steps card.
+ */
+export function stepHistory(sql: Sql, today: string, floor: AdminDashboardQueryFragment): AdminDashboardQueryFragment {
+    // Complete Apple Health days only: a complete row beats a newer incomplete one (profile statistics
+    // take the newest row), and real rows beat the Fight fallback.
+    // Window-bound queries pass a floor so they do not sort years of imported history.
+    // NOTE: 1.1.2 (210) phones that connected Health before 16 Sep 2026 fail their daily-Steps
+    // upload (HealthKit error 5) but still upload Fight totals. A day without a complete daily row
+    // takes the steps between two daily checkpoints of a Fight upload: whole days, highest Fight.
+    // Remove once no installed build is 1.1.2 (210); silly and samuel upload no Fights and stay missing.
+    return sql`
+        select latest.user_id, latest.day, latest.steps, (p.created_at at time zone 'Europe/Paris')::date as joined_day, p.handle
+        from (
+            select distinct on (days.user_id, days.day) days.user_id, days.day, days.steps, days.finalized
+            from (
+                select metric.user_id, metric.day, metric.value::float8 as steps, metric.updated_at,
+                    metric.observed_through >= metric.ends_at as finalized, 1 as priority
+                from private.activity_metrics as metric
+                join public.data_sources as source on source.id = metric.source_id
+                where metric.scope = 'day' and metric.metric = 'steps' and source.provider = 'apple_health'
+                    and metric.day >= ${floor}
+                union all
+                select legacy.user_id, legacy.day, legacy.value::float8, legacy.updated_at,
+                    legacy.finalized_at is not null, 0
+                from public.metric_days as legacy
+                join public.data_sources as source on source.id = legacy.source_id
+                where legacy.metric = 'steps' and source.provider = 'apple_health' and legacy.day >= ${floor}
+                union all
+                select fight.user_id, fight.day, max(fight.steps), max(fight.updated_at), true, -1
+                from (
+                    select snapshot.user_id, snapshot.created_at as updated_at, (point.value->>'day')::date as day,
+                        (point.value->>'steps')::float8 - coalesce(lag((point.value->>'steps')::float8)
+                            over (partition by snapshot.id order by point.ordinality), 0) as steps,
+                        (point.value->>'cutoff_at')::timestamptz = ((point.value->>'day')::date + 1)::timestamp at time zone f.time_zone
+                            and (point.value->>'day')::date::timestamp at time zone f.time_zone >= f.starts_at as whole
+                    from (
+                        select distinct on (s.fight_id, s.user_id) s.id, s.fight_id, s.user_id, s.created_at, s.step_checkpoints
+                        from private.fight_score_snapshots as s
+                        where s.step_checkpoints is not null and s.cutoff_at >= ${floor}
+                        order by s.fight_id, s.user_id, s.cutoff_at desc, s.created_at desc
+                    ) as snapshot
+                    join public.fights as f on f.id = snapshot.fight_id
+                    cross join lateral jsonb_array_elements(snapshot.step_checkpoints) with ordinality as point
+                ) as fight
+                where fight.whole and fight.day >= ${floor}
+                group by fight.user_id, fight.day
+            ) as days
+            order by days.user_id, days.day, days.finalized desc, days.priority < 0, days.updated_at desc, days.priority desc
+        ) as latest
+        join public.profiles as p on p.user_id = latest.user_id
+        where p.deleted_at is null and latest.finalized and latest.day < ${today}::date
+    `;
+}
+
 /** "8,234", "42%", "1 day", "1.2 seconds": a number in an example sentence, in English. */
 function readable(value: number, unit: AdminDashboardUnit): string {
     const digits = value.toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
@@ -261,59 +317,10 @@ function definitions(
     const activeDays = sql`
         select distinct user_id, (at at time zone 'Europe/Paris')::date as day from (${activity}) as activity
     `;
-    // Complete Apple Health days only: a complete row beats a newer incomplete one (profile statistics
-    // take the newest row), and real rows beat the Fight fallback.
-    // Window-bound queries pass a floor so they do not sort years of imported history.
-    // NOTE: 1.1.2 (210) phones that connected Health before 16 Sep 2026 fail their daily-Steps
-    // upload (HealthKit error 5) but still upload Fight totals. A day without a complete daily row
-    // takes the steps between two daily checkpoints of a Fight upload: whole days, highest Fight.
-    // Remove once no installed build is 1.1.2 (210); silly and samuel upload no Fights and stay missing.
-    const stepHistory = (floor: AdminDashboardQueryFragment) => sql`
-        select latest.user_id, latest.day, latest.steps, p.joined_day, p.handle
-        from (
-            select distinct on (days.user_id, days.day) days.user_id, days.day, days.steps, days.finalized
-            from (
-                select metric.user_id, metric.day, metric.value::float8 as steps, metric.updated_at,
-                    metric.observed_through >= metric.ends_at as finalized, 1 as priority
-                from private.activity_metrics as metric
-                join public.data_sources as source on source.id = metric.source_id
-                where metric.scope = 'day' and metric.metric = 'steps' and source.provider = 'apple_health'
-                    and metric.day >= ${floor}
-                union all
-                select legacy.user_id, legacy.day, legacy.value::float8, legacy.updated_at,
-                    legacy.finalized_at is not null, 0
-                from public.metric_days as legacy
-                join public.data_sources as source on source.id = legacy.source_id
-                where legacy.metric = 'steps' and source.provider = 'apple_health' and legacy.day >= ${floor}
-                union all
-                select fight.user_id, fight.day, max(fight.steps), max(fight.updated_at), true, -1
-                from (
-                    select snapshot.user_id, snapshot.created_at as updated_at, (point.value->>'day')::date as day,
-                        (point.value->>'steps')::float8 - coalesce(lag((point.value->>'steps')::float8)
-                            over (partition by snapshot.id order by point.ordinality), 0) as steps,
-                        (point.value->>'cutoff_at')::timestamptz = ((point.value->>'day')::date + 1)::timestamp at time zone f.time_zone
-                            and (point.value->>'day')::date::timestamp at time zone f.time_zone >= f.starts_at as whole
-                    from (
-                        select distinct on (s.fight_id, s.user_id) s.id, s.fight_id, s.user_id, s.created_at, s.step_checkpoints
-                        from private.fight_score_snapshots as s
-                        where s.step_checkpoints is not null and s.cutoff_at >= ${floor}
-                        order by s.fight_id, s.user_id, s.cutoff_at desc, s.created_at desc
-                    ) as snapshot
-                    join public.fights as f on f.id = snapshot.fight_id
-                    cross join lateral jsonb_array_elements(snapshot.step_checkpoints) with ordinality as point
-                ) as fight
-                where fight.whole and fight.day >= ${floor}
-                group by fight.user_id, fight.day
-            ) as days
-            order by days.user_id, days.day, days.finalized desc, days.priority < 0, days.updated_at desc, days.priority desc
-        ) as latest
-        join (${profiles}) as p on p.user_id = latest.user_id
-        where latest.finalized and latest.day < ${w.today}::date
-    `;
-    const history = stepHistory(sql`'-infinity'::date`);
+    const history = stepHistory(sql, w.today, sql`'-infinity'::date`);
     const steps = sql`select * from (${history}) as history where history.day >= history.joined_day`;
     const recentSteps = sql`
-        select * from (${stepHistory(sql`least(${w.start}::date, ${w.today}::date - 61)`)}) as history
+        select * from (${stepHistory(sql, w.today, sql`least(${w.start}::date, ${w.today}::date - 61)`)}) as history
         where history.day >= history.joined_day
     `;
     // NOTE: the Production view runs this code on the preview server against production, which has no
@@ -778,7 +785,7 @@ function definitions(
             // covers the last 6 signup months, the cards' cohorts and the chart period.
             const synced = sql`
                 select distinct history.user_id, history.day
-                from (${stepHistory(sql`least(${w.start}::date, ${w.today}::date - 200)`)}) as history
+                from (${stepHistory(sql, w.today, sql`least(${w.start}::date, ${w.today}::date - 200)`)}) as history
                 where history.day >= history.joined_day
             `;
             const withHealth = sql`
@@ -951,7 +958,7 @@ function definitions(
                 from (${activitySince(sql`${floor}::timestamp at time zone 'Europe/Paris'`)}) as activity
             `;
             const synced = sql`
-                select distinct history.user_id, history.day from (${stepHistory(floor)}) as history
+                select distinct history.user_id, history.day from (${stepHistory(sql, w.today, floor)}) as history
                 where history.day >= history.joined_day
             `;
             // People active in the `span` complete days before the latest `span` who were not active

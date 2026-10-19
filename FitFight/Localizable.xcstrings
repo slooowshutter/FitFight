@@ -18683,6 +18683,16 @@
                     }
                 }
             }
+        },
+        "Version 1.3.0 starts here. This build changes nothing you can see yet.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "La version 1.3.0 commence ici. Cette version ne change encore rien de visible."
+                    }
+                }
+            }
         }
     },
     "version": "1.0"

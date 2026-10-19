@@ -2,10 +2,9 @@ import type { Sql } from "postgres";
 import { APP_WIDE_JOIN_CODE } from "@/lib/domain/fights/join-code";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
-    friendSuggestionRowSchema,
+    friendSuggestionSchema,
     type FriendSuggestions,
 } from "@/lib/types/friends/friend-suggestion";
-import { signMediaUrls } from "./media-supabase-query";
 
 /**
  * People the caller raced or sat out with who are not friends, requested, blocked, or deleted. A repeating
@@ -16,10 +15,10 @@ export async function listFriendSuggestions(
     userId: string,
     database: Sql = createDatabaseClient(),
 ): Promise<FriendSuggestions> {
-    const rows = friendSuggestionRowSchema.array().parse(await database`
+    const people = friendSuggestionSchema.array().parse(await database`
         select profile.id as user_id, profile.handle, profile.display_name, profile.companion_id,
             case when profile.companion_id = 'custom' then profile.companion_image_url end as avatar_url,
-            media.object_path as avatar_path, shared.shared_fights
+            shared.shared_fights
         from (
             select theirs.user_id, count(*)::int as shared_fights, max(fight.starts_at) as last_shared_at
             from public.fight_members as mine
@@ -39,7 +38,6 @@ export async function listFriendSuggestions(
             group by theirs.user_id
         ) as shared
         join public.profiles as profile on profile.id = shared.user_id
-        left join public.media_objects as media on media.id = profile.avatar_media_id and media.status = 'ready'
         where profile.deleted_at is null
             and not exists (
                 select 1 from private.profile_friendships as friendship
@@ -57,19 +55,5 @@ export async function listFriendSuggestions(
         order by shared.shared_fights desc, shared.last_shared_at desc, profile.id
         limit 10
     `);
-    const urls = await signMediaUrls(
-        rows.flatMap((row) => (row.avatar_path ? [row.avatar_path] : [])),
-    );
-    return {
-        people: rows.map((row) => ({
-            user_id: row.user_id,
-            handle: row.handle,
-            display_name: row.display_name,
-            companion_id: row.companion_id,
-            avatar_url:
-                row.avatar_url ??
-                (row.avatar_path ? (urls.get(row.avatar_path) ?? null) : null),
-            shared_fights: row.shared_fights,
-        })),
-    };
+    return { people };
 }

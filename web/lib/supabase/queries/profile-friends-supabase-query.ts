@@ -5,7 +5,6 @@ import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { profileFriendListRowSchema, friendshipRowSchema, type FriendsPage, type FriendsQuery, type FriendshipAction, type FriendshipResponse } from "@/lib/types/friends/friendship";
 import { profileFeatureConfigSchema } from "@/lib/types/profiles/shared-profile";
 import { endFriendFight, ensureFriendFights } from "./friend-fights-supabase-query";
-import { signMediaUrl } from "./media-supabase-query";
 import { loadProfileAccess } from "./shared-profiles-supabase-query";
 
 /** A reverse request stays pending until its recipient explicitly accepts it. */
@@ -60,11 +59,10 @@ export async function listProfileFriends(userId: string, query: FriendsQuery, da
         await sql`select id as user_id from public.profiles where id = ${userId} and deleted_at is null for share`;
         const rows = profileFriendListRowSchema.array().parse(await sql`
             select profile.id as user_id, profile.handle, profile.display_name, profile.companion_id, case when profile.companion_id = 'custom' then profile.companion_image_url end avatar_url,
-                friendship.state, friendship.requester_id, media.object_path avatar_path
+                friendship.state, friendship.requester_id
             from private.profile_friendships friendship
             join public.profiles profile on profile.id = case when friendship.user_low = ${userId}
                 then friendship.user_high else friendship.user_low end
-            left join public.media_objects media on media.id = profile.avatar_media_id and media.status = 'ready'
             where (friendship.user_low = ${userId} or friendship.user_high = ${userId})
                 and profile.deleted_at is null
                 and not exists (
@@ -80,10 +78,10 @@ export async function listProfileFriends(userId: string, query: FriendsQuery, da
         const filtered = rows.filter((row) => query.kind === "accepted" ? row.state === "accepted"
             : row.state === "pending" && (query.kind === "outgoing" ? row.requester_id === userId : row.requester_id !== userId));
         const afterCursor = filtered.filter((row) => !query.cursor || row.user_id > query.cursor);
-        const people = await Promise.all(afterCursor.slice(0, query.limit).map(async (row) => ({
+        const people = afterCursor.slice(0, query.limit).map((row) => ({
             user_id: row.user_id, handle: row.handle, display_name: row.display_name, companion_id: row.companion_id,
-            avatar_url: row.avatar_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null),
-        })));
+            avatar_url: row.avatar_url,
+        }));
         return {
             people,
             next_cursor: afterCursor.length > query.limit ? people[people.length - 1].user_id : null,

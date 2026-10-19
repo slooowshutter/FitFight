@@ -1,7 +1,5 @@
 import { z } from "zod";
 import type { Sql } from "postgres";
-import { ApiError, ERROR_CODES } from "@/lib/http";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     fightSnapshotSchema,
@@ -10,7 +8,6 @@ import {
 } from "@/lib/types/fights/fight-snapshot";
 import { companionIdSchema } from "@/lib/types/companions/companion";
 import { FRIEND_FIGHT_WEEK_SECONDS } from "@/lib/types/fights/friend-fight";
-import { mapMedia, signMediaUrls, type MediaRow } from "./media-supabase-query";
 
 const snapshotRowSchema = fightSnapshotSchema.extend({
     fights: z.array(
@@ -22,7 +19,6 @@ const snapshotRowSchema = fightSnapshotSchema.extend({
             user_id: z.string().uuid(),
             handle: z.string(),
             display_name: z.string(),
-            avatar_media_id: z.string().uuid().nullable().optional(),
             companion_id: companionIdSchema.nullable().default(null),
             companion_image_url: z.string().url().nullish(),
         }),
@@ -123,7 +119,7 @@ export async function readFightSnapshot(
                 ) as history on member.state = 'accepted'
                 where member.fight_id in (select id from visible_fights)
             ), visible_profiles as (
-                select id as user_id, handle, display_name, avatar_media_id, companion_id, companion_image_url
+                select id as user_id, handle, display_name, companion_id, companion_image_url
                 from public.profiles
                 where id in (
                     select user_id from visible_members union select owner_id from visible_fights
@@ -212,58 +208,13 @@ export async function readFightSnapshot(
     });
     return fightSnapshotSchema.parse({
         ...row,
-        profiles: await attachProfileAvatars(row.profiles),
+        profiles: row.profiles.map((profile) => ({
+            user_id: profile.user_id,
+            handle: profile.handle,
+            display_name: profile.display_name,
+            avatar: null,
+            companion_id: profile.companion_id,
+            ...(profile.companion_id === "custom" && profile.companion_image_url ? { companion_image_url: profile.companion_image_url } : {}),
+        })),
     });
-}
-
-async function attachProfileAvatars(
-    profiles: z.infer<typeof snapshotRowSchema>["profiles"],
-): Promise<FightSnapshot["profiles"]> {
-    const ids = [
-        ...new Set(
-            profiles.flatMap((profile) =>
-                profile.avatar_media_id ? [profile.avatar_media_id] : [],
-            ),
-        ),
-    ];
-    const avatars = new Map<
-        string,
-        FightSnapshot["profiles"][number]["avatar"]
-    >();
-    if (ids.length > 0) {
-        const admin = createAdminClient();
-        const { data, error } = await admin
-            .from("media_objects")
-            .select(
-                "id, owner_id, kind, purpose, status, object_path, original_filename, content_type, byte_size, width, height, duration_ms, sha256, created_at",
-            )
-            .in("id", ids)
-            .eq("status", "ready");
-        if (error)
-            throw new ApiError(
-                500,
-                ERROR_CODES.db_error,
-                "Could not load profile photos",
-            );
-        const mediaRows = (data ?? []) as MediaRow[];
-        const urls = await signMediaUrls(
-            mediaRows.map((media) => media.object_path),
-        );
-        for (const media of mediaRows) {
-            avatars.set(
-                media.id,
-                mapMedia(media, urls.get(media.object_path) ?? null),
-            );
-        }
-    }
-    return profiles.map((profile) => ({
-        user_id: profile.user_id,
-        handle: profile.handle,
-        display_name: profile.display_name,
-        avatar: profile.avatar_media_id
-            ? (avatars.get(profile.avatar_media_id) ?? null)
-            : null,
-        companion_id: profile.companion_id,
-        ...(profile.companion_id === "custom" && profile.companion_image_url ? { companion_image_url: profile.companion_image_url } : {}),
-    }));
 }

@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 1.2.1 release", updated: "19 Oct 2026" };
+            const MIRROR = { matches: "develop 1.2.1 release + choose your companion alert", updated: "19 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 2;
@@ -1032,6 +1032,11 @@
     });
     // web/lib/alerts/in-app-alerts.ts, highest priority first. The first button is the primary one.
     const IN_APP_ALERTS = {
+        companion: {
+            id: "choose-your-companion", title: "Choose your companion", image: `${ROOT}web/public/landing/companion-capybara-3.webp`,
+            body: "Your companion is your picture in fights, on Feed and on your profile. Choose one so your friends see more than your initials.",
+            buttons: [{ title: "Choose", action: "choose_companion", primary: true }, { title: "Not now", action: "dismiss", primary: false }],
+        },
         first: {
             id: "start-first-fight", title: "Start your first fight", image: null,
             body: "Add a friend by username, pick 3 days to a month, and see who walks more. You can also set what the loser has to do.",
@@ -1594,7 +1599,8 @@
     });
     const nextAlert = () => { D().inAppAlert = D().inAppAlertQueue?.shift() ?? null; };
     action("rootShowInAppAlert", (which) => {
-        const queue = which === "queue" ? [IN_APP_ALERTS.first, IN_APP_ALERTS.character] : [IN_APP_ALERTS[which] || IN_APP_ALERTS.first];
+        // The backend sends at most three per open, highest priority first.
+        const queue = which === "queue" ? [IN_APP_ALERTS.companion, IN_APP_ALERTS.first, IN_APP_ALERTS.character] : [IN_APP_ALERTS[which] || IN_APP_ALERTS.first];
         D().inAppAlert = clone(queue[0]);
         D().inAppAlertQueue = queue.slice(1).map(clone);
         shownAlert = null;
@@ -1607,6 +1613,7 @@
         D().inAppAlert = null;
         if (choice?.action === "update") return present("sysExternal", { url: choice.url || APP_STORE_URL });
         if (choice?.action === "open_character") return present("paidCharacter");
+        if (choice?.action === "choose_companion") return present("companionPicker");
         if (choice?.action === "new_fight") return setTab("newFight");
         nextAlert();
         render();
@@ -1932,9 +1939,10 @@
         ["Update toast: TestFlight", trigger("#fights", "rootShowUpdate:testflight"), { ...app, note: "Hides itself after 10 seconds" }],
         ["Update toast: App Store", trigger("#fights", "rootShowUpdate:appstore"), app],
         ["Update card preview (admin)", trigger("#you", "rootShowUpdate:preview"), { ...app, admin: true }],
+        ["In-app alert: choose your companion", trigger("#fights", "rootShowInAppAlert:companion"), { ...app, note: "No companion picture. Choose opens the picker" }],
         ["In-app alert: start your first fight", trigger("#fights", "rootShowInAppAlert:first"), app],
         ["In-app alert: make your own character", trigger("#fights", "rootShowInAppAlert:character"), app],
-        ["In-app alerts: two in a row", trigger("#fights", "rootShowInAppAlert:queue"), { ...app, note: "Not now shows the next one" }],
+        ["In-app alerts: three in a row (the most per open)", trigger("#fights", "rootShowInAppAlert:queue"), { ...app, note: "Not now or a tap outside shows the next. A button that opens something leaves the rest for the next open" }],
         ["Today’s check-in (daily push)", "#fights/fight?id=duel/~dailyRecap?id=duel", app],
         ["Get fight-end reminders?", "#fights/~pushPrePrompt", app],
         ["FitFight is on the App Store", "#fights/~appStoreNotice", { ...app, note: "TestFlight build, players only" }],
@@ -2103,7 +2111,7 @@
         .rt-iaa .scrim { position: absolute; inset: 0; background: var(--scrim); }
         .rt-iaa .card { position: relative; width: 100%; padding: 24px; border-radius: 22px; background: var(--overlay); box-shadow: inset 0 0 0 1px var(--overlayLine); }
         .rt-iaa.enter .scrim, .rt-iaa.enter .card { animation: fade 0.2s ease-out; }
-        .rt-iaa img { width: 132px; height: 150px; margin: 0 auto 18px; object-fit: cover; border-radius: 14px; background: var(--control); }
+        .rt-iaa img { width: 132px; height: 150px; margin: 0 auto 18px; object-fit: cover; }
         .rt-iaa h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.33px; }
         .rt-iaa p { margin-top: 10px; font-size: 13px; font-weight: 700; line-height: calc(1.364em + 4px); color: var(--textSecondary); }
         .rt-iaa .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }

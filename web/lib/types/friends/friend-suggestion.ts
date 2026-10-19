@@ -7,10 +7,6 @@ export const friendSuggestionSchema = sharedIdentitySchema.extend({
 export const friendSuggestionsSchema = z.object({
     people: z.array(friendSuggestionSchema),
 });
-export const friendSuggestionRowSchema = friendSuggestionSchema.extend({
-    avatar_path: z.string().nullable(),
-});
 
 export type FriendSuggestion = z.infer<typeof friendSuggestionSchema>;
 export type FriendSuggestions = z.infer<typeof friendSuggestionsSchema>;
-export type FriendSuggestionRow = z.infer<typeof friendSuggestionRowSchema>;

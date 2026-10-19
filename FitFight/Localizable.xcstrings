@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Your companion is your only profile picture: uploaded photos no longer show anywhere. If you have no companion picture yet, FitFight asks you to choose one.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ton compagnon est ta seule photo de profil : les photos importées ne s’affichent plus nulle part. Si tu n’as pas encore d’image de compagnon, FitFight te demande d’en choisir un."
+                    }
+                }
+            }
+        },
         "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour.": {
             "localizations": {
                 "fr": {

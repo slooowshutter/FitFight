@@ -30,7 +30,6 @@ export const profileDatabaseRowSchema = profileSchema.omit({
     companion_line: true,
 }).extend({
     id: z.string().uuid(),
-    avatar_media_id: z.string().uuid().nullable(),
     time_zone: timeZoneSchema.nullable(),
 });
 

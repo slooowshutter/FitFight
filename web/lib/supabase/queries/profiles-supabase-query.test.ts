@@ -24,7 +24,7 @@ const legacyProfile = profileSchema.parse(
 
 const profile = { ...legacyProfile, time_zone: "Europe/Paris" };
 const { user_id: id, ...profileFields } = profile;
-const databaseProfile = { ...profileFields, id, avatar_media_id: null };
+const databaseProfile = { ...profileFields, id };
 
 test("profile patches normalize handles and reject caller-owned IDs, timestamps, and empty updates", () => {
     assert.deepEqual(
@@ -173,11 +173,12 @@ test("profile reads filter by the authenticated owner and expose only the API fi
                 assert.equal(url.searchParams.get("deleted_at"), "is.null");
                 assert.equal(
                     url.searchParams.get("select"),
-                    "id,handle,display_name,handle_set_at,referral_code,avatar_media_id,companion_id,companion_prompt,companion_image_url,time_zone",
+                    "id,handle,display_name,handle_set_at,referral_code,companion_id,companion_prompt,companion_image_url,time_zone",
                 );
                 return Response.json([
                     {
                         ...databaseProfile,
+                        avatar_media_id: "11111111-1111-4111-8111-111111111111",
                         deleted_at: null,
                         internal_column: "private",
                         created_at: "2026-09-01T00:00:00Z",
@@ -188,6 +189,24 @@ test("profile reads filter by the authenticated owner and expose only the API fi
         },
     });
     assert.deepEqual(await readProfile(profile.user_id, admin), profile);
+});
+
+test("a new profile photo is refused before anything is saved; removing one still works", async () => {
+    const admin = createClient("https://profiles.example", "test-only-key", {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+            fetch: async (input, init) => {
+                const request = new Request(input, init);
+                assert.deepEqual(await request.json(), { avatar_media_id: null, companion_image_url: null });
+                return Response.json(databaseProfile);
+            },
+        },
+    });
+    await assert.rejects(
+        updateProfile(profile.user_id, { avatar_media_id: "11111111-1111-4111-8111-111111111111" }, admin),
+        (error) => error instanceof ApiError && error.status === 400 && /companion/.test(error.message),
+    );
+    assert.equal((await updateProfile(profile.user_id, { avatar_media_id: null }, admin)).avatar, null);
 });
 
 test("legacy accounts without a saved zone use a fixed UTC calendar", async () => {

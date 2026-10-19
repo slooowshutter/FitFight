@@ -5,7 +5,7 @@ import Foundation
 struct InAppAlert: Decodable, Identifiable, Equatable {
     struct Choice: Decodable, Equatable {
         let title: String
-        /// `update`, `open_character`, `new_fight`, or `dismiss`.
+        /// `update`, `open_character`, `choose_companion`, `new_fight`, or `dismiss`.
         let action: String
         /// Set for `update`: the App Store, or TestFlight on the beta.
         let url: URL?

@@ -312,7 +312,7 @@ struct ContentView: View {
             if let alert = model.inAppAlert,
                model.dailyStatusRecap == nil, !push.showPrePrompt, !companions.showingPicker {
                 InAppAlertView(inAppAlert: alert) { choice in
-                    if let url = model.chooseInAppAlert(choice, session: session) { openURL(url) }
+                    if let url = model.chooseInAppAlert(choice, session: session, companions: companions) { openURL(url) }
                 } onDismiss: {
                     model.dismissInAppAlert(session: session)
                 }

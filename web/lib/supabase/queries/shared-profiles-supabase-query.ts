@@ -13,7 +13,6 @@ import {
     type SharedIdentity, type SharedProfile, type UpdateProfileSettings, type ProfileRivalrySummary,
 } from "@/lib/types/profiles/shared-profile";
 import { readCompanionLabel } from "./custom-characters-supabase-query";
-import { signMediaUrl, signMediaUrls } from "./media-supabase-query";
 
 /** Profile locks serialize new sharing reads with settings, friendships, blocks, and deletion. */
 export async function loadProfileAccess(sql: TransactionSql, viewerId: string, targetId: string, write = false) {
@@ -36,7 +35,7 @@ async function loadProfileAccessRows(sql: TransactionSql, viewerId: string, targ
         select jsonb_build_object('user_id', profile.id, 'handle', profile.handle,
             'display_name', profile.display_name, 'companion_id', profile.companion_id) identity,
             case when profile.companion_id = 'custom' then profile.companion_image_url end companion_image_url,
-            media.object_path avatar_path, coalesce(profile.time_zone, 'UTC') time_zone,
+            coalesce(profile.time_zone, 'UTC') time_zone,
             coalesce(to_jsonb(settings), ${sql.json(defaultProfileSettings)}::jsonb) settings,
             jsonb_build_object(
                 'owner', profile.id = ${viewerId},
@@ -67,7 +66,6 @@ async function loadProfileAccessRows(sql: TransactionSql, viewerId: string, targ
                 when friendship.requester_id is not null then 'incoming' else 'none' end friendship
         from public.profiles profile
         left join private.profile_settings settings on settings.user_id = profile.id
-        left join public.media_objects media on media.id = profile.avatar_media_id and media.status = 'ready'
         left join private.profile_friendships friendship
             on friendship.user_low = least(${viewerId}::uuid, profile.id)
             and friendship.user_high = greatest(${viewerId}::uuid, profile.id)
@@ -225,7 +223,7 @@ export async function readSharedProfile(
             ? await readCompanionLabel(targetId, row.companion_image_url, sql)
             : {};
         return sharedProfileSchema.parse({
-            identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) },
+            identity: { ...row.identity, avatar_url: row.companion_image_url ?? null },
             access: relationship.owner ? "owner" : access.shared ? "shared" : "private",
             competitive: row.settings.competitive,
             friendship: preview ? "none" : row.friendship,
@@ -327,7 +325,7 @@ export async function lookupSharedProfile(userId: string, handle: string, databa
     if (!targetId) throw new ApiError(404, "not_found", "Profile unavailable");
     return database.begin(async (sql) => {
         const row = await loadProfileAccess(sql, userId, targetId);
-        return { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? await signMediaUrl(row.avatar_path) : null) };
+        return { ...row.identity, avatar_url: row.companion_image_url ?? null };
     });
 }
 
@@ -369,9 +367,8 @@ export async function readOwnRivalries(userId: string, database: Sql = createDat
             sharedIds: new Set(shared.filter((fight) => fight.user_id === row.identity.user_id).map((fight) => fight.id)),
         }));
     });
-    const avatars = await signMediaUrls(rivals.flatMap(({ row }) => !row.companion_image_url && row.avatar_path ? [row.avatar_path] : []));
     return rivals.map(({ row, sharedIds }) => ({
-        identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? avatars.get(row.avatar_path) ?? null : null) },
+        identity: { ...row.identity, avatar_url: row.companion_image_url ?? null },
         rivalry: rivalryRecord(facts, userId, row.identity.user_id, sharedIds),
     }));
 }

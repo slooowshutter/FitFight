@@ -1628,8 +1628,9 @@ final class AppModel: ObservableObject {
     }
 
     /// Each time the app opens: the backend picks up to three alerts, shown one after another.
+    /// The required companion picker comes first; alerts wait for the next open, so it is never asked twice.
     func loadInAppAlerts(session: SessionStore) async {
-        guard session.authSession != nil, api.isConfigured, inAppAlert == nil else { return }
+        guard session.authSession != nil, api.isConfigured, inAppAlert == nil, !session.needsCompanionSelection else { return }
         do {
             queuedInAppAlerts = try await api.inAppAlerts(accessToken: try await session.freshAccessToken())
         } catch {
@@ -1640,13 +1641,14 @@ final class AppModel: ObservableObject {
 
     /// Returns the update link to open. Not now shows the next alert; a button that opens something
     /// leaves the rest for the next open.
-    func chooseInAppAlert(_ choice: InAppAlert.Choice, session: SessionStore) -> URL? {
+    func chooseInAppAlert(_ choice: InAppAlert.Choice, session: SessionStore, companions: CompanionStore) -> URL? {
         guard let alert = inAppAlert else { return nil }
         answerInAppAlert(alert, response: "tapped", action: choice.action, session: session)
         inAppAlert = nil
         switch choice.action {
         case "update": return choice.url
         case "open_character": showingPaidCharacter = true
+        case "choose_companion": companions.showingPicker = true
         case "new_fight": tab = .newFight
         default: showNextInAppAlert()
         }

@@ -250,7 +250,7 @@ test("snapshot establishes transaction-local caller permissions before its singl
     );
     assert.match(calls[4].query, /fight.state = 'live' and fight.ends_at > now\(\)\s*\)\s*\) as snapshot/);
     assert.match(calls[4].query, /as grace_ends_at/);
-    assert.match(calls[4].query, /avatar_media_id/);
+    assert.doesNotMatch(calls[4].query, /avatar_media_id/, "profile photos are never read");
     assert.match(calls[4].query, /companion_id/);
     assert.match(calls[4].query, /select snapshot.value, snapshot.step_checkpoints/);
     assert.doesNotMatch(calls[4].query, /as final_sync_grace_seconds/);

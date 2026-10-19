@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { InstallableRelease } from "@/lib/types/releases/app-release";
 
 export const alertLanguageValues = ["en", "fr"] as const;
-export const alertActionValues = ["update", "open_character", "new_fight", "dismiss"] as const;
+export const alertActionValues = ["update", "open_character", "choose_companion", "new_fight", "dismiss"] as const;
 export const alertResponseValues = ["shown", "tapped", "dismissed"] as const;
 
 export const alertActionSchema = z.enum(alertActionValues);
@@ -40,6 +40,7 @@ export const alertFactsRowSchema = z.object({
     days_since_signup: z.coerce.number().int(),
     fights: z.coerce.number().int(),
     custom_characters: z.coerce.number().int(),
+    companion_picture: z.boolean(),
     purchases: z.coerce.number().int(),
     friends: z.coerce.number().int(),
     steps_last_7_days: z.coerce.number(),
@@ -63,6 +64,8 @@ export type AlertFacts = {
     fights: number;
     /** Custom characters owned, paid or free. */
     customCharacters: number;
+    /** Their picture is companion art: a stock animal, a Special, or a custom character with a portrait. False with no companion or a words-only custom animal. */
+    companionPicture: boolean;
     /** Paid custom characters plus Specials bought. */
     purchases: number;
     friends: number;

@@ -12,6 +12,21 @@ import type {
  */
 export const inAppAlerts: AlertDefinition[] = [
     {
+        id: "choose-your-companion",
+        // choose_companion opens the picker from 1.3.0; 1.2.1 (234) would only close the alert. Profile photos no longer show, so this covers old photo users too.
+        who: (facts) => versionAtLeast(facts.appVersion, "1.3.0") && !facts.companionPicture,
+        title: { en: "Choose your companion", fr: "Choisissez votre compagnon" },
+        body: {
+            en: "Your companion is your picture in fights, on Feed and on your profile. Choose one so your friends see more than your initials.",
+            fr: "Votre compagnon est votre image dans les défis, le Fil et votre profil. Choisissez-en un pour que vos amis voient plus que vos initiales.",
+        },
+        image: "/landing/companion-capybara-3.webp",
+        buttons: [
+            { title: { en: "Choose", fr: "Choisir" }, action: "choose_companion" },
+            { title: { en: "Not now", fr: "Pas maintenant" }, action: "dismiss" },
+        ],
+    },
+    {
         id: "start-first-fight",
         who: (facts) => facts.daysSinceSignup >= 3 && facts.fights === 0,
         title: { en: "Start your first fight", fr: "Lancez votre premier défi" },

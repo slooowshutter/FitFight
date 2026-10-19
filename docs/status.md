@@ -6,6 +6,23 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## Marketing version 1.3.0, 20 Oct 2026
+
+Apple approved and released 1.2.1 (234) on 19 Oct 2026; production `/api/app-release`
+shows it as `latest`. That closed the 1.2.1 train: the staging TestFlight upload for #434
+(`preview` `6f9304b`, build 235) failed with "Invalid Pre-Release Train. The train version
+'1.2.1' is closed for new build submissions" (90186). By Marc's rule the next version is
+**1.3.0**: `MARKETING_VERSION`, the TestFlight, App Store and release-tools workflows,
+`AGENTS.md`, `shipping.md` and the mirror say 1.3.0. Nothing players see changed since
+1.2.1, so the required 1.3.0 release note says so (English and French); replace it when
+1.3.0 gets real changes.
+
+Also seen on 19 Oct: TestFlight installs the highest build by default, so Marc got the
+App Store build 1.2.1 (234, `prod`) instead of staging 233 ("App Store" strip). A staging
+1.3.0 build is higher and fixes that.
+
+---
+
 ## Admin dashboard tables on iPhone and web, prepared 19 Oct 2026
 
 Marc saw no table on the iPhone Users tab: #431 built it on the web only. He wants every admin

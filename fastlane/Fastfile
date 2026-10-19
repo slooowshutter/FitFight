@@ -189,16 +189,18 @@ end
 # testers and Apple review are not blocked by the Friends Beta minimum.
 def available_app_releases(app, registered, previous)
     builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, platform: "IOS", processing_states: "VALID")
+    # NOTE: App Store Connect can return a build with no beta detail (seen 19 Oct 2026, after 1.2.1
+    # was released). Such a build is in no TestFlight state, so it is neither latest nor in review.
     external_groups = app.get_beta_groups.reject(&:is_internal_group)
     group_build_ids = external_groups.map { |group| group.fetch_builds.map(&:id) }
     staging = builds.select do |build|
         build.processing_state == "VALID" && !build.expired &&
-            build.build_beta_detail.external_build_state == "IN_BETA_TESTING" &&
+            build.build_beta_detail&.external_build_state == "IN_BETA_TESTING" &&
             !group_build_ids.empty? && group_build_ids.all? { |ids| ids.include?(build.id) }
     end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
     staging_candidate = builds.select do |build|
         build.processing_state == "VALID" && !build.expired &&
-            %w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW].include?(build.build_beta_detail.external_build_state) &&
+            %w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW].include?(build.build_beta_detail&.external_build_state) &&
             registered_release?(registered, "staging", build.app_version, build.version)
     end.max_by { |build| [Gem::Version.new(marketing_version(build.app_version)), Integer(build.version)] }
     # Internal testers receive every processed build. The newest registered VALID

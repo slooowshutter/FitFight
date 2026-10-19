@@ -17,6 +17,11 @@ shows it as `latest`. That closed the 1.2.1 train: the staging TestFlight upload
 1.2.1, so the required 1.3.0 release note says so (English and French); replace it when
 1.3.0 gets real changes.
 
+The first 1.3.0 upload (`preview` `88274c6`) stopped before building: the release-availability
+step crashed on a build that App Store Connect returned without beta detail (`undefined method
+external_build_state for nil`, `Fastfile` 196), first seen after 1.2.1 was released. Such a
+build is now treated as in no TestFlight state; `fastlane/testflight_test.rb` covers it.
+
 Also seen on 19 Oct: TestFlight installs the highest build by default, so Marc got the
 App Store build 1.2.1 (234, `prod`) instead of staging 233 ("App Store" strip). A staging
 1.3.0 build is higher and fixes that.

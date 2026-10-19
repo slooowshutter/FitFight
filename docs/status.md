@@ -31,6 +31,47 @@ not compiled here; the simulator build and contract tests run in CI.
 
 ---
 
+## Home page: WHOOP, paid extras and closing art, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 for the home page to say FitFight has WHOOP too, to stop
+calling the companions "coming later", and to replace the tennis picture under "Your
+friends are already walking."
+
+- **Copy (English and French):** the hero line reads Free · iPhone · Apple Health ·
+  WHOOP, and the pricing list says "Apple Health and WHOOP sync". The card of paid extras
+  is titled "Optional extras" / "En option", and the FAQ cost answer calls Specials and custom
+  companions optional purchases. A new FAQ, "Does it work with WHOOP?", says that WHOOP
+  connects for sleep, recovery, strain and workouts and that Fight steps still come from Apple Health.
+- **Art:** the closing card shows `friends-running.webp`: Rabbit, Turtle, Fox and Badger
+  jogging on a trail, transparent, 786 x 404. It is the approved "FitFight Group
+  Vignette" Blend image `stb-s04-classic-race`, copied unchanged from
+  `docs/design/source/kit/fight-group-image-proposals.html`. The edge-fade mask that hid the
+  old opaque picture's box is removed. `tennis-night.webp` is removed. Marc found the
+  `raceNight.png` art ugly, and its background was black, not transparent.
+- **FAQ text:** the WHOOP answer names the screens in words. Nunito has no `→` glyph,
+  so the browser drew the arrows from another font, smaller and lower than the text.
+- **Live:** nothing deployed. Production gets it when `preview` merges to `main`. The
+  App Store version with WHOOP is 1.2.1, still in review. 1.1.3 has no WHOOP.
+
+---
+
+## Sample fight names and home page line, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 to rename the sample fight Eat it and to reword the home page
+line that said "get" twice.
+
+- **Names:** Eat it is now Roommate Rumble (Duel de colocs in French). A fourth live fight,
+  Office Showdown (Le match du bureau), joins: Alex, Sam and Theo, 2 weeks, 4 days left,
+  Alex 430 steps behind Sam, loser brings donuts on Friday.
+- **Home page line:** "Choose a length, set the stakes, then start walking." French:
+  "Choisissez une durée, fixez l’enjeu, puis mettez-vous en marche."
+- **Where:** `web/components/landing/landing-copy.ts`, `FitFight/CompanionPreview.swift`
+  (debug simulator only, so no release note) and the mirror. The next Screenshots run
+  captures the App Store set with the new names. App Store Connect still has the 1.2.0 set
+  until a new set is uploaded with the next App Store version.
+
+---
+
 ## Admin Users table and referral stats, prepared 19 Oct 2026
 
 Marc asked on 19 Oct 2026 for a table of the latest users on the admin dashboard's Users tab,

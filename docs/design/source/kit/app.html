@@ -328,10 +328,10 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop admin dashboard tables", updated: "19 Oct 2026" };
+            const MIRROR = { matches: "develop sample fights + admin dashboard tables", updated: "19 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
-            const DATA_VERSION = 2;
+            const DATA_VERSION = 3;
             const ROOT = "../../../../";
             const QUERY = new URLSearchParams(location.search);
 
@@ -561,8 +561,9 @@
                     };
                 }
                 const group = fight("group", "Step it Up", "K7M2", [28430, 25590, 22340, 20840], [alex, leo, nina, sam], 7, 54, { recurring: true, seriesId: "series-group", inviter: alex });
-                const duel = fight("duel", "Eat it", "H8P4", [18420, 19680], [alex, theo], 7, 124, { actionText: "Takes the stairs all next week" });
+                const duel = fight("duel", "Roommate Rumble", "H8P4", [18420, 19680], [alex, theo], 7, 124, { actionText: "Takes the stairs all next week" });
                 const weekend = fight("weekend", "Walk Wars", "R3V6", [12680, 11820, 11240, 10740], [alex, nina, leo, sam], 3, 32, { actionText: "Plans our next Sunday walk" });
+                const showdown = fight("showdown", "Office Showdown", "D6N3", [84960, 85390, 79120], [alex, sam, theo], 14, 100, { actionText: "Brings donuts on Friday" });
                 const invite = fight("invite", "The breakfast club", "B4K9", [0, 0], [alex, sam], 3, 60, { status: "invited", inviter: sam, invitePitch: "Sam invited you", recurring: true, offersJoinNext: true });
                 invite.standings.find((s) => s.person === alex).invited = true;
                 const finished = fight("finished", "Coffee is on you", "C9F2", [24100, 21900], [alex, theo], 3, -96);
@@ -572,7 +573,7 @@
                     const end = new Date(group.windowStart).getTime() - (round - 1) * 7 * DAY;
                     return { ...clone(group), id: `group-r${round}`, windowEnd: iso(end), windowStart: iso(end - 7 * DAY), status: "finished", serverState: "final", standings: group.standings.map((s) => ({ ...s, finalStepsComplete: true })) };
                 });
-                let fights = [group, duel, weekend, invite, finished, ...history];
+                let fights = [group, duel, weekend, showdown, invite, finished, ...history];
                 if (scenario === "empty" || scenario === "loading") fights = [];
                 if (scenario === "tied") { duel.standings.forEach((s) => { s.score = 18420; s.rank = 1; }); fights = [duel]; }
                 if (scenario === "solo") { duel.standings = duel.standings.filter((s) => s.person === alex); fights = [duel]; }
@@ -1093,8 +1094,8 @@
     const invitation = () => D().fights.find((f) => f.status === "invited");
 
     // ═══ ONBOARDING PIECES (OnboardingComponents.swift) ═══
-    const PAGES = ["username", "health", "healthResult", "companion", "founderFight", "firstFight", "reminders", "celebration"];
-    const STEP = { username: 2, health: 3, healthResult: 3, companion: 4, founderFight: 5, firstFight: 5, reminders: 6 };
+    const PAGES = ["username", "health", "healthResult", "whoop", "companion", "founderFight", "firstFight", "reminders", "celebration"];
+    const STEP = { username: 2, health: 3, healthResult: 3, whoop: 3, companion: 4, founderFight: 5, firstFight: 5, reminders: 6 };
     const PREVIOUS = { health: "username", healthResult: "health", companion: "healthResult", founderFight: "companion", firstFight: "founderFight", reminders: "firstFight" };
     const STEP_LABEL = { 1: "Your account", 2: "Your username", 3: "Apple Health", 4: "Your companion", 5: "Your first Fight", 6: "Reminders" };
 
@@ -1108,7 +1109,7 @@
     }
     let direction = 1;
 
-    const header = (step, back, busy) => `<header class="rt-ob-head">${back ? `<button type="button" class="rt-ob-back" aria-label="Back"${on(back)}${busy ? " disabled" : ""}>${icon("chevron.left")}</button>` : ""}<div class="rt-ob-progress"><div class="row"><span>${esc(STEP_LABEL[step] ?? "FitFight")}</span>${step ? `<span class="c-2">${step} of 6</span>` : ""}</div>${step ? `<div class="bar">${[1, 2, 3, 4, 5, 6].map((i) => `<span class="${i <= step ? "on" : ""}"></span>`).join("")}</div>` : ""}</div></header>`;
+    const header = (step, back, busy, label = STEP_LABEL[step]) => `<header class="rt-ob-head">${back ? `<button type="button" class="rt-ob-back" aria-label="Back"${on(back)}${busy ? " disabled" : ""}>${icon("chevron.left")}</button>` : ""}<div class="rt-ob-progress"><div class="row"><span>${esc(label ?? "FitFight")}</span>${step ? `<span class="c-2">${step} of 6</span>` : ""}</div>${step ? `<div class="bar">${[1, 2, 3, 4, 5, 6].map((i) => `<span class="${i <= step ? "on" : ""}"></span>`).join("")}</div>` : ""}</div></header>`;
     const page = (content, actions, enter) => `<div class="rt-ob-scroll" data-scroll><div class="rt-ob-content ${enter ? "rt-enter" : ""}" style="--dir:${direction}">${content}</div></div><div class="rt-ob-actions">${actions}</div>`;
     const heading = (title, subtitle, centered = true) => `<div class="rt-ob-heading ${centered ? "" : "leading"}"><h1 class="rt-in">${esc(title)}</h1>${subtitle ? `<p class="rt-in" style="--o:1">${esc(subtitle)}</p>` : ""}</div>`;
     const speech = (animal, text) => `<div class="rt-speech"><img src="${companionArt(animal)}" alt=""><p>${esc(text)}</p></div>`;
@@ -1203,6 +1204,8 @@
                 referral: p.referral === "1",
                 free: p.referral === "1" ? 1 : 0,
                 drawing: p.drawing === "1",
+                // A WhoopConnectionStore of its own; `whoop=connecting|connected|error` links seed it.
+                whoop: { busy: p.whoop === "connecting", connected: p.whoop === "connected", failed: p.whoop === "error" },
             };
         }
         return entry.st;
@@ -1239,17 +1242,59 @@
         render();
     }
 
+    // ═══ PROPOSAL: connect WHOOP during onboarding ═══
+    // The WHOOP sign-in is the same as Settings → Connectors → WHOOP. Fight steps still come only from Apple Health.
+    variant("onboarding-whoop", {
+        title: "Connect WHOOP in onboarding",
+        note: "Where a new player can connect WHOOP next to Apple Health. Tap Connect, then Continue on the whoop.com prompt.",
+        options: [
+            { id: "today", name: "Today", when: "The app as it is now: WHOOP only in Settings → Connectors." },
+            { id: "health", name: "On the Apple Health page", when: "Right if WHOOP should read as the second choice next to Apple Health, before anything is connected." },
+            { id: "result", name: "After Apple Health", when: "Right if the Apple Health page should stay one job. The WHOOP row comes once the steps are in, with no extra page." },
+            { id: "page", name: "Its own page", when: "Right if WHOOP deserves a full explanation. Everyone sees one more page, with I don't wear one to skip it." },
+        ],
+        // The links follow the chosen option, so each one opens where that option draws WHOOP.
+        get links() {
+            const at = { today: "health", health: "health", result: "healthResult&steps=1", page: "whoop" }[V("onboarding-whoop")];
+            return V("onboarding-whoop") === "today"
+                ? [["Apple Health", "#onboarding?step=health"], ["Health result", "#onboarding?step=healthResult&steps=1"]]
+                : [
+                    ["Not connected", `#onboarding?step=${at}`],
+                    ["Use whoop.com to sign in", `#onboarding?step=${at}&whoop=connecting/~rootObWhoopConsent`],
+                    ["Connecting", `#onboarding?step=${at}&whoop=connecting`],
+                    ["Connected", `#onboarding?step=${at}&whoop=connected`],
+                    ["Couldn’t connect", `#onboarding?step=${at}&whoop=error`],
+                    ...(V("onboarding-whoop") === "result" ? [["No step data", "#onboarding?step=healthResult"]] : []),
+                ];
+        },
+    });
+    const privacyLink = () => `present:sysExternal?url=${encodeURIComponent(`${S.environment === "production" ? "https://fitfight.app" : "https://staging.fitfight.app"}/privacy`)}`;
+    const consent = `By connecting, you agree to our <button type="button" class="c-moss"${on(privacyLink())}>Privacy Policy</button>.`;
+    // The WHOOP row of the "health" and "result" options: Settings' WHOOP account row, with its logo.
+    function whoopRow(w) {
+        const subtitle = w.connected ? "Connected · Updates every hour" : w.failed ? "Couldn’t connect WHOOP. Tap to try again." : "Sleep, recovery, strain and workouts";
+        const tone = w.connected ? "mossText" : w.failed ? "emberText" : "textSecondary";
+        const pill = w.busy ? FF.pill("Connecting", "neutral") : w.connected ? FF.pill("Connected", "softMoss") : w.failed ? FF.pill("Retry", "softEmber") : FF.pill("Connect", "solidMoss");
+        const row = `<button type="button" class="ff-grow ${w.busy ? "disabled" : ""}"${on(w.busy || w.connected ? null : "rootObWhoop")}${w.busy ? " disabled" : ""}><img class="rt-logo" src="${asset("Connector-WHOOP")}" alt=""><span class="grow vstack"><span class="title">WHOOP</span><span class="subtitle" style="color:var(--${tone})">${esc(subtitle)}</span></span>${pill}</button>`;
+        return `<div class="rt-whoop"><p class="t-body c-2">Wear a WHOOP? Connect it too. Fight steps still come from Apple Health.</p>${FF.grouped([row])}${w.connected ? "" : `<p class="t-caption c-2">${consent}</p>`}</div>`;
+    }
+
     // ═══ ONBOARDING VIEW (OnboardingView.swift): one page at a time under the progress header ═══
     function onboardingView(entry, ui) {
         const p = entry.p || {};
         const s = progress(entry);
         const replay = s.replay;
-        const current = PAGES.includes(p.step) ? p.step : replay ? "health" : "username";
+        const whoopAt = V("onboarding-whoop");
+        // The WHOOP page exists only in the "page" option; its links fall back to the Health result.
+        const current = p.step === "whoop" && whoopAt !== "page" ? "healthResult" : PAGES.includes(p.step) ? p.step : replay ? "health" : "username";
         const enter = entering(entry, current);
         const busy = !!ui.busy;
         const animal = s.animal;
+        const afterHealth = whoopAt === "page" ? "whoop" : "healthResult";
         // The replay shows only Health, Fight offers and reminders.
-        const previous = replay ? (current === "health" ? null : current === "founderFight" ? "healthResult" : PREVIOUS[current]) : PREVIOUS[current];
+        const previous = replay
+            ? (current === "health" ? null : current === "founderFight" ? afterHealth : current === "whoop" ? "healthResult" : PREVIOUS[current])
+            : current === "companion" ? afterHealth : current === "whoop" ? "healthResult" : PREVIOUS[current];
         const errorOf = (fallback) => ("error" in ui ? ui.error : fallback);
         let content = "";
         let actions = "";
@@ -1270,7 +1315,8 @@
                     ["figure.walk", "Uploads the Apple Health activity you allow, including individual records and workouts. Stored privately."],
                     ["person.2", "Fight participants see your steps and standings."],
                     ["lock", "You control access in Apple Health."],
-                ].map(([glyph, text]) => `<div class="rt-health-row">${icon(glyph)}<span>${esc(text)}</span></div>`).join("");
+                ].map(([glyph, text]) => `<div class="rt-health-row">${icon(glyph)}<span>${esc(text)}</span></div>`).join("")
+                + (whoopAt === "health" ? whoopRow(s.whoop) : "");
             actions = FF.cta("Connect Apple Health", { enabled: !busy, busy, on: "rootObHealthConnect" }) + skip("I'll do this later", "rootObHealthResult:0", busy);
         } else if (current === "healthResult") {
             const steps = s.steps ? D().todaySteps : null;
@@ -1279,8 +1325,24 @@
                 + `<div class="rt-in" style="--o:1">${FF.card(`<div class="rt-result"><img src="${companionArt(animal)}" alt="">${steps != null
                     ? `<div class="rt-count">${enter && steps ? "0" : fmt.n(steps)}</div><div class="rt-steps-label">steps today</div>`
                     : `<div class="t-heading">No accessible step data</div><div class="t-body c-2">Connect later from Profile → Settings → Connectors.</div>`}</div>`)}</div>`
-                + `<p class="t-caption c-2" style="text-align:center">Only steps taken during the Fight count.</p>`;
+                + `<p class="t-caption c-2" style="text-align:center">Only steps taken during the Fight count.</p>`
+                + (whoopAt === "result" ? whoopRow(s.whoop) : "");
             actions = FF.cta("Continue", { on: "rootObHealthContinue" });
+        } else if (current === "whoop") {
+            // The "page" option: WHOOP gets the Apple Health page's layout. Connected, the button moves on.
+            const w = s.whoop;
+            content = heading("Wear a WHOOP?\nBring it too.", "Connect WHOOP for your sleep, recovery, strain and workouts.", false)
+                + `<div class="rt-health-art"><img class="rt-whoop-logo" src="${asset("Connector-WHOOP")}" alt=""><img src="${companionArt(animal)}" alt=""></div>`
+                + [
+                    ["waveform.path.ecg", "Gets your WHOOP data straight from WHOOP, updated every hour. Stored privately."],
+                    ["shoeprints.fill", "Fight steps still come from Apple Health."],
+                ].map(([glyph, text]) => `<div class="rt-health-row">${icon(glyph)}<span>${esc(text)}</span></div>`).join("")
+                + (w.connected ? "" : `<div class="rt-health-row">${icon("lock")}<span>${consent}</span></div>`)
+                + (w.connected ? FF.notice("WHOOP connected. Updates every hour.", { tone: "moss", icon: "checkmark.circle" })
+                    : w.failed ? FF.notice("Couldn’t connect WHOOP. Try again.", { tone: "ember", icon: "exclamationmark.triangle" }) : "");
+            actions = w.connected
+                ? FF.cta("Continue", { on: "rootObWhoopNext" })
+                : FF.cta(w.failed ? "Retry" : "Connect WHOOP", { enabled: !w.busy, busy: w.busy, on: "rootObWhoop" }) + skip("I don't wear one", "rootObWhoopNext", w.busy);
         } else if (current === "companion") {
             const error = errorOf(p.error ? OFFLINE : null);
             content = heading("Find your kind\nof competitive.")
@@ -1339,7 +1401,7 @@
                 + heading(`You're in,\n${s.handle || you().handle.replace(/^@/, "")}.`, s.joined ?? (s.founder ? "Fight Marc" : null));
             actions = FF.cta("Continue", { on: "rootObFinish" });
         }
-        return `<div class="rt-ob">${header(STEP[current], previous && `rootObBack:${previous}`, busy)}${page(content, actions, enter)}</div>`;
+        return `<div class="rt-ob">${header(STEP[current], previous && `rootObBack:${previous}`, busy || s.whoop.busy, current === "whoop" ? "WHOOP" : undefined)}${page(content, actions, enter)}</div>`;
     }
 
     screen("onboarding", { kind: "flow", title: "Onboarding", render: (p, ui, ctx) => onboardingView(ctx.entry, ui) });
@@ -1384,7 +1446,37 @@
     // Progress saved by an older build already has its companion; the replay skips it too.
     action("rootObHealthContinue", () => {
         const entry = obEntry();
+        if (entry) go(V("onboarding-whoop") === "page" ? "whoop" : progress(entry).chosen ? "founderFight" : "companion");
+    });
+    action("rootObWhoopNext", () => {
+        const entry = obEntry();
         if (entry) go(progress(entry).chosen ? "founderFight" : "companion");
+    });
+    // WhoopConnectionStore.refresh(connectWith:): WHOOP's sign-in in ASWebAuthenticationSession, then the link.
+    action("rootObWhoop", () => {
+        const entry = obEntry();
+        if (!entry) return;
+        Object.assign(progress(entry).whoop, { busy: true, failed: false });
+        delete entry.p.whoop;
+        present("rootObWhoopConsent");
+    });
+    // Continue stands in for signing in on WHOOP and the app finishing the link. Cancel is no error.
+    action("rootObWhoopDone", (status) => {
+        const entry = obEntry();
+        dismiss();
+        if (!entry) return;
+        const w = progress(entry).whoop;
+        w.busy = status !== "cancel";
+        render();
+        if (w.busy) later(entry, 1200, () => Object.assign(w, { busy: false, connected: true }));
+    });
+    screen("rootObWhoopConsent", {
+        kind: "alert", title: "Use whoop.com to sign in",
+        alert: () => ({
+            title: "“FitFight” Wants to Use “whoop.com” to Sign In",
+            message: "This allows the app and website to share information about you.",
+            buttons: [{ title: "Cancel", role: "cancel", on: "rootObWhoopDone:cancel" }, { title: "Continue", on: "rootObWhoopDone:connected" }],
+        }),
     });
     action("rootObPick", (arg) => {
         const entry = obEntry();
@@ -2022,6 +2114,10 @@
         .rt-health-row { display: flex; align-items: flex-start; gap: 12px; font-size: 13px; font-weight: 700; color: var(--textSecondary); }
         .rt-health-row svg { flex: none; width: 24px; height: 15px; margin-top: 1px; }
         .rt-result { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+        .rt-whoop { display: flex; flex-direction: column; gap: 10px; }
+        .rt-whoop > .t-caption { padding: 0 16px; }
+        .rt-logo { flex: none; width: 36px; height: 36px; border-radius: 9px; }
+        .rt-health-art .rt-whoop-logo { width: 58px; height: 58px; border-radius: 14px; }
         .rt-result img { height: 170px; width: 100%; object-fit: contain; }
         .rt-count { font-size: 48px; font-weight: 800; color: var(--mossText); line-height: 1.2; }
         .rt-steps-label { font-size: 15px; font-weight: 700; color: var(--textSecondary); }
@@ -4048,9 +4144,10 @@
 
     // ─── Map links ──────────────────────────────────────────────────
     links("Fight detail", [
-        ["Eat it: 1 v 1, Stats", "#fights/fight?id=duel"],
+        ["Roommate Rumble: 1 v 1, Stats", "#fights/fight?id=duel"],
         ["Step it Up: group, last round notice, trophies", "#fights/fight?id=group"],
         ["Walk Wars: 4 racers", "#fights/fight?id=weekend"],
+        ["Office Showdown: 3 racers, 2 weeks", "#fights/fight?id=showdown"],
         ["History pane: rounds, All time, Records", "#fights/fight?id=group&pane=history"],
         ["Round summary", "#fights/fight?id=group&pane=history/~fightRound?id=group-r1"],
         ["A past round (from Past)", "#fights/fight?id=group-r2"],
@@ -5109,7 +5206,7 @@
     const REACTION_PAGE = 4;
     const OFFLINE = "The Internet connection appears to be offline.";
     // The server sends fight names with each post; these cover rounds that are not in your list.
-    const FIGHT_NAMES = { group: "Step it Up", duel: "Eat it", weekend: "Walk Wars", invite: "The breakfast club", finished: "Coffee is on you", lunch: "Lunch laps" };
+    const FIGHT_NAMES = { group: "Step it Up", duel: "Roommate Rumble", weekend: "Walk Wars", invite: "The breakfast club", finished: "Coffee is on you", lunch: "Lunch laps" };
     const PHOTO_ART = ["limited-capybara", "limited-panda", "limited-hedgehog", "limited-silverback", "limited-tiger"];
     const uid = () => `fd${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const plural = (n, one, other) => (n === 1 ? one : other).replace("%d", fmt.n(n));

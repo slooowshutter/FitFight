@@ -42,6 +42,24 @@ rows, the sticky handle, and no page-wide sideways scroll.
 
 ---
 
+## Website Steps total matches the admin, prepared 19 Oct 2026
+
+On 19 Oct 2026 Marc saw 10.6M Steps recorded on fitfight.app and 12.4M in the admin
+All-time steps card.
+
+- **Cause:** the home page summed `public.step_days`. Since the activity pipeline (#306,
+  23 Sep), new builds write `step_days` only for days inside an open Fight, so most days
+  were missing.
+- **Code:** `readCachedTotalSteps` now sums the admin's `stepHistory`, now shared: complete
+  Apple Health days from each person's signup day to yesterday in Paris, with the Fight
+  fallback for 1.1.2 (210). The hourly cache is unchanged. No API, database, app or release
+  setting changed.
+- **Verification (local):** web typecheck and 550 unit tests passed. The new query gave the
+  expected total on a local Postgres 16 with a small fake schema. The Database workflow
+  (migrated schema, `npm run build` prerenders `/`) has not run on it. Not deployed.
+
+---
+
 ## App Store 1.2.1 submitted for review, 19 Oct 2026
 
 Marc asked on 19 Oct 2026 to merge `develop` → `preview` → `main` and submit the new App

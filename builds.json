@@ -318,5 +318,10 @@
     "channel": "staging",
     "version": "1.2.1",
     "build": 233
+  },
+  {
+    "channel": "prod",
+    "version": "1.2.1",
+    "build": 234
   }
 ]

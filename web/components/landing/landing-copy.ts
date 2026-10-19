@@ -32,7 +32,7 @@ const en = {
             "you",
             " and ",
             "your friends",
-            ". Decide on challenge length, agree on what the winner gets or the loser does, then get some steps.",
+            ". Choose a length, set the stakes, then start walking.",
         ],
         facts: ["Steps only", "Private by default", "Free, no ads"],
         frags: [
@@ -53,7 +53,7 @@ const en = {
             rival: "capybara",
         },
         {
-            name: "Eat it",
+            name: "Roommate Rumble",
             left: "5 days left",
             gap: "−1,260",
             ahead: false,
@@ -65,6 +65,13 @@ const en = {
             gap: "+2,840",
             ahead: true,
             rival: "silverback",
+        },
+        {
+            name: "Office Showdown",
+            left: "4 days left",
+            gap: "−430",
+            ahead: false,
+            rival: "hedgehog",
         },
     ],
     standings: [
@@ -121,7 +128,12 @@ const en = {
         win: "Win the challenge.",
         gaps: [
             ["Step it Up", "+2,840", "steps ahead", "Relax. Or don’t."],
-            ["Eat it", "−1,260", "steps behind", "Time for the long way home."],
+            [
+                "Roommate Rumble",
+                "−1,260",
+                "steps behind",
+                "Time for the long way home.",
+            ],
         ],
         nextPose: "Next pose:",
         nextPoseName: "Pushing",
@@ -472,7 +484,7 @@ const en = {
     phone: {
         tabs: ["Fights", "New", "Feed", "Feedback", "Profile"],
         fightsTitle: "Fights",
-        leading: "Leading 2 of 3",
+        leading: "Leading 2 of 4",
         stepsToday: "steps today",
         challenges: "Challenges",
         segments: ["Current", "Invited 1", "Past"],
@@ -550,7 +562,7 @@ const fr: typeof en = {
             "vous",
             " et ",
             "vos amis",
-            ". Choisissez la durée du défi, mettez-vous d’accord sur ce que gagne le vainqueur ou sur le gage du perdant, puis cumulez les pas.",
+            ". Choisissez une durée, fixez l’enjeu, puis mettez-vous en marche.",
         ],
         facts: ["Seulement les pas", "Privé par défaut", "Gratuit, sans pub"],
         frags: [
@@ -577,7 +589,7 @@ const fr: typeof en = {
             rival: "capybara",
         },
         {
-            name: "Prends ça",
+            name: "Duel de colocs",
             left: "Encore 5 jours",
             gap: "−1 260",
             ahead: false,
@@ -589,6 +601,13 @@ const fr: typeof en = {
             gap: "+2 840",
             ahead: true,
             rival: "silverback",
+        },
+        {
+            name: "Le match du bureau",
+            left: "Encore 4 jours",
+            gap: "−430",
+            ahead: false,
+            rival: "hedgehog",
         },
     ],
     standings: [
@@ -656,7 +675,7 @@ const fr: typeof en = {
                 "Détendez-vous. Ou pas.",
             ],
             [
-                "Prends ça",
+                "Duel de colocs",
                 "−1 260",
                 "pas de retard",
                 "C’est l’heure du chemin le plus long.",
@@ -1034,7 +1053,7 @@ const fr: typeof en = {
     phone: {
         tabs: ["Défis", "Nouveau", "Fil", "Retours", "Profil"],
         fightsTitle: "Défis",
-        leading: "En tête dans 2 sur 3",
+        leading: "En tête dans 2 sur 4",
         stepsToday: "pas aujourd’hui",
         challenges: "Défis",
         segments: ["En cours", "Invités 1", "Passés"],

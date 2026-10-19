@@ -6,6 +6,23 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## Sample fight names and home page line, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 to rename the sample fight Eat it and to reword the home page
+line that said "get" twice.
+
+- **Names:** Eat it is now Roommate Rumble (Duel de colocs in French). A fourth live fight,
+  Office Showdown (Le match du bureau), joins: Alex, Sam and Theo, 2 weeks, 4 days left,
+  Alex 430 steps behind Sam, loser brings donuts on Friday.
+- **Home page line:** "Choose a length, set the stakes, then start walking." French:
+  "Choisissez une durée, fixez l’enjeu, puis mettez-vous en marche."
+- **Where:** `web/components/landing/landing-copy.ts`, `FitFight/CompanionPreview.swift`
+  (debug simulator only, so no release note) and the mirror. The next Screenshots run
+  captures the App Store set with the new names. App Store Connect still has the 1.2.0 set
+  until a new set is uploaded with the next App Store version.
+
+---
+
 ## Admin Users table and referral stats, prepared 19 Oct 2026
 
 Marc asked on 19 Oct 2026 for a table of the latest users on the admin dashboard's Users tab,

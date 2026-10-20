@@ -1013,7 +1013,9 @@ with its own Apple Account and buys in Sandbox: a Special or character charge th
 names Sandbox moves an account with no purchases to the Sandbox shelf, and the
 charge is verified there. Production opens that shelf only while the release
 registry lists a production build in review. App Store users only make
-Production charges.
+Production charges. A Production charge moves an account back to the Production
+shelf even after Sandbox purchases, so a tester who bought in Sandbox can still
+pay for real. Sandbox Specials stay recorded but are not listed on that shelf.
 
 Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
 app. Let older backend instances drain first, because their schemas list only

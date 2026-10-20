@@ -1301,6 +1301,14 @@ while the release registry (`testflight-latest/releases.json`, refreshed every
 15 minutes) lists a production build in review. The allowlist is removed.
 App Store users only make Production charges.
 
+**Real charge after Sandbox purchases (fixed in code 20 Oct 2026):** Marc
+bought two characters in Sandbox on production on 15 Oct, which locked his
+account to the Sandbox shelf. His later real App Store purchase was then
+verified as Sandbox and failed with "Apple purchase signature could not be
+verified", so the app showed Purchase pending forever. A Production charge now
+moves the account back to the Production shelf. His production account row was
+moved by hand on 20 Oct so his pending charge can be claimed before the deploy.
+
 **Accepted risk:** during a review window, a TestFlight tester who rewrites the
 app's traffic could buy in Sandbox for their own production account and get a
 Special or a custom character free. This needs deliberate tampering and ends

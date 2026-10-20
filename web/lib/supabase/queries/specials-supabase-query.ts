@@ -7,6 +7,7 @@ import {
     specialProductId,
     type AppleSpecialConsumableTransaction,
     type AppleSpecialTransaction,
+    type ApplePurchaseEnvironment,
 } from "@/lib/types/apple/special-purchase";
 import {
     limitedCompanionIdValues,
@@ -26,14 +27,15 @@ import {
 } from "@/lib/types/companions/specials";
 
 /**
- * The shelf comes from deployment configuration. `sandbox` is set only while claiming a charge that names Sandbox; the
- * charge is then verified as Sandbox, so a false claim only moves the caller's own account while it has no purchase,
- * and on production only while a build is in review.
+ * The shelf comes from deployment configuration. `charge` is set only while claiming, to the environment the charge
+ * names; the charge is then verified against the returned shelf, so a false claim only moves the caller's own account:
+ * to Sandbox while it has no purchase, and on production only while a build is in review. A Production charge moves an
+ * account off the Sandbox shelf even after Sandbox purchases, or a real payment could never be claimed.
  */
 export async function readSpecialStore(
     userId: string,
     database: Sql = createDatabaseClient(),
-    sandbox = false,
+    charge?: ApplePurchaseEnvironment,
 ): Promise<SpecialStore> {
     const configured = specialsConfigurationSchema.safeParse({
         environment: process.env.APPLE_IAP_ENVIRONMENT,
@@ -48,7 +50,7 @@ export async function readSpecialStore(
     // NOTE: App Review signs in with its own Apple Account and buys in Sandbox against production, so production opens
     // the Sandbox shelf only while the release registry lists a build in review.
     const environment =
-        sandbox &&
+        charge === "Sandbox" &&
         (configuration.environment === "Sandbox" ||
             (await appReleasePolicy()).review !== null)
             ? "Sandbox"
@@ -69,10 +71,12 @@ export async function readSpecialStore(
         await sql`
             update private.special_accounts as account set environment = ${environment}
             where user_id = ${userId} and environment <> ${environment}
-                and not exists (select 1 from private.special_editions where account_id = account.id)
-                and not exists (select 1 from private.special_transactions where account_id = account.id)
-                and not exists (select 1 from private.special_purchases where account_id = account.id)
-                and not exists (select 1 from private.custom_character_purchases where account_id = account.id)
+                and (${charge === "Production" && environment === "Production"}::boolean or (
+                    not exists (select 1 from private.special_editions where account_id = account.id)
+                    and not exists (select 1 from private.special_transactions where account_id = account.id)
+                    and not exists (select 1 from private.special_purchases where account_id = account.id)
+                    and not exists (select 1 from private.custom_character_purchases where account_id = account.id)
+                ))
         `;
         const [row] =
             await sql`select id, user_id, environment from private.special_accounts where user_id = ${userId}`;

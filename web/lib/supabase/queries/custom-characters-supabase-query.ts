@@ -7,6 +7,7 @@ import { readActiveDeviceInstallations } from "@/lib/supabase/queries/device-ins
 import { readFreeCharacters, readReferralPending } from "@/lib/supabase/queries/free-characters-supabase-query";
 import { readSpecialStore } from "@/lib/supabase/queries/specials-supabase-query";
 import { customCharacterProductId, type AppleCustomCharacterTransaction } from "@/lib/types/apple/custom-character-purchase";
+import type { ApplePurchaseEnvironment } from "@/lib/types/apple/special-purchase";
 import {
     companionLabelRowSchema,
     companionLinesBatchSchema,
@@ -44,9 +45,9 @@ async function saveCustomCharacterDescription(
 export async function readCustomCharacterStore(
     userId: string,
     database: Sql = createDatabaseClient(),
-    sandbox = false,
+    charge?: ApplePurchaseEnvironment,
 ) {
-    const account = await readSpecialStore(userId, database, sandbox);
+    const account = await readSpecialStore(userId, database, charge);
     const purchases = customCharacterPurchaseRowSchema.array().parse(
         await database`select * from private.custom_character_purchases
             where account_id = ${account.app_account_token} order by created_at desc`,

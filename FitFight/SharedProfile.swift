@@ -283,5 +283,8 @@ struct AdministerFightRequest: Encodable {
 struct ProfileRivalrySummary: Decodable, Identifiable {
     let identity: SharedProfileIdentity
     let rivalry: ProfileRivalry
+    /// When you became friends; nil when you are not friends, and from a server before 1.3.0.
+    let friendsSince: String?
     var id: UUID { identity.userId }
+    enum CodingKeys: String, CodingKey { case identity, rivalry, friendsSince = "friends_since" }
 }

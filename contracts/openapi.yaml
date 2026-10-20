@@ -2893,7 +2893,7 @@ components:
                 }
             }
         }
-        ProfileRivalrySummary: {"type": "object", "required": ["identity", "rivalry"], "properties": {"identity": {"$ref": "#/components/schemas/SharedProfileIdentity"}, "rivalry": {"$ref": "#/components/schemas/ProfileRivalry"}}}
+        ProfileRivalrySummary: {"type": "object", "required": ["identity", "rivalry"], "properties": {"identity": {"$ref": "#/components/schemas/SharedProfileIdentity"}, "rivalry": {"$ref": "#/components/schemas/ProfileRivalry"}, "friends_since": {"type": "string", "format": "date-time", "nullable": true, "description": "When the friendship was accepted; null when you are not friends. Builds before 1.3.0 ignore it."}}}
         ProfileActivity: {
             "type": "object",
             "required": [

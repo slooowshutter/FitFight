@@ -73,8 +73,9 @@ struct YouView: View {
         .navigationDestination(isPresented: $showingSettings) { settingsScreen }
         .navigationDestination(isPresented: $showingDashboard) {
             DashboardView(
-                sports: activity.sports, days: activity.days, statistics: ownProfile?.stepStatistics,
-                results: results, record: ownProfile?.record
+                sports: activity.sports, days: activity.days, eightWeekSteps: activity.eightWeekSteps,
+                results: results, record: ownProfile?.record, rivals: rivals,
+                connectHealth: { await refreshOwnProfile(trigger: .manual, requestAccess: !steps.hasAsked) }
             )
         }
         .onChange(of: session.authSession?.user.id, initial: true) { _, userID in

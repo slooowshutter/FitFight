@@ -330,24 +330,10 @@ struct FightDetailView: View {
                         .foregroundStyle(theme.textTertiary)
                     HStack(spacing: 6) {
                         ForEach(Array(stats.yourPlaces.prefix(10).enumerated()), id: \.offset) { _, place in
-                            let medal: (ink: Color, wash: Color)? = switch place.rank {
-                            case 1: (theme.medalGold, theme.medalGoldWash)
-                            case 2: (theme.medalSilver, theme.medalSilverWash)
-                            case 3: (theme.medalBronze, theme.medalBronzeWash)
-                            default: nil
-                            }
                             Button {
                                 placeRound = place.round
                             } label: {
-                                Text("\(place.rank)")
-                                    .font(.ff(14, 800))
-                                    .monospacedDigit()
-                                    .foregroundStyle(medal?.ink ?? theme.textDim)
-                                    .frame(width: 30, height: 32)
-                                    .background(
-                                        medal?.wash ?? theme.control,
-                                        in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous)
-                                    )
+                                FFPlaceSquare(place.rank)
                             }
                             .buttonStyle(FFHapticPlainStyle())
                             .accessibilityLabel(dateSpan(place.round.windowStart, place.round.windowEnd.addingTimeInterval(-1)))
@@ -356,7 +342,7 @@ struct FightDetailView: View {
                     }
                 }
                 .sheet(item: $placeRound) { round in
-                    roundSummary(round)
+                    RoundSummarySheet(round: round) { placeRound = nil }
                         .fitFightTheme(theme)
                         .presentationBackground(theme.bg)
                         .presentationDetents([.medium, .large])
@@ -447,60 +433,6 @@ struct FightDetailView: View {
         }
     }
 
-    /// One round at a glance, opened from Your place each round.
-    private func roundSummary(_ round: Fight) -> some View {
-        let racers = round.standings
-            .filter { !$0.invited && !$0.deferred }
-            .sorted { ($0.rank ?? .max) < ($1.rank ?? .max) }
-        let you = racers.first { $0.person.isYou }
-        let detail = { (title: String, value: String) in
-            FFGroupedRow(
-                title: title,
-                trailing: AnyView(
-                    Text(value)
-                        .font(.ff(17, 800))
-                        .monospacedDigit()
-                        .foregroundStyle(theme.text)
-                )
-            )
-        }
-        return ScrollView {
-            VStack(alignment: .leading, spacing: theme.space.cardGap) {
-                FFSheetHeader(title: dateSpan(round.windowStart, round.windowEnd.addingTimeInterval(-1))) { placeRound = nil }
-                if let rank = you?.rank {
-                    Text(String(appLocalized: "series.place-of", defaultValue: "Your place: \(rank) of \(racers.count)"))
-                        .ffType(.heading)
-                        .foregroundStyle(theme.text)
-                }
-                // The top three, plus you when you finished lower.
-                ForEach(Array(racers.enumerated()).filter { $0.offset < 3 || $0.element.person.isYou }, id: \.element.id) { index, row in
-                    FFLeaderboardRow(
-                        rank: row.rank ?? index + 1,
-                        monogram: row.person.initials,
-                        name: row.person.name,
-                        value: fullNumber(row.score),
-                        isYou: row.person.isYou,
-                        avatar: AnyView(CompanionAvatar(row.person, size: 38))
-                    )
-                }
-                FFGroupedRows {
-                    detail(String(appLocalized: "Racers"), "\(racers.count)")
-                    FFDivider()
-                    detail(String(appLocalized: "Steps together"), fullNumber(racers.reduce(0) { $0 + $1.score }))
-                    if racers.count > 1 {
-                        FFDivider()
-                        detail(String(appLocalized: "Won by"), fullNumber(racers[0].score - racers[1].score))
-                    }
-                    if let you {
-                        FFDivider()
-                        detail(String(appLocalized: "Your steps"), fullNumber(you.score))
-                    }
-                }
-            }
-            .padding(20)
-        }
-    }
-
     /// The record and when it was set, then its holder and your own best.
     private func recordRow(_ title: String, holder: Person, headline: String, value: Double, when: String?, mine: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -525,18 +457,6 @@ struct FightDetailView: View {
                     .foregroundStyle(holder.isYou ? theme.mossText : theme.text)
             }
         }
-    }
-
-    private func fullNumber(_ value: Double) -> String {
-        Int(value.rounded()).formatted(.number.locale(AppLocalization.locale))
-    }
-
-    private func dateSpan(_ start: Date, _ end: Date) -> String {
-        let day = Date.FormatStyle.dateTime.day().month(.abbreviated).locale(AppLocalization.locale)
-        if Calendar.current.isDate(start, inSameDayAs: end) {
-            return start.formatted(day.weekday(.abbreviated))
-        }
-        return "\(start.formatted(day)) - \(end.formatted(day))"
     }
 
     private func showAllButton(expanded: Bool, count: Int, action: @escaping () -> Void) -> some View {
@@ -1203,4 +1123,76 @@ struct JoinFightPreview: View {
     private var joinRoundNext: String {
         Fight.deadlineStamp(fight.windowEnd)
     }
+}
+
+/// One round or fight at a glance: the top three, plus you when you finished lower. Opened from a place square.
+struct RoundSummarySheet: View {
+    let round: Fight
+    let onClose: () -> Void
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        let racers = round.standings
+            .filter { !$0.invited && !$0.deferred }
+            .sorted { ($0.rank ?? .max) < ($1.rank ?? .max) }
+        let you = racers.first { $0.person.isYou }
+        let detail = { (title: String, value: String) in
+            FFGroupedRow(
+                title: title,
+                trailing: AnyView(
+                    Text(value)
+                        .font(.ff(17, 800))
+                        .monospacedDigit()
+                        .foregroundStyle(theme.text)
+                )
+            )
+        }
+        ScrollView {
+            VStack(alignment: .leading, spacing: theme.space.cardGap) {
+                FFSheetHeader(title: dateSpan(round.windowStart, round.windowEnd.addingTimeInterval(-1))) { onClose() }
+                if let rank = you?.rank {
+                    Text(String(appLocalized: "series.place-of", defaultValue: "Your place: \(rank) of \(racers.count)"))
+                        .ffType(.heading)
+                        .foregroundStyle(theme.text)
+                }
+                // The top three, plus you when you finished lower.
+                ForEach(Array(racers.enumerated()).filter { $0.offset < 3 || $0.element.person.isYou }, id: \.element.id) { index, row in
+                    FFLeaderboardRow(
+                        rank: row.rank ?? index + 1,
+                        monogram: row.person.initials,
+                        name: row.person.name,
+                        value: fullNumber(row.score),
+                        isYou: row.person.isYou,
+                        avatar: AnyView(CompanionAvatar(row.person, size: 38))
+                    )
+                }
+                FFGroupedRows {
+                    detail(String(appLocalized: "Racers"), "\(racers.count)")
+                    FFDivider()
+                    detail(String(appLocalized: "Steps together"), fullNumber(racers.reduce(0) { $0 + $1.score }))
+                    if racers.count > 1 {
+                        FFDivider()
+                        detail(String(appLocalized: "Won by"), fullNumber(racers[0].score - racers[1].score))
+                    }
+                    if let you {
+                        FFDivider()
+                        detail(String(appLocalized: "Your steps"), fullNumber(you.score))
+                    }
+                }
+            }
+            .padding(20)
+        }
+    }
+}
+
+private func fullNumber(_ value: Double) -> String {
+    Int(value.rounded()).formatted(.number.locale(AppLocalization.locale))
+}
+
+private func dateSpan(_ start: Date, _ end: Date) -> String {
+    let day = Date.FormatStyle.dateTime.day().month(.abbreviated).locale(AppLocalization.locale)
+    if Calendar.current.isDate(start, inSameDayAs: end) {
+        return start.formatted(day.weekday(.abbreviated))
+    }
+    return "\(start.formatted(day)) - \(end.formatted(day))"
 }

@@ -548,6 +548,108 @@ struct FFResultGlyph: View {
     }
 }
 
+/// Your place in one round or fight: gold, silver and bronze for the podium. Fight History and the Dashboard.
+struct FFPlaceSquare: View {
+    let rank: Int
+    @Environment(\.ffTheme) private var theme
+
+    init(_ rank: Int) { self.rank = rank }
+
+    var body: some View {
+        let medal: (ink: Color, wash: Color)? = switch rank {
+        case 1: (theme.medalGold, theme.medalGoldWash)
+        case 2: (theme.medalSilver, theme.medalSilverWash)
+        case 3: (theme.medalBronze, theme.medalBronzeWash)
+        default: nil
+        }
+        Text("\(rank)")
+            .font(.ff(14, 800))
+            .monospacedDigit()
+            .foregroundStyle(medal?.ink ?? theme.textDim)
+            .frame(width: 30, height: 32)
+            .background(medal?.wash ?? theme.control, in: RoundedRectangle(cornerRadius: theme.radius.glyph, style: .continuous))
+    }
+}
+
+/// The moss "Sort by" link with the current order, as on Fights. Opens `ffSortSheet`.
+struct FFSortButton: View {
+    let title: String
+    let action: () -> Void
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: "arrow.up.arrow.down")
+                .ffType(.label)
+                .foregroundStyle(theme.mossText)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(FFHapticPlainStyle())
+        .accessibilityLabel(String(appLocalized: "Sort by"))
+        .accessibilityValue(title)
+    }
+}
+
+extension View {
+    /// The Sort by drawer: one row per order with a check on the current one; picking a row closes it.
+    func ffSortSheet<Option: Hashable>(isPresented: Binding<Bool>, options: [Option], selection: Binding<Option>, title: @escaping (Option) -> String) -> some View {
+        modifier(FFSortSheetPresenter(isPresented: isPresented, options: options, selection: selection, title: title))
+    }
+}
+
+/// Sheets do not inherit the theme, so the caller's theme is handed to the drawer.
+private struct FFSortSheetPresenter<Option: Hashable>: ViewModifier {
+    @Binding var isPresented: Bool
+    let options: [Option]
+    @Binding var selection: Option
+    let title: (Option) -> String
+    @Environment(\.ffTheme) private var theme
+
+    func body(content: Content) -> some View {
+        content.sheet(isPresented: $isPresented) {
+            FFSortSheet(options: options, selection: $selection, title: title)
+                .fitFightTheme(theme)
+                .presentationBackground(theme.overlay)
+                .presentationCornerRadius(theme.radius.shell)
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium])
+        }
+    }
+}
+
+private struct FFSortSheet<Option: Hashable>: View {
+    let options: [Option]
+    @Binding var selection: Option
+    let title: (Option) -> String
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.ffTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            FFSheetHeader(title: String(appLocalized: "Sort by")) { dismiss() }
+            FFGroupedRows {
+                ForEach(options, id: \.self) { option in
+                    if option != options.first { FFDivider() }
+                    FFGroupedRow(title: title(option), trailing: AnyView(
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(theme.mossText)
+                            .opacity(selection == option ? 1 : 0)
+                    )) {
+                        selection = option
+                        dismiss()
+                    }
+                    .accessibilityAddTraits(selection == option ? .isSelected : [])
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(theme.text)
+        .padding(.horizontal, theme.space.screenPadding)
+        .padding(.top, 16)
+    }
+}
+
 // MARK: - Avatars
 
 /// Monogram until a photo exists. Always a circle, always the control fill with a

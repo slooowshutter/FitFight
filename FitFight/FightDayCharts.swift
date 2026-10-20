@@ -52,19 +52,14 @@ struct FightDayChartsView: View {
                 }
             }
             if !full.series.isEmpty {
+                let scrubbable = [.line, .histogram, .pace].contains(kind) && full.dayCount > 0
                 if kind == .oval {
                     Text("Confirmed Fight totals")
                         .ffType(.micro)
                         .foregroundStyle(theme.textSecondary)
                 }
-                if kind == .oval || full.dayCount > 0 {
-                    chart(model)
-                } else {
-                    Text("Daily history isn't available yet. Confirmed totals are shown in Oval and standings.")
-                        .ffType(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                }
-                if [.line, .histogram, .pace].contains(kind), full.dayCount > 0 {
+                // A finger on the chart hides what sits below it, so the day's numbers read above.
+                if scrubbable {
                     let day = min(selectedDay ?? full.dayCount - 1, full.dayCount - 1)
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
@@ -86,6 +81,15 @@ struct FightDayChartsView: View {
                         }
                         legend(full, shown: shown, day: day)
                     }
+                }
+                if kind == .oval || full.dayCount > 0 {
+                    chart(model)
+                } else {
+                    Text("Daily history isn't available yet. Confirmed totals are shown in Oval and standings.")
+                        .ffType(.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
+                if scrubbable {
                     Text(kind == .line || kind == .pace
                          ? String(appLocalized: "Touch or slide to inspect a day. Tap a name to show or hide it.")
                          : String(appLocalized: "Tap a day to see its steps. Tap a name to show or hide it."))
@@ -161,10 +165,15 @@ struct FightDayChartsView: View {
                     Text(name)
                         .lineLimit(1)
                     if let day {
-                        Text((kind == .pace ? series.cumulative[day] : series.daily[day])?
-                            .formatted(.number.precision(.fractionLength(0))) ?? "-")
-                            .fontWeight(.heavy)
-                            .monospacedDigit()
+                        // The widest number holds the space, so sliding never rewraps the legend above the chart.
+                        ZStack(alignment: .leading) {
+                            Text(model.peak(cumulative: kind == .pace).formatted(.number.precision(.fractionLength(0))))
+                                .hidden()
+                            Text((kind == .pace ? series.cumulative[day] : series.daily[day])?
+                                .formatted(.number.precision(.fractionLength(0))) ?? "-")
+                        }
+                        .fontWeight(.heavy)
+                        .monospacedDigit()
                     }
                 }
                 .ffType(day == nil ? .micro : .caption)

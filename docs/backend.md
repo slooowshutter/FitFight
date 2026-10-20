@@ -229,7 +229,7 @@ query only marks its own tile with `Query failed: ...`.
 ## Admin dashboard tables (prepared 19 Oct 2026)
 
 Tables are server-defined, like sections, cards and charts, so a new table or column needs no
-app build. Each `/admin/dashboard` payload has `tables` (drawn between the cards and the charts):
+app build. Each `/admin/dashboard` payload has `tables` (drawn after the charts):
 `id`, `title`, `description`, `columns` (`title`, `definition`), `total`, the first page of `rows`
 (`id`, one `cells` entry per column: `text`, `muted`, `bold`, already written for display),
 `note` and `page_size`. The iPhone app (`AdminTableCard`) and the web page (`TableCard`) draw any

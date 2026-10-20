@@ -123,7 +123,7 @@ export const adminDashboardSchema = z.object({
     sections: z.array(z.object({ id: adminDashboardSectionSchema, title: z.string() })),
     cards: z.array(adminDashboardCardSchema),
     charts: z.array(adminDashboardChartSchema),
-    /** Drawn between the cards and the charts. Servers before 19 Oct 2026 omit it. */
+    /** Drawn after the charts. Servers before 19 Oct 2026 omit it. */
     tables: z.array(adminDashboardTableSchema),
 });
 

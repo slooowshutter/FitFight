@@ -240,7 +240,7 @@ struct FitFightAdminDashboard: Decodable {
         let value: Double
     }
 
-    /// A server-defined table, drawn between the cards and the charts. The app draws any table, so
+    /// A server-defined table, drawn after the charts. The app draws any table, so
     /// a new table or column needs no app update.
     struct Table: Decodable, Identifiable {
         struct Column: Decodable {

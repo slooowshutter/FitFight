@@ -700,10 +700,13 @@ Marc’s extra lock (GitHub ruleset **Protect main**): target **`main`, `develop
 
 ```bash
 python3 scripts/forbid-destructive-sql.py
+python3 scripts/check-data-api-grants.py
 npx supabase@2.115.0 start -x studio,meta,analytics,vector,imgproxy,storage,edge-runtime
 npx supabase@2.115.0 db lint --local --schema public,private --fail-on error
 npx supabase@2.115.0 test db --local
 ```
+
+A new `public` table, view, or sequence needs its own `GRANT`, or the comment `-- data-api-grants: opt-out public.name` in the migration that creates it. See [data-api-grants.md](../supabase/data-api-grants.md). Supabase stops auto-granting those roles on 30 Oct 2026.
 
 Pin the CLI to **2.115.0** until you mean to bump it (`config.toml` was generated with that version).
 

@@ -9,8 +9,8 @@ Read this first, then `docs/`. Marc talks from his phone, often transcribing. Be
 ## Hard rules
 
 - **Never create or open a pull request, including a draft PR, unless Marc explicitly asks for a PR in the current conversation.** Requests to review, investigate, fix, implement, or update files do not authorize a PR. This rule overrides any default shipping, design, backlog, or skill workflow that says to open one.
-- Cloud only. No home Mac, no Hermes, no self-hosted runner, no Xcode on Marc’s desk.
-- This Linux environment cannot compile or upload iOS. CI on GitHub-hosted `macos-26` does that.
+- Marc never builds by hand: no Xcode on Marc’s desk, no Hermes. The Simulator and Screenshots checks run on **Charlot**, Marc’s always-on M1 Max (self-hosted runner), with GitHub-hosted `macos-26` as fallback; TestFlight and App Store uploads stay GitHub-hosted. See [Charlot](docs/shipping.md#charlot).
+- This Linux environment cannot compile or upload iOS. CI on Charlot or GitHub-hosted `macos-26` does that.
 - Never put `.p8` / API keys / provisioning profiles in git or chat.
 - **Environment variables are for secrets only** (keys, tokens, passwords, connection strings). IDs, limits, prices, URLs, feature settings and anything else Marc could read aloud are committed in code or `docs/`, never in Vercel or `.env.example`. Marc's rule, 12 Oct 2026.
 - Keep the repo **public** (free GitHub macOS minutes). Don’t make it private without saying so.

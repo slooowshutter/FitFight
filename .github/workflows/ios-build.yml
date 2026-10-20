@@ -1,4 +1,5 @@
-# Compile on GitHub-hosted macOS. Never self-hosted. Never a home Mac.
+# Compiles on Charlot (Marc's M1 Max, self-hosted) when the MAC_RUNNER repo variable is
+# "charlot", otherwise on GitHub-hosted macOS. See docs/shipping.md#charlot.
 name: iOS simulator build
 
 on:
@@ -111,7 +112,7 @@ jobs:
 
     build:
         name: Simulator
-        runs-on: macos-26
+        runs-on: ${{ vars.MAC_RUNNER || 'macos-26' }}
         timeout-minutes: 30
         permissions:
             contents: read
@@ -124,8 +125,8 @@ jobs:
             - name: Verify app update toasts
               timeout-minutes: 1
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o /tmp/fitfight-update-tests
-                  /tmp/fitfight-update-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/AppUpdateChecker.swift tests/AppUpdateCheckerTests.swift -o "$RUNNER_TEMP"/fitfight-update-tests
+                  "$RUNNER_TEMP"/fitfight-update-tests
 
             - name: Verify Google sign-in and environment selection
               run: python3 scripts/test_google_sign_in.py
@@ -138,13 +139,13 @@ jobs:
 
             - name: Verify remaining-time labels
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o /tmp/fitfight-remaining-tests
-                  /tmp/fitfight-remaining-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/RemainingTime.swift tests/RemainingTimeTests.swift -o "$RUNNER_TEMP"/fitfight-remaining-tests
+                  "$RUNNER_TEMP"/fitfight-remaining-tests
 
             - name: Verify remote photo cache keys
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/RemoteImageCache.swift tests/RemoteImageCacheTests.swift -o /tmp/fitfight-image-cache-tests
-                  /tmp/fitfight-image-cache-tests
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/RemoteImageCache.swift tests/RemoteImageCacheTests.swift -o "$RUNNER_TEMP"/fitfight-image-cache-tests
+                  "$RUNNER_TEMP"/fitfight-image-cache-tests
 
             - name: Verify live standings and snapshot ordering
               run: python3 scripts/test_fight_live_updates.py
@@ -199,8 +200,8 @@ jobs:
 
             - name: Verify native API contracts
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift FitFight/InAppAlert.swift tests/APIContractTests.swift -o /tmp/fitfight-contract-tests
-                  /tmp/fitfight-contract-tests contracts/fixtures
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx14.0" FitFight/AppLocalization.swift FitFight/AIWorkflowRequest.swift FitFight/Media.swift FitFight/Profile.swift FitFight/FightSnapshot.swift FitFight/InAppAlert.swift tests/APIContractTests.swift -o "$RUNNER_TEMP"/fitfight-contract-tests
+                  "$RUNNER_TEMP"/fitfight-contract-tests contracts/fixtures
 
             - name: Verify generation recovery and account isolation
               run: python3 scripts/test_ai_companion_state.py
@@ -210,8 +211,8 @@ jobs:
 
             - name: Verify profile access and response ordering
               run: |
-                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/SharedProfile.swift FitFight/ProfileScreenStore.swift tests/ProfileScreenStoreTests.swift -o /tmp/fitfight-profile-tests
-                  /tmp/fitfight-profile-tests contracts/fixtures
+                  swiftc -swift-version 5 -target "$(uname -m)-apple-macosx13.0" FitFight/SharedProfile.swift FitFight/ProfileScreenStore.swift tests/ProfileScreenStoreTests.swift -o "$RUNNER_TEMP"/fitfight-profile-tests
+                  "$RUNNER_TEMP"/fitfight-profile-tests contracts/fixtures
 
             - name: Verify profile history navigation and rematches
               run: python3 scripts/test_profile_navigation.py
@@ -223,11 +224,21 @@ jobs:
               id: xcode
               run: echo "build=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
 
-            # Checkout gives every app file a new timestamp, so the app always recompiles.
+            # Charlot keeps Xcode's build folder between runs, so only changed files recompile.
+            # The built app is removed first because Xcode never removes deleted resources from it.
+            - name: Reuse Charlot's build folder
+              if: runner.environment == 'self-hosted'
+              run: |
+                  mkdir -p "$HOME/DerivedData/$RUNNER_NAME-simulator"
+                  ln -sfn "$HOME/DerivedData/$RUNNER_NAME-simulator" build
+                  rm -rf build/Build/Products/*/*.app build/Build/Products/*/*.appex
+
+            # On GitHub, checkout gives every app file a new timestamp, so the app always recompiles.
             # This cache only skips downloading and compiling the Swift packages.
             # Built apps stay out because Xcode never removes deleted resources from them.
             - name: Restore Swift package build cache
               id: build-cache
+              if: runner.environment == 'github-hosted'
               uses: actions/cache/restore@v4
               with:
                   path: |
@@ -255,7 +266,7 @@ jobs:
 
             # Only pushes save, so pull requests share the develop, preview, or main cache.
             - name: Save Swift package build cache
-              if: github.event_name == 'push' && steps.build-cache.outputs.cache-hit != 'true'
+              if: runner.environment == 'github-hosted' && github.event_name == 'push' && steps.build-cache.outputs.cache-hit != 'true'
               uses: actions/cache/save@v4
               with:
                   path: |
@@ -271,6 +282,7 @@ jobs:
                   RUNTIME=$(xcrun simctl list runtimes --json | python3 -c "import json,sys; rs=[r for r in json.load(sys.stdin)['runtimes'] if r['isAvailable'] and 'iOS' in r['name']]; print(sorted(rs,key=lambda r:r['version'])[-1]['identifier'])")
                   DEVICE_TYPE=$(xcrun simctl list devicetypes --json | python3 -c "import json,sys; ds=[d for d in json.load(sys.stdin)['devicetypes'] if d['name'] in ('iPhone 16','iPhone 15','iPhone 17')]; print(ds[0]['identifier'])")
                   UDID=$(xcrun simctl create limited-companions "$DEVICE_TYPE" "$RUNTIME")
+                  trap 'xcrun simctl shutdown "$UDID" || true; xcrun simctl delete "$UDID"' EXIT
                   xcrun simctl boot "$UDID"
                   xcrun simctl bootstatus "$UDID" -b
                   xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/FitFight.app

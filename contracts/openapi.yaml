@@ -1077,7 +1077,7 @@ paths:
                                     },
                                     "tables": {
                                         "type": "array",
-                                        "description": "Server-defined tables, drawn between the cards and the charts, first column fixed. The first page of rows; GET /admin/table reads the next ones. Servers before 19 Oct 2026 omit it.",
+                                        "description": "Server-defined tables, drawn after the charts, first column fixed. The first page of rows; GET /admin/table reads the next ones. Servers before 19 Oct 2026 omit it.",
                                         "items": {
                                             "type": "object",
                                             "required": ["id", "title", "description", "columns", "total", "rows", "note", "page_size"],

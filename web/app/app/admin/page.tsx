@@ -219,13 +219,6 @@ export default function AdminPage() {
                     ))}
                 </div>
             ) : null}
-            {data?.tables.map((table) => (
-                <TableCard
-                    key={`${data.environment}:${table.id}`}
-                    table={table}
-                    environment={data.environment}
-                />
-            ))}
             {data ? (
                 <div className="grid gap-4 lg:grid-cols-2">
                     {data.charts.map((chart) => (
@@ -233,6 +226,13 @@ export default function AdminPage() {
                     ))}
                 </div>
             ) : null}
+            {data?.tables.map((table) => (
+                <TableCard
+                    key={`${data.environment}:${table.id}`}
+                    table={table}
+                    environment={data.environment}
+                />
+            ))}
         </>
     );
 }

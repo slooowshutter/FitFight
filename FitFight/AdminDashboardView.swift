@@ -102,10 +102,6 @@ struct AdminDashboardView: View {
                         cardTile(card)
                     }
                 }
-                ForEach(dashboard.tables ?? []) { table in
-                    AdminTableCard(table: table, server: server)
-                        .id("\(server.rawValue)-\(table.id)")
-                }
                 // The server's first chart decides which group leads, so Retention keeps its curves on top.
                 if dashboard.charts.first?.xKind == "date" {
                     trendGroup(dashboard)
@@ -113,6 +109,10 @@ struct AdminDashboardView: View {
                 } else {
                     breakdownGroup(dashboard)
                     trendGroup(dashboard)
+                }
+                ForEach(dashboard.tables ?? []) { table in
+                    AdminTableCard(table: table, server: server)
+                        .id("\(server.rawValue)-\(table.id)")
                 }
             } else if loading && failure == nil {
                 ProgressView()

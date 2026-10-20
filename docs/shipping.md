@@ -14,7 +14,7 @@ Not: agent on Marc’s laptop or home Mac → local Xcode.
 | Workflow             | File                                         | When                                                                                                                                             | Runner          |
 | -------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
 | Simulator            | `.github/workflows/ios-build.yml`            | PR + push to `main`, `develop`, or `preview`                                                                                                     | Charlot         |
-| Screenshots          | `.github/workflows/ios-screenshots.yml`      | PR + push to `main`, `develop`, or `preview`                                                                                                     | Charlot         |
+| Screenshots          | `.github/workflows/ios-screenshots.yml`      | push to `main`                                                                                                                                   | Charlot         |
 | TestFlight           | `.github/workflows/ios-testflight.yml`       | push to `preview` (app/fastlane paths), plus optional `workflow_dispatch` on that branch. No cron. Feature branches and `develop` do not upload. | `macos-26`      |
 | App Store candidate  | `.github/workflows/ios-app-store.yml`        | app push to `main`; uploads only and never submits for review                                                                                    | `macos-26`      |
 | Database             | `.github/workflows/database.yml`             | PR + push to `main`, `develop`, or `preview`                                                                                                     | `ubuntu-latest` |
@@ -126,7 +126,7 @@ Run the release regression checks with `bundle exec ruby fastlane/testflight_tes
 
 ## Seeing the UI without a build
 
-Every PR renders each screen in the simulator and uploads them as the `screens` artifact,
+Every app push to `main` renders each screen in the simulator and uploads them as the `screens` artifact,
 including `design-<name>.png` for each of the eleven design directions.
 `FitFight/ScreenshotExport.swift` runs when the app is launched with `FF_SHOOT=1`, renders
 each screen with `ImageRenderer` (scroll views stay blank in that renderer, so `FFScreen`

@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop a503dcf3 with the Dashboard branch (Fights first)", updated: "20 Oct 2026" };
+            const MIRROR = { matches: "develop 01d79bf0 with the newest-day-first Bars branch", updated: "21 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 3;
@@ -3604,11 +3604,15 @@
         }).join("")}</div>`;
         const parts = [chips];
         if (kind === "oval") parts.push(`<p class="t-micro c-2">Confirmed Fight totals</p>`);
-        if (kind === "oval" || count > 0) parts.push({ oval: ovalChart, bars: barsChart, line: lineChart, pace: lineChart, histogram: histogramChart }[kind](model, visible, ui, kind));
-        else parts.push(`<p class="t-caption c-2">Daily history isn't available yet. Confirmed totals are shown in Oval and standings.</p>`);
-        if (["line", "histogram", "pace"].includes(kind) && count > 0) {
+        const scrubbable = ["line", "histogram", "pace"].includes(kind) && count > 0;
+        // A finger on the chart hides what sits below it, so the day's numbers read above.
+        if (scrubbable) {
             const day = Math.min(ui.fdDay ?? count - 1, count - 1);
             parts.push(`<div class="vstack" style="gap:10px"><div class="hstack"><span class="t-label grow">${esc(model.labels[day])}</span><span class="t-micro c-2">${kind === "pace" ? "Cumulative steps" : "Daily steps"}</span></div>${legend(shown, day)}</div>`);
+        }
+        if (kind === "oval" || count > 0) parts.push({ oval: ovalChart, bars: barsChart, line: lineChart, pace: lineChart, histogram: histogramChart }[kind](model, visible, ui, kind));
+        else parts.push(`<p class="t-caption c-2">Daily history isn't available yet. Confirmed totals are shown in Oval and standings.</p>`);
+        if (scrubbable) {
             parts.push(`<p class="t-micro c-faint">${kind === "histogram" ? "Tap a day to see its steps. Tap a name to show or hide it." : "Touch or slide to inspect a day. Tap a name to show or hide it."}</p>`);
             parts.push(`<p class="t-micro c-faint">Only synced steps are shown. Missing daily data is marked with a dash.</p>`);
         } else if (kind === "bars") {
@@ -3711,7 +3715,7 @@
         return `<div class="fdv-barsday">${model.labels.map((label, day) => `<div class="day">${FF.eyebrow(label)}<div class="vstack" style="gap:10px">${series.map((se) => {
             const value = se.daily[day];
             return `<div class="fdv-barrow">${avatar(se.person, 16)}<span class="t-micro c-2 ellipsis name">${esc(nameOf(se.person))}</span><span class="track"><span style="width:${peak === 0 ? 0 : Math.min(1, (value ?? 0) / peak) * 100}%;background:${se.color}"></span></span><span class="t-micro c-2 value">${value == null ? "-" : esc(score(value))}</span></div>`;
-        }).join("")}</div></div>`).join("")}</div>`;
+        }).join("")}</div></div>`).reverse().join("")}</div>`;
     }
 
     // ─── History pane (SeriesStats) ─────────────────────────────────

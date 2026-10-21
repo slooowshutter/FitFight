@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.3.0",
             year: 2026,
             month: 10,
+            day: 21,
+            notes: "Inside a fight, Bars now shows the newest day first, so today is at the top."
+        ),
+        ReleaseNote(
+            version: "1.3.0",
+            year: 2026,
+            month: 10,
             day: 20,
             notes: "Dashboard opens on Fights: your win rate in a ring, your place in your last fights (tap one for its summary), your run, and Friends head to head with each friend's score and who leads, sorted A to Z, by most fights or by how long you have been friends. Slide across any chart to read its number; averages sit in a small badge. Steps marks the days you were in a fight. Tap Weeks and months, or a sport, for bars by day, week and month."
         ),

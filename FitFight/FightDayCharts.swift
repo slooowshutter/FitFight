@@ -474,8 +474,8 @@ private struct FightDayBarsChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(model.labels.enumerated()), id: \.offset) { day, label in
-                if day > 0 { Color.clear.frame(height: 20) }
+            ForEach(Array(model.labels.enumerated()).reversed(), id: \.offset) { day, label in
+                if day < model.dayCount - 1 { Color.clear.frame(height: 20) }
                 FFEyebrow(label)
                     .padding(.bottom, 12)
                 VStack(spacing: 10) {

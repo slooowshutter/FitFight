@@ -6,6 +6,59 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## Dashboard: Fights first, values under the finger, fight days, Day/Week/Month pages, prepared 20 Oct 2026
+
+Marc (build 223, then 18 Oct): many charts let you slide but show no number;
+the dashed average needs a readable value, as a small badge; the Dashboard
+should lead with fights; keep Sports. From the proposals he picked the win rate
+ring (thin gaps), History's place squares and the rival cards.
+
+**Code (native only):**
+
+- Profile -> Dashboard opens on **Fights** (tabs: Fights, Steps, Sports, Admin).
+  Fights: the win rate in a ring split into won, drew and lost, with the three
+  counts beside it; your place in your last 10 fights as the same squares as a
+  fight's History (`FFPlaceSquare`), each opening the same round summary
+  (`RoundSummarySheet`) when the fight is loaded; your run and best win run;
+  Friends head to head: one card per rival (companion, score, who leads, a
+  won/drew/lost bar) from `/me/rivalries`, opening their profile, sorted A to Z by
+  handle, or by most fights, oldest or newest friends, with the Fights tab's Sort by
+  link and drawer (now shared as `FFSortButton` and `.ffSortSheet`); then history.
+- Steps: the dashed line's value ("Avg 8,771") sits in a small solid badge on the
+  line; the first date and Today sit under the bars; today reads "Today so far".
+  The top card compares the last 15 finished days with the 15 before. Averages
+  skip days without Steps, as on Profile. Days that overlap a fight from your
+  history are bright, the rest dimmed, with a "Fight day" tag and a Fight days vs
+  other days card. Average by weekday uses the last 8 weeks without today, and
+  you can slide on it.
+- Weeks and months (Steps) or a tap on any sport opens a page with Day (31
+  days), Week (26 weeks) and Month (12 months) bars from a year of Apple
+  Health, a labelled average, and Average, Best and Total.
+- Fight screen: on Line, Histogram and Pace the day and everyone's number read
+  above the chart instead of below it.
+- Empty Steps state has a Connect Apple Health button. Sport totals say "min".
+- Companion preview history: three-day fights with a free day between, so the
+  preview has fight days; the newest is the finished Coffee is on you fight, so its
+  square opens a summary. One 1.3.0 release note in English and French.
+
+**Mirror:** `app.html` has the same Dashboard, the chart page and the new preview
+history (data version 3). The `dashboard-fights` options are gone now that Marc
+picked: the winner is plain mirror code.
+
+**Contract:** additive. `GET /api/v1/me/rivalries` rows gain `friends_since`
+(when the friendship was accepted, null when not friends), in `contracts/openapi.yaml`.
+Older builds ignore it; a build with this change reads a missing field as null, so
+on an older server the friendship sorts fall back to A to Z. No database change.
+Order: deploy the backend, then ship the app. Fight days come from the first page
+of `/profiles/{id}/history`.
+
+**Verification (local, 20 Oct):** web typecheck and all 550 unit tests passed; the
+rivalries database test was updated but not run (needs a database). Generic Simulator build (Xcode 27) succeeded
+with no warnings in the changed files. Localization, fight chart, profile
+refresh and native API boundary checks passed. The mirror screens were rendered
+in headless Chrome. Not checked: the app in the Simulator (this Mac has no
+Simulator runtime installed since 18 Oct) and a device with real Apple Health data.
+
 ## Marketing version 1.3.0, 20 Oct 2026
 
 Apple approved and released 1.2.1 (234) on 19 Oct 2026; production `/api/app-release`

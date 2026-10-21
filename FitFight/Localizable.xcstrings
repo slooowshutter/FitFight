@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Inside a fight, Bars now shows the newest day first, so today is at the top.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dans un défi, Barres montre maintenant le jour le plus récent en premier : aujourd’hui est en haut."
+                    }
+                }
+            }
+        },
         "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour.": {
             "localizations": {
                 "fr": {

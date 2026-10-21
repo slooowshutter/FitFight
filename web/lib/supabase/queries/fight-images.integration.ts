@@ -55,6 +55,13 @@ test("a fight image waits for two runners, folds changes, respects the daily all
     await database`update public.fight_members set state = 'accepted', accepted_at = now() where fight_id = ${fight} and user_id = ${peer}`;
     await enqueueChangedFightImages(database);
     await database`update public.profiles set companion_id = 'fox' where id = ${peer}`;
+    const levels = randomUUID();
+    const [resting, fit] = ["resting", "fit"].map((stage) => `https://supabase.tryblend.ai/storage/v1/object/public/generated/a/${stage}.png`);
+    await database`
+        insert into private.ai_library_images (request_id, user_id, workflow, description, stage, image_url)
+        values (${levels}, ${owner}, 'fitness', 'Dog', 'resting', ${resting}), (${levels}, ${owner}, 'fitness', 'Dog', 'fit', ${fit})
+    `;
+    await database`update public.profiles set companion_id = 'custom', companion_prompt = 'Dog', companion_image_url = ${resting} where id = ${owner}`;
     await enqueueChangedFightImages(database);
     assert.deepEqual(
         (await rows()).map((row) => [row.status, row.waits_an_hour]),
@@ -69,8 +76,9 @@ test("a fight image waits for two runners, folds changes, respects the daily all
     assert.equal(claimed.job.status, "running");
     assert.equal(claimed.job.attempts, 1);
     assert.deepEqual(
-        claimed.cast.map((row) => [row.user_id, row.is_owner, row.companion_id]),
-        [[owner, true, null], [peer, false, "fox"]],
+        claimed.cast.map((row) => [row.user_id, row.is_owner, row.companion_id, row.companion_image_url]),
+        [[owner, true, "custom", fit], [peer, false, "fox", null]],
+        "a custom character runs in its Pushing pose, not the equipped Resting one",
     );
     await saveFightImageRun(claimed.job.id, { layout: "trail", runners: [], workflowId: "workflow", inputs: {}, runId: "run-1" }, database);
     await finishFightImageAttempt(claimed.job.id, { runId: "run-1", imageUrl: image, check: "{}", problems: [], pass: true }, database);

@@ -126,7 +126,17 @@ export async function claimNextFightImage(
             const cast = (
                 await sql`
                     select member.user_id, member.user_id = fight.owner_id as is_owner, member.accepted_at,
-                        profile.companion_id, profile.companion_image_url, profile.companion_prompt
+                        profile.companion_id, profile.companion_prompt,
+                        -- NOTE: the app equips the Resting level (in an armchair, under a blanket), so the image
+                        -- model invented a different running outfit every time. The Pushing level of the same
+                        -- character is already standing in its sports kit.
+                        coalesce((
+                            select running.image_url
+                            from private.ai_library_images as equipped
+                            join private.ai_library_images as running on running.request_id = equipped.request_id and running.stage = 'fit'
+                            where equipped.user_id = member.user_id and equipped.image_url = profile.companion_image_url
+                            limit 1
+                        ), profile.companion_image_url) as companion_image_url
                     from public.fight_members as member
                     join public.fights as fight on fight.id = member.fight_id
                     join public.profiles as profile on profile.id = member.user_id and profile.deleted_at is null

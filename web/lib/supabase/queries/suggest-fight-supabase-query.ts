@@ -4,7 +4,6 @@ import { ApiError } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import { administeredFightSchema, suggestedSeriesSchema, suggestedFightOwnerSchema } from "@/lib/types/admin/fight-administration";
 import type { SuggestFightResponse } from "@/lib/types/fights/suggest-fight";
-import { profileCountRowSchema } from "@/lib/types/profiles/shared-profile";
 import { inviteEveryoneToOpenFight } from "./app-wide-fight-invite-supabase-query";
 import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import { enqueueFightInviteNotifications } from "./notification-intents-supabase-query";
@@ -23,10 +22,6 @@ export async function setFightSuggested(userId: string, fightId: string, suggest
         if (suggested && (series.visibility !== "joinable" || series.paused_at !== null || series.current_fight_id !== fight.id
             || !["live", "scheduled", "inviting"].includes(fight.state) || fight.ends_at.getTime() <= now.getTime())) {
             throw new ApiError(409, "conflict", "Only an active public fight can be suggested");
-        }
-        if (suggested) {
-            const [capacity] = await sql`select count(*)::int n from public.fight_members where fight_id = ${fightId} and state in ('accepted', 'deferred')`;
-            if (profileCountRowSchema.parse(capacity).n >= 50) throw new ApiError(409, "conflict", "This fight is full");
         }
         await sql`update public.fight_series set suggested = ${suggested}, suggested_at = ${suggested ? now : null} where id = ${series.id}`;
         // Everyone is invited to a Suggested fight, so its rounds close 24 hours after the end.

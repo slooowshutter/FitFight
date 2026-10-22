@@ -20,10 +20,12 @@ final class SessionStore {
         return prompts
     }
 
-    func setCompanion(id: String, prompt: String?) async throws {
+    func setCompanion(id: String, prompt: String?, onlyIfPending: Bool = false) async throws {
+        if onlyIfPending, !CompanionStore.hasPendingChoice(for: profile?.userId) { return }
         if rejectSave { throw URLError(.cannotConnectToHost) }
         profile?.companionId = id
         profile?.companionPrompt = prompt
+        if id != "custom" { profile?.companionImageURL = nil }
         if let prompt {
             prompts.removeAll { $0 == prompt }
             prompts.insert(prompt, at: 0)
@@ -104,6 +106,32 @@ enum CompanionStateTests {
             SpecialSeries.allCases.firstIndex(of: $0)! < SpecialSeries.allCases.firstIndex(of: $1)!
         }, "The Specials carousel is ordered by series")
         precondition(StockCompanion.limitedTiger.effortImage(stage: .peak) == "Companion-limited-tiger-effort-5", "Specials have effort poses")
+
+        // The animal from first launch must not cover a character equipped later, and must not be written back over it.
+        let original = CompanionStore()
+        let first = FitFightProfile(userId: userId, handle: "companion_test", displayName: "Test", handleSetAt: nil, companionId: "fox")
+        original.apply(first)
+        session.rejectSave = true
+        try await original.choose(id: "fox", prompt: nil, session: session)
+        precondition(CompanionStore.hasPendingChoice(for: userId))
+        precondition(original.animal(for: userId.uuidString, companionID: "goat", isYou: true) == .fox, "An offline pick still shows before it lands")
+        session.rejectSave = false
+        let created = URL(string: "https://cdn.tryblend.ai/created.png")!
+        CompanionStore.clearPendingChoice(for: userId)
+        var equipped = first
+        equipped.companionId = "custom"
+        equipped.companionImageURL = created
+        session.profile = equipped
+        original.apply(equipped)
+        precondition(original.isCustom && original.customImageURL == created)
+        precondition(original.animal(for: userId.uuidString, companionID: "fox", isYou: true) == nil, "A created character replaces the first animal on fight cards")
+        precondition(original.animal(for: userId.uuidString, companionID: "custom", isYou: true) == nil)
+        await original.publishPending(session: session)
+        precondition(session.profile?.companionId == "custom" && session.profile?.companionImageURL == created, "A cleared first animal must not be saved again")
+        session.profile?.companionId = "goat"
+        session.profile?.companionImageURL = nil
+        original.apply(session.profile)
+        precondition(original.animal(for: userId.uuidString, companionID: "fox", isYou: true) == .goat, "A fight row that still says the first animal shows the one you equipped")
 
         // A retired Special id from the first roster stays on its profile and is simply unknown here.
         let retired = FitFightProfile(userId: UUID(), handle: "retired", displayName: "Retired", handleSetAt: nil, companionId: "limited-pangolin")

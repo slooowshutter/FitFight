@@ -27,6 +27,8 @@ final class SessionStore: ObservableObject {
         options: SupabaseClientOptions(auth: .init(emitLocalSessionAsInitialSession: true))
     )
     private let api = FitFightAPI()
+    /// Companion saves run one at a time, so an older stock pick cannot land after a custom character.
+    private var companionSaveTail: Task<Void, Never>?
     private static let handleChosenKey = "ff.handle.chosen"
     private static let needsHealthKey = "ff.onboarding.needsHealth"
     private static let needsNotificationKey = "ff.onboarding.needsNotifications"
@@ -418,21 +420,47 @@ final class SessionStore: ObservableObject {
         return try await api.companionPrompts(accessToken: token)
     }
 
-    func setCompanion(id: String? = nil, prompt: String? = nil, image: FitFightAICompanionSelection? = nil) async throws {
+    func setCompanion(
+        id: String? = nil,
+        prompt: String? = nil,
+        image: FitFightAICompanionSelection? = nil,
+        onlyIfPending: Bool = false
+    ) async throws {
         guard !screenshotSignedIn else { throw CompanionPreview.WriteUnavailable() }
         guard let userId = authSession?.user.id ?? client.auth.currentUser?.id else {
             throw HandleError.notSignedIn
         }
-        let token = try await freshAccessToken()
-        let updated = try await api.updateProfile(
-            companionId: id,
-            companionPrompt: prompt,
-            companionImage: image,
-            accessToken: token
-        )
-        try Task.checkCancellation()
-        guard authSession?.user.id == userId else { throw CancellationError() }
-        cacheProfile(updated, for: userId)
+        let previous = companionSaveTail
+        let task = Task { @MainActor () throws -> FitFightProfile in
+            await previous?.value
+            // Equipping a created character clears the offline stock pick before this runs.
+            if onlyIfPending, !CompanionStore.hasPendingChoice(for: userId) {
+                guard let profile, profile.userId == userId else { throw CancellationError() }
+                return profile
+            }
+            if image != nil {
+                CompanionStore.clearPendingChoice(for: userId)
+            }
+            let token = try await freshAccessToken()
+            let updated = try await api.updateProfile(
+                companionId: id,
+                companionPrompt: prompt,
+                companionImage: image,
+                accessToken: token
+            )
+            try Task.checkCancellation()
+            guard authSession?.user.id == userId else { throw CancellationError() }
+            if image != nil {
+                CompanionStore.clearPendingChoice(for: userId)
+            }
+            cacheProfile(updated, for: userId)
+            return updated
+        }
+        let tracked = Task { @MainActor in
+            _ = try? await task.value
+        }
+        companionSaveTail = tracked
+        return try await task.value
     }
 
     @discardableResult

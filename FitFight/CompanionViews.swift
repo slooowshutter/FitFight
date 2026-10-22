@@ -250,6 +250,8 @@ final class CompanionStore: ObservableObject {
     @Published var selection: StockCompanion = .badger
     @Published var sport: CompanionSport = .hiking { didSet { persist() } }
     @Published var isCustom = false
+    /// The equipped custom character's picture. Fight cards use this, not a stale profile photo.
+    @Published var customImageURL: URL?
     @Published var customPrompt = ""
     @Published private(set) var savedPrompts: [String] = []
     @Published private(set) var hasChosen = false
@@ -273,6 +275,12 @@ final class CompanionStore: ObservableObject {
         return UserDefaults.standard.string(forKey: pendingPrefix + userId.uuidString) != nil
     }
 
+    /// Drops an offline stock pick so it cannot be written back over a custom character.
+    static func clearPendingChoice(for userId: UUID) {
+        UserDefaults.standard.removeObject(forKey: pendingPrefix + userId.uuidString)
+        UserDefaults.standard.removeObject(forKey: pendingPromptPrefix + userId.uuidString)
+    }
+
     static func deleteLocalLibrary(for userId: UUID) {
         UserDefaults.standard.removeObject(forKey: "ff.ai.pending." + userId.uuidString)
         UserDefaults.standard.removeObject(forKey: libraryPrefix + userId.uuidString)
@@ -290,20 +298,24 @@ final class CompanionStore: ObservableObject {
             customPrompt = savedPrompts.first ?? ""
             selection = .badger
             isCustom = false
+            customImageURL = nil
             hasChosen = false
         }
         if let userId = profile?.userId,
            let pending = UserDefaults.standard.string(forKey: Self.pendingPrefix + userId.uuidString) {
             let pendingPrompt = UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
             applyChoice(id: pending, prompt: pendingPrompt)
+            customImageURL = pending == Self.customId ? profile?.companionImageURL : nil
             if pendingSaveLanded(on: profile, id: pending, prompt: pendingPrompt) {
                 clearPending(for: userId)
             }
         } else if let id = profile?.companionId {
             applyChoice(id: id, prompt: profile?.companionPrompt)
+            customImageURL = id == Self.customId ? profile?.companionImageURL : nil
         } else {
             hasChosen = false
             isCustom = false
+            customImageURL = nil
             if profile == nil {
                 customPrompt = ""
                 savedPrompts = []
@@ -360,7 +372,8 @@ final class CompanionStore: ObservableObject {
         else { return }
         let prompt = UserDefaults.standard.string(forKey: Self.pendingPromptPrefix + userId.uuidString)
         do {
-            try await session.setCompanion(id: pending, prompt: pending == Self.customId ? prompt : nil)
+            // onlyIfPending: equipping a custom character clears the key, so this must not put the old animal back.
+            try await session.setCompanion(id: pending, prompt: pending == Self.customId ? prompt : nil, onlyIfPending: true)
             if pendingSaveLanded(on: session.profile, id: pending, prompt: prompt) {
                 clearPending(for: userId)
             }
@@ -370,7 +383,12 @@ final class CompanionStore: ObservableObject {
     }
 
     func animal(for personID: String?, companionID: String? = nil, isYou: Bool = false) -> StockCompanion? {
-        if isYou && hasChosen { return isCustom ? nil : selection }
+        // Your cards use the animal you equipped, not an older id saved on the fight.
+        // A custom character has no stock image; the avatar draws its picture instead.
+        if isYou && hasChosen {
+            if isCustom || companionID == Self.customId { return nil }
+            return selection
+        }
         if let companionID, let animal = StockCompanion(rawValue: companionID) {
             return animal
         }
@@ -416,8 +434,7 @@ final class CompanionStore: ObservableObject {
     }
 
     private func clearPending(for userId: UUID) {
-        UserDefaults.standard.removeObject(forKey: Self.pendingPrefix + userId.uuidString)
-        UserDefaults.standard.removeObject(forKey: Self.pendingPromptPrefix + userId.uuidString)
+        Self.clearPendingChoice(for: userId)
     }
 
     private func restore() {
@@ -542,6 +559,17 @@ struct CompanionAvatar: View {
         )
     }
 
+    /// Your equipped custom character, not the profile photo cached on an older fight row.
+    private var customArtURL: URL? {
+        if isYou && companions.isCustom, let equipped = companions.customImageURL {
+            return equipped
+        }
+        if isYou && companions.isCustom {
+            return photoURL
+        }
+        return companionID == CompanionStore.customId ? photoURL : nil
+    }
+
     var body: some View {
         if let animal = companions.animal(for: personID, companionID: companionID, isYou: isYou) {
             Group {
@@ -564,9 +592,9 @@ struct CompanionAvatar: View {
             .contentShape(Rectangle())
             .opacity(pending ? 0.55 : 1)
             .accessibilityHidden(true)
-        } else if let photoURL, (isYou && companions.hasChosen) ? companions.isCustom : companionID == CompanionStore.customId {
+        } else if let artURL = customArtURL {
             // A custom character is transparent art like the stock animals, so it stands free in the same square, never in a photo circle.
-            RemotePhoto(url: photoURL, kind: .avatar, contentMode: .fit) { Color.clear }
+            RemotePhoto(url: artURL, kind: .avatar, contentMode: .fit) { Color.clear }
                 .frame(width: halfBody ? size / 0.55 : size, height: halfBody ? size / 0.55 : size)
                 .frame(width: size, height: size, alignment: .top)
                 .clipped()

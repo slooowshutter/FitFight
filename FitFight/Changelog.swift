@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.3.0",
             year: 2026,
             month: 10,
+            day: 22,
+            notes: "On Fights, the animals in each fight follow the character you equipped. A character you created no longer falls back to the animal from your first profile."
+        ),
+        ReleaseNote(
+            version: "1.3.0",
+            year: 2026,
+            month: 10,
             day: 21,
             notes: "Inside a fight, Bars now shows the newest day first, so today is at the top."
         ),

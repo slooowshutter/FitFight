@@ -1,6 +1,16 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "On Fights, the animals in each fight follow the character you equipped. A character you created no longer falls back to the animal from your first profile.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dans Défis, les animaux de chaque défi suivent le personnage que tu as choisi. Un personnage que tu as créé ne revient plus à l’animal de ton premier profil."
+                    }
+                }
+            }
+        },
         "Inside a fight, Bars now shows the newest day first, so today is at the top.": {
             "localizations": {
                 "fr": {

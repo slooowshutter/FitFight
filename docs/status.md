@@ -1296,7 +1296,9 @@ the challenger's next refresh, or when the grace ends.
 
 **Everybody fight on production is full:** read-only on 14 Oct, `PGG7` had 50 of 50
 accepted or deferred members (the cap), 11 more invited who cannot accept, and 81 profiles.
-New users already see "Couldn't accept." on that onboarding page. The cap is unchanged here.
+New users already see "Couldn't accept." on that onboarding page. Marc removed the cap on
+21 Oct 2026: fights have no member limit. The apps still handle `fight_full` from older
+servers. The new backend never sends it. Production stays capped until `preview` merges to `main`.
 
 **Contract:** `/api/v1` unchanged for every installed build. Two new endpoints; no request or
 response field changed. Read-only `/api/app-release` on 14 Oct: production latest 1.1.2

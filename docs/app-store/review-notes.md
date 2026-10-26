@@ -24,9 +24,8 @@ Updated 18 Oct 2026 for 1.2.0, submitted unchanged as 1.2.1 on 19 Oct: Connector
 >
 > IN-APP PURCHASES
 >
-> Both products are consumables and work with a Sandbox account on the production server.
+> The custom character is a consumable and works with a Sandbox account on the production server. Specials are free: open Profile, tap your animal, open the Specials tab, pick any Special and tap Save companion.
 >
-> - Special companion (com.fitfight.mvp.special): open Profile, tap your animal, open the Specials tab, pick any Special and tap Buy for (price). The chosen Special unlocks for good on that FitFight account.
 > - Custom character (com.fitfight.mvp.custom_character): open Profile, tap your animal, open the Yours tab and tap Create your own. Describe an animal. One purchase draws three portraits; pick one, then five fitness poses are generated.
 >
 > FitFight's server records each purchase, so Restore purchases re-syncs it.

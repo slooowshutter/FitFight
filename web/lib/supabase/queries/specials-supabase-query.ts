@@ -118,13 +118,14 @@ export async function readSpecialStore(
             environment: account.environment,
             purchases_enabled: true,
             product_id: specialProductId,
-            // Retired Specials are listed only for an account that owns one.
+            // Retired Specials are listed only for an account that owns one. Every current Special is free, so it is
+            // reported as yours and older builds wear it without a charge.
             editions: specialCompanionIdValues
                 .filter((id) => current.has(id) || owned.has(id))
                 .map((id) => ({
                     id,
                     product_id: productIds.get(id),
-                    status: owned.has(id) ? "yours" : "available",
+                    status: "yours",
                 })),
             conflicts,
         });
@@ -216,23 +217,7 @@ export async function recordSpecialPurchase(
             saved = specialPurchaseRowSchema.parse(updated);
         }
         if (!saved) throw new Error("Special purchase was not saved");
-        // The same Special may be owned twice, or under the old model, so a refund unequips only the last ownership.
-        if (saved.revoked_at && account.user_id) {
-            await sql`
-                update public.profiles set companion_id = null, companion_prompt = null
-                where id = ${account.user_id} and companion_id = ${saved.companion_id}
-                    and not exists (
-                        select 1 from private.special_purchases where account_id = ${account.id}
-                            and environment = ${transaction.environment} and companion_id = ${saved.companion_id}
-                            and revoked_at is null
-                    )
-                    and not exists (
-                        select 1 from private.special_editions where account_id = ${account.id}
-                            and environment = ${transaction.environment} and companion_id = ${saved.companion_id}
-                            and state = 'owned'
-                    )
-            `;
-        }
+        // A charge only ever bought a current Special, which is now free, so a refund leaves the profile as it is.
         return {
             outcome: saved.revoked_at ? "refunded" : "owned",
             transaction_id: transaction.transactionId,
@@ -357,7 +342,14 @@ export async function recordSpecialTransaction(
                     original_transaction_id = ${transaction.originalTransactionId}, attempt_id = null where id = ${edition.id}
             `;
         }
-        if (!stale && revoked && belongs && account.user_id) {
+        // A current Special is free, so a refund takes off only a retired one.
+        if (
+            !stale &&
+            revoked &&
+            belongs &&
+            edition.retired_at !== null &&
+            account.user_id
+        ) {
             await sql`update public.profiles set companion_id = null, companion_prompt = null where id = ${account.user_id} and companion_id = ${transaction.companionId}`;
         }
         return {

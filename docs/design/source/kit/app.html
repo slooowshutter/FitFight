@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 01d79bf0 with the newest-day-first Bars branch", updated: "21 Oct 2026" };
+            const MIRROR = { matches: "develop e91a758 with the free Specials branch", updated: "24 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 3;
@@ -8503,7 +8503,6 @@
         const img = event.target;
         if (img instanceof HTMLImageElement && /\/Companion-custom[.-]/.test(img.src)) img.src = you()?.companionImage || PIG;
     }, true);
-    const SPECIAL_PRICE = "€0.99";
     const CHARACTER_PRICE = "€2.99";
     const OFFLINE = "The Internet connection appears to be offline.";
     const POSE_STAGES = ["resting", "soft", "average", "fit", "strong"];
@@ -8537,8 +8536,6 @@
 
     // ─── Data: the Specials ledger and custom characters (server state in the app) ───
     const defaultShop = () => ({
-        // The preview owns the first two Specials; Alex wears the Tiger, so it is owned too.
-        owned: ["limited-black-panther", "limited-lone-wolf", "limited-tiger"],
         free: 0,
         characters: [],
         equipped: null,
@@ -8885,19 +8882,15 @@
     // Params: tab=all|specials|yours, selection=<id>, grid=1, required=1 (first launch), custom=1 ("Make it yours"),
     // free=N, store=off (no StoreKit product), sales=off, unclaimed=1, conflict=1, editions=loading|error, error=1,
     // fresh=1 (a new player: Badger, nothing owned), characters=demo (one character in every state on Yours).
-    const ownedOf = (ui) => ui.freshOwned || shop().owned;
     const currentOf = (ui) => ui.freshCurrent ?? D().companion;
     const charactersOf = (ui) => (ui.fresh ? [] : characters()).filter((c) => c.phase !== "refunded");
-    const statusOf = (ui, id) => (ownedOf(ui).includes(id) ? "yours" : "available");
-    const priceOf = (ui) => (ui.storeOff ? null : SPECIAL_PRICE);
-    const specialLabel = (ui, id) => (isLimited(id) ? (statusOf(ui, id) === "yours" ? "Yours" : priceOf(ui) ?? "Available") : null);
+    // Every Special is free, so the server lists each one as yours: no price, and Yours keeps only the current animal.
+    const specialLabel = (id) => (isLimited(id) ? "Free" : null);
     const equippedStock = (ui) => (isCustom(currentOf(ui)) ? null : currentOf(ui));
-    const shows = (ui, id) => !isLimited(id) || !ui.salesOff || statusOf(ui, id) === "yours";
     function animalsIn(ui, category) {
-        if (category !== "yours") return (category === "all" ? ALL : LIMITED).filter((id) => shows(ui, id));
-        const owned = LIMITED.filter((id) => statusOf(ui, id) === "yours");
+        if (category !== "yours") return category === "all" ? ALL : LIMITED;
         const current = equippedStock(ui);
-        return [...(current && !owned.includes(current) ? [current] : []), ...owned];
+        return current ? [current] : [];
     }
     function categoryChanged(ui) {
         ui.error = "";
@@ -8910,7 +8903,7 @@
     }
     function pickerInit(p, ui, defaultTab) {
         const s = shop();
-        if (p.fresh === "1") { ui.fresh = true; ui.freshOwned = []; ui.freshCurrent = "badger"; }
+        if (p.fresh === "1") { ui.fresh = true; ui.freshCurrent = "badger"; }
         if (p.free != null) s.free = Math.max(0, Number(p.free) || 0);
         importCard();
         if (p.characters === "demo") demoCharacters();
@@ -8963,11 +8956,11 @@
         });
         out.push(`<div class="cp-head"><h1 class="cp-title">Choose your companion</h1>${ui.category !== "yours" && visible.length ? `<button type="button" class="cp-glyph ff-press" aria-label="${ui.grid ? "Show one at a time" : "Show all"}" data-on="toggle:grid">${icon(ui.grid ? "rectangle.portrait" : "square.grid.2x2")}</button>` : ""}${required ? "" : `<button type="button" class="cp-close" data-on="close"${busy ? " disabled" : ""}>Close</button>`}</div>`);
         out.push(`<p class="cp-copy">How others see you in fights and Feed. Change it anytime.</p>`);
-        if (s.free > 0) out.push(`<div class="hstack" style="gap:10px">${freeBadge(s.free)}<span class="t-caption c-2">Unlock any Special or create your own.</span></div>`);
-        const tabs = [["all", "All"], ...(LIMITED.some((id) => shows(ui, id)) ? [["limited", "Specials"]] : []), ["yours", "Yours"]];
+        if (s.free > 0) out.push(`<div class="hstack" style="gap:10px">${freeBadge(s.free)}<span class="t-caption c-2">Create your own character.</span></div>`);
+        const tabs = [["all", "All"], ["limited", "Specials"], ["yours", "Yours"]];
         out.push(FF.segmented(tabs, ui.category, { on: "cpCategory:", fill: true }));
         if (ui.category === "limited" || (ui.category === "all" && isLimited(ui.draft))) {
-            out.push(`<p class="t-caption c-2">Buy any Special once and keep it forever. Collect as many as you like.</p>`);
+            out.push(`<p class="t-caption c-2">Every Special is free. Wear any one you like.</p>`);
             if (ui.message) out.push(`<p class="t-caption c-2">${esc(ui.message)}</p>`);
             if (ui.conflict) out.push(`<div>${FF.button("Request a refund from Apple", { kind: "secondary", on: "cpRefund" })}</div>`);
         }
@@ -8982,7 +8975,7 @@
             const container = 812 - 8 - 34 - (showBar ? 69 + (ui.error ? 24 : 0) : 0) - 6;
             out.push(stage({
                 animals: visible, selection: ui.pickingCustom ? null : ui.draft, key: `picker-${ui.category}`,
-                on: "cpPick:", label: (id) => specialLabel(ui, id), disabled: busy, height: container - reserved,
+                on: "cpPick:", label: specialLabel, disabled: busy, height: container - reserved,
             }));
         }
         if (ui.category !== "yours" && visible.length && ui.grid) {
@@ -8991,15 +8984,15 @@
                 : [[null, visible]];
             out.push(`<div class="cp-grid">${groups.map(([title, ids]) => `${title ? `<div class="cp-grid-header">${esc(title)}</div>` : ""}${ids.map((id) => {
                 const selected = ui.draft === id && !ui.pickingCustom;
-                return tile({ name: BY_ID[id].name, caption: specialLabel(ui, id), selected, art: `<img src="${companionArt(id)}" alt="">`, on: `cpPick:=${id}`, disabled: busy });
+                return tile({ name: BY_ID[id].name, caption: specialLabel(id), selected, art: `<img src="${companionArt(id)}" alt="">`, on: `cpPick:=${id}`, disabled: busy });
             }).join("")}`).join("")}</div>`);
         }
         if (ui.category === "yours") {
             const owned = animalsIn(ui, "yours");
             const chars = charactersOf(ui);
-            if (!chars.length && !owned.some(isLimited)) out.push(`<p class="t-body c-2">Specials you buy and characters you create live here.</p>`);
+            if (!chars.length) out.push(`<p class="t-body c-2">Characters you create live here.</p>`);
             const tiles = owned.map((id) => tile({
-                name: BY_ID[id].name, caption: equippedStock(ui) === id ? "Equipped" : specialLabel(ui, id),
+                name: BY_ID[id].name, caption: "Equipped",
                 selected: ui.draft === id && !ui.pickingCustom, art: `<img src="${companionArt(id)}" alt="">`, on: `cpPick:=${id}`, disabled: busy,
             }));
             for (const c of chars) {
@@ -9024,14 +9017,7 @@
         let bar = "";
         if (showBar) {
             const a = BY_ID[ui.draft];
-            const owned = statusOf(ui, ui.draft) === "yours";
-            const paid = a.limited;
-            const unlocksFree = s.free > 0 && !ui.unclaimed;
-            const canBuy = !ui.salesOff && !ui.storeOff && !owned;
-            const title = paid && !owned
-                ? ui.unclaimed ? "Unlock this Special" : unlocksFree ? "Unlock with 1 free" : priceOf(ui) ? `Buy for ${priceOf(ui)}` : "Purchases unavailable"
-                : "Save companion";
-            bar = `<div class="cp-bar">${ui.grid ? `<div class="cp-bar-pick"><img src="${companionArt(ui.draft)}" alt=""><div class="vstack" style="gap:4px"><b class="t-label">${esc(a.name)}</b><span class="t-body c-2">${esc(a.caption)}</span>${isCustom(currentOf(ui)) || ui.draft !== currentOf(ui) ? `<span class="t-caption c-2">Not saved yet</span>` : ""}</div></div>` : ""}${ui.error ? `<p class="t-caption c-ember">${esc(ui.error)}</p>` : ""}${FF.button(title, { full: true, on: "cpSave", busy, enabled: !paid || owned || canBuy || unlocksFree || ui.unclaimed })}</div>`;
+            bar = `<div class="cp-bar">${ui.grid ? `<div class="cp-bar-pick"><img src="${companionArt(ui.draft)}" alt=""><div class="vstack" style="gap:4px"><b class="t-label">${esc(a.name)}</b><span class="t-body c-2">${esc(a.caption)}</span>${isCustom(currentOf(ui)) || ui.draft !== currentOf(ui) ? `<span class="t-caption c-2">Not saved yet</span>` : ""}</div></div>` : ""}${ui.error ? `<p class="t-caption c-ember">${esc(ui.error)}</p>` : ""}${FF.button("Save companion", { full: true, on: "cpSave", busy })}</div>`;
         }
         // safeAreaInset(edge: .bottom) keeps the system spacing (6) between the scroll content and the bar.
         return FF.screen(out.join(""), { clearance: false, bottom: bar, bodyStyle: `padding-bottom:${bar ? 26 : 20}px` });
@@ -9068,55 +9054,23 @@
         S.modals.splice(S.modals.indexOf(entry), 1);
         render();
     }
-    // saveStock: a Special that is not owned is bought (or unlocked with a free character) first, then worn.
+    // saveStock: every Special is yours, so the pick is worn at once.
     action("cpSave", (_, ctx) => {
         const ui = ctx.ui;
         const id = ui.draft;
         if (!id || ui.saving) return;
-        const s = shop();
         Object.assign(ui, { error: "", pickingCustom: false });
-        const owned = statusOf(ui, id) === "yours";
-        const limited = isLimited(id);
         // A Special needs the server's ownership check, so it is never saved offline; an animal saves locally first.
-        const offline = S.scenario === "offline" && limited;
-        if (limited && !owned && !ui.unclaimed && !(s.free > 0) && !offline) {
-            const then = `cpBought:${id}`;
-            if (SCREENS.sysStoreKit) present("sysStoreKit", { title: "Special companion", price: SPECIAL_PRICE, then });
-            else run(then, ctx.el);
-            return;
-        }
+        const offline = S.scenario === "offline" && isLimited(id);
         ui.saving = true;
         render();
         setTimeout(() => {
             ui.saving = false;
             if (offline) { ui.error = OFFLINE; render(); return; }
-            if (limited && !owned) {
-                if (ui.unclaimed) ui.unclaimed = false;
-                else s.free -= 1;
-                unlock(ui, id);
-                ui.message = "";
-                render();
-                return;
-            }
             setCompanion(id);
             if (ui.fresh) ui.freshCurrent = id;
             closeEntry(ctx.key);
         }, FLOW.busy);
-    });
-    function unlock(ui, id) {
-        if (!shop().owned.includes(id)) shop().owned.push(id);
-        if (ui.freshOwned && !ui.freshOwned.includes(id)) ui.freshOwned.push(id);
-        // After a purchase the picker stays open, so the buyer sees the Special marked as theirs. It is worn at once.
-        setCompanion(id);
-        if (ui.fresh) ui.freshCurrent = id;
-    }
-    // Run by the StoreKit sheet's Buy.
-    action("cpBought", (id) => {
-        const entry = [...S.modals].reverse().find((m) => ["companionPicker", "specials"].includes(m.id));
-        const ui = entry ? uiOf(keyOf(entry)) : {};
-        unlock(ui, id);
-        ui.message = "";
-        render();
     });
     action("cpRefund", (_, ctx) => {
         ctx.ui.message = "Refund requested. Apple will decide and notify you.";
@@ -9737,10 +9691,9 @@
         ["Specials shop", "#you/~specials", { note: "The same picker, opened on Specials" }],
         ["Grid view, Specials by series", `${pick}?tab=specials&grid=1`, { note: "Night Hunters, Royals, Gym Bros, Cozy Club, Odd Squad" }],
         ["Grid view, All", `${pick}?tab=all&grid=1&selection=fox`, { note: "Bottom bar shows the pick and Not saved yet" }],
-        ["Buy a Special (Buy for €0.99)", `${pick}?tab=specials&selection=limited-snow-leopard`, { note: "Opens the App Store purchase sheet; Buy makes it yours" }],
-        ["Unlock with 1 free", `${pick}?tab=specials&selection=limited-snow-leopard&free=1`, { note: "Free badge, then the Special unlocks without paying" }],
-        ["Purchases unavailable", `${pick}?tab=specials&selection=limited-snow-leopard&store=off`],
-        ["Unlock this Special (paid charge waiting)", `${pick}?tab=specials&selection=limited-cheetah&unclaimed=1`],
+        ["Wear a Special (free)", `${pick}?tab=specials&selection=limited-snow-leopard`, { note: "Save companion wears it at once" }],
+        ["1 free character", `${pick}?tab=specials&free=1`, { note: "The free badge: Create your own character" }],
+        ["Paid charge waiting", `${pick}?tab=specials&selection=limited-cheetah&unclaimed=1`, { note: "A charge paid before Specials were free" }],
         ["Request a refund from Apple (conflict)", `${pick}?tab=specials&conflict=1`],
         ["Checking availability", `${pick}?tab=specials&editions=loading`],
         ["Couldn’t load specials", `${pick}?tab=specials&editions=error`],

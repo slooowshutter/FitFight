@@ -16,7 +16,7 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 | Bundle ID          | `com.fitfight.mvp`              |
 | SKU                | `fitfight`                      |
 | Price              | Free                            |
-| In-app purchases   | Special companion `com.fitfight.mvp.special` (EUR 0.99), Custom character `com.fitfight.mvp.custom_character` (EUR 2.99), both consumable |
+| In-app purchases   | Custom character `com.fitfight.mvp.custom_character` (EUR 2.99), consumable. Special companion `com.fitfight.mvp.special` (EUR 0.99) is no longer sold: Specials are free since 24 Oct 2026 |
 | Advertising        | None                            |
 | Privacy Policy URL | `https://fitfight.app/privacy`  |
 | Support URL        | `https://fitfight.app/support`  |
@@ -60,9 +60,9 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 >
 > YOUR COMPANION
 >
-> Your companion stands in for you in fights, standings and the Feed. It changes pose as your steps add up during the day. Change it any time, unlock a Special, or describe any animal and get your own.
+> Your companion stands in for you in fights, standings and the Feed. It changes pose as your steps add up during the day. Change it any time, wear a free Special, or describe any animal and get your own.
 >
-> Free, with no ads. Specials and custom companions are optional in-app purchases.
+> Free, with no ads, and so are all 30 Specials. A custom companion is an optional in-app purchase.
 
 ## Keywords
 

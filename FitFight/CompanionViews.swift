@@ -1264,7 +1264,7 @@ struct CompanionPicker: View {
             if characterPurchases.freeCharacters > 0 {
                 HStack(spacing: 10) {
                     FreeCharacterBadge(count: characterPurchases.freeCharacters)
-                    Text(String(appLocalized: "Unlock any Special or create your own."))
+                    Text(String(appLocalized: "Create your own character."))
                         .ffType(.caption).foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1273,7 +1273,7 @@ struct CompanionPicker: View {
                         selection: $category, fill: true) { $0.name }
             .disabled(isSaving)
             if category == .limited || (category == .all && draft?.isLimited == true) {
-                Text("Buy any Special once and keep it forever. Collect as many as you like.")
+                Text("Every Special is free. Wear any one you like.")
                     .ffType(.caption)
                     .foregroundStyle(theme.textSecondary)
                 if !purchases.message.isEmpty {
@@ -1373,8 +1373,8 @@ struct CompanionPicker: View {
             if category == .yours {
                 let owned = animals(in: .yours)
                 let characters = characterPurchases.snapshot?.characters.filter { $0.status != .refunded } ?? []
-                if characters.isEmpty && !owned.contains(where: \.isLimited) {
-                    Text("Specials you buy and characters you create live here.")
+                if characters.isEmpty {
+                    Text("Characters you create live here.")
                         .ffType(.body)
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1389,7 +1389,7 @@ struct CompanionPicker: View {
                         } label: {
                             collectionTile(
                                 name: animal.name,
-                                caption: equippedStock == animal ? String(appLocalized: "Equipped") : specialLabel(animal),
+                                caption: String(appLocalized: "Equipped"),
                                 selected: selected
                             ) {
                                 Image(animal.image).resizable().scaledToFit()
@@ -1502,7 +1502,7 @@ struct CompanionPicker: View {
                     let owned = status(draft) == .yours
                     let canBuy = purchases.canBuy(draft)
                     FFButton(
-                        title: (paid || CompanionPreview.isEnabled && draft.isLimited) && !owned
+                        title: paid && !owned
                             ? purchases.hasUnclaimedCharge
                                 ? String(appLocalized: "Unlock this Special")
                                 : unlocksFree
@@ -1577,19 +1577,15 @@ struct CompanionPicker: View {
 
     private func status(_ animal: StockCompanion) -> SpecialStoreSnapshot.Edition.Status? {
         #if DEBUG && targetEnvironment(simulator)
-        if CompanionPreview.isEnabled {
-            return animal == CompanionCategory.limited.animals[0] || animal == CompanionCategory.limited.animals[1] ? .yours : .available
-        }
+        if CompanionPreview.isEnabled { return .yours }
         #endif
         return purchases.snapshot?.editions.first { $0.id == animal.rawValue }?.status
     }
 
-    /// Yours lists every Special this account owns and the current stock companion.
+    /// Every Special is free, so Yours lists only the current stock companion or Special next to the characters.
     private func animals(in category: CompanionCategory) -> [StockCompanion] {
         guard category == .yours else { return category.animals.filter(shows) }
-        let owned = CompanionCategory.limited.animals.filter { status($0) == .yours }
-        let current = equippedStock.map { owned.contains($0) ? [] : [$0] } ?? []
-        return current + owned
+        return equippedStock.map { [$0] } ?? []
     }
 
     /// The preview never saves a choice, so its fixture animal counts as equipped.
@@ -1599,12 +1595,12 @@ struct CompanionPicker: View {
 
     private func specialLabel(_ animal: StockCompanion) -> String? {
         guard animal.isLimited else { return nil }
-        return status(animal) == .yours ? String(appLocalized: "Yours") : specialPrice ?? String(appLocalized: "Available")
+        return status(animal) == .yours ? String(appLocalized: "Free") : specialPrice ?? String(appLocalized: "Available")
     }
 
-    /// Every Special costs the same consumable. The preview has no StoreKit, but it still shows the label a buyer sees.
+    /// A Special the server does not list as yours costs the one consumable.
     private var specialPrice: String? {
-        purchases.product?.displayPrice ?? (CompanionPreview.isEnabled ? "€0.99" : nil)
+        purchases.product?.displayPrice
     }
 
     /// A free character pays for a Special, unless an earlier paid charge is still waiting to unlock one.

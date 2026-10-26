@@ -1,6 +1,56 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Every Special is free now. On Profile, tap your companion, open Specials and wear any one you like.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tous les Spéciaux sont gratuits. Sur Profil, touche ton compagnon, ouvre Spéciaux et porte celui que tu veux."
+                    }
+                }
+            }
+        },
+        "Every Special is free. Wear any one you like.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tous les Spéciaux sont gratuits. Porte celui que tu veux."
+                    }
+                }
+            }
+        },
+        "Create your own character.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Crée ton propre personnage."
+                    }
+                }
+            }
+        },
+        "Characters you create live here.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tes personnages créés apparaissent ici."
+                    }
+                }
+            }
+        },
+        "Free": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Gratuit"
+                    }
+                }
+            }
+        },
         "Inside a fight, Bars now shows the newest day first, so today is at the top.": {
             "localizations": {
                 "fr": {
@@ -15417,16 +15467,6 @@
                 }
             }
         },
-        "Specials you buy and characters you create live here.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Tes Spéciaux achetés et tes personnages créés apparaissent ici."
-                    }
-                }
-            }
-        },
         "Black Panther": {
             "localizations": {
                 "fr": {
@@ -16087,16 +16127,6 @@
                 }
             }
         },
-        "Buy any Special once and keep it forever. Collect as many as you like.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Achète un Spécial une fois et garde-le pour toujours. Collectionne-en autant que tu veux."
-                    }
-                }
-            }
-        },
         "Unlock this Special": {
             "localizations": {
                 "fr": {
@@ -16441,16 +16471,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "Les versions TestFlight indiquent maintenant à tout le monde, sauf aux admins, que FitFight est sur l'App Store, avec un bouton pour l'ouvrir."
-                    }
-                }
-            }
-        },
-        "Unlock any Special or create your own.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Débloque n’importe quel Spécial ou crée le tien."
                     }
                 }
             }

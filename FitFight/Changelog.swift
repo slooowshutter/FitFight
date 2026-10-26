@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.3.0",
             year: 2026,
             month: 10,
+            day: 24,
+            notes: "Every Special is free now. On Profile, tap your companion, open Specials and wear any one you like."
+        ),
+        ReleaseNote(
+            version: "1.3.0",
+            year: 2026,
+            month: 10,
             day: 21,
             notes: "Inside a fight, Bars now shows the newest day first, so today is at the top."
         ),

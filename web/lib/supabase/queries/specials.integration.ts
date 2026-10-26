@@ -94,13 +94,16 @@ async function status(user: string, companion: string) {
     )?.status;
 }
 
-test("the shelf offers the current roster to everyone; retired editions stay stored but unsold", async (context) => {
+test("the shelf gives the current roster to everyone for free; retired editions stay stored but unlisted", async (context) => {
     const { users } = await specialUsers(context, 1);
     const store = await readSpecialStore(users[0], database);
     assert.equal(store.product_id, "com.fitfight.mvp.special");
     assert.equal(store.purchases_enabled, true);
     assert.equal(store.editions.length, 30);
-    assert.ok(store.editions.every((row) => row.status === "available"));
+    assert.ok(
+        store.editions.every((row) => row.status === "yours"),
+        "Older builds wear a Special marked yours without a charge",
+    );
     assert.equal(
         store.editions.find((row) => row.id === "limited-black-panther")
             ?.product_id,
@@ -116,15 +119,23 @@ test("the shelf offers the current roster to everyone; retired editions stay sto
     assert.equal(retired.count, 40);
 });
 
-test("anyone can buy any Special: two accounts own the same one and one account owns several", async (context) => {
+test("anyone wears any current Special for free, charges stay recorded, and a retired Special still needs ownership", async (context) => {
     const { users, accounts } = await specialUsers(context);
+    await updateProfile(
+        users[0],
+        { companion_id: "limited-black-panther" },
+        admin,
+    );
+    await database`update public.profiles set companion_id = 'limited-lone-wolf' where id = ${users[1]}`;
     await assert.rejects(
-        updateProfile(
-            users[0],
-            { companion_id: "limited-black-panther" },
-            admin,
-        ),
+        updateProfile(users[0], { companion_id: "limited-pangolin" }, admin),
         { code: "special_purchase_required" },
+    );
+    await assert.rejects(
+        database`update public.profiles set companion_id = 'limited-pangolin' where id = ${users[1]}`,
+        (error: unknown) =>
+            error instanceof postgres.PostgresError &&
+            error.message.includes("special_purchase_required"),
     );
     for (const [account, transactionId, companion] of [
         [accounts[0], "300000001", "limited-black-panther"],
@@ -143,30 +154,7 @@ test("anyone can buy any Special: two accounts own the same one and one account 
         });
     }
     assert.equal(await status(users[0], "limited-black-panther"), "yours");
-    assert.equal(await status(users[0], "limited-lone-wolf"), "yours");
-    assert.equal(await status(users[1], "limited-black-panther"), "yours");
-    assert.equal(await status(users[1], "limited-lone-wolf"), "available");
-    await updateProfile(users[0], { companion_id: "limited-lone-wolf" }, admin);
-    await updateProfile(
-        users[0],
-        { companion_id: "limited-black-panther" },
-        admin,
-    );
-    await updateProfile(
-        users[1],
-        { companion_id: "limited-black-panther" },
-        admin,
-    );
-    await assert.rejects(
-        updateProfile(users[1], { companion_id: "limited-lone-wolf" }, admin),
-        { code: "special_purchase_required" },
-    );
-    await assert.rejects(
-        database`update public.profiles set companion_id = 'limited-lone-wolf' where id = ${users[1]}`,
-        (error: unknown) =>
-            error instanceof postgres.PostgresError &&
-            error.message.includes("special_purchase_required"),
-    );
+    assert.equal(await status(users[1], "limited-lone-wolf"), "yours");
 
     const replay = await recordSpecialPurchase(
         charge(accounts[0], "300000001"),
@@ -181,10 +169,9 @@ test("anyone can buy any Special: two accounts own the same one and one account 
     const [rows] =
         await database`select count(*)::int as count from private.special_purchases where account_id = ${accounts[0]}`;
     assert.equal(rows.count, 2);
-    assert.equal(await status(users[0], "limited-tiger"), "available");
 });
 
-test("a refund revokes only its charge, unequips only the last ownership, and a reversal restores it", async (context) => {
+test("a refund revokes only its charge and never takes off the free Special; a reversal restores the charge", async (context) => {
     const { users, accounts } = await specialUsers(context, 1);
     const first = charge(accounts[0], "300000011");
     const second = charge(accounts[0], "300000012");
@@ -201,40 +188,38 @@ test("a refund revokes only its charge, unequips only the last ownership, and a 
             ?.outcome,
         "refunded",
     );
-    assert.equal((await readProfile(users[0], admin)).companion_id, "limited-tiger");
+    await recordSpecialPurchase(refund(second), undefined, database);
+    await recordSpecialPurchase(refund(second), undefined, database);
+    assert.equal(
+        (await readProfile(users[0], admin)).companion_id,
+        "limited-tiger",
+        "A refund never takes off a free Special",
+    );
     assert.equal(await status(users[0], "limited-tiger"), "yours");
-    await recordSpecialPurchase(refund(second), undefined, database);
-    await recordSpecialPurchase(refund(second), undefined, database);
-    assert.equal((await readProfile(users[0], admin)).companion_id, null);
-    assert.equal(await status(users[0], "limited-tiger"), "available");
     assert.equal(
         (await recordSpecialPurchase(second, "limited-tiger", database))
             ?.outcome,
         "refunded",
         "A delayed older record never undoes a newer refund",
     );
-    await assert.rejects(
-        updateProfile(users[0], { companion_id: "limited-tiger" }, admin),
-        { code: "special_purchase_required" },
-    );
-    await recordSpecialPurchase(
-        { ...second, signedDate: second.signedDate + 3000 },
-        undefined,
-        database,
-    );
-    assert.equal(await status(users[0], "limited-tiger"), "yours");
     assert.equal(
-        (await readProfile(users[0], admin)).companion_id,
-        null,
-        "A refund reversal must not override the user's chosen profile animal",
+        (
+            await recordSpecialPurchase(
+                { ...second, signedDate: second.signedDate + 3000 },
+                undefined,
+                database,
+            )
+        )?.outcome,
+        "owned",
+        "A refund reversal restores the charge",
     );
     const [kept] =
         await database`select count(*)::int as count from private.special_purchases where account_id = ${accounts[0]}`;
     assert.equal(kept.count, 2, "Refunded charges stay recorded");
 });
 
-test("a notification for an unclaimed charge changes nothing; a charge refunded before its claim is never granted", async (context) => {
-    const { users, accounts } = await specialUsers(context, 1);
+test("a notification for an unclaimed charge changes nothing; a charge refunded before its claim is recorded as refunded", async (context) => {
+    const { accounts } = await specialUsers(context, 1);
     const transaction = charge(accounts[0], "300000021");
     const refunded = {
         ...transaction,
@@ -253,7 +238,9 @@ test("a notification for an unclaimed charge changes nothing; a charge refunded 
             ?.outcome,
         "refunded",
     );
-    assert.equal(await status(users[0], "limited-panda"), "available");
+    const [stored] =
+        await database`select revoked_at from private.special_purchases where account_id = ${accounts[0]}`;
+    assert.notEqual(stored.revoked_at, null);
 });
 
 test("a charge cannot be rebound to another account, identity or environment, including concurrent first delivery", async (context) => {
@@ -351,8 +338,8 @@ test("legacy charges keep their recorded outcomes and identities", async (contex
     await recordSpecialTransaction(transaction, database);
     assert.equal(
         await status(users[1], "limited-black-panther"),
-        "available",
-        "Another account's legacy edition is never shown as taken",
+        "yours",
+        "Another account's legacy edition never takes a free Special away",
     );
     const conflict = await recordSpecialTransaction(
         receipt(accounts[1], "200000002"),
@@ -377,6 +364,11 @@ test("legacy charges keep their recorded outcomes and identities", async (contex
         ),
         { code: "forbidden" },
     );
+    await updateProfile(
+        users[0],
+        { companion_id: "limited-black-panther" },
+        admin,
+    );
     const refunded = {
         ...transaction,
         signedDate: transaction.signedDate + 2000,
@@ -387,7 +379,11 @@ test("legacy charges keep their recorded outcomes and identities", async (contex
         (await recordSpecialTransaction(transaction, database)).outcome,
         "refunded",
     );
-    assert.equal(await status(users[0], "limited-black-panther"), "available");
+    assert.equal(
+        (await readProfile(users[0], admin)).companion_id,
+        "limited-black-panther",
+        "A legacy refund never takes off a free Special",
+    );
 });
 
 test("production keeps App Review Sandbox charges on a separate Sandbox shelf", async (context) => {

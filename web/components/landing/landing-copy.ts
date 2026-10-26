@@ -227,7 +227,7 @@ const en = {
         eyebrow: "Companions",
         title: "Pick a companion.",
         titleAccent: "Watch it grow.",
-        lede: "Your companion stands in for you in fights, standings and the Feed. It changes pose as your steps add up during the day. Change it any time, unlock a Special, or describe any animal and get your own.",
+        lede: "Your companion stands in for you in fights, standings and the Feed. It changes pose as your steps add up during the day. Change it any time, wear a free Special, or describe any animal and get your own.",
         pick: "Pick your animal",
         walk: "Walk. It changes pose with your steps today.",
         stepsToday: "Steps today",
@@ -407,21 +407,16 @@ const en = {
         eyebrow: "Pricing",
         tag: "Everything included",
         free: "Free",
-        text: "Every fight, every feature and all 12 companions. No ads. No tracking.",
+        text: "Every fight, every feature, all 12 companions and all 30 Specials. No ads. No tracking.",
         included: [
             "Unlimited fights",
             "Live standings and charts",
-            "All 12 companions",
+            "All 12 companions and 30 Specials",
             "Feed, posts and reactions",
             "Apple Health and WHOOP sync",
         ],
-        later: "Optional extras",
+        later: "Optional extra",
         extras: [
-            [
-                "Special",
-                "€0.99",
-                "Buy any special companion once and keep it forever. Collect as many as you like.",
-            ],
             [
                 "Make it yours",
                 "€2.99",
@@ -467,7 +462,7 @@ const en = {
             ],
             [
                 "How much does it cost?",
-                "Nothing. FitFight is free, with no ads. Specials and custom companions are optional purchases.",
+                "Nothing. FitFight is free, with no ads, and so are all 30 Specials. A custom companion is an optional purchase.",
             ],
             [
                 "Does it work with WHOOP?",
@@ -779,7 +774,7 @@ const fr: typeof en = {
         eyebrow: "Compagnons",
         title: "Choisissez un compagnon.",
         titleAccent: "Regardez-le grandir.",
-        lede: "Votre compagnon vous représente dans les défis, le classement et le fil. Il change de pose à mesure que vos pas s’accumulent dans la journée. Changez-en quand vous voulez, débloquez un Spécial ou décrivez n’importe quel animal pour avoir le vôtre.",
+        lede: "Votre compagnon vous représente dans les défis, le classement et le fil. Il change de pose à mesure que vos pas s’accumulent dans la journée. Changez-en quand vous voulez, portez un Spécial gratuit ou décrivez n’importe quel animal pour avoir le vôtre.",
         pick: "Choisissez votre animal",
         walk: "Marchez. Il change de pose avec vos pas du jour.",
         stepsToday: "Pas aujourd’hui",
@@ -981,21 +976,16 @@ const fr: typeof en = {
         eyebrow: "Prix",
         tag: "Tout est inclus",
         free: "Gratuit",
-        text: "Tous les défis, toutes les fonctions et les 12 compagnons. Sans pub. Sans suivi.",
+        text: "Tous les défis, toutes les fonctions, les 12 compagnons et les 30 Spéciaux. Sans pub. Sans suivi.",
         included: [
             "Défis illimités",
             "Classement et graphiques en direct",
-            "Les 12 compagnons",
+            "Les 12 compagnons et les 30 Spéciaux",
             "Fil, messages et réactions",
             "Synchronisation avec Santé d’Apple et WHOOP",
         ],
         later: "En option",
         extras: [
-            [
-                "Spécial",
-                "0,99 €",
-                "Achetez un compagnon spécial une fois et gardez-le pour toujours. Collectionnez-en autant que vous voulez.",
-            ],
             [
                 "À ton image",
                 "2,99 €",
@@ -1041,7 +1031,7 @@ const fr: typeof en = {
             ],
             [
                 "Combien ça coûte ?",
-                "Rien. FitFight est gratuit et sans pub. Les Spéciaux et les compagnons personnalisés sont des achats en option.",
+                "Rien. FitFight est gratuit et sans pub, comme les 30 Spéciaux. Un compagnon personnalisé est un achat en option.",
             ],
             [
                 "Est-ce que ça marche avec WHOOP ?",

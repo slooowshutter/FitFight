@@ -55,8 +55,9 @@ test("authenticated legacy /me and new mutual-profile contracts coexist before a
     }), { params: Promise.resolve({}) });
     assert.equal(zoneResponse.status, 200);
     assert.equal(profileSchema.parse(await zoneResponse.json()).time_zone, "Pacific/Kiritimati");
+    // Current Specials are free; a retired one still needs ownership.
     const unpaidSave = await updateMe(new Request("https://staging.fitfight.app/api/v1/me", {
-        method: "PATCH", headers, body: JSON.stringify({ companion_id: "limited-black-panther" }),
+        method: "PATCH", headers, body: JSON.stringify({ companion_id: "limited-pangolin" }),
     }), { params: Promise.resolve({}) });
     assert.equal(unpaidSave.status, 403);
     const store = await readSpecialStore(viewer.userId, database);

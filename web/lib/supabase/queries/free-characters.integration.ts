@@ -143,8 +143,6 @@ test("a free character unlocks one Special, once per key, and the Special can th
     await assert.rejects(claimFreeSpecial(owner, randomUUID(), "limited-cheetah", database), { code: "no_free_characters" });
 
     await database`update public.profiles set companion_id = 'limited-tiger' where id = ${owner}`;
-    await assert.rejects(database`update public.profiles set companion_id = 'limited-tiger' where id = ${other}`,
-        /special_purchase_required/);
     const [account] = await database`select id from private.special_accounts where user_id = ${owner}`;
     await assert.rejects(database`insert into private.special_purchases (account_id, environment, companion_id)
         values (${account.id}, 'Sandbox', 'limited-tiger')`, { code: "23514" });

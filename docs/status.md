@@ -6,6 +6,41 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## Specials are free, prepared 24 Oct 2026
+
+Marc asked on 24 Oct 2026 to make the Special companion free.
+
+- **Server:** `GET /api/v1/me/specials` lists each of the 30 current Specials as
+  `yours`. A retired Special still shows only to an account that owns one. Migration
+  `20261024120000_free_specials.sql` changes `private.require_special_ownership`: a
+  Special whose edition is not retired needs no purchase, and a retired one still needs
+  an owned edition or purchase. A refund no longer takes a current Special off the
+  profile, on the consumable path and on the legacy per-Special path. Every purchase row
+  stays. The purchase, transaction, free-claim and notification endpoints are unchanged.
+- **Older builds:** they read `yours`, so they show "Yours" under each Special and
+  "Save companion", and never open Apple's sheet. Their Yours tab lists all 30 Specials.
+- **App (1.3.0):** the Specials tab says "Every Special is free. Wear any one you
+  like." Each Special shows "Free". Yours lists only the current animal and the custom
+  characters. The free-character badge says "Create your own character." The StoreKit
+  code stays, because the server still decides ownership. Release note, French strings
+  and the mirror are updated.
+- **Website (English and French):** the pricing card includes all 30 Specials, the
+  extras card lists only the custom companion, and the FAQ cost answer says Specials are free.
+- **Docs:** product, backend, App Store metadata and App Review notes.
+- **Compatibility:** additive. The response shape is the same and older builds already
+  decode `yours`. Apply the migration before the backend deploys, because the new
+  backend reports Specials as yours that the old trigger still blocks.
+- **Checks:** strict TypeScript and all 550 backend unit tests passed. Localization,
+  native API boundary and destructive-SQL checks passed. The new trigger ran on a local
+  PostgreSQL 16: a current Special saved with no purchase, and an unowned retired
+  Special failed with `special_purchase_required`. The changed `*.integration.ts` tests
+  need the CI database and did not run here. The Swift change needs the CI simulator build.
+- **Not done:** nothing deployed. App Store Connect still lists the
+  `com.fitfight.mvp.special` in-app purchase. The privacy page keeps "Special companion
+  purchases", because past purchases stay recorded.
+
+---
+
 ## Dashboard: Fights first, values under the finger, fight days, Day/Week/Month pages, prepared 20 Oct 2026
 
 Marc (build 223, then 18 Oct): many charts let you slide but show no number;

@@ -973,9 +973,18 @@ Supabase will receive a permission error after the migration. Feature-branch pus
 alone do not apply the hosted migration. No existing finalized scores or hosted
 previously-deleted accounts are rewritten by this change.
 
-## Specials: paid limited companions (updated 12 Oct 2026)
+## Specials: limited companions, free since 24 Oct 2026
 
-**Current model, 12 Oct 2026:** Specials are no longer one of a kind. Any account
+**Free, 24 Oct 2026:** every current Special is free. `readSpecialStore` lists
+each of the 30 in `limitedCompanionIdValues` as `yours`, so every build wears
+one without a charge. `20261024120000_free_specials.sql` lets
+`private.require_special_ownership` accept a Special whose edition is not
+retired; a retired Special still needs an owned edition or purchase. A refund
+records `revoked_at` but no longer takes a current Special off the profile.
+Purchase, transaction, free-claim and notification endpoints are unchanged and
+keep every row. The rest of this section describes the paid models.
+
+**Paid model, 12 Oct 2026:** Specials are no longer one of a kind. Any account
 may own any number of them. Each is one charge of the consumable
 `com.fitfight.mvp.special`; `POST /api/v1/me/specials/purchases` verifies it
 and records the chosen Special in `private.special_purchases` (one row per

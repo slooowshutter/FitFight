@@ -176,7 +176,8 @@ struct YouView: View {
                     CompanionAvatar(
                         personID: session.profile?.userId.uuidString,
                         companionID: session.profile?.companionId, isYou: true,
-                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 48
+                        monogram: session.profile?.initials ?? "FF", photoURL: session.profile?.photoURL, size: 48,
+                        effort: CompanionEffortStage.matchingDaily(steps.status)
                     )
                     .overlay(alignment: .bottomTrailing) {
                         Image(systemName: "pencil")

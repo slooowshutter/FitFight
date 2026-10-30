@@ -6,6 +6,20 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## User feedback from @rad: pose, Feed composer, new companion, prepared 30 Oct 2026
+
+From the production Feedback tab (@rad, build 234, 19-26 Oct).
+
+- **Pose on Profile** ("Animal not syncing", 26 Oct): Fights shows your companion in the pose today's steps reached, but the Profile header showed the saved picture. For a custom character that is always the Resting pose (armchair, coffee), so 18K steps showed the couch. The custom poses now load once in `ContentView` into `CompanionStore.fitnessImages`, and the Profile header avatar (`CompanionAvatar(effort:)`) uses the same pose as Fights, stock animals too. What friends see (`companion_image_url`, Resting) is unchanged.
+- **Feed composer** ("Feed posting", 22 Oct): Choose no longer ticks every fight; it keeps what started ticked (nothing from Feed, the fight from a fight's Feed). Fights that are over leave the list and Everyone: only live fights, a recurring series between rounds, and the fight the post starts in.
+- **New companion** ("Animal generation special", 19 Oct; "Wording Change", 22 Oct): Create another shows on every step of a paid character (drawing, portrait pick, poses, problem), not only when finished. The old one stays on Yours and keeps drawing. The second step is now "Pick from our suggestions" ("Choisis parmi nos suggestions").
+
+**Not done:** hiding an unwanted custom character (needs a server column and route), changing a post's fights after posting and tagging people (API change, feature), an Add people button on the fight screen (new UI, mirror proposal first). "Character display bug" (22 Oct, an old uploaded photo on Fights) is handled by open PR #427.
+
+**Contract:** none. App and mirror only; no API, database or migration change.
+
+---
+
 ## Dashboard: Fights first, values under the finger, fight days, Day/Week/Month pages, prepared 20 Oct 2026
 
 Marc (build 223, then 18 Oct): many charts let you slide but show no number;

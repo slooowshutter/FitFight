@@ -255,6 +255,8 @@ final class CompanionStore: ObservableObject {
     @Published private(set) var hasChosen = false
     @Published var showingPicker = false
     @Published var pickerStartsWithCustom = false
+    /// Your custom character's five poses by stage, so Fights and Profile both show the pose today's steps reached.
+    @Published var fitnessImages: [String: URL] = [:]
 
     private var isRestoring = false
     private var ownerId: UUID?
@@ -504,6 +506,8 @@ struct CompanionAvatar: View {
     var ring: Color?
     /// Head to waist instead of full body, for the small stacks on Fights cards.
     var halfBody = false
+    /// Your own companion in the pose today's steps reached, as on Fights. Nil shows the saved picture.
+    var effort: CompanionEffortStage?
     @EnvironmentObject private var companions: CompanionStore
 
     init(
@@ -515,7 +519,8 @@ struct CompanionAvatar: View {
         size: CGFloat = 44,
         pending: Bool = false,
         ring: Color? = nil,
-        halfBody: Bool = false
+        halfBody: Bool = false,
+        effort: CompanionEffortStage? = nil
     ) {
         self.personID = personID
         self.companionID = companionID
@@ -526,6 +531,7 @@ struct CompanionAvatar: View {
         self.pending = pending
         self.ring = ring
         self.halfBody = halfBody
+        self.effort = effort
     }
 
     init(_ person: Person?, size: CGFloat = 44, pending: Bool = false, ring: Color? = nil, halfBody: Bool = false) {
@@ -547,7 +553,7 @@ struct CompanionAvatar: View {
             Group {
                 if halfBody {
                     // The 352x400 portrait scaled so its top 55% (head to waist) fills the square, then cropped.
-                    Image(animal.image)
+                    Image(animal.effortImage(stage: effort))
                         .resizable()
                         .scaledToFit()
                         .frame(width: size / 0.55 * 352 / 400, height: size / 0.55)
@@ -555,7 +561,7 @@ struct CompanionAvatar: View {
                         .clipped()
                 } else {
                     // Full body in the same square a head crop used, so rows and cards keep their size.
-                    Image(animal.image)
+                    Image(animal.effortImage(stage: effort))
                         .resizable()
                         .scaledToFit()
                         .frame(width: size, height: size)
@@ -566,7 +572,7 @@ struct CompanionAvatar: View {
             .accessibilityHidden(true)
         } else if let photoURL, (isYou && companions.hasChosen) ? companions.isCustom : companionID == CompanionStore.customId {
             // A custom character is transparent art like the stock animals, so it stands free in the same square, never in a photo circle.
-            RemotePhoto(url: photoURL, kind: .avatar, contentMode: .fit) { Color.clear }
+            RemotePhoto(url: effort.flatMap { companions.fitnessImages[$0.fitnessImageStage] } ?? photoURL, kind: .avatar, contentMode: .fit) { Color.clear }
                 .frame(width: halfBody ? size / 0.55 : size, height: halfBody ? size / 0.55 : size)
                 .frame(width: size, height: size, alignment: .top)
                 .clipped()
@@ -618,7 +624,6 @@ struct CompanionIntroduction: View {
     @Environment(\.ffTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.ffStaticRender) private var staticRender
-    @State private var fitnessImages: [String: URL] = [:]
     @State private var showingLevels = false
     /// The picker lives on the root sheet, so it opens only after the levels drawer has dismissed.
     @State private var pickerAfterLevels = false
@@ -692,25 +697,6 @@ struct CompanionIntroduction: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .task(id: [session.profile?.userId.uuidString, session.profile?.companionImageURL?.absoluteString]) {
-            fitnessImages = [:]
-            guard let profile = session.profile,
-                  profile.companionId == CompanionStore.customId,
-                  let selectedURL = profile.companionImageURL else { return }
-            do {
-                let entries = try await FitFightAPI().aiLibrary(accessToken: try await session.freshAccessToken())
-                guard !Task.isCancelled,
-                      session.profile?.userId == profile.userId,
-                      session.profile?.companionImageURL == selectedURL else { return }
-                if let entry = entries.first(where: {
-                    $0.workflow == .fitness && $0.images.contains(where: { $0.url == selectedURL })
-                }), entry.images.count == 5 {
-                    fitnessImages = Dictionary(uniqueKeysWithValues: entry.images.map { ($0.stage, $0.url) })
-                }
-            } catch {
-                return
-            }
-        }
         .sheet(isPresented: $showingLevels, onDismiss: {
             guard pickerAfterLevels else { return }
             pickerAfterLevels = false
@@ -804,7 +790,7 @@ struct CompanionIntroduction: View {
     @ViewBuilder
     private var youArt: some View {
         if companions.isCustom {
-            RemotePhoto(url: fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
+            RemotePhoto(url: companions.fitnessImages[youEffort.fitnessImageStage] ?? session.profile?.photoURL, contentMode: .fit) { Color.clear }
         } else {
             CompanionCharacter(animal: companions.selection, effort: youEffort, greets: surface != .fights)
         }
@@ -813,7 +799,7 @@ struct CompanionIntroduction: View {
     @ViewBuilder
     private func levelArt(_ stage: CompanionEffortStage) -> some View {
         if companions.isCustom {
-            RemotePhoto(url: fitnessImages[stage.fitnessImageStage], contentMode: .fit) { Color.clear }
+            RemotePhoto(url: companions.fitnessImages[stage.fitnessImageStage], contentMode: .fit) { Color.clear }
         } else {
             Image(companions.selection.effortImage(stage: stage))
                 .resizable()

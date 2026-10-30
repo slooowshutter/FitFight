@@ -28,6 +28,13 @@ enum Changelog {
             version: "1.3.0",
             year: 2026,
             month: 10,
+            day: 30,
+            notes: "Profile now shows your companion in the same pose as Fights, from today's steps. New post: Choose starts with nothing ticked, and fights that are over leave the list. New companion: Create another works at every step, and “Pick the words we draw” is now “Pick from our suggestions”."
+        ),
+        ReleaseNote(
+            version: "1.3.0",
+            year: 2026,
+            month: 10,
             day: 21,
             notes: "Inside a fight, Bars now shows the newest day first, so today is at the top."
         ),

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import postgres from "postgres";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
@@ -109,7 +109,12 @@ test("a fight image waits for two runners, folds changes, respects the daily all
     await enqueueChangedFightImages(database);
     assert.equal((await rows()).length, 1, "the same runners and companions do not draw again");
 
-    await database`update public.profiles set companion_id = 'otter' where id = ${owner}`;
+    const restingKey = createHash("md5").update([`${owner}:custom:${resting}`, `${peer}:fox:`].sort().join(",")).digest("hex");
+    await database`update private.fight_group_images set cast_key = ${restingKey} where id = ${claimed.job.id}`;
+    await enqueueChangedFightImages(database);
+    assert.equal((await rows()).length, 2, "an image drawn from the Resting picture draws again from the Pushing one");
+
+    await database`update public.profiles set companion_id = 'otter', companion_prompt = null where id = ${owner}`;
     await enqueueChangedFightImages(database);
     await database`update private.fight_group_images set due_at = now() - interval '1 second' where fight_id = ${fight} and status = 'waiting'`;
     const second = await claimNextFightImage(database);

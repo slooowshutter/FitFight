@@ -741,6 +741,15 @@ Verified locally: unit, database and build checks; one cron pass turned a real
 2.7 MB staging PNG into a 303 KB `image/webp` with `max-age=31536000` in 1.5 s;
 in the Simulator, the first frame of an opened fight already shows the picture.
 
+**Custom characters drawn naked, prepared 31 Oct:** production images drew custom
+characters naked or in made-up clothes, because the model got the equipped Resting
+picture (armchair, blanket). #444 (on `develop` only) sends the Pushing picture in
+the running kit instead. The cast key now uses that same picture, so each running
+fight with a custom character draws once more (35 of 53 on production on 31 Oct,
+about $5), and a new round no longer reuses a naked picture. Verified locally:
+typecheck, 550 unit and 147 database tests; the new check fails on the old key.
+Not yet deployed.
+
 ---
 
 ## In-app alerts, prepared 15 Oct 2026

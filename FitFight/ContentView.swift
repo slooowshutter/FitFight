@@ -126,6 +126,30 @@ struct ContentView: View {
             if let profile { Analytics.describe(profile) }
             Task { await companions.publishPending(session: session) }
         }
+        // Loaded here, not on one tab, so Fights and Profile show the same pose.
+        .task(id: [session.profile?.userId.uuidString, session.profile?.companionImageURL?.absoluteString]) {
+            companions.fitnessImages = [:]
+            guard let profile = session.profile,
+                  profile.companionId == CompanionStore.customId,
+                  let selectedURL = profile.companionImageURL else { return }
+            // Tries again after a failure, so an offline start still gets today's pose.
+            while !Task.isCancelled {
+                do {
+                    let entries = try await FitFightAPI().aiLibrary(accessToken: try await session.freshAccessToken())
+                    guard !Task.isCancelled,
+                          session.profile?.userId == profile.userId,
+                          session.profile?.companionImageURL == selectedURL else { return }
+                    if let entry = entries.first(where: {
+                        $0.workflow == .fitness && $0.images.contains(where: { $0.url == selectedURL })
+                    }), entry.images.count == 5 {
+                        companions.fitnessImages = Dictionary(uniqueKeysWithValues: entry.images.map { ($0.stage, $0.url) })
+                    }
+                    return
+                } catch {
+                    do { try await Task.sleep(for: .seconds(30)) } catch { return }
+                }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             companions.apply(session.profile)

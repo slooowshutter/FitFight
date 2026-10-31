@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 01d79bf0 with the newest-day-first Bars branch", updated: "21 Oct 2026" };
+            const MIRROR = { matches: "develop e91a758c with the rad feedback fixes branch", updated: "30 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 3;
@@ -3111,6 +3111,7 @@
         card: (f) => liveCard(f),
         liveCard, joinOfferRow, finishedRow, friendLookup, timeLeft,
         streakPill, avatarStack, stamp, remaining, durationLabel, deadlineLabel, listTitle, listRank, result, fieldSize, isUpcoming,
+        todayStage: () => stageFor(todayCount()),
     };
     globalThis.COMPANION_INTRO = (surface, opts = {}) => companionIntro(surface, opts);
 
@@ -5322,12 +5323,14 @@
         if (!stored || stored === "Steps Fight" || stored === "Défi de pas") return act || stored || "Steps Fight";
         return stored;
     }
-    // postableFights: not invitations, live first then by name, one per series.
-    function postableFights() {
+    // postableFights: not invitations, not fights that are over (except a recurring series between rounds and the
+    // fight the post starts in), live first then by name, one per series.
+    function postableFights(kept) {
         const seen = new Set();
         return D().fights
             // Fight Marc rounds only exist in the founder's own list (the admin view here).
-            .filter((f) => f.status !== "invited" && !f.pendingJoin && !(f.hostedRound && !S.admin))
+            .filter((f) => f.status !== "invited" && !f.pendingJoin && !(f.hostedRound && !S.admin)
+                && (f.status === "live" || (f.recurring && f.status === "pending") || f.id === kept))
             .sort((a, b) => ((a.status === "live") !== (b.status === "live") ? (a.status === "live" ? -1 : 1) : listTitle(a).localeCompare(listTitle(b), "en", { sensitivity: "base" })))
             .filter((f) => !seen.has(f.seriesId || f.id) && seen.add(f.seriesId || f.id));
     }
@@ -5653,7 +5656,7 @@
     let pendingPick = null; // { key, kind } while the system photo picker or camera is up
     const composeState = (p, ui) => {
         const broadcast = p.broadcast === "1" || p.broadcast === "true";
-        const fights = postableFights();
+        const fights = postableFights(p.fightId);
         const allIDs = fights.map((f) => f.id);
         const sendsToFriends = ui.everyone || ui.friends;
         const chosen = ui.everyone ? allIDs : [...allIDs.filter((id) => ui.fightIDs.includes(id)), ...ui.fightIDs.filter((id) => !allIDs.includes(id))];
@@ -5681,7 +5684,7 @@
                 if (p.demo === "photos") { ui.text = "Lunch walk receipts."; addPicked(ctx.key, 2); }
                 if (p.demo === "video") ui.video = true;
                 if (p.demo === "error") ui.error = "Choose up to four photos or one video per post.";
-                if (p.demo === "choose") Object.assign(ui, { everyone: false, friends: true, fightIDs: postableFights().map((f) => f.id) });
+                if (p.demo === "choose") Object.assign(ui, { everyone: false, friends: true, fightIDs: postableFights(p.fightId).map((f) => f.id) });
                 if (p.demo === "none") Object.assign(ui, { everyone: false, friends: false, fightIDs: [] });
             }
             // When the system picker closes without reporting back (or is not drawn yet), treat it as a pick.
@@ -5872,11 +5875,7 @@
     });
     // Composer
     action("feedAudience", (arg, ctx) => {
-        const picked = arg.split("=")[1] === "true";
-        const ui = ctx.ui;
-        // Choose starts from everything Everyone had, so you untick what to leave out.
-        if (ui.everyone && !picked) Object.assign(ui, { friends: true, fightIDs: postableFights().map((f) => f.id) });
-        ui.everyone = picked;
+        ctx.ui.everyone = arg.split("=")[1] === "true";
         render();
     });
     action("feedAudienceRow", (id, ctx) => {
@@ -6867,7 +6866,7 @@
     // ProgressView(): the system spinner (gray unless tinted), not the gold FFLoadingBlock.
     const progress = (label = "", tint = "") => `<div class="pf-progress"><span class="spinner"${tint ? ` style="color:var(--${tint})"` : ""}></span>${label ? `<span class="t-caption c-2">${esc(label)}</span>` : ""}</div>`;
     const left = (html) => `<div class="pf-left">${html}</div>`;
-    const companion = (who, size, o = {}) => (who ? companionImg(who, { w: size, h: size, cls: `pf-companion ${o.cls || ""}` }) : FF.avatar("?", { size }));
+    const companion = (who, size, o = {}) => (who ? companionImg(who, { w: size, h: size, cls: `pf-companion ${o.cls || ""}`, pose: o.pose }) : FF.avatar("?", { size }));
     const topEntry = () => S.stacks[S.tab][S.stacks[S.tab].length - 1];
     const modalEntry = (id) => [...S.modals].reverse().find((m) => m.id === id);
     const later = (ms, fn) => setTimeout(() => { fn(); render(); }, ms);
@@ -7077,7 +7076,7 @@
         const me = you();
         const words = companionWords(me);
         return `<div class="pf-head">
-                <button type="button" class="pf-avatar-btn" aria-label="Edit profile" data-on="pfPresent:editProfile">${companion(me, 48)}<span class="badge">${icon("pencil")}</span></button>
+                <button type="button" class="pf-avatar-btn" aria-label="Edit profile" data-on="pfPresent:editProfile">${companion(me, 48, { pose: `effort-${globalThis.FIGHTS.todayStage().n}` })}<span class="badge">${icon("pencil")}</span></button>
                 <div class="vstack grow" style="gap:2px;min-width:0"><span class="t-title ellipsis">${esc(me.name)}</span><span class="t-caption c-2">${esc(me.handle)}</span></div>
                 <button type="button" class="pf-round" aria-label="Dashboard" data-on="pfPush:dashboard"><span class="pf-bars3"><i style="height:8px"></i><i style="height:16px"></i><i style="height:12px"></i></span></button>
                 <button type="button" class="pf-round" aria-label="Settings" data-on="push:settings">${icon("gearshape")}</button>
@@ -9243,7 +9242,7 @@
         // A new character leaves the Fights card of a finished one for when its owner sees it.
         if (p.new !== "1") s.characters.forEach((c) => { if (c.phase === "complete") c.seen = true; });
     }
-    // Opens "Pick the words we draw" at once with the owner's words; the rewrites join them when the check ends.
+    // Opens "Pick from our suggestions" at once with the owner's words; the rewrites join them when the check ends.
     function startCheck(ui, text, ms = FLOW.check, fail = false) {
         Object.assign(ui, { options: [text], note: null, chosen: 0, checkFailed: false, checking: true });
         const gen = (ui.checkGen = (ui.checkGen || 0) + 1);
@@ -9284,7 +9283,7 @@
         const summary1 = `“${c?.description ?? ui.options?.[ui.chosen] ?? ""}”`;
         const parts = [
             part(0, "Describe your animal", "", summary0, current, () => describeHTML(ui, s)),
-            part(1, "Pick the words we draw", "After you write, we suggest richer versions.", summary1, current, () => reviewHTML(ui)),
+            part(1, "Pick from our suggestions", "After you write, we suggest richer versions.", summary1, current, () => reviewHTML(ui)),
             part(2, "Pick a portrait", "Drawn after you pay. About a minute.", "Portrait chosen", current, () => (!c ? "" : step === "choosing" ? choosingHTML(c, ui) : step === "problem" ? problemHTML(c) : portraitsHTML(c)), c?.portrait),
             part(3, "Name it", "Five fitness poses, then a name.", null, current, () => (!c ? "" : step === "done" ? doneHTML(c, ui) : step === "problem" ? problemHTML(c) : posesHTML(c, ui))),
         ];
@@ -9381,6 +9380,8 @@
 
     function characterBar(step, c, ui, s) {
         const trimmed = (ui.description || "").trim();
+        // From any step of a paid character, so one stuck on a portrait pick or drawing never blocks the next.
+        const another = FF.button("Create another", { kind: "ghost", size: "small", full: true, on: "cpcAnother" });
         switch (step) {
             case "describe":
                 return FF.button("Next", { size: "large", full: true, on: "cpcNext", enabled: !!trimmed && !ui.restoring })
@@ -9400,21 +9401,20 @@
             case "poses": {
                 const denied = ui.pushDenied || s.pushStatus === "denied";
                 return FF.button(denied ? "Close" : "Notify me when it’s ready", { kind: "secondary", size: "large", full: true, on: "cpcNotify" })
-                    + `<p class="t-caption c-2 cpc-note">${denied ? "Notifications are off. The Fights tab shows when it is ready." : "You can close the app. We keep drawing."}</p>`;
+                    + `<p class="t-caption c-2 cpc-note">${denied ? "Notifications are off. The Fights tab shows when it is ready." : "You can close the app. We keep drawing."}</p>` + another;
             }
             case "choosing":
-                return FF.button("Use this portrait", { size: "large", full: true, on: "cpcUsePortrait", enabled: pickedSlot(c, ui) != null && !ui.choosing, busy: ui.choosing });
+                return FF.button("Use this portrait", { size: "large", full: true, on: "cpcUsePortrait", enabled: pickedSlot(c, ui) != null && !ui.choosing, busy: ui.choosing }) + another;
             case "done": {
                 const equipped = isCustom(D().companion) && s.equipped === c.id;
                 return (equipped || !c.poses
                     ? FF.button("Done", { size: "large", full: true, on: "close" })
-                    : FF.button("Use as companion", { size: "large", full: true, on: "cpcSelect", enabled: !ui.selecting, busy: ui.selecting }))
-                    + FF.button("Create another", { kind: "ghost", size: "small", full: true, on: "cpcAnother" });
+                    : FF.button("Use as companion", { size: "large", full: true, on: "cpcSelect", enabled: !ui.selecting, busy: ui.selecting })) + another;
             }
             default:
-                return c?.phase === "needsSupport"
+                return (c?.phase === "needsSupport"
                     ? FF.button("Contact support", { size: "large", full: true, on: "cpcSupport" })
-                    : FF.button("Try again", { size: "large", full: true, on: "cpcRetry", enabled: !ui.busy, busy: ui.busy });
+                    : FF.button("Try again", { size: "large", full: true, on: "cpcRetry", enabled: !ui.busy, busy: ui.busy })) + another;
         }
     }
 

@@ -331,12 +331,12 @@ final class FeedStore: ObservableObject {
     }
 }
 
-/// Fights that are over leave the list, except a recurring series between rounds and the fight the post starts in.
 private func postableFights(_ fights: [Fight], keeping kept: UUID?) -> [Fight] {
     var seen = Set<String>()
     return fights
         .filter { fight in
             guard let id = UUID(uuidString: fight.id) else { return false }
+            // Fights that are over leave the list, except a recurring series between rounds and the fight the post starts in.
             return fight.status != .invited
                 && !fight.pendingJoin
                 && (fight.status == .live || (fight.recurring && fight.status == .pending) || id == kept)

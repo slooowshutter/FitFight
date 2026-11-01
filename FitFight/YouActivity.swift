@@ -13,6 +13,8 @@ final class YouActivityStore: ObservableObject {
         let isSteps: Bool
         /// 31 values, oldest first; the last one is today.
         let values: [Double]
+        /// Nil for Steps.
+        var workoutType: HKWorkoutActivityType? = nil
     }
 
     @Published private(set) var sports: [Sport] = []
@@ -61,11 +63,43 @@ final class YouActivityStore: ObservableObject {
             .sorted { $0.value.reduce(0, +) > $1.value.reduce(0, +) }
             .map { type, values in
                 let (name, image) = Self.label(type)
-                return Sport(id: "workout-\(type.rawValue)", name: name, systemImage: image, isSteps: false, values: values)
+                return Sport(id: "workout-\(type.rawValue)", name: name, systemImage: image, isSteps: false, values: values, workoutType: type)
             }
         days = dayList
         eightWeekSteps = longSteps
         sports = [Sport(id: "steps", name: String(appLocalized: "Steps"), systemImage: "shoeprints.fill", isSteps: true, values: steps)] + workoutSports
+    }
+
+    /// One sport's daily values for the last `days` days, oldest first and today last: Steps, or minutes
+    /// of that workout. Nil when Apple Health can't be read.
+    static func history(for sport: Sport, days: Int) async -> [Double]? {
+        #if DEBUG && targetEnvironment(simulator)
+        if CompanionPreview.isEnabled {
+            // The 31 sample days repeat back in time, ending on today's sample.
+            return (0..<days).map { sport.values[((30 - (days - 1 - $0)) % 31 + 31) % 31] }
+        }
+        #endif
+        guard HKHealthStore.isHealthDataAvailable(), UIApplication.shared.isProtectedDataAvailable else { return nil }
+        let calendar = Calendar.current
+        let store = HKHealthStore()
+        let today = calendar.startOfDay(for: Date())
+        guard let start = calendar.date(byAdding: .day, value: 1 - days, to: today),
+              let end = calendar.date(byAdding: .day, value: 1, to: today) else { return nil }
+        let index = { (date: Date) in calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: date)).day ?? -1 }
+        var values = Array(repeating: 0.0, count: days)
+        if let type = sport.workoutType {
+            guard let workouts = try? await workouts(store: store, start: start, end: end) else { return nil }
+            for workout in workouts where workout.workoutActivityType == type && values.indices.contains(index(workout.startDate)) {
+                values[index(workout.startDate)] += workout.duration / 60
+            }
+        } else {
+            guard let collection = try? await dailySteps(store: store, start: start, end: end) else { return nil }
+            collection.enumerateStatistics(from: start, to: end) { statistics, _ in
+                let i = index(statistics.startDate)
+                if values.indices.contains(i) { values[i] = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0 }
+            }
+        }
+        return values
     }
 
     private static func dailySteps(store: HKHealthStore, start: Date, end: Date) async throws -> HKStatisticsCollection {

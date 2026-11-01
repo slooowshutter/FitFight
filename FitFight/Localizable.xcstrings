@@ -1,6 +1,26 @@
 {
     "sourceLanguage": "en",
     "strings": {
+        "Profile now shows your companion in the same pose as Fights, from today's steps. New post: Choose starts with nothing ticked, and fights that are over leave the list. New companion: Create another works at every step, and “Pick the words we draw” is now “Pick from our suggestions”.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le profil montre maintenant ton compagnon dans la même pose que Défis, selon tes pas du jour. Nouvelle publication : Choix commence sans rien de coché, et les défis terminés quittent la liste. Nouveau compagnon : En créer un autre marche à chaque étape, et « Choisis le texte à dessiner » devient « Choisis parmi nos suggestions »."
+                    }
+                }
+            }
+        },
+        "Inside a fight, Bars now shows the newest day first, so today is at the top.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Dans un défi, Barres montre maintenant le jour le plus récent en premier : aujourd’hui est en haut."
+                    }
+                }
+            }
+        },
         "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour.": {
             "localizations": {
                 "fr": {
@@ -14890,26 +14910,6 @@
                 }
             }
         },
-        "Last 15 days vs the 15 before": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "15 derniers jours vs les 15 d’avant"
-                    }
-                }
-            }
-        },
-        "Drag across the bars. The dashed line is your average.": {
-            "localizations": {
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Glisse sur les barres. La ligne pointillée est ta moyenne."
-                    }
-                }
-            }
-        },
         "Best days": {
             "localizations": {
                 "fr": {
@@ -14982,22 +14982,6 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "par jour, vs %@ avant"
-                    }
-                }
-            }
-        },
-        "dashboard.best-weekday": {
-            "localizations": {
-                "en": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "%1$@ is your best day: %2$@ on average."
-                    }
-                },
-                "fr": {
-                    "stringUnit": {
-                        "state": "translated",
-                        "value": "Le %1$@ est ton meilleur jour : %2$@ en moyenne."
                     }
                 }
             }
@@ -17572,12 +17556,12 @@
                 }
             }
         },
-        "Pick the words we draw": {
+        "Pick from our suggestions": {
             "localizations": {
                 "fr": {
                     "stringUnit": {
                         "state": "translated",
-                        "value": "Choisis le texte à dessiner"
+                        "value": "Choisis parmi nos suggestions"
                     }
                 }
             }
@@ -18690,6 +18674,578 @@
                     "stringUnit": {
                         "state": "translated",
                         "value": "La version 1.3.0 commence ici. Cette version ne change encore rien de visible."
+                    }
+                }
+            }
+        },
+        "Last 15 full days vs the 15 before": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "15 derniers jours complets vs les 15 d’avant"
+                    }
+                }
+            }
+        },
+        "Today so far": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Aujourd’hui, pour l’instant"
+                    }
+                }
+            }
+        },
+        "Fight day": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jour de défi"
+                    }
+                }
+            }
+        },
+        "Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "Drag across the bars. Bright bars are fight days.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Glisse sur les barres. Les barres vives sont les jours de défi."
+                    }
+                }
+            }
+        },
+        "Weeks and months": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaines et mois"
+                    }
+                }
+            }
+        },
+        "Fight days vs other days": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Jours de défi vs autres jours"
+                    }
+                }
+            }
+        },
+        "Last 8 weeks, without today. Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "8 dernières semaines, sans aujourd’hui. Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "Tap a sport for its days, weeks and months.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Touche un sport pour voir ses jours, semaines et mois."
+                    }
+                }
+            }
+        },
+        "In numbers": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "En chiffres"
+                    }
+                }
+            }
+        },
+        "This week so far": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Cette semaine, pour l’instant"
+                    }
+                }
+            }
+        },
+        "This month so far": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce mois-ci, pour l’instant"
+                    }
+                }
+            }
+        },
+        "This month": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Ce mois-ci"
+                    }
+                }
+            }
+        },
+        "One bar a day for the last 31 days. Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une barre par jour sur les 31 derniers jours. Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "One bar a week for the last 26 weeks: your Steps a day that week. Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une barre par semaine sur les 26 dernières semaines : tes Pas par jour cette semaine-là. Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "One bar a month for the last 12 months: your Steps a day that month. Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Une barre par mois sur les 12 derniers mois : tes Pas par jour ce mois-là. Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "Workout minutes a day for the last 31 days. Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Minutes d’entraînement par jour sur les 31 derniers jours. Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "Workout minutes a week for the last 26 weeks. Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Minutes d’entraînement par semaine sur les 26 dernières semaines. Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "Workout minutes a month for the last 12 months. Drag across the bars.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Minutes d’entraînement par mois sur les 12 derniers mois. Glisse sur les barres."
+                    }
+                }
+            }
+        },
+        "dashboard.fight-days-average": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "a day when you fight, vs %@ on other days"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "par jour de défi, vs %@ les autres jours"
+                    }
+                }
+            }
+        },
+        "dashboard.best-weekday-label": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@, your best day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@, ton meilleur jour"
+                    }
+                }
+            }
+        },
+        "dashboard.streak-won": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld wins in a row"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld victoires d’affilée"
+                    }
+                }
+            }
+        },
+        "dashboard.streak-lost": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld losses in a row"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld défaites d’affilée"
+                    }
+                }
+            }
+        },
+        "dashboard.streak-drew": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld draws in a row"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld nuls d’affilée"
+                    }
+                }
+            }
+        },
+        "dashboard.best-run": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Best run: %lld wins in a row"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleure série : %lld victoires d’affilée"
+                    }
+                }
+            }
+        },
+        "dashboard.average": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Average"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moyenne"
+                    }
+                }
+            }
+        },
+        "dashboard.best": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Best"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Meilleur"
+                    }
+                }
+            }
+        },
+        "dashboard.total": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Total"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Total"
+                    }
+                }
+            }
+        },
+        "dashboard.week-of": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Week of %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Semaine du %@"
+                    }
+                }
+            }
+        },
+        "dashboard.per-day": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ a day"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ par jour"
+                    }
+                }
+            }
+        },
+        "dashboard.average-line": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Avg %@"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Moy. %@"
+                    }
+                }
+            }
+        },
+        "Apple Health can't be read right now. Open FitFight again with your iPhone unlocked.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Santé d’Apple ne peut pas être lu pour l’instant. Rouvre FitFight avec ton iPhone déverrouillé."
+                    }
+                }
+            }
+        },
+        "dashboard.ring-won": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "won"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "gagnés"
+                    }
+                }
+            }
+        },
+        "dashboard.out-of-fights": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Out of %lld fights"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Sur %lld défis"
+                    }
+                }
+            }
+        },
+        "dashboard.rival-leads": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ leads"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%@ mène"
+                    }
+                }
+            }
+        },
+        "dashboard.one-draw": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "1 draw"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "1 nul"
+                    }
+                }
+            }
+        },
+        "dashboard.draws": {
+            "localizations": {
+                "en": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld draws"
+                    }
+                },
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "%lld nuls"
+                    }
+                }
+            }
+        },
+        "Your place, last 10 fights": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre place, 10 derniers défis"
+                    }
+                }
+            }
+        },
+        "Your place each fight": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Votre place à chaque défi"
+                    }
+                }
+            }
+        },
+        "You lead": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Tu mènes"
+                    }
+                }
+            }
+        },
+        "All square": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "À égalité"
+                    }
+                }
+            }
+        },
+        "Friends head to head": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Face-à-face entre amis"
+                    }
+                }
+            }
+        },
+        "A to Z": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "De A à Z"
+                    }
+                }
+            }
+        },
+        "Most fights": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le plus de défis"
+                    }
+                }
+            }
+        },
+        "Oldest friends": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Amis de longue date"
+                    }
+                }
+            }
+        },
+        "Newest friends": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Nouveaux amis"
+                    }
+                }
+            }
+        },
+        "Dashboard opens on Fights: your win rate in a ring, your place in your last fights (tap one for its summary), your run, and Friends head to head with each friend's score and who leads, sorted A to Z, by most fights or by how long you have been friends. Slide across any chart to read its number; averages sit in a small badge. Steps marks the days you were in a fight. Tap Weeks and months, or a sport, for bars by day, week and month.": {
+            "localizations": {
+                "fr": {
+                    "stringUnit": {
+                        "state": "translated",
+                        "value": "Le tableau de bord s’ouvre sur Défis : ton taux de victoires dans un anneau, ta place dans tes derniers défis (touche-en un pour son résumé), ta série, et le face-à-face entre amis avec le score de chacun et qui mène, trié de A à Z, par nombre de défis ou par ancienneté d’amitié. Glisse sur n’importe quel graphique pour lire son chiffre ; les moyennes sont dans un petit badge. Pas marque les jours où tu étais en défi. Touche Semaines et mois, ou un sport, pour des barres par jour, semaine et mois."
                     }
                 }
             }

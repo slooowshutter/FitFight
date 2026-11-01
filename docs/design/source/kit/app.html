@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 1.3.0, admin AI section with Azure", updated: "21 Oct 2026" };
+            const MIRROR = { matches: "develop 1c3b1c00, admin AI section with Azure", updated: "1 Nov 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 3;
@@ -604,9 +604,13 @@
                     { name: "Swim", icon: "figure.pool.swim", minutes: steps.map((_, i) => ([8, 22].includes(i) ? 30 : 0)) },
                 ];
                 // 18 finished fights, newest first: 12 won, 5 lost, 1 draw.
-                const historyNames = ["Coffee run", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"];
+                const historyNames = ["Coffee is on you", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"];
                 const results = ["win", "loss", "draw", "loss", "win", "win", "win", "win", "loss", "win", "win", "win", "loss", "win", "loss", "win", "win", "win"];
-                const profileHistory = historyNames.map((name, i) => ({ id: `h${i}`, name, endsAt: `2026-09-${String(Math.max(1, 18 - i)).padStart(2, "0")}`, result: results[i], placement: results[i] === "loss" ? 2 : 1, fieldSize: 2 }));
+                // Three-day fights with one free day between them (CompanionPreview.sampleHistory).
+                const midnight = (back) => { const d = new Date(now); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - back).toISOString(); };
+                const profileHistory = historyNames.map((name, i) => ({ id: `h${i}`, name, startsAt: midnight(4 + 4 * i), endsAt: midnight(1 + 4 * i), result: results[i], placement: results[i] === "loss" ? 2 : 1, fieldSize: 2 }));
+                // The newest row is the finished Coffee is on you fight, so its place square opens that fight's summary.
+                Object.assign(profileHistory[0], { fightId: "finished", startsAt: new Date(finished.windowStart).toISOString(), endsAt: new Date(finished.windowEnd).toISOString() });
                 const data = {
                     version: DATA_VERSION,
                     you: alex,
@@ -3107,6 +3111,7 @@
         card: (f) => liveCard(f),
         liveCard, joinOfferRow, finishedRow, friendLookup, timeLeft,
         streakPill, avatarStack, stamp, remaining, durationLabel, deadlineLabel, listTitle, listRank, result, fieldSize, isUpcoming,
+        todayStage: () => stageFor(todayCount()),
     };
     globalThis.COMPANION_INTRO = (surface, opts = {}) => companionIntro(surface, opts);
 
@@ -3600,11 +3605,15 @@
         }).join("")}</div>`;
         const parts = [chips];
         if (kind === "oval") parts.push(`<p class="t-micro c-2">Confirmed Fight totals</p>`);
-        if (kind === "oval" || count > 0) parts.push({ oval: ovalChart, bars: barsChart, line: lineChart, pace: lineChart, histogram: histogramChart }[kind](model, visible, ui, kind));
-        else parts.push(`<p class="t-caption c-2">Daily history isn't available yet. Confirmed totals are shown in Oval and standings.</p>`);
-        if (["line", "histogram", "pace"].includes(kind) && count > 0) {
+        const scrubbable = ["line", "histogram", "pace"].includes(kind) && count > 0;
+        // A finger on the chart hides what sits below it, so the day's numbers read above.
+        if (scrubbable) {
             const day = Math.min(ui.fdDay ?? count - 1, count - 1);
             parts.push(`<div class="vstack" style="gap:10px"><div class="hstack"><span class="t-label grow">${esc(model.labels[day])}</span><span class="t-micro c-2">${kind === "pace" ? "Cumulative steps" : "Daily steps"}</span></div>${legend(shown, day)}</div>`);
+        }
+        if (kind === "oval" || count > 0) parts.push({ oval: ovalChart, bars: barsChart, line: lineChart, pace: lineChart, histogram: histogramChart }[kind](model, visible, ui, kind));
+        else parts.push(`<p class="t-caption c-2">Daily history isn't available yet. Confirmed totals are shown in Oval and standings.</p>`);
+        if (scrubbable) {
             parts.push(`<p class="t-micro c-faint">${kind === "histogram" ? "Tap a day to see its steps. Tap a name to show or hide it." : "Touch or slide to inspect a day. Tap a name to show or hide it."}</p>`);
             parts.push(`<p class="t-micro c-faint">Only synced steps are shown. Missing daily data is marked with a dash.</p>`);
         } else if (kind === "bars") {
@@ -3707,7 +3716,7 @@
         return `<div class="fdv-barsday">${model.labels.map((label, day) => `<div class="day">${FF.eyebrow(label)}<div class="vstack" style="gap:10px">${series.map((se) => {
             const value = se.daily[day];
             return `<div class="fdv-barrow">${avatar(se.person, 16)}<span class="t-micro c-2 ellipsis name">${esc(nameOf(se.person))}</span><span class="track"><span style="width:${peak === 0 ? 0 : Math.min(1, (value ?? 0) / peak) * 100}%;background:${se.color}"></span></span><span class="t-micro c-2 value">${value == null ? "-" : esc(score(value))}</span></div>`;
-        }).join("")}</div></div>`).join("")}</div>`;
+        }).join("")}</div></div>`).reverse().join("")}</div>`;
     }
 
     // ─── History pane (SeriesStats) ─────────────────────────────────
@@ -5314,12 +5323,14 @@
         if (!stored || stored === "Steps Fight" || stored === "Défi de pas") return act || stored || "Steps Fight";
         return stored;
     }
-    // postableFights: not invitations, live first then by name, one per series.
-    function postableFights() {
+    // postableFights: not invitations, not fights that are over (except a recurring series between rounds and the
+    // fight the post starts in), live first then by name, one per series.
+    function postableFights(kept) {
         const seen = new Set();
         return D().fights
             // Fight Marc rounds only exist in the founder's own list (the admin view here).
-            .filter((f) => f.status !== "invited" && !f.pendingJoin && !(f.hostedRound && !S.admin))
+            .filter((f) => f.status !== "invited" && !f.pendingJoin && !(f.hostedRound && !S.admin)
+                && (f.status === "live" || (f.recurring && f.status === "pending") || f.id === kept))
             .sort((a, b) => ((a.status === "live") !== (b.status === "live") ? (a.status === "live" ? -1 : 1) : listTitle(a).localeCompare(listTitle(b), "en", { sensitivity: "base" })))
             .filter((f) => !seen.has(f.seriesId || f.id) && seen.add(f.seriesId || f.id));
     }
@@ -5645,7 +5656,7 @@
     let pendingPick = null; // { key, kind } while the system photo picker or camera is up
     const composeState = (p, ui) => {
         const broadcast = p.broadcast === "1" || p.broadcast === "true";
-        const fights = postableFights();
+        const fights = postableFights(p.fightId);
         const allIDs = fights.map((f) => f.id);
         const sendsToFriends = ui.everyone || ui.friends;
         const chosen = ui.everyone ? allIDs : [...allIDs.filter((id) => ui.fightIDs.includes(id)), ...ui.fightIDs.filter((id) => !allIDs.includes(id))];
@@ -5673,7 +5684,7 @@
                 if (p.demo === "photos") { ui.text = "Lunch walk receipts."; addPicked(ctx.key, 2); }
                 if (p.demo === "video") ui.video = true;
                 if (p.demo === "error") ui.error = "Choose up to four photos or one video per post.";
-                if (p.demo === "choose") Object.assign(ui, { everyone: false, friends: true, fightIDs: postableFights().map((f) => f.id) });
+                if (p.demo === "choose") Object.assign(ui, { everyone: false, friends: true, fightIDs: postableFights(p.fightId).map((f) => f.id) });
                 if (p.demo === "none") Object.assign(ui, { everyone: false, friends: false, fightIDs: [] });
             }
             // When the system picker closes without reporting back (or is not drawn yet), treat it as a pick.
@@ -5864,11 +5875,7 @@
     });
     // Composer
     action("feedAudience", (arg, ctx) => {
-        const picked = arg.split("=")[1] === "true";
-        const ui = ctx.ui;
-        // Choose starts from everything Everyone had, so you untick what to leave out.
-        if (ui.everyone && !picked) Object.assign(ui, { friends: true, fightIDs: postableFights().map((f) => f.id) });
-        ui.everyone = picked;
+        ctx.ui.everyone = arg.split("=")[1] === "true";
         render();
     });
     action("feedAudienceRow", (id, ctx) => {
@@ -6859,7 +6866,7 @@
     // ProgressView(): the system spinner (gray unless tinted), not the gold FFLoadingBlock.
     const progress = (label = "", tint = "") => `<div class="pf-progress"><span class="spinner"${tint ? ` style="color:var(--${tint})"` : ""}></span>${label ? `<span class="t-caption c-2">${esc(label)}</span>` : ""}</div>`;
     const left = (html) => `<div class="pf-left">${html}</div>`;
-    const companion = (who, size, o = {}) => (who ? companionImg(who, { w: size, h: size, cls: `pf-companion ${o.cls || ""}` }) : FF.avatar("?", { size }));
+    const companion = (who, size, o = {}) => (who ? companionImg(who, { w: size, h: size, cls: `pf-companion ${o.cls || ""}`, pose: o.pose }) : FF.avatar("?", { size }));
     const topEntry = () => S.stacks[S.tab][S.stacks[S.tab].length - 1];
     const modalEntry = (id) => [...S.modals].reverse().find((m) => m.id === id);
     const later = (ms, fn) => setTimeout(() => { fn(); render(); }, ms);
@@ -7069,7 +7076,7 @@
         const me = you();
         const words = companionWords(me);
         return `<div class="pf-head">
-                <button type="button" class="pf-avatar-btn" aria-label="Edit profile" data-on="pfPresent:editProfile">${companion(me, 48)}<span class="badge">${icon("pencil")}</span></button>
+                <button type="button" class="pf-avatar-btn" aria-label="Edit profile" data-on="pfPresent:editProfile">${companion(me, 48, { pose: `effort-${globalThis.FIGHTS.todayStage().n}` })}<span class="badge">${icon("pencil")}</span></button>
                 <div class="vstack grow" style="gap:2px;min-width:0"><span class="t-title ellipsis">${esc(me.name)}</span><span class="t-caption c-2">${esc(me.handle)}</span></div>
                 <button type="button" class="pf-round" aria-label="Dashboard" data-on="pfPush:dashboard"><span class="pf-bars3"><i style="height:8px"></i><i style="height:16px"></i><i style="height:12px"></i></span></button>
                 <button type="button" class="pf-round" aria-label="Settings" data-on="push:settings">${icon("gearshape")}</button>
@@ -7391,58 +7398,190 @@
     };
     // FFGroupedRows around a ForEach with no FFDivider: the card, no lines between rows.
     const plainRows = (rows) => `<div class="ff-grouped">${rows.join("")}</div>`;
-    function dashboardSteps(ui) {
+    // Days without Steps are missing data rather than rest, so averages skip zeros, as on You.
+    const avg = (values) => {
+        const recorded = values.filter((v) => v > 0);
+        return recorded.length ? sum(recorded) / recorded.length : null;
+    };
+    const DIM_GOLD = "color-mix(in srgb, var(--gold) 45%, transparent)";
+    const shortDate = (date) => new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const daysAgo = (n) => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate() - n); };
+    const change = (value, base) => {
+        const c = (value - base) / base;
+        return `<span style="font-size:17px;font-weight:800" class="${c >= 0 ? "c-moss" : "c-ember"}">${c >= 0 ? "+" : "-"}${Math.round(Math.abs(c) * 100)}%</span>`;
+    };
+    // dashboardAverageRule: the dashed line, with its number in a small solid badge on the line's left end.
+    const avgRule = (value, top, label) => `<b class="pf-avg" style="bottom:${(value / top * 100).toFixed(2)}%"><span>Avg ${esc(label)}</span></b>`;
+    // A chart the finger reads (chartXSelection): data-sel is the ui field it writes. A link can open it with one picked.
+    const picked = (ui, p, field, fallback) => ui[field] ?? (p[field] != null ? Number(p[field]) : fallback);
+    const endsRow = (first, last) => `<div class="pf-ends"><span>${esc(first)}</span><span>${esc(last)}</span></div>`;
+
+    // DashboardView.fightDays: the days of the last 31 that overlap a fight from your history.
+    function fightDays() {
+        const skip = ["cancelled", "not_entered", "unavailable", "removed", "withdrawn"];
+        const windows = ownHistory().filter((row) => !skip.includes(row.result)).map((row) => [new Date(row.startsAt || row.endsAt).getTime(), new Date(row.endsAt).getTime()]);
+        const days = new Set();
+        for (let i = 0; i < 31; i++) {
+            const start = daysAgo(30 - i).getTime(), end = daysAgo(29 - i).getTime();
+            if (windows.some(([s, e]) => s < end && e > start)) days.add(i);
+        }
+        return days;
+    }
+    function dashboardSteps(ui, p) {
         const steps = sports()[0]?.values || [];
-        if (steps.length !== 31) return `<p class="t-body c-2">Connect Apple Health to see your Steps here.</p>`;
-        const recent = sum(steps.slice(-15)) / 15;
-        const before = sum(steps.slice(1, 16)) / 15;
-        const change = before > 0 ? (recent - before) / before : null;
-        const shown = ui.day ?? 30;
+        if (steps.length !== 31 || !steps.some((v) => v > 0)) {
+            return `<p class="t-body c-2">Connect Apple Health to see your Steps here.</p>${left(FF.button("Connect Apple Health", { on: "pfHealthSync" }))}`;
+        }
+        // Today is still going, so the halves, the dashed line and fight days use the 30 finished days.
+        const recent = avg(steps.slice(15, 30));
+        const before = avg(steps.slice(0, 15));
+        const fight = fightDays();
+        const fought = [...fight].filter((i) => i < 30);
+        const shown = Math.min(Math.max(picked(ui, p, "day", 30), 0), 30);
         const top = niceTop(Math.max(...steps));
-        const average = sum(steps) / 31;
-        const chart = `<div class="pf-chart pf-drag" data-count="31" style="height:140px">
-                ${steps.map((v, i) => `<i style="height:${(v / top * 100).toFixed(2)}%;background:var(${i === shown ? "--mossFill" : "--gold"})"></i>`).join("")}
-                <b class="pf-avg" style="bottom:${(average / top * 100).toFixed(2)}%"></b>
+        const line = avg(steps.slice(0, 30));
+        const chart = `<div class="pf-chart pf-drag" data-sel="day" data-count="31" style="height:140px">
+                ${steps.map((v, i) => `<i style="height:${(v / top * 100).toFixed(2)}%;background:${i === shown ? "var(--mossFill)" : !fight.size || fight.has(i) ? "var(--gold)" : DIM_GOLD}"></i>`).join("")}
+                ${line ? avgRule(line, top, num(line)) : ""}
             </div>`;
-        // ISO weeks: Monday first, as Calendar(identifier: .iso8601).
-        const averages = [0, 1, 2, 3, 4, 5, 6].map((weekday) => {
-            const values = steps.filter((_, i) => (dayOf(i).getDay() + 6) % 7 === weekday);
-            return values.length ? sum(values) / values.length : 0;
-        });
-        const best = averages.indexOf(Math.max(...averages));
-        const weekTop = niceTop(Math.max(...averages));
+        const onFights = avg(fought.map((i) => steps[i]));
+        const otherwise = avg(steps.slice(0, 30).filter((_, i) => !fight.has(i)));
+        // The 55 finished days of the last 8 weeks (YouActivityStore.eightWeekSteps without today), Monday first.
+        const finished = [...steps.slice(0, 25)].reverse().concat(steps).slice(0, -1);
+        const byWeekday = [[], [], [], [], [], [], []];
+        finished.forEach((v, i) => byWeekday[(daysAgo(finished.length - i).getDay() + 6) % 7].push(v));
+        const averages = byWeekday.map(avg);
+        const best = averages.reduce((b, v, i) => ((v ?? 0) > (averages[b] ?? 0) ? i : b), 0);
+        const weekday = Math.min(Math.max(picked(ui, p, "weekday", best), 0), 6);
+        const weekTop = niceTop(Math.max(...averages.map((v) => v ?? 0)));
         const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
         const ranked = steps.map((v, i) => i).sort((a, b) => steps[b] - steps[a]).slice(0, 5);
         return FF.card(`<div class="vstack" style="gap:10px">
-                    <span class="t-eyebrow c-2">Last 15 days vs the 15 before</span>
-                    <div class="hstack" style="gap:8px;align-items:baseline"><span style="font-size:34px;font-weight:800">${num(recent)}</span>${change != null ? `<span style="font-size:17px;font-weight:800" class="${change >= 0 ? "c-moss" : "c-ember"}">${change >= 0 ? "+" : "-"}${Math.round(Math.abs(change) * 100)}%</span>` : ""}</div>
-                    <span class="t-caption c-2">a day, vs ${num(before)} before</span>
+                    <span class="t-eyebrow c-2">Last 15 full days vs the 15 before</span>
+                    <div class="hstack" style="gap:8px;align-items:baseline"><span style="font-size:34px;font-weight:800">${recent != null ? num(recent) : "-"}</span>${recent != null && before != null ? change(recent, before) : ""}</div>
+                    ${before != null ? `<span class="t-caption c-2">a day, vs ${num(before)} before</span>` : ""}
                 </div>`)
             + FF.card(`<div class="vstack" style="gap:10px">
-                    <div class="hstack"><span class="t-label c-2 grow">${esc(weekdayDay(dayOf(shown)))}</span><span style="font-size:22px;font-weight:800">${num(steps[shown])}</span></div>
+                    <div class="hstack" style="gap:8px"><span class="t-label c-2">${shown === 30 ? "Today so far" : esc(weekdayDay(daysAgo(30 - shown)))}</span>${fight.has(shown) ? FF.pill("Fight day", "neutral") : ""}<span class="grow"></span><span style="font-size:22px;font-weight:800">${num(steps[shown])}</span></div>
                     ${chart}
-                    <span class="t-micro c-2">Drag across the bars. The dashed line is your average.</span>
+                    ${endsRow(shortDate(daysAgo(30)), "Today")}
+                    <span class="t-micro c-2">${fight.size ? "Drag across the bars. Bright bars are fight days." : "Drag across the bars."}</span>
+                    ${FF.divider(0)}
+                    <button type="button" class="pf-chartrow" data-on="push:dashboardChart?sport=steps"><span class="t-label grow">Weeks and months</span>${FF.chevron()}</button>
                 </div>`)
-            + FF.card(`<div class="vstack" style="gap:10px">
+            + (onFights != null && otherwise != null ? FF.card(`<div class="vstack" style="gap:10px">
+                    <span class="t-eyebrow c-2">Fight days vs other days</span>
+                    <div class="hstack" style="gap:8px;align-items:baseline"><span style="font-size:34px;font-weight:800">${num(onFights)}</span>${change(onFights, otherwise)}</div>
+                    <span class="t-caption c-2">a day when you fight, vs ${num(otherwise)} on other days</span>
+                </div>`) : "")
+            + (averages.some((v) => v != null) ? FF.card(`<div class="vstack" style="gap:10px">
                     <span class="t-eyebrow c-2">Average by weekday</span>
+                    <div class="hstack"><span class="t-label c-2 grow">${weekday === best ? `${names[best]}, your best day` : names[weekday]}</span><span style="font-size:22px;font-weight:800">${averages[weekday] != null ? num(averages[weekday]) : "-"}</span></div>
                     <div class="pf-week">
-                        <div class="pf-chart" style="height:92px">${averages.map((v, i) => `<i style="height:${(v / weekTop * 100).toFixed(2)}%;border-radius:4px;background:${i === best ? "var(--gold)" : "color-mix(in srgb, var(--gold) 45%, transparent)"}"></i>`).join("")}</div>
+                        <div class="pf-chart pf-drag" data-sel="weekday" data-count="7" style="height:92px">${averages.map((v, i) => `<i style="height:${((v ?? 0) / weekTop * 100).toFixed(2)}%;border-radius:4px;background:${i === weekday ? "var(--gold)" : DIM_GOLD}"></i>`).join("")}</div>
                         <div class="pf-axis">${names.map((n) => `<span>${n[0]}</span>`).join("")}</div>
                     </div>
-                    <span class="t-caption c-2">${names[best]} is your best day: ${num(averages[best])} on average.</span>
-                </div>`)
-            + FF.section("Best days", plainRows(ranked.map((i, rank) => `<div class="pf-line"><span class="t-label c-2" style="width:24px">${rank + 1}</span><span class="t-rowTitle grow">${esc(weekdayDay(dayOf(i)))}</span><span style="font-size:17px;font-weight:800">${num(steps[i])}</span></div>`)));
+                    <span class="t-micro c-2">Last 8 weeks, without today. Drag across the bars.</span>
+                </div>`) : "")
+            + FF.section("Best days", plainRows(ranked.map((i, rank) => `<div class="pf-line"><span class="t-label c-2" style="width:24px">${rank + 1}</span><span class="t-rowTitle grow">${esc(weekdayDay(daysAgo(30 - i)))}</span><span style="font-size:17px;font-weight:800">${num(steps[i])}</span></div>`)));
     }
+
     // ProfileHistoryContent: name, result and place, date.
     const LABELS = { win: "Won", loss: "Lost", draw: "Draw", withdrawn: "Withdrew", removed: "Removed", incomplete: "Incomplete final sync", cancelled: "Cancelled", ongoing: "Ongoing", solo: "Solo Fight", not_entered: "Did not enter" };
     const historyContent = (row) => `<div class="vstack" style="gap:8px"><span class="t-heading">${esc(row.name || "Fight result")}</span><div class="hstack t-label"><span class="grow">${esc(LABELS[row.result] || "Historical result unavailable")}</span>${row.placement ? `<span>${row.placement} of ${row.fieldSize}</span>` : ""}</div><span class="t-caption c-2">${esc(String(row.endsAt).slice(0, 10))}</span></div>`;
     const ownHistory = () => (S.scenario === "empty" || S.scenario === "loading" ? [] : D().profileHistory);
+    // Like the Lost filter, a counted fight that is not won or drawn is lost.
+    const outcome = (row) => (row.result === "win" ? "won" : row.result === "draw" ? "drew" : "lost");
+    const OUTCOME_FILL = { won: "var(--mossFill)", drew: "var(--textTertiary)", lost: "var(--emberFill)" };
+
+    // Won, drew and lost as one ring around the win rate, with the three counts beside it.
+    const ringCard = (won, drew, lost) => {
+        const played = won + drew + lost;
+        const r = 52, c = 2 * Math.PI * r;
+        const parts = [[won, OUTCOME_FILL.won], [drew, OUTCOME_FILL.drew], [lost, OUTCOME_FILL.lost]].filter(([v]) => v > 0);
+        const gap = parts.length > 1 ? 2 : 0;
+        let at = 0;
+        const arcs = parts.map(([v, color]) => {
+            const length = v / played * c;
+            const arc = `<circle cx="64" cy="64" r="${r}" fill="none" stroke="${color}" stroke-width="12" stroke-dasharray="${Math.max(length - gap, 0.5).toFixed(2)} ${c.toFixed(2)}" stroke-dashoffset="${(-(at + gap / 2)).toFixed(2)}" transform="rotate(-90 64 64)"/>`;
+            at += length;
+            return arc;
+        }).join("");
+        const row = (label, value, fill, cls) => `<div class="hstack" style="gap:10px"><i class="pf-key" style="background:${fill}"></i><span class="t-label grow">${label}</span><span class="${cls}" style="font-size:20px;font-weight:800">${value}</span></div>`;
+        return FF.card(`<div class="hstack" style="gap:22px;align-items:center">
+                <div class="pf-ring">
+                    <svg viewBox="0 0 128 128" aria-hidden="true"><circle cx="64" cy="64" r="${r}" fill="none" stroke="var(--track)" stroke-width="12"/>${played ? arcs : ""}</svg>
+                    <span class="vstack" style="align-items:center"><span style="font-size:32px;font-weight:800;line-height:1">${played ? `${Math.round(won / played * 100)}%` : "-"}</span><span class="t-caption c-2">won</span></span>
+                </div>
+                <div class="vstack grow" style="gap:10px">
+                    ${row("Won", won, OUTCOME_FILL.won, "c-moss")}${row("Drew", drew, OUTCOME_FILL.drew, "c-2")}${row("Lost", lost, OUTCOME_FILL.lost, "c-ember")}
+                    ${played ? `<span class="t-caption c-2">Out of ${played} fights</span>` : ""}
+                </div>
+            </div>`);
+    };
+    // Your place in your last ten counted fights, newest first: the squares and summary of a fight's History.
+    const PLACE_MEDALS = { 1: ["medalGold", "medalGoldWash"], 2: ["medalSilver", "medalSilverWash"], 3: ["medalBronze", "medalBronzeWash"] };
+    const yourPlaces = (rows) => {
+        const outcomes = rows.map(outcome);
+        const places = rows.filter((row) => row.placement != null);
+        if (places.length < 2) return "";
+        const changed = outcomes.findIndex((o) => o !== outcomes[0]);
+        const current = changed < 0 ? outcomes.length : changed;
+        let bestRun = 0, run = 0;
+        for (const o of outcomes) { run = o === "won" ? run + 1 : 0; bestRun = Math.max(bestRun, run); }
+        const streak = { won: "wins", lost: "losses", drew: "draws" }[outcomes[0]];
+        const square = (row) => {
+            const [ink, wash] = PLACE_MEDALS[row.placement] || ["textDim", "control"];
+            const style = `color:var(--${ink});background:var(--${wash})`;
+            return row.fightId && D().fights.some((f) => f.id === row.fightId)
+                ? `<button type="button" class="fdv-medal ff-press" style="${style}" aria-label="${esc(row.name)}" data-on="present:fightRound?id=${esc(row.fightId)}">${row.placement}</button>`
+                : `<span class="fdv-medal" style="${style}" aria-label="${esc(row.name)}">${row.placement}</span>`;
+        };
+        // Ten squares need the screen's width, so they sit on the background as in History, not in a card.
+        return `<div class="vstack" style="gap:8px">
+                <span class="t-eyebrow c-3">${places.length > 10 ? "Your place, last 10 fights" : "Your place each fight"}</span>
+                <div class="hstack" style="gap:6px">${places.slice(0, 10).map(square).join("")}</div>
+                ${current >= 2 ? `<span class="t-label">${current} ${streak} in a row</span>` : ""}
+                ${bestRun >= 2 && (outcomes[0] !== "won" || bestRun > current) ? `<span class="t-caption c-2">Best run: ${bestRun} wins in a row</span>` : ""}
+            </div>`;
+    };
+    // A rival's companion, the score and who leads, then won, drew and lost as one bar. Opens their profile.
+    // DashboardView.FriendSort, in the Fights tab's Sort by drawer.
+    const FRIEND_SORTS = [["name", "A to Z"], ["mostFights", "Most fights"], ["oldestFriends", "Oldest friends"], ["newestFriends", "Newest friends"]];
+    // When you became friends (ProfileRivalrySummary.friendsSince); null for people who are not friends.
+    const friendsSince = (id) => (D().friends.some((f) => (f?.id ?? f) === id) && META[id]?.friendsDaysAgo != null ? Date.now() - META[id].friendsDaysAgo * DAY : null);
+    const rivalCards = (ids, sort) => `<section class="ff-section"><div class="hstack" style="gap:8px"><div class="grow">${FF.sectionHeader("Friends head to head")}</div><button type="button" class="fl-sort" aria-label="Sort by" data-on="present:dashboardFriendsSort">${icon("arrow.up.arrow.down")}<span>${esc(FRIEND_SORTS.find(([v]) => v === sort)[1])}</span></button></div>${ids.map((id) => {
+        const who = person(id), h = headToHead(id);
+        const lead = h.wins > h.losses ? `<span class="c-moss">You lead</span>` : h.losses > h.wins ? `<span class="c-ember">${esc(who.name)} leads</span>` : `<span class="c-2">All square</span>`;
+        const draws = h.draws ? `<span class="c-2"> · ${h.draws} ${h.draws === 1 ? "draw" : "draws"}</span>` : "";
+        const bar = [[h.wins, OUTCOME_FILL.won], [h.draws, OUTCOME_FILL.drew], [h.losses, OUTCOME_FILL.lost]].filter(([v]) => v > 0).map(([v, fill]) => `<i style="flex:${v};background:${fill}"></i>`).join("");
+        return FF.card(`<div class="vstack" style="gap:12px">
+                <div class="hstack" style="gap:12px">${companion(who, 52)}<span class="vstack grow" style="gap:2px;min-width:0"><span class="t-rowTitle ellipsis">${esc(who.name)}</span><span class="t-caption">${lead}${draws}</span></span><span style="font-size:24px;font-weight:800;white-space:nowrap"><span class="c-moss">${h.wins}</span><span class="c-3"> - </span><span class="c-ember">${h.losses}</span></span></div>
+                <div class="pf-tug">${bar}</div>
+            </div>`, { on: `profileOpen:${id}`, cls: "pf-press-card" });
+    }).join("")}</section>`;
     function dashboardFights(ui) {
         const r = D().record;
+        const history = ownHistory();
+        const counted = history.filter((row) => ["win", "loss", "draw"].includes(row.result));
+        // By handle, then each order breaks ties by handle. People who are not friends go last on friendship age.
+        const sort = uiOf("friendSort").value || "name";
+        const fights = (id) => { const h = headToHead(id); return h.wins + h.draws + h.losses; };
+        const handle = (id) => person(id).handle.replace(/^@/, "");
+        const ids = rivals().sort((a, b) => {
+            const byHandle = handle(a).localeCompare(handle(b), "en", { numeric: true });
+            if (sort === "mostFights") return fights(b) - fights(a) || byHandle;
+            if (sort === "oldestFriends" || sort === "newestFriends") {
+                const x = friendsSince(a), y = friendsSince(b);
+                if (x != null && y != null && x !== y) return sort === "oldestFriends" ? x - y : y - x;
+                if (x == null && y != null) return 1;
+                if (x != null && y == null) return -1;
+            }
+            return byHandle;
+        });
         const filter = ui.filter || "all";
-        const count = (value, label, cls) => `<div class="vstack" style="flex:1;align-items:center;gap:2px"><span class="${cls}" style="font-size:44px;font-weight:800">${value}</span><span class="t-caption c-2">${label}</span></div>`;
-        const rows = ownHistory().filter((row) => filter === "all" || (filter === "won" && row.result === "win") || (filter === "drew" && row.result === "draw") || (filter === "lost" && row.result !== "win" && row.result !== "draw"));
-        return FF.card(`<div class="hstack">${count(r.wins, "Won", "c-moss")}${count(r.draws, "Drew", "c-2")}${count(r.losses, "Lost", "c-ember")}</div>`)
+        const rows = history.filter((row) => filter === "all" || (filter === "won" && row.result === "win") || (filter === "drew" && row.result === "draw") || (filter === "lost" && row.result !== "win" && row.result !== "draw"));
+        return ringCard(r.wins, r.draws, r.losses) + yourPlaces(counted) + (ids.length ? rivalCards(ids, sort) : "")
             + `<h3 class="t-heading" style="padding-top:8px">Fight history</h3>`
             + left(FF.segmented([["all", "All"], ["won", "Won"], ["lost", "Lost"], ["drew", "Drew"]], filter, { on: "set:filter" }))
             + (S.scenario === "loading" ? progress() : !rows.length ? `<p class="t-body c-2">No results yet</p>` : "")
@@ -7455,8 +7594,9 @@
                     ${list.map((sport) => {
                         const peak = Math.max(...sport.values, 1);
                         const total = sum(sport.values);
-                        return `<div class="hstack" style="gap:10px"><span class="c-2 pf-ico20">${icon(sport.icon)}</span><span class="t-label ellipsis" style="width:56px">${esc(sport.name)}</span><span class="pf-heat">${sport.values.map((v) => `<i style="background:${tick(v, peak)}"></i>`).join("")}</span><span style="width:48px;text-align:right;font-size:15px;font-weight:800">${sport.isSteps ? `${num(total / 1000)}k` : `${num(total)}m`}</span></div>`;
+                        return `<button type="button" class="pf-dsport" data-on="push:dashboardChart?sport=${encodeURIComponent(sport.id)}"><span class="c-2 pf-ico20">${icon(sport.icon)}</span><span class="t-label ellipsis" style="width:56px">${esc(sport.name)}</span><span class="pf-heat">${sport.values.map((v) => `<i style="background:${tick(v, peak)}"></i>`).join("")}</span><span style="width:64px;text-align:right;font-size:15px;font-weight:800;white-space:nowrap">${sport.isSteps ? `${num(total / 1000)}k` : `${num(total)} min`}</span>${FF.chevron()}</button>`;
                     }).join("")}
+                    <span class="t-micro c-2">Tap a sport for its days, weeks and months.</span>
                 </div>`)
             + FF.section("Active days", plainRows(list.map((sport) => `<div class="pf-line"><span class="c-2 pf-ico20" style="width:24px">${icon(sport.icon)}</span><span class="t-rowTitle grow">${esc(sport.name)}</span><span style="font-size:17px;font-weight:800">${sport.values.filter((v) => v > 0).length} of ${sport.values.length} days</span></div>`)));
     }
@@ -7464,29 +7604,112 @@
         kind: "push",
         title: "Dashboard",
         render: (p, ui, ctx) => {
-            const tabs = [["steps", "Steps"], ["fights", "Fights"], ["sports", "Sports"], ...(S.admin ? [["admin", "Admin"]] : [])];
-            let tab = ui.tab || p.tab || "steps";
-            if (!tabs.some(([t]) => t === tab)) tab = "steps";
-            const content = tab === "steps" ? dashboardSteps(ui) : tab === "fights" ? dashboardFights(ui) : tab === "sports" ? dashboardSports()
+            // Fights first: the record against people is what only FitFight knows.
+            const tabs = [["fights", "Fights"], ["steps", "Steps"], ["sports", "Sports"], ...(S.admin ? [["admin", "Admin"]] : [])];
+            let tab = ui.tab || p.tab || "fights";
+            if (!tabs.some(([t]) => t === tab)) tab = "fights";
+            const content = tab === "steps" ? dashboardSteps(ui, p) : tab === "fights" ? dashboardFights(ui) : tab === "sports" ? dashboardSports()
                 : (globalThis.ADMIN?.dashboardTab?.(ui, ctx.key) ?? progress());
             return `<div class="pf-push">${FF.screen(largeTitle("Dashboard") + left(FF.segmented(tabs, tab, { on: "set:tab" })) + content, { top: navBar("Dashboard") })}</div>`;
         },
     });
-    // chartXSelection: the bar under the finger while dragging; the selection clears when the finger lifts.
+
+    screen("dashboardFriendsSort", {
+        kind: "drawer",
+        detent: "medium",
+        title: "Sort by",
+        render() {
+            const sort = uiOf("friendSort").value || "name";
+            const rows = FRIEND_SORTS.map(([value, title]) => FF.groupedRow({ title, on: `pfFriendSort:${value}`, trailing: `<span class="fl-check" style="opacity:${value === sort ? 1 : 0}">${icon("checkmark")}</span>` }));
+            return `<div class="fl-drawer" style="gap:16px">${FF.sheetHeader("Sort by")}${FF.grouped(rows)}</div>`;
+        },
+    });
+    action("pfFriendSort", (value) => { uiOf("friendSort").value = value; dismiss(); });
+
+    // ─── DashboardChartPage: one sport by day, week or month ────────
+    // Companion preview reads a year from Apple Health as the 31 sample days repeated back in time, ending today.
+    function chartBuckets(sport, bucket) {
+        const days = 366;
+        const daily = Array.from({ length: days }, (_, i) => sport.values[(((30 - (days - 1 - i)) % 31) + 31) % 31]);
+        const groups = [];
+        daily.forEach((v, i) => {
+            const date = daysAgo(days - 1 - i);
+            // Calendar.current in en_US: weeks start on Sunday.
+            const start = bucket === "day" ? date : bucket === "week" ? new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay()) : new Date(date.getFullYear(), date.getMonth(), 1);
+            const last = groups[groups.length - 1];
+            if (last && last.start.getTime() === start.getTime()) last.values.push(v);
+            else groups.push({ start, values: [v] });
+        });
+        const current = groups[groups.length - 1].start.getTime();
+        return groups.slice(-(bucket === "day" ? 31 : bucket === "week" ? 26 : 12)).map((g) => {
+            const total = sum(g.values);
+            return { start: g.start, value: sport.isSteps && bucket !== "day" ? avg(g.values) ?? 0 : total, sum: total, current: g.start.getTime() === current };
+        });
+    }
+    screen("dashboardChart", {
+        kind: "push",
+        title: "Sport chart",
+        render: (p, ui) => {
+            const sport = sports().find((s) => s.id === p.sport) || sports()[0];
+            if (!sport) return `<div class="pf-push">${FF.screen('<p class="t-body c-2">Apple Health can’t be read right now. Open FitFight again with your iPhone unlocked.</p>', { top: navBar("Steps") })}</div>`;
+            const bucket = ui.bucket || p.bucket || "day";
+            const bars = chartBuckets(sport, bucket);
+            const shown = Math.min(Math.max(picked(ui, p, "bar", bars.length - 1), 0), bars.length - 1);
+            const line = avg(bars.filter((b) => !b.current).map((b) => b.value));
+            const finished = bars.map((b, i) => i).filter((i) => !bars[i].current);
+            const best = finished.length ? finished.reduce((a, i) => (bars[i].value > bars[a].value ? i : a), finished[0]) : null;
+            const minutes = (v) => `${num(v)} min`;
+            const value = (v) => (!sport.isSteps ? minutes(v) : bucket === "day" ? num(v) : `${num(v)} a day`);
+            const label = (b) => (bucket === "day" ? (b.current ? "Today so far" : weekdayDay(b.start))
+                : bucket === "week" ? (b.current ? "This week so far" : `Week of ${shortDate(b.start)}`)
+                : (b.current ? "This month so far" : b.start.toLocaleDateString("en-US", { month: "long", year: "numeric" })));
+            const first = bucket === "month" ? bars[0].start.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : shortDate(bars[0].start);
+            const last = { day: "Today", week: "This week", month: "This month" }[bucket];
+            const explanation = {
+                "true-day": "One bar a day for the last 31 days. Drag across the bars.",
+                "true-week": "One bar a week for the last 26 weeks: your Steps a day that week. Drag across the bars.",
+                "true-month": "One bar a month for the last 12 months: your Steps a day that month. Drag across the bars.",
+                "false-day": "Workout minutes a day for the last 31 days. Drag across the bars.",
+                "false-week": "Workout minutes a week for the last 26 weeks. Drag across the bars.",
+                "false-month": "Workout minutes a month for the last 12 months. Drag across the bars.",
+            }[`${sport.isSteps}-${bucket}`];
+            const top = niceTop(Math.max(...bars.map((b) => b.value), 1));
+            const total = sum(bars.map((b) => b.sum));
+            const row = (title, text) => `<div class="pf-line"><span class="t-rowTitle grow">${esc(title)}</span><span class="ellipsis" style="font-size:17px;font-weight:800">${esc(text)}</span></div>`;
+            const body = FF.segmented([["day", "Day"], ["week", "Week"], ["month", "Month"]], bucket, { on: "set:bucket", fill: true })
+                + FF.card(`<div class="vstack" style="gap:10px">
+                    <div class="hstack" style="align-items:baseline"><span class="t-label c-2 grow">${esc(label(bars[shown]))}</span><span style="font-size:22px;font-weight:800">${esc(value(bars[shown].value))}</span></div>
+                    <div class="pf-chart pf-drag" data-sel="bar" data-count="${bars.length}" style="height:220px;gap:${bars.length > 20 ? 3 : 10}px">
+                        ${bars.map((b, i) => `<i style="height:${(b.value / top * 100).toFixed(2)}%;background:var(${i === shown ? "--mossFill" : "--gold"})"></i>`).join("")}
+                        ${line ? avgRule(line, top, value(line)) : ""}
+                    </div>
+                    ${endsRow(first, last)}
+                    <span class="t-micro c-2">${esc(explanation)}</span>
+                </div>`)
+                + FF.section("In numbers", `<div class="ff-grouped">${row("Average", line ? value(line) : "-")}${FF.divider()}${row("Best", best != null && bars[best].value > 0 ? `${label(bars[best])} · ${value(bars[best].value)}` : "-")}${FF.divider()}${row("Total", sport.isSteps ? num(total) : minutes(total))}</div>`);
+            return `<div class="pf-push pf-inline">${FF.screen(body, { top: navBar(sport.name) })}</div>`;
+        },
+    });
+    // chartXSelection: the bar or point under the finger while dragging; the selection clears when the finger lifts.
     phone.addEventListener("pointerdown", (event) => {
-        if (!event.target.closest(".pf-drag")) return;
-        const key = event.target.closest("[data-key]")?.dataset.key;
+        const start = event.target.closest(".pf-drag");
+        if (!start) return;
+        const key = start.closest("[data-key]")?.dataset.key;
         if (!key) return;
         const ui = uiOf(key);
+        const field = start.dataset.sel;
+        const count = Number(start.dataset.count);
+        const line = start.dataset.mode === "line";
         const pick = (e) => {
-            const chart = phone.querySelector(`[data-key="${CSS_ESCAPE(key)}"] .pf-drag`);
+            const chart = phone.querySelector(`[data-key="${CSS_ESCAPE(key)}"] .pf-drag[data-sel="${field}"]`);
             if (!chart) return;
             const box = chart.getBoundingClientRect();
-            const index = Math.max(0, Math.min(30, Math.floor((e.clientX - box.left) / box.width * 31)));
-            if (ui.day !== index) { ui.day = index; render(); }
+            const f = (e.clientX - box.left) / box.width;
+            const index = Math.max(0, Math.min(count - 1, line ? Math.round(f * (count - 1)) : Math.floor(f * count)));
+            if (ui[field] !== index) { ui[field] = index; render(); }
         };
         pick(event);
-        const up = () => { window.removeEventListener("pointermove", pick); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); ui.day = null; render(); };
+        const up = () => { window.removeEventListener("pointermove", pick); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); ui[field] = null; render(); };
         window.addEventListener("pointermove", pick);
         window.addEventListener("pointerup", up);
         window.addEventListener("pointercancel", up);
@@ -8045,6 +8268,17 @@
         .pf-ico20 { display: inline-grid; place-items: center; width: 20px; flex: none; font-size: 15px; }
         .pf-heat { display: flex; flex: 1; gap: 2px; min-width: 0; }
         .pf-heat i { flex: 1; height: 24px; border-radius: 2px; }
+        .pf-avg span { position: absolute; left: 0; top: 0; transform: translateY(-50%); padding: 3px 7px; border-radius: 6px; border: 1px solid var(--hairline); background: var(--control); font-size: 11px; font-weight: 700; line-height: 1.1; color: var(--text); white-space: nowrap; }
+        .pf-week .pf-drag { touch-action: none; }
+        .pf-ends { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--textFaint); }
+        .pf-chartrow { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+        .pf-dsport { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; }
+        .pf-inline .pf-nav-title { opacity: 1; }
+        .pf-ring { position: relative; flex: none; display: grid; place-items: center; width: 128px; height: 128px; }
+        .pf-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .pf-key { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+        .pf-tug { display: flex; gap: 3px; height: 6px; }
+        .pf-tug i { min-width: 6px; border-radius: 3px; }
 
         .pf-sheethead { padding: 12px 20px 0; }
         .pf-sheethead.title { padding: 12px 20px; }
@@ -8153,9 +8387,15 @@
         ["WHOOP: couldn’t connect", "#you/settings/~sourceGuide?id=whoop&whoop=error"],
         ["WHOOP: use whoop.com to sign in", "#you/settings/~sourceGuide?id=whoop&whoop=connecting/~pfWhoopConsent", { kind: "system" }],
         ["Delete account?", "#you/settings/~profileDeleteAccount"],
-        ["Dashboard: Steps", "#you/dashboard"],
-        ["Dashboard: Fights", "#you/dashboard?tab=fights"],
+        ["Dashboard: Fights", "#you/dashboard"],
+        ["Dashboard: a fight's summary, from your place", "#you/dashboard/~fightRound?id=finished", { note: "Tap the first place square" }],
+        ["Dashboard: sort friends head to head", "#you/dashboard/~dashboardFriendsSort"],
+        ["Dashboard: Steps", "#you/dashboard?tab=steps"],
+        ["Dashboard: Steps, a day picked", "#you/dashboard?tab=steps&day=14", { note: "What the finger reads while dragging" }],
         ["Dashboard: Sports", "#you/dashboard?tab=sports"],
+        ["Steps by day, week and month", "#you/dashboard?tab=steps/dashboardChart?sport=steps"],
+        ["Steps by month", "#you/dashboard?tab=steps/dashboardChart?sport=steps&bucket=month"],
+        ["Run by day, week and month", "#you/dashboard?tab=sports/dashboardChart?sport=Run"],
         ["Dashboard: Admin", "#you/dashboard?tab=admin", { admin: true }],
         ["Dashboard, no fight history", "#you/dashboard?tab=fights", { scenario: "empty" }],
     ]);
@@ -9002,7 +9242,7 @@
         // A new character leaves the Fights card of a finished one for when its owner sees it.
         if (p.new !== "1") s.characters.forEach((c) => { if (c.phase === "complete") c.seen = true; });
     }
-    // Opens "Pick the words we draw" at once with the owner's words; the rewrites join them when the check ends.
+    // Opens "Pick from our suggestions" at once with the owner's words; the rewrites join them when the check ends.
     function startCheck(ui, text, ms = FLOW.check, fail = false) {
         Object.assign(ui, { options: [text], note: null, chosen: 0, checkFailed: false, checking: true });
         const gen = (ui.checkGen = (ui.checkGen || 0) + 1);
@@ -9043,7 +9283,7 @@
         const summary1 = `“${c?.description ?? ui.options?.[ui.chosen] ?? ""}”`;
         const parts = [
             part(0, "Describe your animal", "", summary0, current, () => describeHTML(ui, s)),
-            part(1, "Pick the words we draw", "After you write, we suggest richer versions.", summary1, current, () => reviewHTML(ui)),
+            part(1, "Pick from our suggestions", "After you write, we suggest richer versions.", summary1, current, () => reviewHTML(ui)),
             part(2, "Pick a portrait", "Drawn after you pay. About a minute.", "Portrait chosen", current, () => (!c ? "" : step === "choosing" ? choosingHTML(c, ui) : step === "problem" ? problemHTML(c) : portraitsHTML(c)), c?.portrait),
             part(3, "Name it", "Five fitness poses, then a name.", null, current, () => (!c ? "" : step === "done" ? doneHTML(c, ui) : step === "problem" ? problemHTML(c) : posesHTML(c, ui))),
         ];
@@ -9140,6 +9380,8 @@
 
     function characterBar(step, c, ui, s) {
         const trimmed = (ui.description || "").trim();
+        // From any step of a paid character, so one stuck on a portrait pick or drawing never blocks the next.
+        const another = FF.button("Create another", { kind: "ghost", size: "small", full: true, on: "cpcAnother" });
         switch (step) {
             case "describe":
                 return FF.button("Next", { size: "large", full: true, on: "cpcNext", enabled: !!trimmed && !ui.restoring })
@@ -9159,21 +9401,20 @@
             case "poses": {
                 const denied = ui.pushDenied || s.pushStatus === "denied";
                 return FF.button(denied ? "Close" : "Notify me when it’s ready", { kind: "secondary", size: "large", full: true, on: "cpcNotify" })
-                    + `<p class="t-caption c-2 cpc-note">${denied ? "Notifications are off. The Fights tab shows when it is ready." : "You can close the app. We keep drawing."}</p>`;
+                    + `<p class="t-caption c-2 cpc-note">${denied ? "Notifications are off. The Fights tab shows when it is ready." : "You can close the app. We keep drawing."}</p>` + another;
             }
             case "choosing":
-                return FF.button("Use this portrait", { size: "large", full: true, on: "cpcUsePortrait", enabled: pickedSlot(c, ui) != null && !ui.choosing, busy: ui.choosing });
+                return FF.button("Use this portrait", { size: "large", full: true, on: "cpcUsePortrait", enabled: pickedSlot(c, ui) != null && !ui.choosing, busy: ui.choosing }) + another;
             case "done": {
                 const equipped = isCustom(D().companion) && s.equipped === c.id;
                 return (equipped || !c.poses
                     ? FF.button("Done", { size: "large", full: true, on: "close" })
-                    : FF.button("Use as companion", { size: "large", full: true, on: "cpcSelect", enabled: !ui.selecting, busy: ui.selecting }))
-                    + FF.button("Create another", { kind: "ghost", size: "small", full: true, on: "cpcAnother" });
+                    : FF.button("Use as companion", { size: "large", full: true, on: "cpcSelect", enabled: !ui.selecting, busy: ui.selecting })) + another;
             }
             default:
-                return c?.phase === "needsSupport"
+                return (c?.phase === "needsSupport"
                     ? FF.button("Contact support", { size: "large", full: true, on: "cpcSupport" })
-                    : FF.button("Try again", { size: "large", full: true, on: "cpcRetry", enabled: !ui.busy, busy: ui.busy });
+                    : FF.button("Try again", { size: "large", full: true, on: "cpcRetry", enabled: !ui.busy, busy: ui.busy })) + another;
         }
     }
 

@@ -90,7 +90,7 @@ struct PaidCharacterView: View {
                              summary: "“\(options?.first ?? (description.isEmpty ? focused?.description ?? "" : description))”") {
                             describe
                         }
-                        part(1, String(appLocalized: "Pick the words we draw"),
+                        part(1, String(appLocalized: "Pick from our suggestions"),
                              later: String(appLocalized: "After you write, we suggest richer versions."),
                              summary: "“\(focused?.description ?? options?[chosen] ?? "")”") {
                             review
@@ -493,14 +493,6 @@ struct PaidCharacterView: View {
                         Task { await select(entry) }
                     }
                 }
-                FFButton(title: String(appLocalized: "Create another"), kind: .ghost, size: .small, fullWidth: true) {
-                    ignored = Set(purchases.snapshot?.characters.map(\.id) ?? [])
-                    focusID = nil
-                    finishedID = nil
-                    options = nil
-                    note = nil
-                    description = ""
-                }
             }
         case .problem:
             if focused?.phase == .needsSupport {
@@ -514,6 +506,18 @@ struct PaidCharacterView: View {
                          busy: purchases.isBusy, fullWidth: true) {
                     Task { await retry(focused) }
                 }
+            }
+        }
+        // From any step of a paid character, so one stuck on a portrait pick or drawing never blocks the next.
+        // ponytail: the old one stays on Yours and keeps drawing; hiding it needs a server column.
+        if focused != nil {
+            FFButton(title: String(appLocalized: "Create another"), kind: .ghost, size: .small, fullWidth: true) {
+                ignored = Set(purchases.snapshot?.characters.map(\.id) ?? [])
+                focusID = nil
+                finishedID = nil
+                options = nil
+                note = nil
+                description = ""
             }
         }
     }
@@ -620,7 +624,7 @@ struct PaidCharacterView: View {
 
     // MARK: Actions
 
-    /// Opens "Pick the words we draw" at once with the owner's words; the rewrites join them when the Blend run ends.
+    /// Opens "Pick from our suggestions" at once with the owner's words; the rewrites join them when the Blend run ends.
     private func startCheck(_ text: String) {
         options = [text]
         note = nil

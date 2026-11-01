@@ -79,6 +79,73 @@ which this workspace cannot start. No hosted database, deployment or supported i
 
 ---
 
+## User feedback from @rad: pose, Feed composer, new companion, prepared 30 Oct 2026
+
+From the production Feedback tab (@rad, build 234, 19-26 Oct).
+
+- **Pose on Profile** ("Animal not syncing", 26 Oct): Fights shows your companion in the pose today's steps reached, but the Profile header showed the saved picture. For a custom character that is always the Resting pose (armchair, coffee), so 18K steps showed the couch. The custom poses now load in `ContentView` into `CompanionStore.fitnessImages` (a failed load tries again every 30 seconds), and the Profile header avatar (`CompanionAvatar(effort:)`) uses the same pose as Fights, stock animals too. What friends see (`companion_image_url`, Resting) is unchanged.
+- **Feed composer** ("Feed posting", 22 Oct): Choose no longer ticks every fight; it keeps what started ticked (nothing from Feed, the fight from a fight's Feed). Fights that are over leave the list and Everyone: only live fights, a recurring series between rounds, and the fight the post starts in.
+- **New companion** ("Animal generation special", 19 Oct; "Wording Change", 22 Oct): Create another shows on every step of a paid character (drawing, portrait pick, poses, problem), not only when finished. The old one stays on Yours and keeps drawing. The second step is now "Pick from our suggestions" ("Choisis parmi nos suggestions").
+
+**Not done:** hiding an unwanted custom character (needs a server column and route), changing a post's fights after posting and tagging people (API change, feature), an Add people button on the fight screen (new UI, mirror proposal first). "Character display bug" (22 Oct, an old uploaded photo on Fights) is handled by open PR #427.
+
+**Contract:** none. App and mirror only; no API, database or migration change.
+
+---
+
+## Dashboard: Fights first, values under the finger, fight days, Day/Week/Month pages, prepared 20 Oct 2026
+
+Marc (build 223, then 18 Oct): many charts let you slide but show no number;
+the dashed average needs a readable value, as a small badge; the Dashboard
+should lead with fights; keep Sports. From the proposals he picked the win rate
+ring (thin gaps), History's place squares and the rival cards.
+
+**Code (native only):**
+
+- Profile -> Dashboard opens on **Fights** (tabs: Fights, Steps, Sports, Admin).
+  Fights: the win rate in a ring split into won, drew and lost, with the three
+  counts beside it; your place in your last 10 fights as the same squares as a
+  fight's History (`FFPlaceSquare`), each opening the same round summary
+  (`RoundSummarySheet`) when the fight is loaded; your run and best win run;
+  Friends head to head: one card per rival (companion, score, who leads, a
+  won/drew/lost bar) from `/me/rivalries`, opening their profile, sorted A to Z by
+  handle, or by most fights, oldest or newest friends, with the Fights tab's Sort by
+  link and drawer (now shared as `FFSortButton` and `.ffSortSheet`); then history.
+- Steps: the dashed line's value ("Avg 8,771") sits in a small solid badge on the
+  line; the first date and Today sit under the bars; today reads "Today so far".
+  The top card compares the last 15 finished days with the 15 before. Averages
+  skip days without Steps, as on Profile. Days that overlap a fight from your
+  history are bright, the rest dimmed, with a "Fight day" tag and a Fight days vs
+  other days card. Average by weekday uses the last 8 weeks without today, and
+  you can slide on it.
+- Weeks and months (Steps) or a tap on any sport opens a page with Day (31
+  days), Week (26 weeks) and Month (12 months) bars from a year of Apple
+  Health, a labelled average, and Average, Best and Total.
+- Fight screen: on Line, Histogram and Pace the day and everyone's number read
+  above the chart instead of below it.
+- Empty Steps state has a Connect Apple Health button. Sport totals say "min".
+- Companion preview history: three-day fights with a free day between, so the
+  preview has fight days; the newest is the finished Coffee is on you fight, so its
+  square opens a summary. One 1.3.0 release note in English and French.
+
+**Mirror:** `app.html` has the same Dashboard, the chart page and the new preview
+history (data version 3). The `dashboard-fights` options are gone now that Marc
+picked: the winner is plain mirror code.
+
+**Contract:** additive. `GET /api/v1/me/rivalries` rows gain `friends_since`
+(when the friendship was accepted, null when not friends), in `contracts/openapi.yaml`.
+Older builds ignore it; a build with this change reads a missing field as null, so
+on an older server the friendship sorts fall back to A to Z. No database change.
+Order: deploy the backend, then ship the app. Fight days come from the first page
+of `/profiles/{id}/history`.
+
+**Verification (local, 20 Oct):** web typecheck and all 550 unit tests passed; the
+rivalries database test was updated but not run (needs a database). Generic Simulator build (Xcode 27) succeeded
+with no warnings in the changed files. Localization, fight chart, profile
+refresh and native API boundary checks passed. The mirror screens were rendered
+in headless Chrome. Not checked: the app in the Simulator (this Mac has no
+Simulator runtime installed since 18 Oct) and a device with real Apple Health data.
+
 ## Marketing version 1.3.0, 20 Oct 2026
 
 Apple approved and released 1.2.1 (234) on 19 Oct 2026; production `/api/app-release`
@@ -761,6 +828,15 @@ Verified locally: unit, database and build checks; one cron pass turned a real
 2.7 MB staging PNG into a 303 KB `image/webp` with `max-age=31536000` in 1.5 s;
 in the Simulator, the first frame of an opened fight already shows the picture.
 
+**Custom characters drawn naked, prepared 31 Oct:** production images drew custom
+characters naked or in made-up clothes, because the model got the equipped Resting
+picture (armchair, blanket). #444 (on `develop` only) sends the Pushing picture in
+the running kit instead. The cast key now uses that same picture, so each running
+fight with a custom character draws once more (35 of 53 on production on 31 Oct,
+about $5), and a new round no longer reuses a naked picture. Verified locally:
+typecheck, 550 unit and 147 database tests; the new check fails on the old key.
+Not yet deployed.
+
 ---
 
 ## In-app alerts, prepared 15 Oct 2026
@@ -1316,7 +1392,9 @@ the challenger's next refresh, or when the grace ends.
 
 **Everybody fight on production is full:** read-only on 14 Oct, `PGG7` had 50 of 50
 accepted or deferred members (the cap), 11 more invited who cannot accept, and 81 profiles.
-New users already see "Couldn't accept." on that onboarding page. The cap is unchanged here.
+New users already see "Couldn't accept." on that onboarding page. Marc removed the cap on
+21 Oct 2026: fights have no member limit. The apps still handle `fight_full` from older
+servers. The new backend never sends it. Production stays capped until `preview` merges to `main`.
 
 **Contract:** `/api/v1` unchanged for every installed build. Two new endpoints; no request or
 response field changed. Read-only `/api/app-release` on 14 Oct: production latest 1.1.2

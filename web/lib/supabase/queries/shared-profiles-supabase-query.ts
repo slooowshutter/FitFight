@@ -64,7 +64,8 @@ async function loadProfileAccessRows(sql: TransactionSql, viewerId: string, targ
             case when profile.id = ${viewerId} then 'self'
                 when friendship.state = 'accepted' then 'friends'
                 when friendship.requester_id = ${viewerId} then 'outgoing'
-                when friendship.requester_id is not null then 'incoming' else 'none' end friendship
+                when friendship.requester_id is not null then 'incoming' else 'none' end friendship,
+            case when friendship.state = 'accepted' then to_jsonb(friendship.accepted_at) #>> '{}' end friends_since
         from public.profiles profile
         left join private.profile_settings settings on settings.user_id = profile.id
         left join public.media_objects media on media.id = profile.avatar_media_id and media.status = 'ready'
@@ -373,5 +374,6 @@ export async function readOwnRivalries(userId: string, database: Sql = createDat
     return rivals.map(({ row, sharedIds }) => ({
         identity: { ...row.identity, avatar_url: row.companion_image_url ?? (row.avatar_path ? avatars.get(row.avatar_path) ?? null : null) },
         rivalry: rivalryRecord(facts, userId, row.identity.user_id, sharedIds),
+        friends_since: row.friends_since,
     }));
 }

@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 1.3.0, admin tables after the charts", updated: "20 Oct 2026" };
+            const MIRROR = { matches: "develop 1.3.0, admin AI section with Azure", updated: "21 Oct 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 3;
@@ -9581,7 +9581,10 @@
         return (value < 0 && digits !== "0" ? "-" : "") + digits + (tier ? tier[1] : "");
     }
     const UNIT_SUFFIX = { percent: "%", days: " d", hours: " h", minutes: " min", seconds: " s" };
+    // Dollars: a model call costs cents, so amounts under $1 keep four decimals.
+    const dollars = (value) => { const size = Math.abs(value); return `${value < 0 ? "-" : ""}$${size.toLocaleString("en-US", { minimumFractionDigits: size < 100 ? 2 : 0, maximumFractionDigits: size < 1 ? 4 : size < 100 ? 2 : 0 })}`; };
     function adminValue(value, unit, exact = false) {
+        if (unit === "usd") return dollars(value);
         const suffix = UNIT_SUFFIX[unit] || "";
         if (exact) return Number(value).toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 }) + suffix;
         return adminNumber(value) + suffix;
@@ -9605,6 +9608,7 @@
     }
     // The server's sentence formatting (admin-dashboard-supabase-query.ts readable / counted).
     function readable(value, unit) {
+        if (unit === "usd") return dollars(value);
         const digits = Number(value).toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
         if (unit === "percent") return `${digits}%`;
         if (unit === "count" || unit === "steps") return digits;
@@ -9736,6 +9740,12 @@
         example: (r) => { const now = r.latest(), start = r.first(); return now === undefined || !start ? null : `FitFight has ${r.count(now, "user", "users")} now, against ${r.format(start.y)} at the end of ${r.period(start.x)}.`; },
         gen: (w, env) => one("Total users", points(w, level(totalUsers, env))),
     });
+    // FitFight's own AI workflows log every model call from 20 Oct 2026: here, the last 14 days.
+    const AI_SINCE = "Model calls are logged from 20 Oct 2026, when FitFight stopped using Blend.";
+    const AI_FROM = LAUNCH_DAYS_AGO - 13;
+    const charactersOn = (t, env) => Math.round((6 + 4 * noise(`ai${env}`, t)) * weekday(t) * (env === "production" ? 1 : 0.12));
+    const fightImagesOn = (t, env) => Math.round(fightsOn(t, env) * 0.6);
+    const aiPoints = (w, fn) => points(w, (ts) => { const live = ts.filter((t) => t >= AI_FROM); return live.length ? fn(live) : NaN; }).filter((p) => !Number.isNaN(p.y));
     const SECTIONS = [
         { id: "overview", cards: overviewCards, charts: [
             totalUsersChart, newUsersChart,
@@ -10094,8 +10104,73 @@
                 rows: (env) => labelRows([["1.2.0 (230)", 402], ["1.1.3 (226)", 151], ["1.1.2 (219)", 63], ["Older", 28]], env),
             }),
         ] },
+        { id: "ai", cards: [
+            card("ai_spend", "AI money spent, 30 days", "usd", false, "What OpenRouter charged: every text call, and drawings Azure had no room for. Last 30 days vs the 30 before.",
+                `Money OpenRouter charged in the last 30 days, up to now, compared with the 30 days before: every text call (cleaning, signature items, names and lines, prompt checks, runner counts) and every drawing that Azure could not take. Retried calls count, because each one is paid. Drawings on Azure use credits, in the next card. ${AI_SINCE}`,
+                (r) => `OpenRouter charged FitFight ${r.format(r.value)} in the last 30 days${r.against("in the 30 days before")}.`, fixed([6.84, null], [0.71, null])),
+            card("ai_azure_credits", "Azure credits used, 30 days", "usd", false, "Drawings on Azure, at OpenAI's list price. Last 30 days vs the 30 before.",
+                `What the drawings made on Azure in the last 30 days, up to now, are worth at OpenAI's list price for their tokens, compared with the 30 days before. They are paid with Azure credits, not money. Retried drawings count. ${AI_SINCE}`,
+                (r) => `Drawings on Azure used ${r.format(r.value)} of credits in the last 30 days${r.against("in the 30 days before")}.`, fixed([64.4, null], [8.2, null])),
+            card("ai_azure_share", "Drawings on Azure, 30 days", "percent", true, "The rest went to OpenRouter because every Azure region was full or down.",
+                "Of the drawings finished in the last 30 days, the share drawn on Azure, compared with the 30 days before. A drawing goes to OpenRouter, and costs money, only when all five Azure regions have used their drawings for the minute or failed.",
+                (r) => `${r.format(r.value)} of the drawings in the last 30 days were drawn on Azure${r.against("in the 30 days before")}.`, fixed([96.8, null], [100, null])),
+            card("ai_requests", "AI requests, 30 days", "count", true, "Portraits, fitness sets, names, checks and group photos the app asked for. Fight images not included.",
+                "Requests the app made in the last 30 days, up to now, compared with the 30 days before: each portrait, fitness set, set of names and lines, prompt check and group photo counts once. Fight images are made by the server, so they are not counted.",
+                (r) => `The app made ${r.count(r.value, "AI request", "AI requests")} in the last 30 days${r.against("in the 30 days before")}.`, fixed([831, 287], [97, 52])),
+            card("ai_success", "AI success rate, 30 days", "percent", true, "Finished requests that completed, last 30 days vs the 30 before.",
+                "Of the requests made in the last 30 days that have finished, the share that completed with a usable result, compared with the 30 days before. Failed, cancelled and unreadable results count against it. Requests still running are left out.",
+                (r) => `${r.format(r.value)} of the finished AI requests in the last 30 days completed${r.against("in the 30 days before")}.`, fixed([97.6, 93.1], [91.2, 88.4])),
+            card("ai_portrait_time", "Median portrait time, 30 days", "seconds", false, "From the first model call to the drawn picture, last 30 days vs the 30 before.",
+                `How long half of the portrait runs took in the last 30 days, from the start of the first model call to the end of the drawing, compared with the 30 days before. The app also waits for its next status check. ${AI_SINCE}`,
+                (r) => `Half of the portraits took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`, fixed([44.3, null], [46.8, null])),
+            card("ai_fitness_time", "Median fitness set time, 30 days", "seconds", false, "Five drawings at the same time, last 30 days vs the 30 before.",
+                `How long half of the fitness sets took in the last 30 days, from the start of the first model call to the end of the last of the five drawings, compared with the 30 days before. ${AI_SINCE}`,
+                (r) => `Half of the fitness sets took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`, fixed([47.9, null], [49.2, null])),
+            card("ai_wait", "Median wait before AI starts, 30 days", "seconds", false, "From the app's request to the first model call, last 30 days vs the 30 before.",
+                `How long half of the requests in the last 30 days waited between the app's request and the start of their first model call, compared with the 30 days before. It grows when Vercel queues the workflow. ${AI_SINCE}`,
+                (r) => `Half of the requests started their first model call within ${r.format(r.value)}${r.against("in the 30 days before")}.`, fixed([0.6, null], [0.8, null])),
+            card("ai_character_cost", "AI cost per character, 30 days", "usd", false, "Portraits, poses and names of each character, paid or free. Last 30 days vs the 30 before.",
+                `The AI cost of the characters people made in the last 30 days, divided by those characters, compared with the 30 days before: money to OpenRouter plus Azure credits at OpenAI's list price. A character's cost is its three portraits, retries, five poses and names and lines. A character sells for EUR 2.99. ${AI_SINCE}`,
+                (r) => `A character cost ${r.format(r.value)} in AI in the last 30 days${r.against("in the 30 days before")}.`, fixed([0.57, null], [0.58, null])),
+        ], charts: [
+            chart("ai_spend_per_bucket", (w) => `AI cost ${w.per}`, "bar", "usd", "date", {
+                note: () => `Money to OpenRouter, and Azure credits at OpenAI's list price. ${AI_SINCE}`,
+                definition: (w) => `The cost of every model call in each ${w.bucket}: money OpenRouter charged, and the Azure credits drawings used, at OpenAI's list price for their tokens. Retried calls count. ${AI_SINCE}`,
+                example: (r) => { const m = r.at("OpenRouter"), c = r.at("Azure credits"); return m === undefined || c === undefined ? null : `FitFight paid OpenRouter ${r.format(m)} and used ${r.format(c)} of Azure credits ${r.when}.`; },
+                gen: (w, env) => {
+                    const drawings = (t) => (3 * charactersOn(t, env) + 5 * charactersOn(t, env) + fightImagesOn(t, env)) * 0.0694;
+                    return [
+                        { name: "OpenRouter", previous: false, points: aiPoints(w, (ts) => ts.reduce((s, t) => s + charactersOn(t, env) * 0.031 + fightImagesOn(t, env) * 0.012 + drawings(t) * 0.03 * noise("ovf", t), 0)) },
+                        { name: "Azure credits", previous: false, points: aiPoints(w, (ts) => ts.reduce((s, t) => s + drawings(t) * (1 - 0.03 * noise("ovf", t)), 0)) },
+                    ];
+                },
+            }),
+            chart("ai_runs_per_bucket", (w) => `AI runs ${w.per}`, "bar", "count", "date", {
+                note: () => AI_SINCE,
+                definition: (w) => `Workflow runs in each ${w.bucket}, by workflow. A paid character makes three portrait runs, then a fitness set and names and lines. ${AI_SINCE}`,
+                example: (r) => { const n = r.at("Portrait"); return n === undefined ? null : `FitFight drew ${r.count(n, "portrait", "portraits")} ${r.when}.`; },
+                gen: (w, env) => [
+                    ["Portrait", (t) => 3 * charactersOn(t, env)], ["Fitness set", (t) => charactersOn(t, env)], ["Names and lines", (t) => Math.round(charactersOn(t, env) * 1.3)],
+                    ["Prompt check", (t) => Math.round(charactersOn(t, env) * 2.1)], ["Group photo", () => 0], ["Fight image", (t) => fightImagesOn(t, env)],
+                ].map(([name, daily]) => ({ name, previous: false, points: aiPoints(w, (ts) => ts.reduce((s, t) => s + daily(t), 0)) })),
+            }),
+            chart("ai_run_time_per_bucket", (w) => `Median run time ${w.per}`, "line", "seconds", "date", {
+                note: (w) => `From the first model call to the last, in each ${w.bucket}. ${AI_SINCE}`,
+                definition: (w) => `How long half of the finished runs of each workflow took in each ${w.bucket}, from the start of the first model call to the end of the last. Failed runs are left out. ${AI_SINCE}`,
+                example: (r) => { const n = r.at("Portrait"); return n === undefined ? null : `Half of the portraits took less than ${r.format(n)} ${r.when}.`; },
+                gen: (w) => [["Portrait", 44], ["Fitness set", 48], ["Names and lines", 9], ["Prompt check", 3], ["Fight image", 58]]
+                    .map(([name, base]) => ({ name, previous: false, points: aiPoints(w, (ts) => base * (0.92 + 0.16 * noise(`rt${name}`, ts[ts.length - 1]))) })),
+            }),
+            chart("ai_step_time_per_bucket", (w) => `Median model call time ${w.per}`, "line", "seconds", "date", {
+                note: (w) => `Drawings, text answers and the first token of text, in each ${w.bucket}. ${AI_SINCE}`,
+                definition: (w) => `How long half of the model calls took in each ${w.bucket}: a whole drawing, a whole text answer, and the wait for the first token of a text answer. ${AI_SINCE}`,
+                example: (r) => { const n = r.at("Drawing"); return n === undefined ? null : `Half of the drawings took less than ${r.format(n)} ${r.when}.`; },
+                gen: (w) => [["Drawing", 39], ["Text answer", 2.6], ["Text first token", 0.9]]
+                    .map(([name, base]) => ({ name, previous: false, points: aiPoints(w, (ts) => base * (0.9 + 0.2 * noise(`st${name}`, ts[ts.length - 1]))) })),
+            }),
+        ] },
     ];
-    const SECTION_TITLES = Object.fromEntries(SECTIONS.map((s) => [s.id, s.id[0].toUpperCase() + s.id.slice(1)]));
+    const SECTION_TITLES = Object.fromEntries(SECTIONS.map((s) => [s.id, s.id === "ai" ? "AI" : s.id[0].toUpperCase() + s.id.slice(1)]));
     // Signup cohorts, newest first: W0 is 100%, then each later week keeps fewer people.
     function cohorts(prefix, count, letter, spanDays, env) {
         const today = startOfToday();
@@ -10356,7 +10431,7 @@
             render();
         }, delay);
     }
-    action("adServer", (value, ctx) => { ctx.ui.adServer = value; ctx.ui.adRows = 10; startLoad(ctx.ui); });
+    action("adServer", (value, ctx) => { ctx.ui.adServer = value; ctx.ui.adRows = {}; startLoad(ctx.ui); });
     action("adSection", (value, ctx) => { ctx.ui.adSection = value; startLoad(ctx.ui); });
     action("adTimeframe", (value, ctx) => { ctx.ui.adTimeframe = value; startLoad(ctx.ui); });
     action("adBucket", (value, ctx) => { ctx.ui.adBucket = value; startLoad(ctx.ui); });
@@ -10385,7 +10460,7 @@
             const dim = ui.adLoaded !== requestOf(ui);
             const trendGroup = trends.length ? groupTitle("Over time") + seg(TIMEFRAMES.map(([v, t]) => [v, t]), ui.adTimeframe, "adTimeframe") + seg(GRANULARITIES, ui.adBucket, "adBucket") + trends.map((c) => chartCard(c, dim)).join("") : "";
             const breakdownGroup = breakdowns.length ? groupTitle("Breakdowns") + breakdowns.map((c) => chartCard(c, false)).join("") : "";
-            groups = `<div class="ad-grid">${shown.cards.map(tile).join("")}</div>${shown.charts[0]?.xKind === "date" ? trendGroup + breakdownGroup : breakdownGroup + trendGroup}${ui.adSection === "users" ? adminTable(ui) : ""}`;
+            groups = `<div class="ad-grid">${shown.cards.map(tile).join("")}</div>${shown.charts[0]?.xKind === "date" ? trendGroup + breakdownGroup : breakdownGroup + trendGroup}${ui.adSection === "users" ? adminTable(ui) : ui.adSection === "ai" ? aiTables(ui) : ""}`;
         }
         return `<div class="ad-dash">
             ${FF.card(`<div class="hstack" style="gap:13px"><span class="ad-gift">${icon("gift")}</span><span class="grow vstack" style="gap:2px"><span class="t-heading">Free characters</span><span class="t-caption c-2">${esc(`${referrals.total} from referrals. Tap to see them or give some.`)}</span></span><span class="ad-row-chev">${icon("chevron.right")}</span></div>`, { on: "present:adminFreeCharacters" })}
@@ -10441,22 +10516,88 @@
             ] };
         });
     }
-    function adminTable(ui) {
-        const all = newestUsers();
-        const rows = all.slice(0, ui.adRows || 10);
+    // AdminTableCard: "10 of 35", the rows, then "Show 20 more" until every row shows.
+    function tableCard(ui, id, title, description, columns, all, first = 10, pageSize = 20) {
+        const rows = all.slice(0, (ui.adRows ??= {})[id] || first);
         const left = all.length - rows.length;
         const cell = (c) => `<td class="${c.muted ? "c-2" : ""}${c.bold ? " ad-bold" : ""}">${esc(c.text)}</td>`;
         return FF.card(`<div class="vstack" style="gap:12px">
-            <div class="vstack" style="gap:4px"><span class="t-heading">Newest users</span><span class="t-caption c-2">${esc(`${rows.length} of ${all.length}. Newest signup first. Deleted accounts are left out. Times are Paris time.`)}</span></div>
-            <div class="ad-table"><table><thead><tr>${USER_COLUMNS.map((title) => `<th>${esc(title)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.cells.map(cell).join("")}</tr>`).join("")}</tbody></table></div>
-            ${left > 0 ? `<div>${FF.button(`Show ${Math.min(20, left)} more`, { kind: "secondary", size: "small", on: "adMoreRows", busy: ui.adRowsBusy, enabled: !ui.adRowsBusy })}</div>` : ""}
+            <div class="vstack" style="gap:4px"><span class="t-heading">${esc(title)}</span><span class="t-caption c-2">${esc(`${rows.length} of ${all.length}. ${description}`)}</span></div>
+            <div class="ad-table"><table><thead><tr>${columns.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.cells.map(cell).join("")}</tr>`).join("")}</tbody></table></div>
+            ${left > 0 ? `<div>${FF.button(`Show ${Math.min(pageSize, left)} more`, { kind: "secondary", size: "small", on: `adMoreRows:${id}:${first}:${pageSize}`, busy: ui.adRowsBusy === id, enabled: !ui.adRowsBusy })}</div>` : ""}
         </div>`, { padding: 16 });
     }
-    action("adMoreRows", (_, ctx) => {
-        ctx.ui.adRowsBusy = true;
+    const adminTable = (ui) => tableCard(ui, "newest_users", "Newest users", "Newest signup first. Deleted accounts are left out. Times are Paris time.", USER_COLUMNS, newestUsers());
+    action("adMoreRows", (arg, ctx) => {
+        const [id, first, size] = arg.split(":");
+        ctx.ui.adRowsBusy = id;
         render();
-        setTimeout(() => { ctx.ui.adRowsBusy = false; ctx.ui.adRows = (ctx.ui.adRows || 10) + 20; render(); }, 500);
+        setTimeout(() => { ctx.ui.adRowsBusy = null; ctx.ui.adRows[id] = (ctx.ui.adRows[id] || Number(first)) + Number(size); render(); }, 500);
     });
+
+    // The AI section's tables, by the server's aiTables: models, steps, people, then every model call by run.
+    function aiTables(ui) {
+        const cell = (text, bold = false) => ({ text: text ?? "-", muted: text == null, bold });
+        const money = (v) => cell(v == null ? null : readable(v, "usd"));
+        const secs = (ms) => cell(ms == null ? null : `${(ms / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} s`);
+        const num = (v) => cell(v == null ? null : Number(v).toLocaleString("en-US"));
+        const since = "Model calls are logged from 20 Oct 2026.";
+        const models = [
+            ["openai/gpt-image-2.5-sunburst", 1184, 9, 38900, 51200, null, 3012000, 2079000, 1146, 2.64, 82.41],
+            ["anthropic/claude-opus-5.5", 214, 1, 8700, 12400, 1900, 391000, 98000, 0, 4.18, 4.18],
+            ["anthropic/claude-fable-5.1", 162, 0, 11200, 15800, 2400, 498000, 61000, 0, 2.07, 2.07],
+            ["anthropic/claude-haiku-5.5", 341, 2, 2900, 4100, 600, 359000, 70000, 0, 0.07, 0.07],
+            ["z-ai/glm-5.3-flash", 401, 0, 1200, 1900, 500, 502000, 22000, 0, 0.03, 0.03],
+            ["google/gemini-2.5-flash", 142, 0, 2100, 2900, 1800, 86000, 11000, 0, 0.02, 0.02],
+        ].map(([m, calls, failed, med, slow, first, tin, tout, azure, paid, cost]) => ({ id: m, cells: [cell(m, true), num(calls), num(failed), secs(med), secs(slow), secs(first), num(tin), num(tout), num(azure), money(paid), money(cost)] }));
+        const steps = [
+            ["fitness: Draw strong", "openai/gpt-image-2.5-sunburst", 142, 1, 37800, 49100, 0.0698],
+            ["fitness: Draw soft", "openai/gpt-image-2.5-sunburst", 142, 2, 38400, 50300, 0.0697],
+            ["fitness: Draw resting", "openai/gpt-image-2.5-sunburst", 142, 0, 39900, 51800, 0.0695],
+            ["fitness: Draw fit", "openai/gpt-image-2.5-sunburst", 142, 1, 37200, 48800, 0.0697],
+            ["fitness: Draw average", "openai/gpt-image-2.5-sunburst", 142, 0, 38100, 49900, 0.0695],
+            ["avatar: Draw the avatar", "openai/gpt-image-2.5-sunburst", 429, 3, 40600, 52100, 0.0693],
+            ["trail: Draw the runners", "openai/gpt-image-2.5-sunburst", 151, 2, 46200, 61900, 0.0412],
+            ["companionLines: Write names and lines", "anthropic/claude-opus-5.5", 214, 1, 8700, 12400, 0.0195],
+            ["trail: Count the runners", "anthropic/claude-fable-5.1", 151, 0, 11100, 15700, 0.0128],
+            ["promptCheck: Check the description", "anthropic/claude-haiku-5.5", 341, 2, 2900, 4100, 0.0002],
+            ["avatar: Clean the description", "z-ai/glm-5.3-flash", 401, 0, 1200, 1900, 0.0001],
+            ["fitness: List the signature items", "google/gemini-2.5-flash", 142, 0, 2100, 2900, 0.0001],
+        ].map(([label, m, calls, failed, med, slow, per]) => ({ id: label, cells: [cell(label, true), cell(m), num(calls), num(failed), secs(med), secs(slow), money(per), money(per * calls)] }));
+        const people = ["leo", "nina_pet", "sam_ber", "theo_dur", "ivy_lau", "alex", "camille_sim", "hugo_mic", "lea_gar", "jules_rou", "manon_dav", "ines_ber"]
+            .map((handle, i) => {
+                const bought = [3, 2, 2, 1, 1, 1, 1, 0, 1, 0, 0, 0][i], free = [0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0][i];
+                const requests = (bought + free) * 6 + [4, 3, 2, 2, 1, 2, 1, 2, 1, 2, 3, 1][i];
+                return { id: handle, cells: [cell(`@${handle}`, true), num(requests), num(i % 4 === 3 ? 1 : 0), money((bought + free) * 0.61 + requests * 0.0002), num(bought), num(free)] };
+            });
+        const runs = [["avatar", ["Clean the description", "z-ai/glm-5.3-flash", "Wafer", 1165, 547, "1,253 / 54", 0.0001], ["Draw the avatar", "openai/gpt-image-2.5-sunburst", "Azure Sweden Central", 40647, null, "2,514 / 1,756", 0.0691]],
+            ["fitness", ["List the signature items", "google/gemini-2.5-flash", "Google AI Studio", 2182, 1858, "606 / 79", 0.0001], ...["resting", "soft", "average", "fit", "strong"].map((stage, k) => [`Draw ${stage}`, "openai/gpt-image-2.5-sunburst", `Azure ${["Poland Central", "Sweden Central", "East US 2", "West US 3", "UAE North"][k]}`, 34694 + k * 1300, null, "2,548 / 1,756", 0.0695])],
+            ["promptCheck", ["Check the description", "anthropic/claude-haiku-5.5", "Claude Platform on AWS", 3108, 610, "1,054 / 205", 0.0002]],
+            ["companionLines", ["Write names and lines", "anthropic/claude-opus-5.5", "Anthropic", 8712, 1904, "1,826 / 412", 0.0195]],
+            ["trail", ["Keep the scene in scope", "z-ai/glm-5.3-flash", "Wafer", 980, 412, "640 / 61", 0.0001], ["Draw the runners", "openai/gpt-image-2.5-sunburst", "Azure Poland Central", 46210, null, "3,102 / 1,372", 0.0412], ["Count the runners", "anthropic/claude-fable-5.1", "Anthropic", 11105, 2410, "3,066 / 377", 0.0128]]];
+        const calls = [];
+        for (let n = 0; n < 9; n++) {
+            const [workflow, ...run] = runs[n % runs.length];
+            const id = `wrun_01M5${String(9137 + n * 211).padStart(4, "0")}XQ${n}K`;
+            const handle = workflow === "trail" ? null : ["leo", "nina_pet", "sam_ber", "ivy_lau"][n % 4];
+            const start = Date.now() - (n * 23 + 4) * 60000;
+            run.forEach(([step, m, on, ms, first, tokens, cost], k) => {
+                const at = new Date(start + k * 2200);
+                const time = `${at.getDate()} ${MONTHS[at.getMonth()]}, ${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}:${String(at.getSeconds()).padStart(2, "0")}`;
+                calls.push({ id: `${id}:${k}`, cells: [cell(id.slice(-8), true), cell(time), cell(workflow), cell(step), num(1), cell(m), cell(on), { text: "Done", muted: false, bold: false }, secs(ms), secs(first), cell(tokens), money(cost), cell(handle && `@${handle}`), cell(null)] });
+            });
+        }
+        return [
+            tableCard(ui, "ai_models", "Models, last 30 days", `Every model FitFight called in the last 30 days, the highest cost first. ${since}`,
+                ["Model", "Calls", "Failed", "Median time", "Slowest 10%", "First token", "Tokens in", "Tokens out", "On Azure", "Paid", "Cost"], models),
+            tableCard(ui, "ai_steps", "Steps, last 30 days", `Every step of every workflow in the last 30 days, the most spent first. ${since}`,
+                ["Step", "Model", "Calls", "Failed", "Median time", "Slowest 10%", "Per call", "Cost"], steps),
+            tableCard(ui, "ai_people", "People, last 30 days", `Everyone who asked for AI in the last 30 days, the most spent first. Fight images belong to no one, so they are left out. ${since}`,
+                ["Person", "Requests", "Failed", "Cost", "Bought", "Free"], people),
+            tableCard(ui, "ai_calls", "Every model call", "Newest run first, then each run's calls in order: the trace of what each request did. Times are Paris time.",
+                ["Run", "Started", "Workflow", "Step", "Try", "Model", "Ran on", "Status", "Time", "First token", "Tokens", "Cost", "Person", "Error"], calls, 20, 50),
+        ].join("");
+    }
 
     // Profile > Dashboard with the Admin tab open (the Steps, Fights and Sports tabs belong to the profile area).
     screen("adminDashboard", {
@@ -10955,6 +11096,7 @@
         ["Dashboard, Admin tab", "#you/adminDashboard", { ...A, note: "Profile > Dashboard > Admin" }],
         ["Admin tab, Staging", "#you/adminDashboard?server=staging", A],
         ["Users tab: newest users table", "#you/adminDashboard?section=users", { ...A, note: "Show 20 more; the handle stays while the table scrolls" }],
+        ["AI tab: spend, times, models and every model call", "#you/adminDashboard?section=ai", { ...A, note: "Four tables after the charts; Every model call is the trace of each run" }],
         ["Admin tab, loading", "#you/adminDashboard?state=loading", { ...A, note: "Refresh finishes the load" }],
         ["Admin tab, not the admin", "#you/adminDashboard?state=error", { ...A, note: "Retry loads it" }],
         ["Card page", "#you/adminDashboard/adminDetail?metric=total_users", A],

@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { readBlendWorkflowRun, startBlendWorkflow } from "@/lib/blend/client";
+import { readAiWorkflowRun, startAiWorkflow } from "@/lib/ai/runner";
 import { fightImageRunners, judgeFightImage, planFightImage } from "@/lib/domain/fight-images/plan";
 import { renderReferenceSheet } from "@/lib/domain/fight-images/reference-sheet";
 import { readCompanionLabel } from "@/lib/supabase/queries/custom-characters-supabase-query";
@@ -15,7 +15,8 @@ import {
 } from "@/lib/supabase/queries/fight-images-supabase-query";
 import type { CompanionLabelRow } from "@/lib/types/ai/custom-character";
 import { aiImageUrlSchema } from "@/lib/types/ai/workflow";
-import { fightImageConfiguration, type FightImageJobRow } from "@/lib/types/fight-images/fight-image";
+import { blendOutputSchema } from "@/lib/types/blend/workflow";
+import { fightImageConfiguration, fightImageOutputSchema, type FightImageJobRow } from "@/lib/types/fight-images/fight-image";
 
 const TRAIL_SCENE =
     "The runners jog together along the trail from left to right, relaxed and happy, some chatting, one or two pushing a little harder.";
@@ -37,14 +38,14 @@ export const fightImageDependencies = {
         // 1200 px fills a phone at 3x; quality 90 looks the same as the PNG at about a ninth of the size.
         return sharp(Buffer.from(await response.arrayBuffer())).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 90 }).toBuffer();
     },
-    start: (workflowId: string, inputs: Record<string, unknown>) => startBlendWorkflow({ workflowId }, inputs),
-    read: (workflowId: string, runId: string) => readBlendWorkflowRun({ workflowId, runId }),
+    start: (workflowId: string, inputs: Record<string, unknown>) => startAiWorkflow({ workflowId }, inputs),
+    read: (workflowId: string, runId: string) => readAiWorkflowRun({ workflowId, runId }),
     now: () => Date.now(),
 };
 
 /**
  * One pass of fight group images, run by the reconcile cron: open images for fights whose runners changed,
- * settle finished Blend runs (checking every runner is drawn and faces right, retrying up to three times),
+ * settle finished runs (checking every runner is drawn and faces right, retrying up to three times),
  * copy ready images to WebP, then start due images while time is left. Stops at deadline (a performance.now() value).
  */
 export async function advanceFightGroupImages(deadline: number, deps = fightImageDependencies) {
@@ -69,7 +70,7 @@ export async function advanceFightGroupImages(deadline: number, deps = fightImag
     if (!fightImageConfiguration.enabled) return summary;
     summary.queued = await deps.enqueue();
 
-    // NOTE: one start renders, uploads and calls Blend (up to ~15 s); leave room so maxDuration never cuts it off.
+    // NOTE: one start renders and uploads a sheet, then starts a run (up to ~15 s); leave room for maxDuration.
     while (performance.now() < deadline - 20_000) {
         const claimed = await deps.claim();
         if (!claimed) break;
@@ -88,15 +89,11 @@ export async function advanceFightGroupImages(deadline: number, deps = fightImag
                 plan.layout === "trail"
                     ? fightImageConfiguration.trail.workflowId
                     : fightImageConfiguration.raceStart.workflowId;
-            // NOTE: Blend sends a bare URL to its LLM nodes as application/octet-stream; a typed file keeps the PNG type.
-            const portraits = [
-                { id: sheetUrl, name: "sheet-1.png", url: sheetUrl, size: 0, mimeType: "image/png", extension: "png", mediaCategory: "image" },
-            ];
             const inputs =
                 plan.layout === "trail"
-                    ? { character_portraits: portraits, cast_roster: plan.roster, scene: TRAIL_SCENE }
+                    ? { portraits: [sheetUrl], cast_roster: plan.roster, scene: TRAIL_SCENE }
                     : {
-                          character_portraits: portraits,
+                          portraits: [sheetUrl],
                           cast_roster: plan.roster,
                           crowd_size: String(plan.crowdSize),
                           crowd_companions: plan.crowdCompanions,
@@ -126,7 +123,7 @@ async function settleRun(
 ): Promise<"ready" | "retried" | "failed" | null> {
     const stale = deps.now() - job.updated_at.getTime() > fightImageConfiguration.runTimeoutMinutes * 60_000;
     if (!job.run_id || !job.workflow_id || !job.inputs || !job.layout || !job.runners) {
-        // The start was interrupted before Blend confirmed a run; give it the timeout to finish recording.
+        // The start was interrupted before a run was confirmed; give it the timeout to finish recording.
         if (!stale) return null;
         await deps.finish(job.id, {
             runId: null,
@@ -138,7 +135,7 @@ async function settleRun(
         });
         return "failed";
     }
-    // An unreadable run (Blend down, bad output) waits like an unfinished one instead of stopping every other image.
+    // An unreadable run (provider down, bad output) waits like an unfinished one instead of stopping every other image.
     const run = await deps.read(job.workflow_id, job.run_id).then(
         (result) => result.data,
         () => null,
@@ -152,10 +149,14 @@ async function settleRun(
     } else if (run.status !== "completed") {
         problems = [`run ${run.status}`];
     } else {
-        const image = run.output?.group_photo?.[0]?.parts.find((part) => part.type === "image");
-        const text = run.output?.count_check?.[0]?.parts.find((part) => part.type === "text");
-        imageUrl = image && "url" in image && aiImageUrlSchema.safeParse(image.url).success ? image.url : null;
-        check = text && "text" in text ? text.text : null;
+        // A FitFight workflow returns { image_url, check }; a Blend run, started before 20 Oct 2026, labelled items.
+        const own = fightImageOutputSchema.safeParse(run.output);
+        const blend = blendOutputSchema.safeParse(run.output);
+        const image = blend.success ? blend.data.group_photo?.[0]?.parts.find((part) => part.type === "image") : undefined;
+        const text = blend.success ? blend.data.count_check?.[0]?.parts.find((part) => part.type === "text") : undefined;
+        const url = own.success ? own.data.image_url : image && "url" in image ? image.url : null;
+        imageUrl = url !== null && aiImageUrlSchema.safeParse(url).success ? url : null;
+        check = own.success ? own.data.check : text && "text" in text ? text.text : null;
         const expected = planFightImage(job.runners).expected;
         problems = imageUrl ? judgeFightImage(job.layout, expected, check ?? "").problems : ["no image in the result"];
     }

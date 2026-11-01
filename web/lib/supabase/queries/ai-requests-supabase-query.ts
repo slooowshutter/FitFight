@@ -434,8 +434,7 @@ export async function claimAiRequestPoll(
         const [row] = await sql`
             update private.ai_requests set lease_token = ${randomUUID()},
                 lease_expires_at = clock_timestamp() + interval '15 seconds',
-                next_poll_at = clock_timestamp() + ${request.workflow === "companion_lines" ? "10 seconds"
-                    : request.workflow === "prompt_check" ? "5 seconds" : "3 seconds"}::interval
+                next_poll_at = clock_timestamp() + ${request.workflow === "companion_lines" ? "5 seconds" : "3 seconds"}::interval
             where id = ${requestId} and user_id = ${userId}
                 and status in ('pending', 'running') and next_poll_at <= clock_timestamp()
                 and (lease_expires_at is null or lease_expires_at <= clock_timestamp())
@@ -525,13 +524,11 @@ export async function finishAiRequestAttempt(
         }
         // NOTE: the response goes in as text; postgres.js would encode a string bound to a jsonb parameter a second time.
         const providerResponse = update.providerResponse === undefined ? null : JSON.stringify(update.providerResponse);
-        // Every read spends the global Blend budget. A suggestion batch takes 40 to 55 s: its first read waits 30 s
-        // after the start, then one every 10 s. A prompt check takes about 45 s and its owner is waiting: 20 s, then 5 s.
+        // Every read spends the global status budget. A suggestion batch takes about 10 s: its first read waits 8 s
+        // after the start, then one every 5 s. A prompt check takes about 3 s and its owner is waiting: every 3 s.
         const pollDelay = request.workflow === "companion_lines"
-            ? request.status === "starting" ? "30 seconds" : "10 seconds"
-            : request.workflow === "prompt_check"
-              ? request.status === "starting" ? "20 seconds" : "5 seconds"
-              : "3 seconds";
+            ? request.status === "starting" ? "8 seconds" : "5 seconds"
+            : "3 seconds";
         const [row] = await sql`
             update private.ai_requests set
                 credit_state = ${creditState},

@@ -6,13 +6,14 @@ import { z } from "zod";
  */
 export const fightImageConfiguration = {
     enabled: true,
-    trail: { workflowId: "6a08d9c0-8520-46da-a2e4-129a23f9154a" },
-    raceStart: { workflowId: "963f78bf-b8af-46f7-a89f-650d41224e0e" },
+    // FitFight's own workflows (web/lib/ai/workflows.ts). They replaced Blend's 6a08d9c0 and 963f78bf on 20 Oct 2026.
+    trail: { workflowId: "fitfight:trail" },
+    raceStart: { workflowId: "fitfight:race_start" },
     /** A change waits this long so joins and companion changes close together make one image. */
     waitMinutes: 60,
     /** Images started per fight in any rolling 24 hours. */
     perFightPerDay: 2,
-    /** Blend runs per image before it is marked failed; each retry is a new run with the same inputs. */
+    /** Runs per image before it is marked failed; each retry is a new run with the same inputs. */
     maxAttempts: 3,
     /** Images started across the whole app in any rolling 7 days, a cost ceiling Marc set on 16 Oct 2026. */
     globalPerWeek: 1000,
@@ -45,7 +46,10 @@ export const fightImageRunnerSchema = z.object({
     artUrl: z.string().url().nullable(),
 });
 
-/** What the Blend count check returns. Extra fields are ignored. */
+/** What the FitFight trail and race start workflows return: the picture and the count check's text. */
+export const fightImageOutputSchema = z.object({ image_url: z.string(), check: z.string() });
+
+/** What the count check returns. Extra fields are ignored. */
 export const fightImageCheckSchema = z.object({
     total: z.coerce.number().int(),
     counts: z.array(z.object({ name: z.string(), count: z.coerce.number().int() })),
@@ -87,6 +91,7 @@ export type FightImageLayout = z.infer<typeof fightImageLayoutSchema>;
 export type CompanionKind = z.infer<typeof companionKindSchema>;
 export type FightImageRunner = z.infer<typeof fightImageRunnerSchema>;
 export type FightImageCheck = z.infer<typeof fightImageCheckSchema>;
+export type FightImageOutput = z.infer<typeof fightImageOutputSchema>;
 export type FightImageJobRow = z.infer<typeof fightImageJobRowSchema>;
 export type FightImageCastRow = z.infer<typeof fightImageCastRowSchema>;
 export type FightImageWebpSourceRow = z.infer<typeof fightImageWebpSourceRowSchema>;

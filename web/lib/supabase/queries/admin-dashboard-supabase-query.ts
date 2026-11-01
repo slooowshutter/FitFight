@@ -25,6 +25,7 @@ import {
     type AdminDashboardWindow,
 } from "@/lib/types/admin/admin-dashboard";
 import { adminUsersCountRowSchema, adminUsersSchema, type AdminUsers } from "@/lib/types/admin/admin-users";
+import { aiCallTableRowSchema, aiStepTableRowSchema } from "@/lib/types/admin/admin-ai";
 
 /**
  * The last `span` days, rolling to now, against the `span` days before them; rows expose `at`.
@@ -179,8 +180,13 @@ export function stepHistory(sql: Sql, today: string, floor: AdminDashboardQueryF
     `;
 }
 
-/** "8,234", "42%", "1 day", "1.2 seconds": a number in an example sentence, in English. */
+/** "8,234", "42%", "1 day", "1.2 seconds", "$0.0693": a number in an example sentence, in English. */
 function readable(value: number, unit: AdminDashboardUnit): string {
+    // Cents hide a model call's cost, so dollars under 1 keep four decimals; from $100, whole dollars.
+    if (unit === "usd") {
+        const size = Math.abs(value);
+        return `${value < 0 ? "-" : ""}$${size.toLocaleString("en-US", { minimumFractionDigits: size < 100 ? 2 : 0, maximumFractionDigits: size < 1 ? 4 : size < 100 ? 2 : 0 })}`;
+    }
     const digits = value.toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
     if (unit === "percent") return `${digits}%`;
     if (unit === "count" || unit === "steps") return digits;
@@ -2872,6 +2878,193 @@ function definitions(
                 ],
             };
         }
+        case "ai": {
+            // NOTE: FitFight's own AI workflows log every model call in private.ai_steps from 20 Oct 2026. Blend
+            // runs before that have no step rows, so spend, times and models start then.
+            const since = "Model calls are logged from 20 Oct 2026, when FitFight stopped using Blend.";
+            const name = sql`case s.workflow when 'avatar' then 'Portrait' when 'fitness' then 'Fitness set'
+                when 'companionLines' then 'Names and lines' when 'promptCheck' then 'Prompt check'
+                when 'groupPhoto' then 'Group photo' when 'trail' then 'Fight image' when 'raceStart' then 'Fight image'
+                else s.workflow end`;
+            const steps = sql`select s.*, s.started_at as at from private.ai_steps as s`;
+            // A count call can finish but reject the picture. Only the saved ready image identifies the
+            // run that passed judgment, including when an earlier run of the same image was rejected.
+            const runs = sql`
+                select s.run_id, ${name} as series, min(s.started_at) as at,
+                    extract(epoch from max(s.started_at + s.duration_ms * interval '1 millisecond') - min(s.started_at)) as seconds,
+                    coalesce(max(r.status) = 'completed', s.workflow in ('trail', 'raceStart') and exists (
+                        select 1 from private.fight_group_images as image
+                        where image.run_id = s.run_id and image.status = 'ready'
+                    )) as finished
+                from private.ai_steps as s
+                left join private.ai_requests as r on r.run_handle ->> 'runId' = s.run_id
+                group by s.run_id, s.workflow
+            `;
+            const requests = sql`select r.*, r.created_at as at from private.ai_requests as r`;
+            const start = new Date(w.now.getTime() - 30 * 86_400_000);
+            const previousStart = new Date(w.now.getTime() - 60 * 86_400_000);
+            const medianRun = (workflow: string) => eventCard(
+                sql, w, 30, sql`select * from (${runs}) as run where run.series = ${workflow} and run.finished`,
+                sql`percentile_cont(0.5) within group (order by e.seconds)`,
+            );
+            return {
+                cards: [
+                    {
+                        id: "ai_spend", title: "AI money spent, 30 days", unit: "usd", better: false,
+                        note: "What OpenRouter charged: every text call, and drawings Azure had no room for. Last 30 days vs the 30 before.",
+                        definition: `Money OpenRouter charged in the last 30 days, up to now, compared with the 30 days before: every text call (cleaning, signature items, names and lines, prompt checks, runner counts) and every drawing that Azure could not take. Retried calls count, because each one is paid. Drawings on Azure use credits, in the next card. ${since}`,
+                        example: (r) => `OpenRouter charged FitFight ${r.format(r.value)} in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`select * from (${steps}) as s where s.provider = 'openrouter'`, sql`sum(e.cost_usd)`),
+                    },
+                    {
+                        id: "ai_azure_credits", title: "Azure credits used, 30 days", unit: "usd", better: false,
+                        note: "Drawings on Azure, at OpenAI's list price. Last 30 days vs the 30 before.",
+                        definition: `What the drawings made on Azure in the last 30 days, up to now, are worth at OpenAI's list price for their tokens, compared with the 30 days before. They are paid with Azure credits, not money. Retried drawings count. ${since}`,
+                        example: (r) => `Drawings on Azure used ${r.format(r.value)} of credits in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`select * from (${steps}) as s where s.provider = 'azure'`, sql`sum(e.cost_usd)`),
+                    },
+                    {
+                        id: "ai_azure_share", title: "Drawings on Azure, 30 days", unit: "percent", better: true,
+                        note: "The rest went to OpenRouter because every Azure region was full or down.",
+                        definition: "Of the drawings finished in the last 30 days, the share drawn on Azure, compared with the 30 days before. A drawing goes to OpenRouter, and costs money, only when all five Azure regions have used their drawings for the minute or failed.",
+                        example: (r) => `${r.format(r.value)} of the drawings in the last 30 days were drawn on Azure${r.against("in the 30 days before")}.`,
+                        query: sql`
+                            select 100.0 * count(*) filter (where e.provider = 'azure' and e.at >= ${start})
+                                    / nullif(count(*) filter (where e.at >= ${start}), 0) as value,
+                                100.0 * count(*) filter (where e.provider = 'azure' and e.at >= ${previousStart} and e.at < ${start})
+                                    / nullif(count(*) filter (where e.at >= ${previousStart} and e.at < ${start}), 0) as previous
+                            from (${steps}) as e where e.kind = 'image' and e.status = 'completed' and e.at < ${w.now}
+                        `,
+                    },
+                    {
+                        id: "ai_requests", title: "AI requests, 30 days", unit: "count", better: true,
+                        note: "Portraits, fitness sets, names, checks and group photos the app asked for. Fight images not included.",
+                        definition: "Requests the app made in the last 30 days, up to now, compared with the 30 days before: each portrait, fitness set, set of names and lines, prompt check and group photo counts once. Fight images are made by the server, so they are not counted.",
+                        example: (r) => `The app made ${r.count(r.value, "AI request", "AI requests")} in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, requests, sql`count(*)`),
+                    },
+                    {
+                        id: "ai_success", title: "AI success rate, 30 days", unit: "percent", better: true,
+                        note: "Finished requests that completed, last 30 days vs the 30 before.",
+                        definition: "Of the requests made in the last 30 days that have finished, the share that completed with a usable result, compared with the 30 days before. Failed, cancelled and unreadable results count against it. Requests still running are left out.",
+                        example: (r) => `${r.format(r.value)} of the finished AI requests in the last 30 days completed${r.against("in the 30 days before")}.`,
+                        query: sql`
+                            select 100.0 * count(*) filter (where e.status = 'completed' and e.at >= ${start})
+                                    / nullif(count(*) filter (where e.status in ('completed', 'failed', 'cancelled') and e.at >= ${start}), 0) as value,
+                                100.0 * count(*) filter (where e.status = 'completed' and e.at >= ${previousStart} and e.at < ${start})
+                                    / nullif(count(*) filter (where e.status in ('completed', 'failed', 'cancelled')
+                                        and e.at >= ${previousStart} and e.at < ${start}), 0) as previous
+                            from (${requests}) as e where e.at < ${w.now}
+                        `,
+                    },
+                    {
+                        id: "ai_portrait_time", title: "Median portrait time, 30 days", unit: "seconds", better: false,
+                        note: "From the first model call to the drawn picture, last 30 days vs the 30 before.",
+                        definition: `How long half of the portrait runs took in the last 30 days, from the start of the first model call to the end of the drawing, compared with the 30 days before. The app also waits for its next status check. ${since}`,
+                        example: (r) => `Half of the portraits took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`,
+                        query: medianRun("Portrait"),
+                    },
+                    {
+                        id: "ai_fitness_time", title: "Median fitness set time, 30 days", unit: "seconds", better: false,
+                        note: "Five drawings at the same time, last 30 days vs the 30 before.",
+                        definition: `How long half of the fitness sets took in the last 30 days, from the start of the first model call to the end of the last of the five drawings, compared with the 30 days before. ${since}`,
+                        example: (r) => `Half of the fitness sets took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`,
+                        query: medianRun("Fitness set"),
+                    },
+                    {
+                        id: "ai_wait", title: "Median wait before AI starts, 30 days", unit: "seconds", better: false,
+                        note: "From the app's request to the first model call, last 30 days vs the 30 before.",
+                        definition: `How long half of the requests in the last 30 days waited between the app's request and the start of their first model call, compared with the 30 days before. It grows when Vercel queues the workflow. ${since}`,
+                        example: (r) => `Half of the requests started their first model call within ${r.format(r.value)}${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`
+                            select r.created_at as at, extract(epoch from first.at - r.created_at) as seconds
+                            from private.ai_requests as r
+                            join lateral (select min(s.started_at) as at from private.ai_steps as s where s.run_id = r.run_handle ->> 'runId') as first
+                                on first.at is not null
+                        `, sql`percentile_cont(0.5) within group (order by e.seconds)`),
+                    },
+                    {
+                        id: "ai_character_cost", title: "AI cost per character, 30 days", unit: "usd", better: false,
+                        note: "Portraits, poses and names of each character, paid or free. Last 30 days vs the 30 before.",
+                        definition: `The AI cost of the characters people made in the last 30 days, divided by those characters, compared with the 30 days before: money to OpenRouter plus Azure credits at OpenAI's list price. A character's cost is its three portraits, retries, five poses and names and lines. A character sells for EUR 2.99. ${since}`,
+                        example: (r) => `A character cost ${r.format(r.value)} in AI in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: sql`
+                            with characters as (
+                                select r.resource_id, min(r.created_at) as at, sum(s.cost_usd) as cost
+                                from private.ai_requests as r
+                                join private.ai_steps as s on s.run_id = r.run_handle ->> 'runId'
+                                where r.resource_id is not null
+                                group by r.resource_id
+                            )
+                            select avg(cost) filter (where at >= ${start} and at < ${w.now}) as value,
+                                avg(cost) filter (where at >= ${previousStart} and at < ${start}) as previous
+                            from characters
+                        `,
+                    },
+                ],
+                charts: [
+                    {
+                        id: "ai_spend_per_bucket", title: `AI cost ${per}`, kind: "bar", unit: "usd", x: "date",
+                        note: `Money to OpenRouter, and Azure credits at OpenAI's list price. ${since}`,
+                        definition: `The cost of every model call in each ${w.bucket}: money OpenRouter charged, and the Azure credits drawings used, at OpenAI's list price for their tokens. Retried calls count. ${since}`,
+                        example: (r) => {
+                            const money = r.at("OpenRouter");
+                            const credits = r.at("Azure credits");
+                            return money === undefined || credits === undefined ? null
+                                : `FitFight paid OpenRouter ${r.format(money)} and used ${r.format(credits)} of Azure credits ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, sql`
+                            select s.started_at as at, case s.provider when 'azure' then 'Azure credits' else 'OpenRouter' end as series, s.cost_usd
+                            from private.ai_steps as s
+                        `, sql`coalesce(sum(e.cost_usd), 0)`, { series: ["OpenRouter", "Azure credits"] }),
+                    },
+                    {
+                        id: "ai_runs_per_bucket", title: `AI runs ${per}`, kind: "bar", unit: "count", x: "date",
+                        note: since,
+                        definition: `Workflow runs in each ${w.bucket}, by workflow. A paid character makes three portrait runs, then a fitness set and names and lines. ${since}`,
+                        example: (r) => {
+                            const portraits = r.at("Portrait");
+                            return portraits === undefined ? null : `FitFight drew ${r.count(portraits, "portrait", "portraits")} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, runs, sql`count(*)`, {
+                            series: ["Portrait", "Fitness set", "Names and lines", "Prompt check", "Group photo", "Fight image"],
+                        }),
+                    },
+                    {
+                        id: "ai_run_time_per_bucket", title: `Median run time ${per}`, kind: "line", unit: "seconds", x: "date",
+                        note: `From the first model call to the last, in each ${w.bucket}. ${since}`,
+                        definition: `How long half of the finished runs of each workflow took in each ${w.bucket}, from the start of the first model call to the end of the last. Failed runs are left out. ${since}`,
+                        example: (r) => {
+                            const portrait = r.at("Portrait");
+                            return portrait === undefined ? null : `Half of the portraits took less than ${r.format(portrait)} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, sql`select * from (${runs}) as run where run.finished`,
+                            sql`percentile_cont(0.5) within group (order by e.seconds)`, {
+                                gaps: true, series: ["Portrait", "Fitness set", "Names and lines", "Prompt check", "Fight image"],
+                            }),
+                    },
+                    {
+                        id: "ai_step_time_per_bucket", title: `Median model call time ${per}`, kind: "line", unit: "seconds", x: "date",
+                        note: `Drawings, text answers and the first token of text, in each ${w.bucket}. ${since}`,
+                        definition: `How long half of the model calls took in each ${w.bucket}: a whole drawing, a whole text answer, and the wait for the first token of a text answer. ${since}`,
+                        example: (r) => {
+                            const drawing = r.at("Drawing");
+                            return drawing === undefined ? null : `Half of the drawings took less than ${r.format(drawing)} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, sql`
+                            select s.started_at as at, case s.kind when 'image' then 'Drawing' else 'Text answer' end as series,
+                                s.duration_ms / 1000.0 as seconds
+                            from private.ai_steps as s where s.status = 'completed'
+                            union all
+                            select s.started_at, 'Text first token', s.first_token_ms / 1000.0
+                            from private.ai_steps as s where s.status = 'completed' and s.first_token_ms is not null
+                        `, sql`percentile_cont(0.5) within group (order by e.seconds)`, {
+                            gaps: true, series: ["Drawing", "Text answer", "Text first token"],
+                        }),
+                    },
+                ],
+            };
+        }
     }
 }
 
@@ -2981,7 +3174,7 @@ export async function readAdminDashboard(
         environment,
         bucket: w.bucket,
         generated_at: now.toISOString(),
-        sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
+        sections: adminDashboardSectionValues.map((id) => ({ id, title: id === "ai" ? "AI" : id[0].toUpperCase() + id.slice(1) })),
         cards: cardTiles,
         charts: chartTiles,
         tables,
@@ -3135,7 +3328,193 @@ const adminTables: (Omit<AdminDashboardTable, "total" | "rows" | "note"> & {
             };
         },
     },
+    ...aiTables(),
 ];
+
+/**
+ * The AI section's tables: by model, by step, by person, and every model call with its run, newest first.
+ * Each reads the last 30 days of private.ai_steps except the call list, which pages through all of them.
+ */
+function aiTables(): typeof adminTables {
+    const cell = (text: string | null, bold = false) => ({ text: text ?? "-", muted: text === null, bold });
+    const dollars = (value: number | null) => cell(value === null ? null : readable(value, "usd"));
+    const seconds = (ms: number | null) => cell(ms === null ? null : `${(ms / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} s`);
+    const number = (value: number | null) => cell(value === null ? null : value.toLocaleString("en-US"));
+    const since = "Model calls are logged from 20 Oct 2026.";
+    const page = async (rows: Promise<Record<string, unknown>[]>, total: Promise<Record<string, unknown>[]>) => {
+        const [read, [count]] = await Promise.all([rows, total]);
+        return { read, total: Number(count.total) };
+    };
+    return [
+        {
+            id: "ai_models", section: "ai", title: "Models, last 30 days", first: 10, page_size: 20,
+            description: `Every model FitFight called in the last 30 days, the highest cost first. ${since}`,
+            columns: [
+                { title: "Model", definition: "The model the workflow asked OpenRouter for." },
+                { title: "Calls", definition: "Model calls, retries included." },
+                { title: "Failed", definition: "Calls that ended in an error. The workflow may have retried them." },
+                { title: "Median time", definition: "Half of the finished calls took less." },
+                { title: "Slowest 10%", definition: "One finished call in ten took longer." },
+                { title: "First token", definition: "Text only: half of the answers started streaming sooner." },
+                { title: "Tokens in", definition: "Input tokens, words and pictures, of all the calls." },
+                { title: "Tokens out", definition: "Output tokens of all the calls, reasoning included." },
+                { title: "On Azure", definition: "Calls drawn on Azure, paid with credits." },
+                { title: "Paid", definition: "Money OpenRouter charged for the calls it ran." },
+                { title: "Cost", definition: "Money paid plus Azure credits at OpenAI's list price." },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    select s.model as label, count(*)::int as calls, count(*) filter (where s.status = 'failed')::int as failed,
+                        percentile_cont(0.5) within group (order by s.duration_ms) filter (where s.status = 'completed') as median_ms,
+                        percentile_cont(0.9) within group (order by s.duration_ms) filter (where s.status = 'completed') as slow_ms,
+                        percentile_cont(0.5) within group (order by s.first_token_ms) as first_token_ms,
+                        sum(s.input_tokens)::bigint as tokens_in, sum(s.output_tokens)::bigint as tokens_out, sum(s.cost_usd) as cost,
+                        count(*) filter (where s.provider = 'azure')::int as azure_calls,
+                        coalesce(sum(s.cost_usd) filter (where s.provider = 'openrouter'), 0) as paid
+                    from private.ai_steps as s where s.started_at >= now() - interval '30 days'
+                    group by s.model order by sum(s.cost_usd) desc nulls last, s.model limit ${limit} offset ${offset}
+                `, database`select count(distinct model) as total from private.ai_steps where started_at >= now() - interval '30 days'`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiStepTableRowSchema.parse(raw);
+                        return { id: row.label, cells: [cell(row.label, true), number(row.calls), number(row.failed),
+                            seconds(row.median_ms), seconds(row.slow_ms), seconds(row.first_token_ms),
+                            number(row.tokens_in), number(row.tokens_out), number(row.azure_calls ?? 0), dollars(row.paid ?? null),
+                            dollars(row.cost)] };
+                    }),
+                };
+            },
+        },
+        {
+            id: "ai_steps", section: "ai", title: "Steps, last 30 days", first: 10, page_size: 20,
+            description: `Every step of every workflow in the last 30 days, the most spent first. ${since}`,
+            columns: [
+                { title: "Step", definition: "The workflow, then the step's name in web/lib/ai/workflows.ts." },
+                { title: "Model", definition: null },
+                { title: "Calls", definition: "Model calls, retries included." },
+                { title: "Failed", definition: "Calls that ended in an error." },
+                { title: "Median time", definition: "Half of the finished calls took less." },
+                { title: "Slowest 10%", definition: "One finished call in ten took longer." },
+                { title: "Per call", definition: "The average cost of one call, Azure credits at OpenAI's list price." },
+                { title: "Cost", definition: "Money to OpenRouter plus Azure credits at OpenAI's list price." },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    select s.workflow || ': ' || s.step as label, min(s.model) as model, count(*)::int as calls,
+                        count(*) filter (where s.status = 'failed')::int as failed,
+                        percentile_cont(0.5) within group (order by s.duration_ms) filter (where s.status = 'completed') as median_ms,
+                        percentile_cont(0.9) within group (order by s.duration_ms) filter (where s.status = 'completed') as slow_ms,
+                        avg(s.cost_usd) as per_call, sum(s.cost_usd) as cost
+                    from private.ai_steps as s where s.started_at >= now() - interval '30 days'
+                    group by s.workflow, s.step order by sum(s.cost_usd) desc nulls last, 1 limit ${limit} offset ${offset}
+                `, database`select count(distinct (workflow, step)) as total from private.ai_steps where started_at >= now() - interval '30 days'`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiStepTableRowSchema.parse(raw);
+                        return { id: row.label, cells: [cell(row.label, true), cell(row.model ?? null), number(row.calls),
+                            number(row.failed), seconds(row.median_ms), seconds(row.slow_ms), dollars(row.per_call ?? null),
+                            dollars(row.cost)] };
+                    }),
+                };
+            },
+        },
+        {
+            id: "ai_people", section: "ai", title: "People, last 30 days", first: 10, page_size: 20,
+            description: `Everyone who asked for AI in the last 30 days, the most spent first. Fight images belong to no one, so they are left out. ${since}`,
+            columns: [
+                { title: "Person", definition: null },
+                { title: "Requests", definition: "Portraits, fitness sets, names and lines, prompt checks and group photos asked for." },
+                { title: "Failed", definition: "Requests that ended failed, cancelled or unreadable." },
+                { title: "Cost", definition: "Their requests' model calls: money to OpenRouter plus Azure credits at OpenAI's list price." },
+                { title: "Bought", definition: "Characters they bought at EUR 2.99 in the last 30 days, refunds left out." },
+                { title: "Free", definition: "Free characters they used in the last 30 days." },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    with asked as (
+                        select r.user_id, count(*)::int as requests,
+                            count(*) filter (where r.status in ('failed', 'cancelled'))::int as failed,
+                            sum((select sum(s.cost_usd) from private.ai_steps as s where s.run_id = r.run_handle ->> 'runId')) as cost
+                        from private.ai_requests as r where r.created_at >= now() - interval '30 days'
+                        group by r.user_id
+                    )
+                    select coalesce('@' || p.handle, 'Deleted account') as label, a.requests as calls, a.failed, a.cost,
+                        (select count(*) from private.custom_character_purchases as c
+                            join private.special_accounts as account on account.id = c.account_id
+                            where account.user_id = a.user_id and c.free_claim_key is null and c.revoked_at is null
+                                and c.created_at >= now() - interval '30 days')::int as bought,
+                        (select count(*) from private.custom_character_purchases as c
+                            join private.special_accounts as account on account.id = c.account_id
+                            where account.user_id = a.user_id and c.free_claim_key is not null
+                                and c.created_at >= now() - interval '30 days')::int as free
+                    from asked as a left join public.profiles as p on p.user_id = a.user_id
+                    order by a.cost desc nulls last, a.requests desc, 1 limit ${limit} offset ${offset}
+                `, database`select count(distinct user_id) as total from private.ai_requests where created_at >= now() - interval '30 days'`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiStepTableRowSchema.parse(raw);
+                        return { id: row.label, cells: [cell(row.label, true), number(row.calls), number(row.failed),
+                            dollars(row.cost), number(row.bought ?? 0), number(row.free ?? 0)] };
+                    }),
+                };
+            },
+        },
+        {
+            id: "ai_calls", section: "ai", title: "Every model call", first: 20, page_size: 50,
+            description: "Newest run first, then each run's calls in order: the trace of what each request did. Times are Paris time.",
+            columns: [
+                { title: "Run", definition: "The workflow run; its calls share this id. Its end matches the run in Vercel." },
+                { title: "Started", definition: null },
+                { title: "Workflow", definition: null },
+                { title: "Step", definition: null },
+                { title: "Try", definition: "1 for the first attempt; a retried call shows 2 or more." },
+                { title: "Model", definition: null },
+                { title: "Ran on", definition: "The Azure region, or the company behind OpenRouter that answered." },
+                { title: "Status", definition: null },
+                { title: "Time", definition: "From the call to the full answer." },
+                { title: "First token", definition: "Text only: from the call to the first streamed token." },
+                { title: "Tokens", definition: "Input, then output tokens." },
+                { title: "Cost", definition: "What OpenRouter charged, or the Azure credits at OpenAI's list price." },
+                { title: "Person", definition: "Who asked for the request. Fight images belong to no one." },
+                { title: "Error", definition: null },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    select s.run_id as label, s.started_at, s.workflow, s.step, s.attempt, s.model, s.upstream, s.status,
+                        s.duration_ms as median_ms, s.first_token_ms, s.input_tokens as tokens_in, s.output_tokens as tokens_out,
+                        s.cost_usd as cost, s.error, p.handle
+                    from private.ai_steps as s
+                    join (select run_id, min(started_at) as run_start from private.ai_steps group by run_id) as run on run.run_id = s.run_id
+                    left join private.ai_requests as r on r.run_handle ->> 'runId' = s.run_id
+                    left join public.profiles as p on p.user_id = r.user_id
+                    order by run.run_start desc, s.run_id, s.started_at limit ${limit} offset ${offset}
+                `, database`select count(*) as total from private.ai_steps`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiCallTableRowSchema.parse(raw);
+                        const at = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+                            timeZone: "Europe/Paris", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+                            second: "2-digit", hourCycle: "h23",
+                        }).formatToParts(row.started_at).map((item) => [item.type, item.value]));
+                        return { id: `${row.label}:${row.step}:${row.attempt}:${row.started_at.toISOString()}`, cells: [
+                            cell(row.label.slice(-8), true),
+                            cell(`${Number(at.day)} ${months[Number(at.month) - 1]}, ${at.hour}:${at.minute}:${at.second}`),
+                            cell(row.workflow), cell(row.step), number(row.attempt), cell(row.model), cell(row.upstream),
+                            { text: row.status === "completed" ? "Done" : "Failed", muted: false, bold: row.status === "failed" },
+                            seconds(row.median_ms), seconds(row.first_token_ms),
+                            cell(row.tokens_in === null ? null : `${row.tokens_in.toLocaleString("en-US")} / ${(row.tokens_out ?? 0).toLocaleString("en-US")}`),
+                            dollars(row.cost), cell(row.handle && `@${row.handle}`), cell(row.error),
+                        ] };
+                    }),
+                };
+            },
+        },
+    ];
+}
 
 /** A page of one table's rows, for its "Show more". */
 export async function readAdminTablePage(

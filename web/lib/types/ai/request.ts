@@ -4,6 +4,7 @@ import { aiCreditStateValues } from "@/lib/types/ai/credits";
 import { aiErrorCodeSchema } from "@/lib/types/ai/error";
 import {
     blendRunHandleSchema,
+    blendRunStateValues,
     blendWorkflowVersionSchema,
 } from "@/lib/types/blend/workflow";
 
@@ -76,7 +77,7 @@ export const aiRequestUpdateSchema = z.object({
     result: z.union([z.record(z.string()), aiCompanionLinesResultSchema, aiPromptCheckResultSchema]).nullable(),
     errorCode: aiErrorCodeSchema.nullable(),
     providerCompletedAt: z.string().datetime({ offset: true }).nullish(),
-    /** Blend's raw run envelope, kept on the row when a run fails, is cancelled, or returns unreadable output. */
+    /** The raw run response, kept on the row when a run fails, is cancelled, or returns unreadable output: Blend's envelope, or a FitFight run's { status }. */
     providerResponse: z.unknown(),
 });
 
@@ -107,6 +108,13 @@ export const aiCallerWindowSchema = z.object({
 });
 
 export type AiAdmissionLimits = z.infer<typeof aiAdmissionLimitsSchema>;
+/** A run as a workflow transport reads it. A FitFight run's output is its workflow's return value. */
+export type AiRunState = {
+    id: string;
+    status: (typeof blendRunStateValues)[number];
+    output?: unknown;
+    completed_at?: string | null;
+};
 export type AiRequestReservation = z.infer<typeof aiRequestReservationSchema>;
 export type AiRequestRecord = z.infer<typeof aiRequestRecordSchema>;
 export type AiRequestUpdate = z.infer<typeof aiRequestUpdateSchema>;

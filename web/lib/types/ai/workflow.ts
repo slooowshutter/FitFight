@@ -9,7 +9,7 @@ export const aiWorkflowValues = ["avatar", "fitness", "group_photo", "companion_
 export const aiWorkflowSchema = z.enum(aiWorkflowValues);
 export const companionLanguageValues = ["en", "fr"] as const;
 const singleLinePattern = /^[^\n\r\u2028\u2029]*$/;
-/** A custom companion's name and line, suggested by Blend or typed by its owner. */
+/** A custom companion's name and line, suggested by the Companion Lines workflow or typed by its owner. */
 export const companionLabelSchema = z.object({
     name: z.string().trim().min(1).max(24).regex(singleLinePattern, "Use one line"),
     line: z.string().trim().min(1).max(60).regex(singleLinePattern, "Use one line"),
@@ -90,6 +90,11 @@ export const createAiRunRequestSchema = z.discriminatedUnion("workflow", [
 export const blendEnvironmentSchema = z.object({
     BLEND_API_KEY: blendApiKeySchema,
 });
+/**
+ * FitFight's own workflows call every model, text and drawing, through OpenRouter. Their own secret name, because
+ * OPENROUTER_API_KEY also turns on the daily statuses, which production keeps off (docs/app-store/privacy-compliance.md).
+ */
+export const aiRunnerEnvironmentSchema = z.object({ AI_WORKFLOWS_OPENROUTER_API_KEY: z.string().trim().min(1) });
 export const aiWorkflowConfigurationSchema = z.object({
     version: blendWorkflowVersionSchema,
     creditPrice: z.coerce.number().int().positive().max(100_000),
@@ -97,9 +102,10 @@ export const aiWorkflowConfigurationSchema = z.object({
 export const legacyAvatarVersionId = "bbf425cb-1c8a-4dfa-9f0d-637f22e8f4e1";
 
 /**
- * Non-secret Blend settings. Only BLEND_API_KEY lives in the environment.
- * Omit versionId to run the latest published version. Omit creditPrice to keep
- * credit-funded starts closed, with no invented default.
+ * Non-secret AI settings. Only API keys live in the environment.
+ * runner "fitfight" runs the workflow in web/lib/ai/workflows.ts; "blend" runs the Blend workflowId, latest
+ * published version unless versionId is set. Omit creditPrice to keep credit-funded starts closed, with no
+ * invented default.
  */
 export const blendConfiguration: {
     limits: {
@@ -109,29 +115,34 @@ export const blendConfiguration: {
     };
     workflows: Record<
         AiWorkflow,
-        { workflowId: string; versionId?: string; creditPrice?: number }
+        { runner: "fitfight" | "blend"; workflowId: string; versionId?: string; creditPrice?: number }
     >;
 } = {
     limits: {
         globalDailyStarts: 500,
         globalConcurrentRuns: 20,
-        providerRequestsPerMinute: 60,
+        // Status reads. Blend allowed 60 a minute; FitFight runs are read from Vercel, so the app's polls fit.
+        providerRequestsPerMinute: 600,
     },
     workflows: {
         avatar: {
+            runner: "fitfight",
             workflowId: "c405d12d-fa25-4e67-8d4d-8336e741cbbc",
             creditPrice: 1,
         },
-        fitness: { workflowId: "fa770c5b-25ba-46cc-a758-a08aeebc1c92" },
-        group_photo: { workflowId: "f740d71e-06fe-41d4-a92d-a85c90abd3f9" },
-        companion_lines: { workflowId: "8df8fe50-aefb-4855-b421-7bfc89f7e825" },
-        prompt_check: { workflowId: "6d906477-6606-436e-95aa-b627d7fafbde" },
+        fitness: { runner: "fitfight", workflowId: "fa770c5b-25ba-46cc-a758-a08aeebc1c92" },
+        group_photo: { runner: "fitfight", workflowId: "f740d71e-06fe-41d4-a92d-a85c90abd3f9" },
+        companion_lines: { runner: "fitfight", workflowId: "8df8fe50-aefb-4855-b421-7bfc89f7e825" },
+        prompt_check: { runner: "fitfight", workflowId: "6d906477-6606-436e-95aa-b627d7fafbde" },
     },
 };
 
+/** Blend's hosts, and FitFight's own storage on staging and production (bucket ai-images). */
 export const aiImageHostValues = [
     "supabase.tryblend.ai",
     "cdn.tryblend.ai",
+    "zstzbfocunthczzubggz.supabase.co",
+    "pvqntpteehdvhqyctwum.supabase.co",
 ] as const;
 export const aiImageUrlSchema = z
     .string()

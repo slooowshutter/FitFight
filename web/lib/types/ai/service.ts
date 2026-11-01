@@ -1,7 +1,4 @@
-import type {
-    startBlendWorkflow,
-    readBlendWorkflowRun,
-} from "@/lib/blend/client";
+import type { readAiWorkflowRun, startAiWorkflow } from "@/lib/ai/runner";
 import type {
     reserveAiRequest,
     claimAiRequestPoll,
@@ -14,8 +11,8 @@ export type AiRequestDependencies = {
     claim: typeof claimAiRequestPoll;
     finish: typeof finishAiRequestAttempt;
     submit: typeof markAiSubmission;
-    start: typeof startBlendWorkflow;
-    read: typeof readBlendWorkflowRun;
+    start: typeof startAiWorkflow;
+    read: typeof readAiWorkflowRun;
 };
 
 export type AiReconciliationDependencies = {

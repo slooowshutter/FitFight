@@ -167,7 +167,7 @@ struct FitFightAdminDashboard: Decodable {
         let title: String
         let value: Double?
         let previous: Double?
-        /// count, steps, percent (0-100), days, hours, minutes or seconds.
+        /// count, steps, percent (0-100), days, hours, minutes, seconds or usd (dollars, from 20 Oct 2026).
         let unit: String
         /// nil when neither direction is good or bad.
         let higherIsBetter: Bool?

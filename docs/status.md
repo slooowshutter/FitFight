@@ -6,6 +6,33 @@ Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Wo
 
 ---
 
+## App Store 1.3.0 submitted for review, 2 Nov 2026
+
+Marc asked on 2 Nov 2026 to ship everything merged in the last two weeks to TestFlight and
+production, then submit the next App Store version as a minor version: **1.3.0**.
+
+- **Merges:** #451 into `develop` (two database test fixes, the 1.3.0 placeholder note removed);
+  #452 `develop` → `preview` (`eda0703`); #453 `preview` → `main` (`f27a5c1`). Ships #426 to #451,
+  including #446 (no 50-member fight cap) and #450 (FitFight runs its own AI workflows).
+- **Staging check before `main`:** a prompt check on the hosted staging server ran through the
+  new runner in about 8 s and wrote its `private.ai_steps` row. The #448 redraw queued 9 fight
+  images: 8 drew on Azure, uploaded to `ai-images` and converted to WebP; one failed its runner
+  count and drew again, as designed.
+- **Production:** both migrations (`20261019120000_account_auth`, `20261020120000_ai_steps`)
+  applied on the `main` merge; the production `ai-images` bucket exists and `/api/health` is ready.
+- **Builds:** TestFlight 1.3.0 (237, staging) and App Store candidate 1.3.0 (238, `prod`).
+- **App Store Connect:** `draft` created 1.3.0 with the listing, the new What's New (English and
+  French), review notes, the `2026-10-16` screenshots and `AFTER_APPROVAL`. `submit 238` selected
+  build 238 and submitted it: `WAITING_FOR_REVIEW` on 2 Nov 2026. The release-tools workflow is
+  back to a read-only audit.
+- **Release endpoint:** production `/api/app-release` shows review 1.3.0 (238); latest stays
+  1.2.1 (234).
+- **App Privacy:** unchanged since 19 Oct. #450 changes the processor (OpenRouter and Azure
+  instead of Blend), not the data types or purposes. The public privacy page still says no
+  companion inputs go to an image provider; that wording is for Marc to decide.
+
+---
+
 ## App Store 1.2.1 submitted for review, 19 Oct 2026
 
 Marc asked on 19 Oct 2026 to merge `develop` → `preview` → `main` and submit the new App

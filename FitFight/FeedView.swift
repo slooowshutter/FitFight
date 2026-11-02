@@ -331,13 +331,15 @@ final class FeedStore: ObservableObject {
     }
 }
 
-private func postableFights(_ fights: [Fight]) -> [Fight] {
+private func postableFights(_ fights: [Fight], keeping kept: UUID?) -> [Fight] {
     var seen = Set<String>()
     return fights
         .filter { fight in
-            UUID(uuidString: fight.id) != nil
-                && fight.status != .invited
+            guard let id = UUID(uuidString: fight.id) else { return false }
+            // Fights that are over leave the list, except a recurring series between rounds and the fight the post starts in.
+            return fight.status != .invited
                 && !fight.pendingJoin
+                && (fight.status == .live || (fight.recurring && fight.status == .pending) || id == kept)
         }
         .sorted { lhs, rhs in
             if lhs.status != rhs.status {
@@ -451,7 +453,7 @@ struct FeedComposeSheet: View {
     }
 
     private var fights: [Fight] {
-        postableFights(model.fights)
+        postableFights(model.fights, keeping: defaultFightID)
     }
 
     private var allFightIDs: [UUID] {
@@ -514,14 +516,7 @@ struct FeedComposeSheet: View {
                 items: [true, false],
                 selection: Binding(
                     get: { everyone },
-                    set: { picked in
-                        // Choose starts from everything Everyone had, so you untick what to leave out.
-                        if everyone && !picked {
-                            friends = true
-                            fightIDs = Set(allFightIDs)
-                        }
-                        everyone = picked
-                    }
+                    set: { everyone = $0 }
                 ),
                 fill: true
             ) { $0 ? String(appLocalized: "Everyone") : String(appLocalized: "Choose") }

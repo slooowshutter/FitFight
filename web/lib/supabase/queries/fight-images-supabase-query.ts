@@ -16,11 +16,26 @@ const WEBP_BUCKET = "fight-group-images";
 const SIGNED_SECONDS = 7 * 24 * 60 * 60;
 const activeFightStates = ["scheduled", "live"];
 
-/** md5 of a fight's accepted runners and their companions; it changes when anyone joins, leaves or switches. */
+/**
+ * The picture a runner is drawn from, for queries with `member` and `profile` in scope. The app equips a custom
+ * character's Resting level (in an armchair, under a blanket), which shows no clothes, so the image model drew it
+ * naked or in a made-up outfit. The Pushing level of the same character stands in the FitFight running kit.
+ */
+function runningArt(sql: Sql) {
+    return sql`coalesce((
+        select running.image_url
+        from private.ai_library_images as equipped
+        join private.ai_library_images as running on running.request_id = equipped.request_id and running.stage = 'fit'
+        where equipped.user_id = member.user_id and equipped.image_url = profile.companion_image_url
+        limit 1
+    ), profile.companion_image_url)`;
+}
+
+/** md5 of a fight's accepted runners and the art they are drawn from; it changes when anyone joins, leaves or switches. */
 function castKey(sql: Sql, fightId: Fragment | string) {
     return sql`(
         select md5(string_agg(
-            member.user_id::text || ':' || coalesce(profile.companion_id, '') || ':' || coalesce(profile.companion_image_url, ''),
+            member.user_id::text || ':' || coalesce(profile.companion_id, '') || ':' || coalesce(${runningArt(sql)}, ''),
             ',' order by member.user_id
         ))
         from public.fight_members as member
@@ -126,7 +141,7 @@ export async function claimNextFightImage(
             const cast = (
                 await sql`
                     select member.user_id, member.user_id = fight.owner_id as is_owner, member.accepted_at,
-                        profile.companion_id, profile.companion_image_url, profile.companion_prompt
+                        profile.companion_id, profile.companion_prompt, ${runningArt(sql)} as companion_image_url
                     from public.fight_members as member
                     join public.fights as fight on fight.id = member.fight_id
                     join public.profiles as profile on profile.id = member.user_id and profile.deleted_at is null

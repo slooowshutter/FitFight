@@ -49,16 +49,7 @@ struct FightsListView: View {
                         .font(.custom("Nunito-ExtraBold", size: 14, relativeTo: .headline))
                         .foregroundStyle(theme.text)
                     Spacer(minLength: 8)
-                    Button { showingSort = true } label: {
-                        Label(sort.title, systemImage: "arrow.up.arrow.down")
-                            .ffType(.label)
-                            .foregroundStyle(theme.mossText)
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(FFHapticPlainStyle())
-                    .accessibilityLabel(String(appLocalized: "Sort by"))
-                    .accessibilityValue(sort.title)
+                    FFSortButton(title: sort.title) { showingSort = true }
                 }
                 FFSegmented(
                     items: FightsListFilter.allCases,
@@ -142,14 +133,7 @@ struct FightsListView: View {
         .task(id: filter) {
             if filter == .invited { await model.loadFightDiscovery(session: session) }
         }
-        .sheet(isPresented: $showingSort) {
-            FightsSortSheet(sort: $sort)
-                .fitFightTheme(theme)
-                .presentationBackground(theme.overlay)
-                .presentationCornerRadius(theme.radius.shell)
-                .presentationDragIndicator(.visible)
-                .presentationDetents([.medium])
-        }
+        .ffSortSheet(isPresented: $showingSort, options: FightsSort.allCases, selection: $sort, title: \.title)
     }
 
     private var fightsRefresh: FFRefreshConfig {
@@ -393,36 +377,6 @@ struct FinishedRow: View {
 
     private var result: FFResult {
         model.fightResult(for: fight)
-    }
-}
-
-private struct FightsSortSheet: View {
-    @Binding var sort: FightsSort
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.ffTheme) private var theme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            FFSheetHeader(title: String(appLocalized: "Sort by")) { dismiss() }
-            FFGroupedRows {
-                ForEach(FightsSort.allCases, id: \.self) { option in
-                    if option != FightsSort.allCases.first { FFDivider() }
-                    FFGroupedRow(title: option.title, trailing: AnyView(
-                        Image(systemName: "checkmark")
-                            .foregroundStyle(theme.mossText)
-                            .opacity(sort == option ? 1 : 0)
-                    )) {
-                        sort = option
-                        dismiss()
-                    }
-                    .accessibilityAddTraits(sort == option ? .isSelected : [])
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(theme.text)
-        .padding(.horizontal, theme.space.screenPadding)
-        .padding(.top, 16)
     }
 }
 

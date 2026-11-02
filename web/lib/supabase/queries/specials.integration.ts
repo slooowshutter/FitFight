@@ -409,14 +409,14 @@ test("production keeps App Review Sandbox charges on a separate Sandbox shelf", 
     try {
         const { users, accounts } = await specialUsers(context);
         assert.equal(
-            (await readSpecialStore(users[0], database, true)).environment,
+            (await readSpecialStore(users[0], database, "Sandbox")).environment,
             "Production",
             "Without a build in review, production never opens the Sandbox shelf",
         );
         review = release;
         resetAppReleasePolicyCacheForTests();
         assert.equal(
-            (await readSpecialStore(users[0], database, true)).environment,
+            (await readSpecialStore(users[0], database, "Sandbox")).environment,
             "Sandbox",
             "An unused account moves to the Sandbox shelf for a Sandbox charge",
         );
@@ -426,7 +426,7 @@ test("production keeps App Review Sandbox charges on a separate Sandbox shelf", 
             database,
         );
         assert.equal(
-            (await readSpecialStore(users[1], database, true)).environment,
+            (await readSpecialStore(users[1], database, "Sandbox")).environment,
             "Production",
             "An account with a purchase never changes shelf",
         );
@@ -456,6 +456,16 @@ test("production keeps App Review Sandbox charges on a separate Sandbox shelf", 
             production.count,
             0,
             "A Sandbox purchase never reaches the real shelf",
+        );
+        assert.equal(
+            (await readSpecialStore(users[0], database)).environment,
+            "Sandbox",
+            "Opening the store does not move a Sandbox account",
+        );
+        assert.equal(
+            (await readSpecialStore(users[0], database, "Production")).environment,
+            "Production",
+            "A real charge moves an account with Sandbox purchases to the real shelf",
         );
     } finally {
         process.env.APPLE_IAP_ENVIRONMENT = "Sandbox";

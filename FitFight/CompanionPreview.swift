@@ -285,12 +285,18 @@ extension CompanionPreview {
 
     /// 18 finished fights, newest first: 12 won, 5 lost (one a group 2nd place) and 1 draw.
     static let sampleHistory: [ProfileHistoryRow] = {
-        let names = ["Coffee run", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"]
+        let names = ["Coffee is on you", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"]
         let results = ["win", "loss", "draw", "loss", "win", "win", "win", "win", "loss", "win", "win", "win", "loss", "win", "loss", "win", "win", "win"]
+        // Three-day fights with one free day between them, so the Dashboard has fight days. The newest is the
+        // finished Coffee is on you fight, so its place square opens that fight's summary.
+        let today = Calendar.current.startOfDay(for: Date())
+        let iso = ISO8601DateFormatter()
         let rows = names.indices.map { i in
-            """
-            {"id": "\(UUID().uuidString)", "fight_id": null, "name": "\(names[i])", "starts_at": "2026-09-\(String(format: "%02d", max(1, 18 - i)))T00:00:00Z",
-             "ends_at": "2026-09-\(String(format: "%02d", max(1, 18 - i)))T00:00:00Z", "category": "private", "result": "\(results[i])",
+            let ends = i == 0 ? Date().addingTimeInterval(-96 * 3_600) : Calendar.current.date(byAdding: .day, value: -(1 + 4 * i), to: today) ?? today
+            let starts = Calendar.current.date(byAdding: .day, value: -3, to: ends) ?? ends
+            return """
+            {"id": "\(UUID().uuidString)", "fight_id": \(i == 0 ? "\"F0000000-0000-4000-8000-000000000005\"" : "null"), "name": "\(names[i])", "starts_at": "\(iso.string(from: starts))",
+             "ends_at": "\(iso.string(from: ends))", "category": "private", "result": "\(results[i])",
              "placement": \(results[i] == "win" ? "1" : results[i] == "draw" ? "1" : "2"), "field_size": 2, "counted": true, "complete": true}
             """
         }

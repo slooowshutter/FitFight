@@ -658,8 +658,15 @@ function ChartCard({ chart }: { chart: AdminDashboardChart }) {
     );
 }
 
-/** "1.5K", "42%", "3 h": the iPhone dashboard's compact numbers. */
+/** "1.5K", "42%", "3 h", "$0.0693": the iPhone dashboard's compact numbers. */
 function formatValue(value: number, unit: AdminDashboardUnit) {
+    if (unit === "usd") {
+        const size = Math.abs(value);
+        return `${value < 0 ? "-" : ""}$${new Intl.NumberFormat("en", {
+            minimumFractionDigits: size < 100 ? 2 : 0,
+            maximumFractionDigits: size < 1 ? 4 : size < 100 ? 2 : 0,
+        }).format(size)}`;
+    }
     const suffix = {
         percent: "%",
         days: " d",

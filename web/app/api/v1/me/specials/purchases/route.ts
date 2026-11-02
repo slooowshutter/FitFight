@@ -19,7 +19,7 @@ export const POST = apiRoute(async (request) => {
     const store = await readSpecialStore(
         userId,
         undefined,
-        claimsSandbox(input.signed_transaction),
+        claimsSandbox(input.signed_transaction) ? "Sandbox" : "Production",
     );
     const transaction = await verifySpecialConsumablePurchase(
         input.signed_transaction,

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
     poweredByHeader: false,
@@ -14,4 +15,5 @@ const nextConfig: NextConfig = {
     },
 };
 
-export default nextConfig;
+// The Workflow SDK compiles the AI workflows (lib/ai/workflows.ts) and serves their runs under /.well-known/workflow.
+export default withWorkflow(nextConfig);

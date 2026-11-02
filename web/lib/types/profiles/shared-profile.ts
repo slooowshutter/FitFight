@@ -81,7 +81,8 @@ export const headToHeadSchema = z.object({
     form: z.array(z.enum(headToHeadResultValues)).max(10),
 });
 
-export const profileRivalrySummarySchema = z.object({ identity: sharedIdentitySchema, rivalry: rivalryRecordSchema });
+// friends_since: when the friendship was accepted; null when you are not friends.
+export const profileRivalrySummarySchema = z.object({ identity: sharedIdentitySchema, rivalry: rivalryRecordSchema, friends_since: z.string().nullable() });
 
 export const activityDaySchema = z.object({
     day: z.string().date(),
@@ -156,6 +157,7 @@ export const profileAccessRowSchema = z.object({
     settings: profileSettingsSchema,
     relationship: profileRelationshipSchema,
     friendship: z.enum(friendshipStateValues),
+    friends_since: z.string().nullable(),
 });
 
 export const profileFeatureConfigSchema = z.object({

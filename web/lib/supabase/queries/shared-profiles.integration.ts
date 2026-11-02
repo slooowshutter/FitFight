@@ -534,11 +534,12 @@ test("rivalries match each opponent's Profile, newest first, under current shari
     await database`update public.profiles set deleted_at = now() where id = ${opponents[5]}`;
     await database`update public.fight_members set state = 'withdrawn' where fight_id = ${fightIds[6]} and user_id = ${opponents[6]}`;
 
+    const [friendship] = await database`select to_jsonb(accepted_at) #>> '{}' accepted from private.profile_friendships where requester_id = ${viewer}`;
     const expected: ProfileRivalrySummary[] = [];
     for (const opponent of opponents) {
         try {
             const profile = await readSharedProfile(viewer, opponent, undefined, database);
-            if (profile.rivalry) expected.push({ identity: profile.identity, rivalry: profile.rivalry });
+            if (profile.rivalry) expected.push({ identity: profile.identity, rivalry: profile.rivalry, friends_since: opponent === opponents[3] ? friendship.accepted : null });
         } catch (error) {
             if (!(error instanceof ApiError) || error.status !== 404) throw error;
         }
@@ -546,6 +547,8 @@ test("rivalries match each opponent's Profile, newest first, under current shari
     const rivalries = await readOwnRivalries(viewer, database);
     assert.deepEqual(rivalries, expected.slice(0, 6));
     assert.deepEqual(rivalries.map((rival) => rival.identity.user_id), [0, 3, 6, 7, 8, 9].map((index) => opponents[index]));
+    assert.deepEqual(rivalries.map((rival) => rival.friends_since !== null), [false, true, false, false, false, false], "Only the friend has a friendship date");
+    assert.ok(!Number.isNaN(Date.parse(rivalries[1].friends_since ?? "")));
     assert.deepEqual(rivalries[0].rivalry, {
         wins: 1, losses: 1, draws: 0,
         rematch: { duration_seconds: 12 * 3600, duration_days: null, action_text: "Make coffee" },

@@ -34,22 +34,26 @@ const testConfiguration: typeof blendConfiguration = {
         providerRequestsPerMinute: 30,
     },
     workflows: {
-        avatar: { ...version, creditPrice: 1 },
+        avatar: { runner: "blend", ...version, creditPrice: 1 },
         fitness: {
+            runner: "blend",
             workflowId: "fitness-publication",
             versionId: "fitness-version",
             creditPrice: 5,
         },
         group_photo: {
+            runner: "blend",
             workflowId: "group-publication",
             versionId: "group-version",
             creditPrice: 2,
         },
         companion_lines: {
+            runner: "blend",
             workflowId: "lines-publication",
             versionId: "lines-version",
         },
         prompt_check: {
+            runner: "blend",
             workflowId: "check-publication",
             versionId: "check-version",
         },
@@ -1137,4 +1141,86 @@ test("a status read that fails keeps Blend's raw response out of the rethrown er
             return true;
         },
     );
+});
+
+test("a FitFight workflow starts with the request's own fields and owned portraits, never Blend labels", async () => {
+    const portrait = "https://cdn.tryblend.ai/portrait.png";
+    const cases = [
+        {
+            input: { workflow: "avatar", parameters: { description: "A fox" } },
+            expected: { description: "A fox" },
+        },
+        {
+            input: { workflow: "fitness", parameters: { avatar_request_id: requestId, identity_details: "Green scarf" } },
+            expected: { portraits: [portrait], identity_details: "Green scarf" },
+        },
+        {
+            input: {
+                workflow: "companion_lines",
+                parameters: {
+                    avatar_request_id: requestId,
+                    description: "A fox",
+                    language: "fr",
+                    avoid: [{ name: "Rusty", line: "Fast and proud" }],
+                },
+            },
+            expected: { portraits: [portrait], description: "A fox", language: "fr", avoid: "Rusty: Fast and proud" },
+        },
+        {
+            input: { workflow: "prompt_check", parameters: { description: "a dog", language: "en" } },
+            expected: { description: "a dog", language: "en" },
+        },
+        {
+            input: { workflow: "group_photo", parameters: {
+                characters: [
+                    { avatar_request_id: requestId, identity_details: "Green scarf" },
+                    { avatar_request_id: "33333333-3333-4333-8333-333333333333", identity_details: "Blue hat" },
+                ],
+                scene: "On a trail",
+            } },
+            expected: { portraits: [portrait], scene: "On a trail", cast_roster: "1. Green scarf\n2. Blue hat" },
+        },
+    ];
+    for (const { input, expected } of cases) {
+        const parsed = createAiRunRequestSchema.parse(input);
+        const selected = { workflowId: `fitfight:${parsed.workflow}`, versionId: "local" };
+        const record = requestRecord({ workflow: parsed.workflow, workflow_version: selected, credit_price: 0, credit_state: "none" });
+        let started: Record<string, unknown> | null = null;
+        await startAiRun(userId, parsed, key, requestDependencies(record, {
+            reserve: async () => ({ request: record, shouldStart: true, portraits: parsed.workflow === "prompt_check" ? [] : [portrait] }),
+            start: async (version, inputs) => {
+                assert.deepEqual(version, selected);
+                started = inputs;
+                return { data: { ...selected, runId: "wrun_1" }, rateLimit: {} };
+            },
+        }));
+        assert.deepEqual(started, { ...expected, request_id: requestId });
+    }
+});
+
+test("a FitFight run's return value is the result itself, checked against the workflow's result shape", async (t) => {
+    const own = "https://zstzbfocunthczzubggz.supabase.co/storage/v1/object/public/ai-images/wrun_1/step_1.png";
+    const handle = { workflowId: "fitfight:avatar", versionId: "local", runId: "wrun_1" };
+    const scenarios = {
+        own_storage: { output: { image_url: own }, status: "completed" },
+        local_host: { output: { image_url: "http://127.0.0.1:54321/storage/v1/object/public/ai-images/a.png" }, status: "failed" },
+        blend_envelope: { output: { avatar: [{ id: "a", item_index: 0, status: "completed", parts: [{ type: "image", url: own }] }] }, status: "failed" },
+    } as const;
+    for (const [name, scenario] of Object.entries(scenarios)) {
+        await t.test(name, async () => {
+            const record = requestRecord({ status: "running", run_handle: handle });
+            const response = await readAiRun(userId, requestId, requestDependencies(record, {
+                read: async () => ({ data: { id: "wrun_1", status: "completed", output: scenario.output }, rateLimit: {} }),
+                finish: async (_owner, _id, _token, update) => requestRecord({
+                    ...record,
+                    status: update.status,
+                    result: update.result,
+                    error_code: update.errorCode,
+                }),
+            }));
+            assert.equal(response.status, scenario.status);
+            if (response.status === "completed") assert.deepEqual(response.workflow === "avatar" && response.data, { image_url: own });
+            else assert.equal(response.status === "failed" && response.code, "ai_invalid_result");
+        });
+    }
 });

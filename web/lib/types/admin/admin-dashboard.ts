@@ -13,6 +13,7 @@ export const adminDashboardSectionValues = [
     "friends",
     "app",
     "metrics",
+    "ai",
 ] as const;
 export const adminDashboardUnitValues = [
     "count",
@@ -22,6 +23,7 @@ export const adminDashboardUnitValues = [
     "hours",
     "minutes",
     "seconds",
+    "usd",
 ] as const;
 /** A table lists one row per label and one column per series. */
 export const adminDashboardChartKindValues = ["line", "bar", "heatmap", "table"] as const;

@@ -458,8 +458,8 @@ test(
             "on the last day the round keeps its end");
         assert.equal(await seriesSeconds(), 7 * 86_400, "and the next rounds are weekly anyway");
 
-        await database`update public.fights set ends_at = ${new Date(Date.now() - 60_000)} where id = ${next.id}`;
-        await assert.rejects(updateFight(owner, next.id, { friendRoundLength: "month" }, admin, new Date(), database),
+        const afterEnd = new Date(Date.parse(round.ends_at) + 60_000);
+        await assert.rejects(updateFight(owner, next.id, { friendRoundLength: "month" }, admin, afterEnd, database),
             /This round has ended/);
     },
 );

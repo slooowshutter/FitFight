@@ -82,10 +82,10 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 
 ## Screenshot set
 
-Six 1320 x 2868 JPEGs per language for the 6.9-inch iPhone set; App Store Connect scales them down for smaller iPhones. The Screenshots workflow captures them from the running app on an iPhone 17 Pro Max simulator in Companion preview, which uses the website's sample people and fights: Alex (you, Tiger), Leo (Silverback), Nina (Capybara), Sam (Hedgehog) and Theo (Panda), in Walk Wars, Eat it and Step it Up, with 8,432 steps today. The 1.2.0 set is in [2026-10-16](2026-10-16/index.html), from the `app-store-screenshots` and `app-store-screenshots-fr` artifacts.
+Six 1320 x 2868 JPEGs per language for the 6.9-inch iPhone set; App Store Connect scales them down for smaller iPhones. The Screenshots workflow captures them from the running app on an iPhone 17 Pro Max simulator in Companion preview, which uses the website's sample people and fights: Alex (you, Tiger), Leo (Silverback), Nina (Capybara), Sam (Hedgehog) and Theo (Panda), in Walk Wars, Step it Up, Roommate Rumble and Office Showdown, with 8,432 steps today. The 1.2.0 set is in [2026-10-16](2026-10-16/index.html), from the `app-store-screenshots` and `app-store-screenshots-fr` artifacts. That set still shows Roommate Rumble under its old name, Eat it, and has no Office Showdown.
 
-1. Fights with Walk Wars (+860), Step it Up (+2,840) and Eat it (-1,260).
-2. Eat it, a live 1v1 against Theo with totals and standings.
+1. Fights with Walk Wars (+860), Step it Up (+2,840) and Office Showdown (-430), then Roommate Rumble (-1,260) below.
+2. Roommate Rumble, a live 1v1 against Theo with totals and standings.
 3. New with the Tiger: Create, Join or Post, and two suggested fights.
 4. An invitation from Sam with Accept and Decline.
 5. Profile with Alex, the Tiger and statistics.

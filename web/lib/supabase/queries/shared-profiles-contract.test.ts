@@ -68,6 +68,7 @@ test("a custom companion's name and line reach only the owner and viewers the pr
                     },
                     relationship: { owner: viewer === userID, friend: false, current_opponent: false, blocked: false },
                     friendship: viewer === userID ? "self" : "none",
+                    friends_since: null,
                 }]);
             if (text.includes("::date::text today")) return Promise.resolve([{ today: "2026-10-15", time_zone: "UTC" }]);
             if (text.includes("member_since")) return Promise.resolve([{ member_since: "2026-09-01", friends_since: null }]);

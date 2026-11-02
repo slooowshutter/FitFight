@@ -4,7 +4,6 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import {
-    JOINABLE_MEMBER_CAP,
     listJoinableFights,
 } from "./join-fight-supabase-query";
 import {
@@ -56,7 +55,6 @@ test("joinable summaries never carry scores", () => {
     assert.equal("score" in summary, false);
     assert.equal("standings" in summary, false);
     assert.equal(summary.memberCount, 3);
-    assert.equal(JOINABLE_MEMBER_CAP, 50);
 });
 
 test("leave requires a fight id", () => {

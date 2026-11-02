@@ -12,6 +12,7 @@ import {
     YAxis,
 } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
@@ -47,15 +48,22 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { FitFightApiError, useFitFightApi } from "@/hooks/use-fitfight-api";
+import {
+    FitFightApiError,
+    fitfightApi,
+    useFitFightApi,
+} from "@/hooks/use-fitfight-api";
 import { browserProjectURL } from "@/lib/supabase/browser-client";
 import {
     adminDashboardBucketSchema,
     adminDashboardEnvironmentSchema,
     adminDashboardSchema,
     adminDashboardSectionSchema,
+    adminDashboardTablePageSchema,
     type AdminDashboardCard,
     type AdminDashboardChart,
+    type AdminDashboardEnvironment,
+    type AdminDashboardTable,
     type AdminDashboardUnit,
 } from "@/lib/types/admin/admin-dashboard";
 
@@ -205,20 +213,155 @@ export default function AdminPage() {
             ) : null}
 
             {data ? (
-                <>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {data.cards.map((card) => (
-                            <StatCard key={card.id} card={card} />
-                        ))}
-                    </div>
-                    <div className="grid gap-4 lg:grid-cols-2">
-                        {data.charts.map((chart) => (
-                            <ChartCard key={chart.id} chart={chart} />
-                        ))}
-                    </div>
-                </>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {data.cards.map((card) => (
+                        <StatCard key={card.id} card={card} />
+                    ))}
+                </div>
             ) : null}
+            {data ? (
+                <div className="grid gap-4 lg:grid-cols-2">
+                    {data.charts.map((chart) => (
+                        <ChartCard key={chart.id} chart={chart} />
+                    ))}
+                </div>
+            ) : null}
+            {data?.tables.map((table) => (
+                <TableCard
+                    key={`${data.environment}:${table.id}`}
+                    table={table}
+                    environment={data.environment}
+                />
+            ))}
         </>
+    );
+}
+
+/** The first column stays in view while the others scroll sideways. */
+const sticky =
+    "sticky left-0 z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]";
+
+/** A server-defined table: its first rows come with the dashboard, and "Show more" reads the next ones. */
+function TableCard({
+    table,
+    environment,
+}: {
+    table: AdminDashboardTable;
+    environment: AdminDashboardEnvironment;
+}) {
+    // `next dev` reads through the preview server, like the dashboard (app/api/v1/dev/admin-table).
+    const path =
+        process.env.NODE_ENV === "development"
+            ? "dev/admin-table"
+            : "admin/table";
+    const [more, setMore] = useState<AdminDashboardTable["rows"]>([]);
+    const [loading, setLoading] = useState(false);
+    const [failure, setFailure] = useState<string>();
+    // NOTE: a signup since the first page shifts the offsets by one, so a later page can repeat a row.
+    const rows = [
+        ...new Map(
+            [...table.rows, ...more].map((row) => [row.id, row]),
+        ).values(),
+    ];
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-extrabold">{table.title}</CardTitle>
+                <CardDescription>
+                    {`${rows.length} of ${table.total}.`}
+                    {table.description ? ` ${table.description}` : null}
+                </CardDescription>
+            </CardHeader>
+            {/* NOTE: without inline-size containment the table's full width widens the whole page. */}
+            <CardContent className="[contain:inline-size]">
+                <Table className="tabular-nums">
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            {table.columns.map((column, index) => (
+                                <TableHead
+                                    key={column.title}
+                                    title={column.definition ?? undefined}
+                                    className={cn(
+                                        "px-4",
+                                        index === 0 && sticky,
+                                    )}
+                                >
+                                    {column.title}
+                                </TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rows.map((row) => (
+                            <TableRow
+                                key={row.id}
+                                className="hover:bg-transparent"
+                            >
+                                {row.cells.map((cell, index) => (
+                                    <TableCell
+                                        key={
+                                            table.columns[index]?.title ?? index
+                                        }
+                                        className={cn(
+                                            "px-4",
+                                            index === 0 && sticky,
+                                            cell.muted &&
+                                                "text-muted-foreground",
+                                            cell.bold && "font-bold",
+                                        )}
+                                    >
+                                        {index === 0 ? (
+                                            <span
+                                                className="block max-w-36 truncate"
+                                                title={cell.text}
+                                            >
+                                                {cell.text}
+                                            </span>
+                                        ) : (
+                                            cell.text
+                                        )}
+                                    </TableCell>
+                                ))}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+            <CardFooter className="flex-wrap gap-3 text-xs text-muted-foreground">
+                {rows.length < table.total ? (
+                    <Button
+                        variant="outline"
+                        disabled={loading}
+                        onClick={() => {
+                            setLoading(true);
+                            setFailure(undefined);
+                            fitfightApi(
+                                `${path}?id=${table.id}&environment=${environment}&limit=${table.page_size}&offset=${rows.length}`,
+                                adminDashboardTablePageSchema,
+                            )
+                                .then(
+                                    (page) =>
+                                        setMore((current) => [
+                                            ...current,
+                                            ...page.rows,
+                                        ]),
+                                    (error: Error) => setFailure(error.message),
+                                )
+                                .finally(() => setLoading(false));
+                        }}
+                    >
+                        {loading
+                            ? "Loading"
+                            : `Show ${Math.min(table.page_size, table.total - rows.length)} more`}
+                    </Button>
+                ) : null}
+                {failure ? (
+                    <span className="text-ember-text">{failure}</span>
+                ) : null}
+                {table.note ? <span>{table.note}</span> : null}
+            </CardFooter>
+        </Card>
     );
 }
 
@@ -515,8 +658,15 @@ function ChartCard({ chart }: { chart: AdminDashboardChart }) {
     );
 }
 
-/** "1.5K", "42%", "3 h": the iPhone dashboard's compact numbers. */
+/** "1.5K", "42%", "3 h", "$0.0693": the iPhone dashboard's compact numbers. */
 function formatValue(value: number, unit: AdminDashboardUnit) {
+    if (unit === "usd") {
+        const size = Math.abs(value);
+        return `${value < 0 ? "-" : ""}$${new Intl.NumberFormat("en", {
+            minimumFractionDigits: size < 100 ? 2 : 0,
+            maximumFractionDigits: size < 1 ? 4 : size < 100 ? 2 : 0,
+        }).format(size)}`;
+    }
     const suffix = {
         percent: "%",
         days: " d",

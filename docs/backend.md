@@ -226,6 +226,31 @@ query only marks its own tile with `Query failed: ...`.
   changes. `admin-dashboard.integration.ts` runs every card and chart on the
   migrated disposable database.
 
+## Admin dashboard tables (prepared 19 Oct 2026)
+
+Tables are server-defined, like sections, cards and charts, so a new table or column needs no
+app build. Each `/admin/dashboard` payload has `tables` (drawn after the charts):
+`id`, `title`, `description`, `columns` (`title`, `definition`), `total`, the first page of `rows`
+(`id`, one `cells` entry per column: `text`, `muted`, `bold`, already written for display),
+`note` and `page_size`. The iPhone app (`AdminTableCard`) and the web page (`TableCard`) draw any
+table the same way: the first column stays put while the others scroll sideways, and **Show N
+more** reads `GET /api/v1/admin/table?id=<id>&[environment=…]&limit=<page_size>&offset=<rows shown>`
+(`{ total, rows, note }`). Tables live in `adminTables` in `admin-dashboard-supabase-query.ts`: add
+one there with its section, columns and a `read` that returns cells. Access and the Production /
+Staging choice are the dashboard's (`openAdminDatabase`). Builds before 19 Oct 2026 ignore `tables`.
+
+- **Newest users** (Users tab, `newest_users`): 10 rows, then 20 per tap, newest signup first,
+  deleted accounts left out, times in Paris. Columns: Handle, Name, Email, Joined, Friends,
+  Everybody fight, Fights, Referred by, Referrals, Apple Health, Last sync, App, Notifications,
+  Sign-in, Time zone. `readAdminUsers` reads them with the dashboard's own rules (`peopleRules`),
+  so a person reads the same in the table and the tiles.
+- **Emails:** they live in `auth.users`, which production's read-only `fitfight_analytics` user
+  cannot read. `private.account_auth` (migration `20261019120000_account_auth`) is a view of
+  `auth.users` (user ID, email, providers) that reads with its owner's rights and copies nothing.
+  Only `fitfight_analytics` gets SELECT on it; `anon`, `authenticated` and `service_role` do not.
+  A database without the view shows "-" for Email and Sign-in, with a `note` saying why:
+  production until this migration reaches `main`.
+
 ## Recent syncs (prepared 12 Oct 2026)
 
 `GET /api/v1/admin/recent-syncs` returns `{ "people": [...] }` with `user_id`,
@@ -478,8 +503,8 @@ away when the account is deleted. This stores descriptions, not generated artwor
 
 ## Character prompt check (prepared 16 Oct 2026)
 
-Before buying, the app sends the description to Blend's FitFight Prompt Check
-workflow through the existing runs API: `POST /api/v1/ai/runs` with
+Before buying, the app sends the description to the FitFight Prompt Check
+workflow (Blend's until 20 Oct 2026, see [AI workflows](ai-workflows.md)) through the existing runs API: `POST /api/v1/ai/runs` with
 `{ "workflow": "prompt_check", "parameters": { "description", "language" } }`
 and an `Idempotency-Key`, then `GET /api/v1/ai/runs/{request_id}` until it
 completes. The result is `{ note, variations }`: an optional one-sentence
@@ -493,14 +518,13 @@ three rewrites. The owner buys with their own words or a rewrite.
   2 running at once per person, and their own 20 running at once overall, so
   checking ideas never uses up drawings or their concurrency. Like name
   suggestions, a check neither waits for nor blocks the owner's other runs.
-- **Slow.** A run takes about 45 to 60 seconds, sometimes 2 to 3 minutes when
-  several run at once. Its first read waits 20 s, then one every 5 s. The app
-  never blocks on it: "Your idea" opens at once with the owner's words, and the
-  rewrites appear when the run ends.
+- **Fast since 20 Oct 2026.** A run takes about 3 to 5 seconds (on Blend it took
+  45 s to 3 minutes). Reads wait 3 s. The app never blocks on it: "Your idea"
+  opens at once with the owner's words, and the rewrites appear when the run ends.
 - **Unreadable output** (not JSON, not exactly three rewrites) fails the run as
-  `ai_invalid_result` and keeps Blend's raw response on the row.
+  `ai_invalid_result`. Its model calls are in `private.ai_steps`.
 
-See [Blend workflows](blend-workflows.md#configuration-and-rollout).
+See [AI workflows](ai-workflows.md).
 
 ## Snake record (prepared 16 Oct 2026)
 
@@ -522,10 +546,9 @@ Rows go only when their player deletes their account (`on delete cascade`).
 A custom character can have a name (1 to 24 characters) and a line (1 to 60),
 trimmed and on one line, saved together in `private.custom_character_purchases`
 (`name`, `line`). Typed text is not reviewed first, like usernames and Fight
-names. Blend's Companion Lines workflow suggests four pairs per batch from the
+names. The Companion Lines workflow suggests four pairs per batch from the
 chosen portrait and the description, in the owner's language (`fr` when the
-newest installation is French, else `en`). See
-[Blend workflows](blend-workflows.md#configuration-and-rollout).
+newest installation is French, else `en`). See [AI workflows](ai-workflows.md).
 
 - `GET /api/v1/me/custom-characters`: each character adds `suggestions` (every
   completed batch, first batch first), `suggestions_pending`,
@@ -543,13 +566,14 @@ newest installation is French, else `en`). See
   `companion_name` and `companion_line` for an equipped custom character: the
   saved pair, else the first suggestion. Another viewer gets them only when the
   profile is shared with them. Stock companions and Specials send neither.
-- `private.ai_requests.provider_response` (jsonb) keeps Blend's raw run response
+- `private.ai_requests.provider_response` (jsonb) keeps the raw run response
   when a run fails, is cancelled, or returns unreadable output, for every
-  workflow. It never reaches the app or the server error log.
+  workflow: Blend's envelope, or `{ status }` for a FitFight run, whose details are
+  in `private.ai_steps`. It never reaches the app or the server error log.
 
 The first batch starts once, when a portrait is chosen (`lines_action_key`); the
-reconciler backfills existing characters one per run. A batch is first read 30
-seconds after it starts, then every 10 seconds. Apply
+reconciler backfills existing characters one per run. A batch is first read 8
+seconds after it starts, then every 5 seconds (30 s, then 10 s, on Blend). Apply
 `20261015120000_companion_labels.sql` before deploying the backend.
 
 ## Fight chart consistency (prepared 15 Sep 2026)
@@ -988,7 +1012,9 @@ with its own Apple Account and buys in Sandbox: a Special or character charge th
 names Sandbox moves an account with no purchases to the Sandbox shelf, and the
 charge is verified there. Production opens that shelf only while the release
 registry lists a production build in review. App Store users only make
-Production charges.
+Production charges. A Production charge moves an account back to the Production
+shelf even after Sandbox purchases, so a tester who bought in Sandbox can still
+pay for real. Sandbox Specials stay recorded but are not listed on that shelf.
 
 Deploy `20260920222056_paid_specials.sql`, then the backend, then distribute the
 app. Let older backend instances drain first, because their schemas list only

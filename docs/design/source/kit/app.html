@@ -328,10 +328,10 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 1.2.1 release", updated: "19 Oct 2026" };
+            const MIRROR = { matches: "develop 41f6770e, 1.3.0 placeholder release note removed", updated: "2 Nov 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
-            const DATA_VERSION = 2;
+            const DATA_VERSION = 3;
             const ROOT = "../../../../";
             const QUERY = new URLSearchParams(location.search);
 
@@ -561,8 +561,9 @@
                     };
                 }
                 const group = fight("group", "Step it Up", "K7M2", [28430, 25590, 22340, 20840], [alex, leo, nina, sam], 7, 54, { recurring: true, seriesId: "series-group", inviter: alex });
-                const duel = fight("duel", "Eat it", "H8P4", [18420, 19680], [alex, theo], 7, 124, { actionText: "Takes the stairs all next week" });
+                const duel = fight("duel", "Roommate Rumble", "H8P4", [18420, 19680], [alex, theo], 7, 124, { actionText: "Takes the stairs all next week" });
                 const weekend = fight("weekend", "Walk Wars", "R3V6", [12680, 11820, 11240, 10740], [alex, nina, leo, sam], 3, 32, { actionText: "Plans our next Sunday walk" });
+                const showdown = fight("showdown", "Office Showdown", "D6N3", [84960, 85390, 79120], [alex, sam, theo], 14, 100, { actionText: "Brings donuts on Friday" });
                 const invite = fight("invite", "The breakfast club", "B4K9", [0, 0], [alex, sam], 3, 60, { status: "invited", inviter: sam, invitePitch: "Sam invited you", recurring: true, offersJoinNext: true });
                 invite.standings.find((s) => s.person === alex).invited = true;
                 const finished = fight("finished", "Coffee is on you", "C9F2", [24100, 21900], [alex, theo], 3, -96);
@@ -572,7 +573,7 @@
                     const end = new Date(group.windowStart).getTime() - (round - 1) * 7 * DAY;
                     return { ...clone(group), id: `group-r${round}`, windowEnd: iso(end), windowStart: iso(end - 7 * DAY), status: "finished", serverState: "final", standings: group.standings.map((s) => ({ ...s, finalStepsComplete: true })) };
                 });
-                let fights = [group, duel, weekend, invite, finished, ...history];
+                let fights = [group, duel, weekend, showdown, invite, finished, ...history];
                 if (scenario === "empty" || scenario === "loading") fights = [];
                 if (scenario === "tied") { duel.standings.forEach((s) => { s.score = 18420; s.rank = 1; }); fights = [duel]; }
                 if (scenario === "solo") { duel.standings = duel.standings.filter((s) => s.person === alex); fights = [duel]; }
@@ -603,9 +604,13 @@
                     { name: "Swim", icon: "figure.pool.swim", minutes: steps.map((_, i) => ([8, 22].includes(i) ? 30 : 0)) },
                 ];
                 // 18 finished fights, newest first: 12 won, 5 lost, 1 draw.
-                const historyNames = ["Coffee run", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"];
+                const historyNames = ["Coffee is on you", "Weekend walkers", "Lunch laps", "No lift, no mercy", "The long way home", "The croissant run", "Park loops", "August challenge", "Sunrise club", "Heatwave", "Stair wars", "Bakery dash", "Commute clash", "Office stairs", "Beach week", "Rooftop run", "Hill repeats", "First blood"];
                 const results = ["win", "loss", "draw", "loss", "win", "win", "win", "win", "loss", "win", "win", "win", "loss", "win", "loss", "win", "win", "win"];
-                const profileHistory = historyNames.map((name, i) => ({ id: `h${i}`, name, endsAt: `2026-09-${String(Math.max(1, 18 - i)).padStart(2, "0")}`, result: results[i], placement: results[i] === "loss" ? 2 : 1, fieldSize: 2 }));
+                // Three-day fights with one free day between them (CompanionPreview.sampleHistory).
+                const midnight = (back) => { const d = new Date(now); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - back).toISOString(); };
+                const profileHistory = historyNames.map((name, i) => ({ id: `h${i}`, name, startsAt: midnight(4 + 4 * i), endsAt: midnight(1 + 4 * i), result: results[i], placement: results[i] === "loss" ? 2 : 1, fieldSize: 2 }));
+                // The newest row is the finished Coffee is on you fight, so its place square opens that fight's summary.
+                Object.assign(profileHistory[0], { fightId: "finished", startsAt: new Date(finished.windowStart).toISOString(), endsAt: new Date(finished.windowEnd).toISOString() });
                 const data = {
                     version: DATA_VERSION,
                     you: alex,
@@ -615,7 +620,7 @@
                     todaySteps: scenario === "empty" ? 0 : 8432,
                     record: { played: 18, wins: 12, draws: 1, losses: 5 },
                     companion: "limited-tiger",
-                    app: { marketing: "1.2.1", build: 233, environment: "staging", date: "17 Oct" },
+                    app: { marketing: "1.3.0", build: 235, environment: "staging", date: "20 Oct" },
                 };
                 for (const hook of DATA_HOOKS) hook(data, scenario);
                 return data;
@@ -1093,8 +1098,8 @@
     const invitation = () => D().fights.find((f) => f.status === "invited");
 
     // ═══ ONBOARDING PIECES (OnboardingComponents.swift) ═══
-    const PAGES = ["username", "health", "healthResult", "companion", "founderFight", "firstFight", "reminders", "celebration"];
-    const STEP = { username: 2, health: 3, healthResult: 3, companion: 4, founderFight: 5, firstFight: 5, reminders: 6 };
+    const PAGES = ["username", "health", "healthResult", "whoop", "companion", "founderFight", "firstFight", "reminders", "celebration"];
+    const STEP = { username: 2, health: 3, healthResult: 3, whoop: 3, companion: 4, founderFight: 5, firstFight: 5, reminders: 6 };
     const PREVIOUS = { health: "username", healthResult: "health", companion: "healthResult", founderFight: "companion", firstFight: "founderFight", reminders: "firstFight" };
     const STEP_LABEL = { 1: "Your account", 2: "Your username", 3: "Apple Health", 4: "Your companion", 5: "Your first Fight", 6: "Reminders" };
 
@@ -1108,7 +1113,7 @@
     }
     let direction = 1;
 
-    const header = (step, back, busy) => `<header class="rt-ob-head">${back ? `<button type="button" class="rt-ob-back" aria-label="Back"${on(back)}${busy ? " disabled" : ""}>${icon("chevron.left")}</button>` : ""}<div class="rt-ob-progress"><div class="row"><span>${esc(STEP_LABEL[step] ?? "FitFight")}</span>${step ? `<span class="c-2">${step} of 6</span>` : ""}</div>${step ? `<div class="bar">${[1, 2, 3, 4, 5, 6].map((i) => `<span class="${i <= step ? "on" : ""}"></span>`).join("")}</div>` : ""}</div></header>`;
+    const header = (step, back, busy, label = STEP_LABEL[step]) => `<header class="rt-ob-head">${back ? `<button type="button" class="rt-ob-back" aria-label="Back"${on(back)}${busy ? " disabled" : ""}>${icon("chevron.left")}</button>` : ""}<div class="rt-ob-progress"><div class="row"><span>${esc(label ?? "FitFight")}</span>${step ? `<span class="c-2">${step} of 6</span>` : ""}</div>${step ? `<div class="bar">${[1, 2, 3, 4, 5, 6].map((i) => `<span class="${i <= step ? "on" : ""}"></span>`).join("")}</div>` : ""}</div></header>`;
     const page = (content, actions, enter) => `<div class="rt-ob-scroll" data-scroll><div class="rt-ob-content ${enter ? "rt-enter" : ""}" style="--dir:${direction}">${content}</div></div><div class="rt-ob-actions">${actions}</div>`;
     const heading = (title, subtitle, centered = true) => `<div class="rt-ob-heading ${centered ? "" : "leading"}"><h1 class="rt-in">${esc(title)}</h1>${subtitle ? `<p class="rt-in" style="--o:1">${esc(subtitle)}</p>` : ""}</div>`;
     const speech = (animal, text) => `<div class="rt-speech"><img src="${companionArt(animal)}" alt=""><p>${esc(text)}</p></div>`;
@@ -1203,6 +1208,8 @@
                 referral: p.referral === "1",
                 free: p.referral === "1" ? 1 : 0,
                 drawing: p.drawing === "1",
+                // A WhoopConnectionStore of its own; `whoop=connecting|connected|error` links seed it.
+                whoop: { busy: p.whoop === "connecting", connected: p.whoop === "connected", failed: p.whoop === "error" },
             };
         }
         return entry.st;
@@ -1239,17 +1246,59 @@
         render();
     }
 
+    // ═══ PROPOSAL: connect WHOOP during onboarding ═══
+    // The WHOOP sign-in is the same as Settings → Connectors → WHOOP. Fight steps still come only from Apple Health.
+    variant("onboarding-whoop", {
+        title: "Connect WHOOP in onboarding",
+        note: "Where a new player can connect WHOOP next to Apple Health. Tap Connect, then Continue on the whoop.com prompt.",
+        options: [
+            { id: "today", name: "Today", when: "The app as it is now: WHOOP only in Settings → Connectors." },
+            { id: "health", name: "On the Apple Health page", when: "Right if WHOOP should read as the second choice next to Apple Health, before anything is connected." },
+            { id: "result", name: "After Apple Health", when: "Right if the Apple Health page should stay one job. The WHOOP row comes once the steps are in, with no extra page." },
+            { id: "page", name: "Its own page", when: "Right if WHOOP deserves a full explanation. Everyone sees one more page, with I don't wear one to skip it." },
+        ],
+        // The links follow the chosen option, so each one opens where that option draws WHOOP.
+        get links() {
+            const at = { today: "health", health: "health", result: "healthResult&steps=1", page: "whoop" }[V("onboarding-whoop")];
+            return V("onboarding-whoop") === "today"
+                ? [["Apple Health", "#onboarding?step=health"], ["Health result", "#onboarding?step=healthResult&steps=1"]]
+                : [
+                    ["Not connected", `#onboarding?step=${at}`],
+                    ["Use whoop.com to sign in", `#onboarding?step=${at}&whoop=connecting/~rootObWhoopConsent`],
+                    ["Connecting", `#onboarding?step=${at}&whoop=connecting`],
+                    ["Connected", `#onboarding?step=${at}&whoop=connected`],
+                    ["Couldn’t connect", `#onboarding?step=${at}&whoop=error`],
+                    ...(V("onboarding-whoop") === "result" ? [["No step data", "#onboarding?step=healthResult"]] : []),
+                ];
+        },
+    });
+    const privacyLink = () => `present:sysExternal?url=${encodeURIComponent(`${S.environment === "production" ? "https://fitfight.app" : "https://staging.fitfight.app"}/privacy`)}`;
+    const consent = `By connecting, you agree to our <button type="button" class="c-moss"${on(privacyLink())}>Privacy Policy</button>.`;
+    // The WHOOP row of the "health" and "result" options: Settings' WHOOP account row, with its logo.
+    function whoopRow(w) {
+        const subtitle = w.connected ? "Connected · Updates every hour" : w.failed ? "Couldn’t connect WHOOP. Tap to try again." : "Sleep, recovery, strain and workouts";
+        const tone = w.connected ? "mossText" : w.failed ? "emberText" : "textSecondary";
+        const pill = w.busy ? FF.pill("Connecting", "neutral") : w.connected ? FF.pill("Connected", "softMoss") : w.failed ? FF.pill("Retry", "softEmber") : FF.pill("Connect", "solidMoss");
+        const row = `<button type="button" class="ff-grow ${w.busy ? "disabled" : ""}"${on(w.busy || w.connected ? null : "rootObWhoop")}${w.busy ? " disabled" : ""}><img class="rt-logo" src="${asset("Connector-WHOOP")}" alt=""><span class="grow vstack"><span class="title">WHOOP</span><span class="subtitle" style="color:var(--${tone})">${esc(subtitle)}</span></span>${pill}</button>`;
+        return `<div class="rt-whoop"><p class="t-body c-2">Wear a WHOOP? Connect it too. Fight steps still come from Apple Health.</p>${FF.grouped([row])}${w.connected ? "" : `<p class="t-caption c-2">${consent}</p>`}</div>`;
+    }
+
     // ═══ ONBOARDING VIEW (OnboardingView.swift): one page at a time under the progress header ═══
     function onboardingView(entry, ui) {
         const p = entry.p || {};
         const s = progress(entry);
         const replay = s.replay;
-        const current = PAGES.includes(p.step) ? p.step : replay ? "health" : "username";
+        const whoopAt = V("onboarding-whoop");
+        // The WHOOP page exists only in the "page" option; its links fall back to the Health result.
+        const current = p.step === "whoop" && whoopAt !== "page" ? "healthResult" : PAGES.includes(p.step) ? p.step : replay ? "health" : "username";
         const enter = entering(entry, current);
         const busy = !!ui.busy;
         const animal = s.animal;
+        const afterHealth = whoopAt === "page" ? "whoop" : "healthResult";
         // The replay shows only Health, Fight offers and reminders.
-        const previous = replay ? (current === "health" ? null : current === "founderFight" ? "healthResult" : PREVIOUS[current]) : PREVIOUS[current];
+        const previous = replay
+            ? (current === "health" ? null : current === "founderFight" ? afterHealth : current === "whoop" ? "healthResult" : PREVIOUS[current])
+            : current === "companion" ? afterHealth : current === "whoop" ? "healthResult" : PREVIOUS[current];
         const errorOf = (fallback) => ("error" in ui ? ui.error : fallback);
         let content = "";
         let actions = "";
@@ -1270,7 +1319,8 @@
                     ["figure.walk", "Uploads the Apple Health activity you allow, including individual records and workouts. Stored privately."],
                     ["person.2", "Fight participants see your steps and standings."],
                     ["lock", "You control access in Apple Health."],
-                ].map(([glyph, text]) => `<div class="rt-health-row">${icon(glyph)}<span>${esc(text)}</span></div>`).join("");
+                ].map(([glyph, text]) => `<div class="rt-health-row">${icon(glyph)}<span>${esc(text)}</span></div>`).join("")
+                + (whoopAt === "health" ? whoopRow(s.whoop) : "");
             actions = FF.cta("Connect Apple Health", { enabled: !busy, busy, on: "rootObHealthConnect" }) + skip("I'll do this later", "rootObHealthResult:0", busy);
         } else if (current === "healthResult") {
             const steps = s.steps ? D().todaySteps : null;
@@ -1279,8 +1329,24 @@
                 + `<div class="rt-in" style="--o:1">${FF.card(`<div class="rt-result"><img src="${companionArt(animal)}" alt="">${steps != null
                     ? `<div class="rt-count">${enter && steps ? "0" : fmt.n(steps)}</div><div class="rt-steps-label">steps today</div>`
                     : `<div class="t-heading">No accessible step data</div><div class="t-body c-2">Connect later from Profile → Settings → Connectors.</div>`}</div>`)}</div>`
-                + `<p class="t-caption c-2" style="text-align:center">Only steps taken during the Fight count.</p>`;
+                + `<p class="t-caption c-2" style="text-align:center">Only steps taken during the Fight count.</p>`
+                + (whoopAt === "result" ? whoopRow(s.whoop) : "");
             actions = FF.cta("Continue", { on: "rootObHealthContinue" });
+        } else if (current === "whoop") {
+            // The "page" option: WHOOP gets the Apple Health page's layout. Connected, the button moves on.
+            const w = s.whoop;
+            content = heading("Wear a WHOOP?\nBring it too.", "Connect WHOOP for your sleep, recovery, strain and workouts.", false)
+                + `<div class="rt-health-art"><img class="rt-whoop-logo" src="${asset("Connector-WHOOP")}" alt=""><img src="${companionArt(animal)}" alt=""></div>`
+                + [
+                    ["waveform.path.ecg", "Gets your WHOOP data straight from WHOOP, updated every hour. Stored privately."],
+                    ["shoeprints.fill", "Fight steps still come from Apple Health."],
+                ].map(([glyph, text]) => `<div class="rt-health-row">${icon(glyph)}<span>${esc(text)}</span></div>`).join("")
+                + (w.connected ? "" : `<div class="rt-health-row">${icon("lock")}<span>${consent}</span></div>`)
+                + (w.connected ? FF.notice("WHOOP connected. Updates every hour.", { tone: "moss", icon: "checkmark.circle" })
+                    : w.failed ? FF.notice("Couldn’t connect WHOOP. Try again.", { tone: "ember", icon: "exclamationmark.triangle" }) : "");
+            actions = w.connected
+                ? FF.cta("Continue", { on: "rootObWhoopNext" })
+                : FF.cta(w.failed ? "Retry" : "Connect WHOOP", { enabled: !w.busy, busy: w.busy, on: "rootObWhoop" }) + skip("I don't wear one", "rootObWhoopNext", w.busy);
         } else if (current === "companion") {
             const error = errorOf(p.error ? OFFLINE : null);
             content = heading("Find your kind\nof competitive.")
@@ -1339,7 +1405,7 @@
                 + heading(`You're in,\n${s.handle || you().handle.replace(/^@/, "")}.`, s.joined ?? (s.founder ? "Fight Marc" : null));
             actions = FF.cta("Continue", { on: "rootObFinish" });
         }
-        return `<div class="rt-ob">${header(STEP[current], previous && `rootObBack:${previous}`, busy)}${page(content, actions, enter)}</div>`;
+        return `<div class="rt-ob">${header(STEP[current], previous && `rootObBack:${previous}`, busy || s.whoop.busy, current === "whoop" ? "WHOOP" : undefined)}${page(content, actions, enter)}</div>`;
     }
 
     screen("onboarding", { kind: "flow", title: "Onboarding", render: (p, ui, ctx) => onboardingView(ctx.entry, ui) });
@@ -1384,7 +1450,37 @@
     // Progress saved by an older build already has its companion; the replay skips it too.
     action("rootObHealthContinue", () => {
         const entry = obEntry();
+        if (entry) go(V("onboarding-whoop") === "page" ? "whoop" : progress(entry).chosen ? "founderFight" : "companion");
+    });
+    action("rootObWhoopNext", () => {
+        const entry = obEntry();
         if (entry) go(progress(entry).chosen ? "founderFight" : "companion");
+    });
+    // WhoopConnectionStore.refresh(connectWith:): WHOOP's sign-in in ASWebAuthenticationSession, then the link.
+    action("rootObWhoop", () => {
+        const entry = obEntry();
+        if (!entry) return;
+        Object.assign(progress(entry).whoop, { busy: true, failed: false });
+        delete entry.p.whoop;
+        present("rootObWhoopConsent");
+    });
+    // Continue stands in for signing in on WHOOP and the app finishing the link. Cancel is no error.
+    action("rootObWhoopDone", (status) => {
+        const entry = obEntry();
+        dismiss();
+        if (!entry) return;
+        const w = progress(entry).whoop;
+        w.busy = status !== "cancel";
+        render();
+        if (w.busy) later(entry, 1200, () => Object.assign(w, { busy: false, connected: true }));
+    });
+    screen("rootObWhoopConsent", {
+        kind: "alert", title: "Use whoop.com to sign in",
+        alert: () => ({
+            title: "“FitFight” Wants to Use “whoop.com” to Sign In",
+            message: "This allows the app and website to share information about you.",
+            buttons: [{ title: "Cancel", role: "cancel", on: "rootObWhoopDone:cancel" }, { title: "Continue", on: "rootObWhoopDone:connected" }],
+        }),
     });
     action("rootObPick", (arg) => {
         const entry = obEntry();
@@ -2022,6 +2118,10 @@
         .rt-health-row { display: flex; align-items: flex-start; gap: 12px; font-size: 13px; font-weight: 700; color: var(--textSecondary); }
         .rt-health-row svg { flex: none; width: 24px; height: 15px; margin-top: 1px; }
         .rt-result { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+        .rt-whoop { display: flex; flex-direction: column; gap: 10px; }
+        .rt-whoop > .t-caption { padding: 0 16px; }
+        .rt-logo { flex: none; width: 36px; height: 36px; border-radius: 9px; }
+        .rt-health-art .rt-whoop-logo { width: 58px; height: 58px; border-radius: 14px; }
         .rt-result img { height: 170px; width: 100%; object-fit: contain; }
         .rt-count { font-size: 48px; font-weight: 800; color: var(--mossText); line-height: 1.2; }
         .rt-steps-label { font-size: 15px; font-weight: 700; color: var(--textSecondary); }
@@ -3011,6 +3111,7 @@
         card: (f) => liveCard(f),
         liveCard, joinOfferRow, finishedRow, friendLookup, timeLeft,
         streakPill, avatarStack, stamp, remaining, durationLabel, deadlineLabel, listTitle, listRank, result, fieldSize, isUpcoming,
+        todayStage: () => stageFor(todayCount()),
     };
     globalThis.COMPANION_INTRO = (surface, opts = {}) => companionIntro(surface, opts);
 
@@ -3504,11 +3605,15 @@
         }).join("")}</div>`;
         const parts = [chips];
         if (kind === "oval") parts.push(`<p class="t-micro c-2">Confirmed Fight totals</p>`);
-        if (kind === "oval" || count > 0) parts.push({ oval: ovalChart, bars: barsChart, line: lineChart, pace: lineChart, histogram: histogramChart }[kind](model, visible, ui, kind));
-        else parts.push(`<p class="t-caption c-2">Daily history isn't available yet. Confirmed totals are shown in Oval and standings.</p>`);
-        if (["line", "histogram", "pace"].includes(kind) && count > 0) {
+        const scrubbable = ["line", "histogram", "pace"].includes(kind) && count > 0;
+        // A finger on the chart hides what sits below it, so the day's numbers read above.
+        if (scrubbable) {
             const day = Math.min(ui.fdDay ?? count - 1, count - 1);
             parts.push(`<div class="vstack" style="gap:10px"><div class="hstack"><span class="t-label grow">${esc(model.labels[day])}</span><span class="t-micro c-2">${kind === "pace" ? "Cumulative steps" : "Daily steps"}</span></div>${legend(shown, day)}</div>`);
+        }
+        if (kind === "oval" || count > 0) parts.push({ oval: ovalChart, bars: barsChart, line: lineChart, pace: lineChart, histogram: histogramChart }[kind](model, visible, ui, kind));
+        else parts.push(`<p class="t-caption c-2">Daily history isn't available yet. Confirmed totals are shown in Oval and standings.</p>`);
+        if (scrubbable) {
             parts.push(`<p class="t-micro c-faint">${kind === "histogram" ? "Tap a day to see its steps. Tap a name to show or hide it." : "Touch or slide to inspect a day. Tap a name to show or hide it."}</p>`);
             parts.push(`<p class="t-micro c-faint">Only synced steps are shown. Missing daily data is marked with a dash.</p>`);
         } else if (kind === "bars") {
@@ -3611,7 +3716,7 @@
         return `<div class="fdv-barsday">${model.labels.map((label, day) => `<div class="day">${FF.eyebrow(label)}<div class="vstack" style="gap:10px">${series.map((se) => {
             const value = se.daily[day];
             return `<div class="fdv-barrow">${avatar(se.person, 16)}<span class="t-micro c-2 ellipsis name">${esc(nameOf(se.person))}</span><span class="track"><span style="width:${peak === 0 ? 0 : Math.min(1, (value ?? 0) / peak) * 100}%;background:${se.color}"></span></span><span class="t-micro c-2 value">${value == null ? "-" : esc(score(value))}</span></div>`;
-        }).join("")}</div></div>`).join("")}</div>`;
+        }).join("")}</div></div>`).reverse().join("")}</div>`;
     }
 
     // ─── History pane (SeriesStats) ─────────────────────────────────
@@ -4048,9 +4153,10 @@
 
     // ─── Map links ──────────────────────────────────────────────────
     links("Fight detail", [
-        ["Eat it: 1 v 1, Stats", "#fights/fight?id=duel"],
+        ["Roommate Rumble: 1 v 1, Stats", "#fights/fight?id=duel"],
         ["Step it Up: group, last round notice, trophies", "#fights/fight?id=group"],
         ["Walk Wars: 4 racers", "#fights/fight?id=weekend"],
+        ["Office Showdown: 3 racers, 2 weeks", "#fights/fight?id=showdown"],
         ["History pane: rounds, All time, Records", "#fights/fight?id=group&pane=history"],
         ["Round summary", "#fights/fight?id=group&pane=history/~fightRound?id=group-r1"],
         ["A past round (from Past)", "#fights/fight?id=group-r2"],
@@ -5109,7 +5215,7 @@
     const REACTION_PAGE = 4;
     const OFFLINE = "The Internet connection appears to be offline.";
     // The server sends fight names with each post; these cover rounds that are not in your list.
-    const FIGHT_NAMES = { group: "Step it Up", duel: "Eat it", weekend: "Walk Wars", invite: "The breakfast club", finished: "Coffee is on you", lunch: "Lunch laps" };
+    const FIGHT_NAMES = { group: "Step it Up", duel: "Roommate Rumble", weekend: "Walk Wars", invite: "The breakfast club", finished: "Coffee is on you", lunch: "Lunch laps" };
     const PHOTO_ART = ["limited-capybara", "limited-panda", "limited-hedgehog", "limited-silverback", "limited-tiger"];
     const uid = () => `fd${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
     const plural = (n, one, other) => (n === 1 ? one : other).replace("%d", fmt.n(n));
@@ -5217,12 +5323,14 @@
         if (!stored || stored === "Steps Fight" || stored === "Défi de pas") return act || stored || "Steps Fight";
         return stored;
     }
-    // postableFights: not invitations, live first then by name, one per series.
-    function postableFights() {
+    // postableFights: not invitations, not fights that are over (except a recurring series between rounds and the
+    // fight the post starts in), live first then by name, one per series.
+    function postableFights(kept) {
         const seen = new Set();
         return D().fights
             // Fight Marc rounds only exist in the founder's own list (the admin view here).
-            .filter((f) => f.status !== "invited" && !f.pendingJoin && !(f.hostedRound && !S.admin))
+            .filter((f) => f.status !== "invited" && !f.pendingJoin && !(f.hostedRound && !S.admin)
+                && (f.status === "live" || (f.recurring && f.status === "pending") || f.id === kept))
             .sort((a, b) => ((a.status === "live") !== (b.status === "live") ? (a.status === "live" ? -1 : 1) : listTitle(a).localeCompare(listTitle(b), "en", { sensitivity: "base" })))
             .filter((f) => !seen.has(f.seriesId || f.id) && seen.add(f.seriesId || f.id));
     }
@@ -5548,7 +5656,7 @@
     let pendingPick = null; // { key, kind } while the system photo picker or camera is up
     const composeState = (p, ui) => {
         const broadcast = p.broadcast === "1" || p.broadcast === "true";
-        const fights = postableFights();
+        const fights = postableFights(p.fightId);
         const allIDs = fights.map((f) => f.id);
         const sendsToFriends = ui.everyone || ui.friends;
         const chosen = ui.everyone ? allIDs : [...allIDs.filter((id) => ui.fightIDs.includes(id)), ...ui.fightIDs.filter((id) => !allIDs.includes(id))];
@@ -5576,7 +5684,7 @@
                 if (p.demo === "photos") { ui.text = "Lunch walk receipts."; addPicked(ctx.key, 2); }
                 if (p.demo === "video") ui.video = true;
                 if (p.demo === "error") ui.error = "Choose up to four photos or one video per post.";
-                if (p.demo === "choose") Object.assign(ui, { everyone: false, friends: true, fightIDs: postableFights().map((f) => f.id) });
+                if (p.demo === "choose") Object.assign(ui, { everyone: false, friends: true, fightIDs: postableFights(p.fightId).map((f) => f.id) });
                 if (p.demo === "none") Object.assign(ui, { everyone: false, friends: false, fightIDs: [] });
             }
             // When the system picker closes without reporting back (or is not drawn yet), treat it as a pick.
@@ -5767,11 +5875,7 @@
     });
     // Composer
     action("feedAudience", (arg, ctx) => {
-        const picked = arg.split("=")[1] === "true";
-        const ui = ctx.ui;
-        // Choose starts from everything Everyone had, so you untick what to leave out.
-        if (ui.everyone && !picked) Object.assign(ui, { friends: true, fightIDs: postableFights().map((f) => f.id) });
-        ui.everyone = picked;
+        ctx.ui.everyone = arg.split("=")[1] === "true";
         render();
     });
     action("feedAudienceRow", (id, ctx) => {
@@ -6639,6 +6743,9 @@
 
     // Changelog.swift, the 12 newest rows verbatim (newest first). Changelog.current is the first row of this marketing version.
     const CHANGELOG = [
+        ["1.3.0", "2026-10-30", "Profile now shows your companion in the same pose as Fights, from today's steps. New post: Choose starts with nothing ticked, and fights that are over leave the list. New companion: Create another works at every step, and “Pick the words we draw” is now “Pick from our suggestions”."],
+        ["1.3.0", "2026-10-21", "Inside a fight, Bars now shows the newest day first, so today is at the top."],
+        ["1.3.0", "2026-10-20", "Dashboard opens on Fights: your win rate in a ring, your place in your last fights (tap one for its summary), your run, and Friends head to head with each friend's score and who leads, sorted A to Z, by most fights or by how long you have been friends. Slide across any chart to read its number; averages sit in a small badge. Steps marks the days you were in a fight. Tap Weeks and months, or a sport, for bars by day, week and month."],
         ["1.2.1", "2026-10-18", "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour."],
         ["1.2.1", "2026-10-18", "Settings now has Connectors: Apple Health, Garmin and WHOOP. Tap Apple Health to sync, review what FitFight can read, and choose which device’s steps count. Garmin and WHOOP show how to send your steps to Apple Health, where FitFight reads them. The sync details are no longer in Settings."],
         ["1.2.1", "2026-10-17", "New post: Photo or video shows Take Photo and Photo Library right under the button, so adding a photo no longer sometimes does nothing."],
@@ -6648,9 +6755,6 @@
         ["1.2.1", "2026-10-17", "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too."],
         ["1.2.1", "2026-10-17", "Fight pictures now open instantly instead of loading for several seconds."],
         ["1.2.1", "2026-10-17", "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month."],
-        ["1.2.1", "2026-10-17", "Opening FitFight no longer sometimes freezes on a blank Fights screen."],
-        ["1.2.1", "2026-10-16", "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."],
-        ["1.2.1", "2026-10-16", "Tap someone's name to open their Player card: your record against them in every Fight, 1v1 or group, your steps compared since you became friends, and your Fights together. Block is gone; Report stays. The flame next to Fights is your 10K streak, the days in a row you walked 10,000 steps."],
     ].map(([version, date, notes], i) => ({ id: i, version, date, notes }));
 
     // What the server would send about each other person. record is [wins, losses, draws]; shares is their
@@ -6762,7 +6866,7 @@
     // ProgressView(): the system spinner (gray unless tinted), not the gold FFLoadingBlock.
     const progress = (label = "", tint = "") => `<div class="pf-progress"><span class="spinner"${tint ? ` style="color:var(--${tint})"` : ""}></span>${label ? `<span class="t-caption c-2">${esc(label)}</span>` : ""}</div>`;
     const left = (html) => `<div class="pf-left">${html}</div>`;
-    const companion = (who, size, o = {}) => (who ? companionImg(who, { w: size, h: size, cls: `pf-companion ${o.cls || ""}` }) : FF.avatar("?", { size }));
+    const companion = (who, size, o = {}) => (who ? companionImg(who, { w: size, h: size, cls: `pf-companion ${o.cls || ""}`, pose: o.pose }) : FF.avatar("?", { size }));
     const topEntry = () => S.stacks[S.tab][S.stacks[S.tab].length - 1];
     const modalEntry = (id) => [...S.modals].reverse().find((m) => m.id === id);
     const later = (ms, fn) => setTimeout(() => { fn(); render(); }, ms);
@@ -6972,7 +7076,7 @@
         const me = you();
         const words = companionWords(me);
         return `<div class="pf-head">
-                <button type="button" class="pf-avatar-btn" aria-label="Edit profile" data-on="pfPresent:editProfile">${companion(me, 48)}<span class="badge">${icon("pencil")}</span></button>
+                <button type="button" class="pf-avatar-btn" aria-label="Edit profile" data-on="pfPresent:editProfile">${companion(me, 48, { pose: `effort-${globalThis.FIGHTS.todayStage().n}` })}<span class="badge">${icon("pencil")}</span></button>
                 <div class="vstack grow" style="gap:2px;min-width:0"><span class="t-title ellipsis">${esc(me.name)}</span><span class="t-caption c-2">${esc(me.handle)}</span></div>
                 <button type="button" class="pf-round" aria-label="Dashboard" data-on="pfPush:dashboard"><span class="pf-bars3"><i style="height:8px"></i><i style="height:16px"></i><i style="height:12px"></i></span></button>
                 <button type="button" class="pf-round" aria-label="Settings" data-on="push:settings">${icon("gearshape")}</button>
@@ -7294,58 +7398,190 @@
     };
     // FFGroupedRows around a ForEach with no FFDivider: the card, no lines between rows.
     const plainRows = (rows) => `<div class="ff-grouped">${rows.join("")}</div>`;
-    function dashboardSteps(ui) {
+    // Days without Steps are missing data rather than rest, so averages skip zeros, as on You.
+    const avg = (values) => {
+        const recorded = values.filter((v) => v > 0);
+        return recorded.length ? sum(recorded) / recorded.length : null;
+    };
+    const DIM_GOLD = "color-mix(in srgb, var(--gold) 45%, transparent)";
+    const shortDate = (date) => new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const daysAgo = (n) => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate() - n); };
+    const change = (value, base) => {
+        const c = (value - base) / base;
+        return `<span style="font-size:17px;font-weight:800" class="${c >= 0 ? "c-moss" : "c-ember"}">${c >= 0 ? "+" : "-"}${Math.round(Math.abs(c) * 100)}%</span>`;
+    };
+    // dashboardAverageRule: the dashed line, with its number in a small solid badge on the line's left end.
+    const avgRule = (value, top, label) => `<b class="pf-avg" style="bottom:${(value / top * 100).toFixed(2)}%"><span>Avg ${esc(label)}</span></b>`;
+    // A chart the finger reads (chartXSelection): data-sel is the ui field it writes. A link can open it with one picked.
+    const picked = (ui, p, field, fallback) => ui[field] ?? (p[field] != null ? Number(p[field]) : fallback);
+    const endsRow = (first, last) => `<div class="pf-ends"><span>${esc(first)}</span><span>${esc(last)}</span></div>`;
+
+    // DashboardView.fightDays: the days of the last 31 that overlap a fight from your history.
+    function fightDays() {
+        const skip = ["cancelled", "not_entered", "unavailable", "removed", "withdrawn"];
+        const windows = ownHistory().filter((row) => !skip.includes(row.result)).map((row) => [new Date(row.startsAt || row.endsAt).getTime(), new Date(row.endsAt).getTime()]);
+        const days = new Set();
+        for (let i = 0; i < 31; i++) {
+            const start = daysAgo(30 - i).getTime(), end = daysAgo(29 - i).getTime();
+            if (windows.some(([s, e]) => s < end && e > start)) days.add(i);
+        }
+        return days;
+    }
+    function dashboardSteps(ui, p) {
         const steps = sports()[0]?.values || [];
-        if (steps.length !== 31) return `<p class="t-body c-2">Connect Apple Health to see your Steps here.</p>`;
-        const recent = sum(steps.slice(-15)) / 15;
-        const before = sum(steps.slice(1, 16)) / 15;
-        const change = before > 0 ? (recent - before) / before : null;
-        const shown = ui.day ?? 30;
+        if (steps.length !== 31 || !steps.some((v) => v > 0)) {
+            return `<p class="t-body c-2">Connect Apple Health to see your Steps here.</p>${left(FF.button("Connect Apple Health", { on: "pfHealthSync" }))}`;
+        }
+        // Today is still going, so the halves, the dashed line and fight days use the 30 finished days.
+        const recent = avg(steps.slice(15, 30));
+        const before = avg(steps.slice(0, 15));
+        const fight = fightDays();
+        const fought = [...fight].filter((i) => i < 30);
+        const shown = Math.min(Math.max(picked(ui, p, "day", 30), 0), 30);
         const top = niceTop(Math.max(...steps));
-        const average = sum(steps) / 31;
-        const chart = `<div class="pf-chart pf-drag" data-count="31" style="height:140px">
-                ${steps.map((v, i) => `<i style="height:${(v / top * 100).toFixed(2)}%;background:var(${i === shown ? "--mossFill" : "--gold"})"></i>`).join("")}
-                <b class="pf-avg" style="bottom:${(average / top * 100).toFixed(2)}%"></b>
+        const line = avg(steps.slice(0, 30));
+        const chart = `<div class="pf-chart pf-drag" data-sel="day" data-count="31" style="height:140px">
+                ${steps.map((v, i) => `<i style="height:${(v / top * 100).toFixed(2)}%;background:${i === shown ? "var(--mossFill)" : !fight.size || fight.has(i) ? "var(--gold)" : DIM_GOLD}"></i>`).join("")}
+                ${line ? avgRule(line, top, num(line)) : ""}
             </div>`;
-        // ISO weeks: Monday first, as Calendar(identifier: .iso8601).
-        const averages = [0, 1, 2, 3, 4, 5, 6].map((weekday) => {
-            const values = steps.filter((_, i) => (dayOf(i).getDay() + 6) % 7 === weekday);
-            return values.length ? sum(values) / values.length : 0;
-        });
-        const best = averages.indexOf(Math.max(...averages));
-        const weekTop = niceTop(Math.max(...averages));
+        const onFights = avg(fought.map((i) => steps[i]));
+        const otherwise = avg(steps.slice(0, 30).filter((_, i) => !fight.has(i)));
+        // The 55 finished days of the last 8 weeks (YouActivityStore.eightWeekSteps without today), Monday first.
+        const finished = [...steps.slice(0, 25)].reverse().concat(steps).slice(0, -1);
+        const byWeekday = [[], [], [], [], [], [], []];
+        finished.forEach((v, i) => byWeekday[(daysAgo(finished.length - i).getDay() + 6) % 7].push(v));
+        const averages = byWeekday.map(avg);
+        const best = averages.reduce((b, v, i) => ((v ?? 0) > (averages[b] ?? 0) ? i : b), 0);
+        const weekday = Math.min(Math.max(picked(ui, p, "weekday", best), 0), 6);
+        const weekTop = niceTop(Math.max(...averages.map((v) => v ?? 0)));
         const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
         const ranked = steps.map((v, i) => i).sort((a, b) => steps[b] - steps[a]).slice(0, 5);
         return FF.card(`<div class="vstack" style="gap:10px">
-                    <span class="t-eyebrow c-2">Last 15 days vs the 15 before</span>
-                    <div class="hstack" style="gap:8px;align-items:baseline"><span style="font-size:34px;font-weight:800">${num(recent)}</span>${change != null ? `<span style="font-size:17px;font-weight:800" class="${change >= 0 ? "c-moss" : "c-ember"}">${change >= 0 ? "+" : "-"}${Math.round(Math.abs(change) * 100)}%</span>` : ""}</div>
-                    <span class="t-caption c-2">a day, vs ${num(before)} before</span>
+                    <span class="t-eyebrow c-2">Last 15 full days vs the 15 before</span>
+                    <div class="hstack" style="gap:8px;align-items:baseline"><span style="font-size:34px;font-weight:800">${recent != null ? num(recent) : "-"}</span>${recent != null && before != null ? change(recent, before) : ""}</div>
+                    ${before != null ? `<span class="t-caption c-2">a day, vs ${num(before)} before</span>` : ""}
                 </div>`)
             + FF.card(`<div class="vstack" style="gap:10px">
-                    <div class="hstack"><span class="t-label c-2 grow">${esc(weekdayDay(dayOf(shown)))}</span><span style="font-size:22px;font-weight:800">${num(steps[shown])}</span></div>
+                    <div class="hstack" style="gap:8px"><span class="t-label c-2">${shown === 30 ? "Today so far" : esc(weekdayDay(daysAgo(30 - shown)))}</span>${fight.has(shown) ? FF.pill("Fight day", "neutral") : ""}<span class="grow"></span><span style="font-size:22px;font-weight:800">${num(steps[shown])}</span></div>
                     ${chart}
-                    <span class="t-micro c-2">Drag across the bars. The dashed line is your average.</span>
+                    ${endsRow(shortDate(daysAgo(30)), "Today")}
+                    <span class="t-micro c-2">${fight.size ? "Drag across the bars. Bright bars are fight days." : "Drag across the bars."}</span>
+                    ${FF.divider(0)}
+                    <button type="button" class="pf-chartrow" data-on="push:dashboardChart?sport=steps"><span class="t-label grow">Weeks and months</span>${FF.chevron()}</button>
                 </div>`)
-            + FF.card(`<div class="vstack" style="gap:10px">
+            + (onFights != null && otherwise != null ? FF.card(`<div class="vstack" style="gap:10px">
+                    <span class="t-eyebrow c-2">Fight days vs other days</span>
+                    <div class="hstack" style="gap:8px;align-items:baseline"><span style="font-size:34px;font-weight:800">${num(onFights)}</span>${change(onFights, otherwise)}</div>
+                    <span class="t-caption c-2">a day when you fight, vs ${num(otherwise)} on other days</span>
+                </div>`) : "")
+            + (averages.some((v) => v != null) ? FF.card(`<div class="vstack" style="gap:10px">
                     <span class="t-eyebrow c-2">Average by weekday</span>
+                    <div class="hstack"><span class="t-label c-2 grow">${weekday === best ? `${names[best]}, your best day` : names[weekday]}</span><span style="font-size:22px;font-weight:800">${averages[weekday] != null ? num(averages[weekday]) : "-"}</span></div>
                     <div class="pf-week">
-                        <div class="pf-chart" style="height:92px">${averages.map((v, i) => `<i style="height:${(v / weekTop * 100).toFixed(2)}%;border-radius:4px;background:${i === best ? "var(--gold)" : "color-mix(in srgb, var(--gold) 45%, transparent)"}"></i>`).join("")}</div>
+                        <div class="pf-chart pf-drag" data-sel="weekday" data-count="7" style="height:92px">${averages.map((v, i) => `<i style="height:${((v ?? 0) / weekTop * 100).toFixed(2)}%;border-radius:4px;background:${i === weekday ? "var(--gold)" : DIM_GOLD}"></i>`).join("")}</div>
                         <div class="pf-axis">${names.map((n) => `<span>${n[0]}</span>`).join("")}</div>
                     </div>
-                    <span class="t-caption c-2">${names[best]} is your best day: ${num(averages[best])} on average.</span>
-                </div>`)
-            + FF.section("Best days", plainRows(ranked.map((i, rank) => `<div class="pf-line"><span class="t-label c-2" style="width:24px">${rank + 1}</span><span class="t-rowTitle grow">${esc(weekdayDay(dayOf(i)))}</span><span style="font-size:17px;font-weight:800">${num(steps[i])}</span></div>`)));
+                    <span class="t-micro c-2">Last 8 weeks, without today. Drag across the bars.</span>
+                </div>`) : "")
+            + FF.section("Best days", plainRows(ranked.map((i, rank) => `<div class="pf-line"><span class="t-label c-2" style="width:24px">${rank + 1}</span><span class="t-rowTitle grow">${esc(weekdayDay(daysAgo(30 - i)))}</span><span style="font-size:17px;font-weight:800">${num(steps[i])}</span></div>`)));
     }
+
     // ProfileHistoryContent: name, result and place, date.
     const LABELS = { win: "Won", loss: "Lost", draw: "Draw", withdrawn: "Withdrew", removed: "Removed", incomplete: "Incomplete final sync", cancelled: "Cancelled", ongoing: "Ongoing", solo: "Solo Fight", not_entered: "Did not enter" };
     const historyContent = (row) => `<div class="vstack" style="gap:8px"><span class="t-heading">${esc(row.name || "Fight result")}</span><div class="hstack t-label"><span class="grow">${esc(LABELS[row.result] || "Historical result unavailable")}</span>${row.placement ? `<span>${row.placement} of ${row.fieldSize}</span>` : ""}</div><span class="t-caption c-2">${esc(String(row.endsAt).slice(0, 10))}</span></div>`;
     const ownHistory = () => (S.scenario === "empty" || S.scenario === "loading" ? [] : D().profileHistory);
+    // Like the Lost filter, a counted fight that is not won or drawn is lost.
+    const outcome = (row) => (row.result === "win" ? "won" : row.result === "draw" ? "drew" : "lost");
+    const OUTCOME_FILL = { won: "var(--mossFill)", drew: "var(--textTertiary)", lost: "var(--emberFill)" };
+
+    // Won, drew and lost as one ring around the win rate, with the three counts beside it.
+    const ringCard = (won, drew, lost) => {
+        const played = won + drew + lost;
+        const r = 52, c = 2 * Math.PI * r;
+        const parts = [[won, OUTCOME_FILL.won], [drew, OUTCOME_FILL.drew], [lost, OUTCOME_FILL.lost]].filter(([v]) => v > 0);
+        const gap = parts.length > 1 ? 2 : 0;
+        let at = 0;
+        const arcs = parts.map(([v, color]) => {
+            const length = v / played * c;
+            const arc = `<circle cx="64" cy="64" r="${r}" fill="none" stroke="${color}" stroke-width="12" stroke-dasharray="${Math.max(length - gap, 0.5).toFixed(2)} ${c.toFixed(2)}" stroke-dashoffset="${(-(at + gap / 2)).toFixed(2)}" transform="rotate(-90 64 64)"/>`;
+            at += length;
+            return arc;
+        }).join("");
+        const row = (label, value, fill, cls) => `<div class="hstack" style="gap:10px"><i class="pf-key" style="background:${fill}"></i><span class="t-label grow">${label}</span><span class="${cls}" style="font-size:20px;font-weight:800">${value}</span></div>`;
+        return FF.card(`<div class="hstack" style="gap:22px;align-items:center">
+                <div class="pf-ring">
+                    <svg viewBox="0 0 128 128" aria-hidden="true"><circle cx="64" cy="64" r="${r}" fill="none" stroke="var(--track)" stroke-width="12"/>${played ? arcs : ""}</svg>
+                    <span class="vstack" style="align-items:center"><span style="font-size:32px;font-weight:800;line-height:1">${played ? `${Math.round(won / played * 100)}%` : "-"}</span><span class="t-caption c-2">won</span></span>
+                </div>
+                <div class="vstack grow" style="gap:10px">
+                    ${row("Won", won, OUTCOME_FILL.won, "c-moss")}${row("Drew", drew, OUTCOME_FILL.drew, "c-2")}${row("Lost", lost, OUTCOME_FILL.lost, "c-ember")}
+                    ${played ? `<span class="t-caption c-2">Out of ${played} fights</span>` : ""}
+                </div>
+            </div>`);
+    };
+    // Your place in your last ten counted fights, newest first: the squares and summary of a fight's History.
+    const PLACE_MEDALS = { 1: ["medalGold", "medalGoldWash"], 2: ["medalSilver", "medalSilverWash"], 3: ["medalBronze", "medalBronzeWash"] };
+    const yourPlaces = (rows) => {
+        const outcomes = rows.map(outcome);
+        const places = rows.filter((row) => row.placement != null);
+        if (places.length < 2) return "";
+        const changed = outcomes.findIndex((o) => o !== outcomes[0]);
+        const current = changed < 0 ? outcomes.length : changed;
+        let bestRun = 0, run = 0;
+        for (const o of outcomes) { run = o === "won" ? run + 1 : 0; bestRun = Math.max(bestRun, run); }
+        const streak = { won: "wins", lost: "losses", drew: "draws" }[outcomes[0]];
+        const square = (row) => {
+            const [ink, wash] = PLACE_MEDALS[row.placement] || ["textDim", "control"];
+            const style = `color:var(--${ink});background:var(--${wash})`;
+            return row.fightId && D().fights.some((f) => f.id === row.fightId)
+                ? `<button type="button" class="fdv-medal ff-press" style="${style}" aria-label="${esc(row.name)}" data-on="present:fightRound?id=${esc(row.fightId)}">${row.placement}</button>`
+                : `<span class="fdv-medal" style="${style}" aria-label="${esc(row.name)}">${row.placement}</span>`;
+        };
+        // Ten squares need the screen's width, so they sit on the background as in History, not in a card.
+        return `<div class="vstack" style="gap:8px">
+                <span class="t-eyebrow c-3">${places.length > 10 ? "Your place, last 10 fights" : "Your place each fight"}</span>
+                <div class="hstack" style="gap:6px">${places.slice(0, 10).map(square).join("")}</div>
+                ${current >= 2 ? `<span class="t-label">${current} ${streak} in a row</span>` : ""}
+                ${bestRun >= 2 && (outcomes[0] !== "won" || bestRun > current) ? `<span class="t-caption c-2">Best run: ${bestRun} wins in a row</span>` : ""}
+            </div>`;
+    };
+    // A rival's companion, the score and who leads, then won, drew and lost as one bar. Opens their profile.
+    // DashboardView.FriendSort, in the Fights tab's Sort by drawer.
+    const FRIEND_SORTS = [["name", "A to Z"], ["mostFights", "Most fights"], ["oldestFriends", "Oldest friends"], ["newestFriends", "Newest friends"]];
+    // When you became friends (ProfileRivalrySummary.friendsSince); null for people who are not friends.
+    const friendsSince = (id) => (D().friends.some((f) => (f?.id ?? f) === id) && META[id]?.friendsDaysAgo != null ? Date.now() - META[id].friendsDaysAgo * DAY : null);
+    const rivalCards = (ids, sort) => `<section class="ff-section"><div class="hstack" style="gap:8px"><div class="grow">${FF.sectionHeader("Friends head to head")}</div><button type="button" class="fl-sort" aria-label="Sort by" data-on="present:dashboardFriendsSort">${icon("arrow.up.arrow.down")}<span>${esc(FRIEND_SORTS.find(([v]) => v === sort)[1])}</span></button></div>${ids.map((id) => {
+        const who = person(id), h = headToHead(id);
+        const lead = h.wins > h.losses ? `<span class="c-moss">You lead</span>` : h.losses > h.wins ? `<span class="c-ember">${esc(who.name)} leads</span>` : `<span class="c-2">All square</span>`;
+        const draws = h.draws ? `<span class="c-2"> · ${h.draws} ${h.draws === 1 ? "draw" : "draws"}</span>` : "";
+        const bar = [[h.wins, OUTCOME_FILL.won], [h.draws, OUTCOME_FILL.drew], [h.losses, OUTCOME_FILL.lost]].filter(([v]) => v > 0).map(([v, fill]) => `<i style="flex:${v};background:${fill}"></i>`).join("");
+        return FF.card(`<div class="vstack" style="gap:12px">
+                <div class="hstack" style="gap:12px">${companion(who, 52)}<span class="vstack grow" style="gap:2px;min-width:0"><span class="t-rowTitle ellipsis">${esc(who.name)}</span><span class="t-caption">${lead}${draws}</span></span><span style="font-size:24px;font-weight:800;white-space:nowrap"><span class="c-moss">${h.wins}</span><span class="c-3"> - </span><span class="c-ember">${h.losses}</span></span></div>
+                <div class="pf-tug">${bar}</div>
+            </div>`, { on: `profileOpen:${id}`, cls: "pf-press-card" });
+    }).join("")}</section>`;
     function dashboardFights(ui) {
         const r = D().record;
+        const history = ownHistory();
+        const counted = history.filter((row) => ["win", "loss", "draw"].includes(row.result));
+        // By handle, then each order breaks ties by handle. People who are not friends go last on friendship age.
+        const sort = uiOf("friendSort").value || "name";
+        const fights = (id) => { const h = headToHead(id); return h.wins + h.draws + h.losses; };
+        const handle = (id) => person(id).handle.replace(/^@/, "");
+        const ids = rivals().sort((a, b) => {
+            const byHandle = handle(a).localeCompare(handle(b), "en", { numeric: true });
+            if (sort === "mostFights") return fights(b) - fights(a) || byHandle;
+            if (sort === "oldestFriends" || sort === "newestFriends") {
+                const x = friendsSince(a), y = friendsSince(b);
+                if (x != null && y != null && x !== y) return sort === "oldestFriends" ? x - y : y - x;
+                if (x == null && y != null) return 1;
+                if (x != null && y == null) return -1;
+            }
+            return byHandle;
+        });
         const filter = ui.filter || "all";
-        const count = (value, label, cls) => `<div class="vstack" style="flex:1;align-items:center;gap:2px"><span class="${cls}" style="font-size:44px;font-weight:800">${value}</span><span class="t-caption c-2">${label}</span></div>`;
-        const rows = ownHistory().filter((row) => filter === "all" || (filter === "won" && row.result === "win") || (filter === "drew" && row.result === "draw") || (filter === "lost" && row.result !== "win" && row.result !== "draw"));
-        return FF.card(`<div class="hstack">${count(r.wins, "Won", "c-moss")}${count(r.draws, "Drew", "c-2")}${count(r.losses, "Lost", "c-ember")}</div>`)
+        const rows = history.filter((row) => filter === "all" || (filter === "won" && row.result === "win") || (filter === "drew" && row.result === "draw") || (filter === "lost" && row.result !== "win" && row.result !== "draw"));
+        return ringCard(r.wins, r.draws, r.losses) + yourPlaces(counted) + (ids.length ? rivalCards(ids, sort) : "")
             + `<h3 class="t-heading" style="padding-top:8px">Fight history</h3>`
             + left(FF.segmented([["all", "All"], ["won", "Won"], ["lost", "Lost"], ["drew", "Drew"]], filter, { on: "set:filter" }))
             + (S.scenario === "loading" ? progress() : !rows.length ? `<p class="t-body c-2">No results yet</p>` : "")
@@ -7358,8 +7594,9 @@
                     ${list.map((sport) => {
                         const peak = Math.max(...sport.values, 1);
                         const total = sum(sport.values);
-                        return `<div class="hstack" style="gap:10px"><span class="c-2 pf-ico20">${icon(sport.icon)}</span><span class="t-label ellipsis" style="width:56px">${esc(sport.name)}</span><span class="pf-heat">${sport.values.map((v) => `<i style="background:${tick(v, peak)}"></i>`).join("")}</span><span style="width:48px;text-align:right;font-size:15px;font-weight:800">${sport.isSteps ? `${num(total / 1000)}k` : `${num(total)}m`}</span></div>`;
+                        return `<button type="button" class="pf-dsport" data-on="push:dashboardChart?sport=${encodeURIComponent(sport.id)}"><span class="c-2 pf-ico20">${icon(sport.icon)}</span><span class="t-label ellipsis" style="width:56px">${esc(sport.name)}</span><span class="pf-heat">${sport.values.map((v) => `<i style="background:${tick(v, peak)}"></i>`).join("")}</span><span style="width:64px;text-align:right;font-size:15px;font-weight:800;white-space:nowrap">${sport.isSteps ? `${num(total / 1000)}k` : `${num(total)} min`}</span>${FF.chevron()}</button>`;
                     }).join("")}
+                    <span class="t-micro c-2">Tap a sport for its days, weeks and months.</span>
                 </div>`)
             + FF.section("Active days", plainRows(list.map((sport) => `<div class="pf-line"><span class="c-2 pf-ico20" style="width:24px">${icon(sport.icon)}</span><span class="t-rowTitle grow">${esc(sport.name)}</span><span style="font-size:17px;font-weight:800">${sport.values.filter((v) => v > 0).length} of ${sport.values.length} days</span></div>`)));
     }
@@ -7367,29 +7604,112 @@
         kind: "push",
         title: "Dashboard",
         render: (p, ui, ctx) => {
-            const tabs = [["steps", "Steps"], ["fights", "Fights"], ["sports", "Sports"], ...(S.admin ? [["admin", "Admin"]] : [])];
-            let tab = ui.tab || p.tab || "steps";
-            if (!tabs.some(([t]) => t === tab)) tab = "steps";
-            const content = tab === "steps" ? dashboardSteps(ui) : tab === "fights" ? dashboardFights(ui) : tab === "sports" ? dashboardSports()
+            // Fights first: the record against people is what only FitFight knows.
+            const tabs = [["fights", "Fights"], ["steps", "Steps"], ["sports", "Sports"], ...(S.admin ? [["admin", "Admin"]] : [])];
+            let tab = ui.tab || p.tab || "fights";
+            if (!tabs.some(([t]) => t === tab)) tab = "fights";
+            const content = tab === "steps" ? dashboardSteps(ui, p) : tab === "fights" ? dashboardFights(ui) : tab === "sports" ? dashboardSports()
                 : (globalThis.ADMIN?.dashboardTab?.(ui, ctx.key) ?? progress());
             return `<div class="pf-push">${FF.screen(largeTitle("Dashboard") + left(FF.segmented(tabs, tab, { on: "set:tab" })) + content, { top: navBar("Dashboard") })}</div>`;
         },
     });
-    // chartXSelection: the bar under the finger while dragging; the selection clears when the finger lifts.
+
+    screen("dashboardFriendsSort", {
+        kind: "drawer",
+        detent: "medium",
+        title: "Sort by",
+        render() {
+            const sort = uiOf("friendSort").value || "name";
+            const rows = FRIEND_SORTS.map(([value, title]) => FF.groupedRow({ title, on: `pfFriendSort:${value}`, trailing: `<span class="fl-check" style="opacity:${value === sort ? 1 : 0}">${icon("checkmark")}</span>` }));
+            return `<div class="fl-drawer" style="gap:16px">${FF.sheetHeader("Sort by")}${FF.grouped(rows)}</div>`;
+        },
+    });
+    action("pfFriendSort", (value) => { uiOf("friendSort").value = value; dismiss(); });
+
+    // ─── DashboardChartPage: one sport by day, week or month ────────
+    // Companion preview reads a year from Apple Health as the 31 sample days repeated back in time, ending today.
+    function chartBuckets(sport, bucket) {
+        const days = 366;
+        const daily = Array.from({ length: days }, (_, i) => sport.values[(((30 - (days - 1 - i)) % 31) + 31) % 31]);
+        const groups = [];
+        daily.forEach((v, i) => {
+            const date = daysAgo(days - 1 - i);
+            // Calendar.current in en_US: weeks start on Sunday.
+            const start = bucket === "day" ? date : bucket === "week" ? new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay()) : new Date(date.getFullYear(), date.getMonth(), 1);
+            const last = groups[groups.length - 1];
+            if (last && last.start.getTime() === start.getTime()) last.values.push(v);
+            else groups.push({ start, values: [v] });
+        });
+        const current = groups[groups.length - 1].start.getTime();
+        return groups.slice(-(bucket === "day" ? 31 : bucket === "week" ? 26 : 12)).map((g) => {
+            const total = sum(g.values);
+            return { start: g.start, value: sport.isSteps && bucket !== "day" ? avg(g.values) ?? 0 : total, sum: total, current: g.start.getTime() === current };
+        });
+    }
+    screen("dashboardChart", {
+        kind: "push",
+        title: "Sport chart",
+        render: (p, ui) => {
+            const sport = sports().find((s) => s.id === p.sport) || sports()[0];
+            if (!sport) return `<div class="pf-push">${FF.screen('<p class="t-body c-2">Apple Health can’t be read right now. Open FitFight again with your iPhone unlocked.</p>', { top: navBar("Steps") })}</div>`;
+            const bucket = ui.bucket || p.bucket || "day";
+            const bars = chartBuckets(sport, bucket);
+            const shown = Math.min(Math.max(picked(ui, p, "bar", bars.length - 1), 0), bars.length - 1);
+            const line = avg(bars.filter((b) => !b.current).map((b) => b.value));
+            const finished = bars.map((b, i) => i).filter((i) => !bars[i].current);
+            const best = finished.length ? finished.reduce((a, i) => (bars[i].value > bars[a].value ? i : a), finished[0]) : null;
+            const minutes = (v) => `${num(v)} min`;
+            const value = (v) => (!sport.isSteps ? minutes(v) : bucket === "day" ? num(v) : `${num(v)} a day`);
+            const label = (b) => (bucket === "day" ? (b.current ? "Today so far" : weekdayDay(b.start))
+                : bucket === "week" ? (b.current ? "This week so far" : `Week of ${shortDate(b.start)}`)
+                : (b.current ? "This month so far" : b.start.toLocaleDateString("en-US", { month: "long", year: "numeric" })));
+            const first = bucket === "month" ? bars[0].start.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : shortDate(bars[0].start);
+            const last = { day: "Today", week: "This week", month: "This month" }[bucket];
+            const explanation = {
+                "true-day": "One bar a day for the last 31 days. Drag across the bars.",
+                "true-week": "One bar a week for the last 26 weeks: your Steps a day that week. Drag across the bars.",
+                "true-month": "One bar a month for the last 12 months: your Steps a day that month. Drag across the bars.",
+                "false-day": "Workout minutes a day for the last 31 days. Drag across the bars.",
+                "false-week": "Workout minutes a week for the last 26 weeks. Drag across the bars.",
+                "false-month": "Workout minutes a month for the last 12 months. Drag across the bars.",
+            }[`${sport.isSteps}-${bucket}`];
+            const top = niceTop(Math.max(...bars.map((b) => b.value), 1));
+            const total = sum(bars.map((b) => b.sum));
+            const row = (title, text) => `<div class="pf-line"><span class="t-rowTitle grow">${esc(title)}</span><span class="ellipsis" style="font-size:17px;font-weight:800">${esc(text)}</span></div>`;
+            const body = FF.segmented([["day", "Day"], ["week", "Week"], ["month", "Month"]], bucket, { on: "set:bucket", fill: true })
+                + FF.card(`<div class="vstack" style="gap:10px">
+                    <div class="hstack" style="align-items:baseline"><span class="t-label c-2 grow">${esc(label(bars[shown]))}</span><span style="font-size:22px;font-weight:800">${esc(value(bars[shown].value))}</span></div>
+                    <div class="pf-chart pf-drag" data-sel="bar" data-count="${bars.length}" style="height:220px;gap:${bars.length > 20 ? 3 : 10}px">
+                        ${bars.map((b, i) => `<i style="height:${(b.value / top * 100).toFixed(2)}%;background:var(${i === shown ? "--mossFill" : "--gold"})"></i>`).join("")}
+                        ${line ? avgRule(line, top, value(line)) : ""}
+                    </div>
+                    ${endsRow(first, last)}
+                    <span class="t-micro c-2">${esc(explanation)}</span>
+                </div>`)
+                + FF.section("In numbers", `<div class="ff-grouped">${row("Average", line ? value(line) : "-")}${FF.divider()}${row("Best", best != null && bars[best].value > 0 ? `${label(bars[best])} · ${value(bars[best].value)}` : "-")}${FF.divider()}${row("Total", sport.isSteps ? num(total) : minutes(total))}</div>`);
+            return `<div class="pf-push pf-inline">${FF.screen(body, { top: navBar(sport.name) })}</div>`;
+        },
+    });
+    // chartXSelection: the bar or point under the finger while dragging; the selection clears when the finger lifts.
     phone.addEventListener("pointerdown", (event) => {
-        if (!event.target.closest(".pf-drag")) return;
-        const key = event.target.closest("[data-key]")?.dataset.key;
+        const start = event.target.closest(".pf-drag");
+        if (!start) return;
+        const key = start.closest("[data-key]")?.dataset.key;
         if (!key) return;
         const ui = uiOf(key);
+        const field = start.dataset.sel;
+        const count = Number(start.dataset.count);
+        const line = start.dataset.mode === "line";
         const pick = (e) => {
-            const chart = phone.querySelector(`[data-key="${CSS_ESCAPE(key)}"] .pf-drag`);
+            const chart = phone.querySelector(`[data-key="${CSS_ESCAPE(key)}"] .pf-drag[data-sel="${field}"]`);
             if (!chart) return;
             const box = chart.getBoundingClientRect();
-            const index = Math.max(0, Math.min(30, Math.floor((e.clientX - box.left) / box.width * 31)));
-            if (ui.day !== index) { ui.day = index; render(); }
+            const f = (e.clientX - box.left) / box.width;
+            const index = Math.max(0, Math.min(count - 1, line ? Math.round(f * (count - 1)) : Math.floor(f * count)));
+            if (ui[field] !== index) { ui[field] = index; render(); }
         };
         pick(event);
-        const up = () => { window.removeEventListener("pointermove", pick); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); ui.day = null; render(); };
+        const up = () => { window.removeEventListener("pointermove", pick); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); ui[field] = null; render(); };
         window.addEventListener("pointermove", pick);
         window.addEventListener("pointerup", up);
         window.addEventListener("pointercancel", up);
@@ -7948,6 +8268,17 @@
         .pf-ico20 { display: inline-grid; place-items: center; width: 20px; flex: none; font-size: 15px; }
         .pf-heat { display: flex; flex: 1; gap: 2px; min-width: 0; }
         .pf-heat i { flex: 1; height: 24px; border-radius: 2px; }
+        .pf-avg span { position: absolute; left: 0; top: 0; transform: translateY(-50%); padding: 3px 7px; border-radius: 6px; border: 1px solid var(--hairline); background: var(--control); font-size: 11px; font-weight: 700; line-height: 1.1; color: var(--text); white-space: nowrap; }
+        .pf-week .pf-drag { touch-action: none; }
+        .pf-ends { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--textFaint); }
+        .pf-chartrow { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+        .pf-dsport { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; }
+        .pf-inline .pf-nav-title { opacity: 1; }
+        .pf-ring { position: relative; flex: none; display: grid; place-items: center; width: 128px; height: 128px; }
+        .pf-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .pf-key { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+        .pf-tug { display: flex; gap: 3px; height: 6px; }
+        .pf-tug i { min-width: 6px; border-radius: 3px; }
 
         .pf-sheethead { padding: 12px 20px 0; }
         .pf-sheethead.title { padding: 12px 20px; }
@@ -8056,9 +8387,15 @@
         ["WHOOP: couldn’t connect", "#you/settings/~sourceGuide?id=whoop&whoop=error"],
         ["WHOOP: use whoop.com to sign in", "#you/settings/~sourceGuide?id=whoop&whoop=connecting/~pfWhoopConsent", { kind: "system" }],
         ["Delete account?", "#you/settings/~profileDeleteAccount"],
-        ["Dashboard: Steps", "#you/dashboard"],
-        ["Dashboard: Fights", "#you/dashboard?tab=fights"],
+        ["Dashboard: Fights", "#you/dashboard"],
+        ["Dashboard: a fight's summary, from your place", "#you/dashboard/~fightRound?id=finished", { note: "Tap the first place square" }],
+        ["Dashboard: sort friends head to head", "#you/dashboard/~dashboardFriendsSort"],
+        ["Dashboard: Steps", "#you/dashboard?tab=steps"],
+        ["Dashboard: Steps, a day picked", "#you/dashboard?tab=steps&day=14", { note: "What the finger reads while dragging" }],
         ["Dashboard: Sports", "#you/dashboard?tab=sports"],
+        ["Steps by day, week and month", "#you/dashboard?tab=steps/dashboardChart?sport=steps"],
+        ["Steps by month", "#you/dashboard?tab=steps/dashboardChart?sport=steps&bucket=month"],
+        ["Run by day, week and month", "#you/dashboard?tab=sports/dashboardChart?sport=Run"],
         ["Dashboard: Admin", "#you/dashboard?tab=admin", { admin: true }],
         ["Dashboard, no fight history", "#you/dashboard?tab=fights", { scenario: "empty" }],
     ]);
@@ -8905,7 +9242,7 @@
         // A new character leaves the Fights card of a finished one for when its owner sees it.
         if (p.new !== "1") s.characters.forEach((c) => { if (c.phase === "complete") c.seen = true; });
     }
-    // Opens "Pick the words we draw" at once with the owner's words; the rewrites join them when the check ends.
+    // Opens "Pick from our suggestions" at once with the owner's words; the rewrites join them when the check ends.
     function startCheck(ui, text, ms = FLOW.check, fail = false) {
         Object.assign(ui, { options: [text], note: null, chosen: 0, checkFailed: false, checking: true });
         const gen = (ui.checkGen = (ui.checkGen || 0) + 1);
@@ -8946,7 +9283,7 @@
         const summary1 = `“${c?.description ?? ui.options?.[ui.chosen] ?? ""}”`;
         const parts = [
             part(0, "Describe your animal", "", summary0, current, () => describeHTML(ui, s)),
-            part(1, "Pick the words we draw", "After you write, we suggest richer versions.", summary1, current, () => reviewHTML(ui)),
+            part(1, "Pick from our suggestions", "After you write, we suggest richer versions.", summary1, current, () => reviewHTML(ui)),
             part(2, "Pick a portrait", "Drawn after you pay. About a minute.", "Portrait chosen", current, () => (!c ? "" : step === "choosing" ? choosingHTML(c, ui) : step === "problem" ? problemHTML(c) : portraitsHTML(c)), c?.portrait),
             part(3, "Name it", "Five fitness poses, then a name.", null, current, () => (!c ? "" : step === "done" ? doneHTML(c, ui) : step === "problem" ? problemHTML(c) : posesHTML(c, ui))),
         ];
@@ -9043,6 +9380,8 @@
 
     function characterBar(step, c, ui, s) {
         const trimmed = (ui.description || "").trim();
+        // From any step of a paid character, so one stuck on a portrait pick or drawing never blocks the next.
+        const another = FF.button("Create another", { kind: "ghost", size: "small", full: true, on: "cpcAnother" });
         switch (step) {
             case "describe":
                 return FF.button("Next", { size: "large", full: true, on: "cpcNext", enabled: !!trimmed && !ui.restoring })
@@ -9062,21 +9401,20 @@
             case "poses": {
                 const denied = ui.pushDenied || s.pushStatus === "denied";
                 return FF.button(denied ? "Close" : "Notify me when it’s ready", { kind: "secondary", size: "large", full: true, on: "cpcNotify" })
-                    + `<p class="t-caption c-2 cpc-note">${denied ? "Notifications are off. The Fights tab shows when it is ready." : "You can close the app. We keep drawing."}</p>`;
+                    + `<p class="t-caption c-2 cpc-note">${denied ? "Notifications are off. The Fights tab shows when it is ready." : "You can close the app. We keep drawing."}</p>` + another;
             }
             case "choosing":
-                return FF.button("Use this portrait", { size: "large", full: true, on: "cpcUsePortrait", enabled: pickedSlot(c, ui) != null && !ui.choosing, busy: ui.choosing });
+                return FF.button("Use this portrait", { size: "large", full: true, on: "cpcUsePortrait", enabled: pickedSlot(c, ui) != null && !ui.choosing, busy: ui.choosing }) + another;
             case "done": {
                 const equipped = isCustom(D().companion) && s.equipped === c.id;
                 return (equipped || !c.poses
                     ? FF.button("Done", { size: "large", full: true, on: "close" })
-                    : FF.button("Use as companion", { size: "large", full: true, on: "cpcSelect", enabled: !ui.selecting, busy: ui.selecting }))
-                    + FF.button("Create another", { kind: "ghost", size: "small", full: true, on: "cpcAnother" });
+                    : FF.button("Use as companion", { size: "large", full: true, on: "cpcSelect", enabled: !ui.selecting, busy: ui.selecting })) + another;
             }
             default:
-                return c?.phase === "needsSupport"
+                return (c?.phase === "needsSupport"
                     ? FF.button("Contact support", { size: "large", full: true, on: "cpcSupport" })
-                    : FF.button("Try again", { size: "large", full: true, on: "cpcRetry", enabled: !ui.busy, busy: ui.busy });
+                    : FF.button("Try again", { size: "large", full: true, on: "cpcRetry", enabled: !ui.busy, busy: ui.busy })) + another;
         }
     }
 
@@ -9484,7 +9822,10 @@
         return (value < 0 && digits !== "0" ? "-" : "") + digits + (tier ? tier[1] : "");
     }
     const UNIT_SUFFIX = { percent: "%", days: " d", hours: " h", minutes: " min", seconds: " s" };
+    // Dollars: a model call costs cents, so amounts under $1 keep four decimals.
+    const dollars = (value) => { const size = Math.abs(value); return `${value < 0 ? "-" : ""}$${size.toLocaleString("en-US", { minimumFractionDigits: size < 100 ? 2 : 0, maximumFractionDigits: size < 1 ? 4 : size < 100 ? 2 : 0 })}`; };
     function adminValue(value, unit, exact = false) {
+        if (unit === "usd") return dollars(value);
         const suffix = UNIT_SUFFIX[unit] || "";
         if (exact) return Number(value).toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 }) + suffix;
         return adminNumber(value) + suffix;
@@ -9508,6 +9849,7 @@
     }
     // The server's sentence formatting (admin-dashboard-supabase-query.ts readable / counted).
     function readable(value, unit) {
+        if (unit === "usd") return dollars(value);
         const digits = Number(value).toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
         if (unit === "percent") return `${digits}%`;
         if (unit === "count" || unit === "steps") return digits;
@@ -9639,6 +9981,12 @@
         example: (r) => { const now = r.latest(), start = r.first(); return now === undefined || !start ? null : `FitFight has ${r.count(now, "user", "users")} now, against ${r.format(start.y)} at the end of ${r.period(start.x)}.`; },
         gen: (w, env) => one("Total users", points(w, level(totalUsers, env))),
     });
+    // FitFight's own AI workflows log every model call from 20 Oct 2026: here, the last 14 days.
+    const AI_SINCE = "Model calls are logged from 20 Oct 2026, when FitFight stopped using Blend.";
+    const AI_FROM = LAUNCH_DAYS_AGO - 13;
+    const charactersOn = (t, env) => Math.round((6 + 4 * noise(`ai${env}`, t)) * weekday(t) * (env === "production" ? 1 : 0.12));
+    const fightImagesOn = (t, env) => Math.round(fightsOn(t, env) * 0.6);
+    const aiPoints = (w, fn) => points(w, (ts) => { const live = ts.filter((t) => t >= AI_FROM); return live.length ? fn(live) : NaN; }).filter((p) => !Number.isNaN(p.y));
     const SECTIONS = [
         { id: "overview", cards: overviewCards, charts: [
             totalUsersChart, newUsersChart,
@@ -9997,8 +10345,73 @@
                 rows: (env) => labelRows([["1.2.0 (230)", 402], ["1.1.3 (226)", 151], ["1.1.2 (219)", 63], ["Older", 28]], env),
             }),
         ] },
+        { id: "ai", cards: [
+            card("ai_spend", "AI money spent, 30 days", "usd", false, "What OpenRouter charged: every text call, and drawings Azure had no room for. Last 30 days vs the 30 before.",
+                `Money OpenRouter charged in the last 30 days, up to now, compared with the 30 days before: every text call (cleaning, signature items, names and lines, prompt checks, runner counts) and every drawing that Azure could not take. Retried calls count, because each one is paid. Drawings on Azure use credits, in the next card. ${AI_SINCE}`,
+                (r) => `OpenRouter charged FitFight ${r.format(r.value)} in the last 30 days${r.against("in the 30 days before")}.`, fixed([6.84, null], [0.71, null])),
+            card("ai_azure_credits", "Azure credits used, 30 days", "usd", false, "Drawings on Azure, at OpenAI's list price. Last 30 days vs the 30 before.",
+                `What the drawings made on Azure in the last 30 days, up to now, are worth at OpenAI's list price for their tokens, compared with the 30 days before. They are paid with Azure credits, not money. Retried drawings count. ${AI_SINCE}`,
+                (r) => `Drawings on Azure used ${r.format(r.value)} of credits in the last 30 days${r.against("in the 30 days before")}.`, fixed([64.4, null], [8.2, null])),
+            card("ai_azure_share", "Drawings on Azure, 30 days", "percent", true, "The rest went to OpenRouter because every Azure region was full or down.",
+                "Of the drawings finished in the last 30 days, the share drawn on Azure, compared with the 30 days before. A drawing goes to OpenRouter, and costs money, only when all five Azure regions have used their drawings for the minute or failed.",
+                (r) => `${r.format(r.value)} of the drawings in the last 30 days were drawn on Azure${r.against("in the 30 days before")}.`, fixed([96.8, null], [100, null])),
+            card("ai_requests", "AI requests, 30 days", "count", true, "Portraits, fitness sets, names, checks and group photos the app asked for. Fight images not included.",
+                "Requests the app made in the last 30 days, up to now, compared with the 30 days before: each portrait, fitness set, set of names and lines, prompt check and group photo counts once. Fight images are made by the server, so they are not counted.",
+                (r) => `The app made ${r.count(r.value, "AI request", "AI requests")} in the last 30 days${r.against("in the 30 days before")}.`, fixed([831, 287], [97, 52])),
+            card("ai_success", "AI success rate, 30 days", "percent", true, "Finished requests that completed, last 30 days vs the 30 before.",
+                "Of the requests made in the last 30 days that have finished, the share that completed with a usable result, compared with the 30 days before. Failed, cancelled and unreadable results count against it. Requests still running are left out.",
+                (r) => `${r.format(r.value)} of the finished AI requests in the last 30 days completed${r.against("in the 30 days before")}.`, fixed([97.6, 93.1], [91.2, 88.4])),
+            card("ai_portrait_time", "Median portrait time, 30 days", "seconds", false, "From the first model call to the drawn picture, last 30 days vs the 30 before.",
+                `How long half of the portrait runs took in the last 30 days, from the start of the first model call to the end of the drawing, compared with the 30 days before. The app also waits for its next status check. ${AI_SINCE}`,
+                (r) => `Half of the portraits took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`, fixed([44.3, null], [46.8, null])),
+            card("ai_fitness_time", "Median fitness set time, 30 days", "seconds", false, "Five drawings at the same time, last 30 days vs the 30 before.",
+                `How long half of the fitness sets took in the last 30 days, from the start of the first model call to the end of the last of the five drawings, compared with the 30 days before. ${AI_SINCE}`,
+                (r) => `Half of the fitness sets took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`, fixed([47.9, null], [49.2, null])),
+            card("ai_wait", "Median wait before AI starts, 30 days", "seconds", false, "From the app's request to the first model call, last 30 days vs the 30 before.",
+                `How long half of the requests in the last 30 days waited between the app's request and the start of their first model call, compared with the 30 days before. It grows when Vercel queues the workflow. ${AI_SINCE}`,
+                (r) => `Half of the requests started their first model call within ${r.format(r.value)}${r.against("in the 30 days before")}.`, fixed([0.6, null], [0.8, null])),
+            card("ai_character_cost", "AI cost per character, 30 days", "usd", false, "Portraits, poses and names of each character, paid or free. Last 30 days vs the 30 before.",
+                `The AI cost of the characters people made in the last 30 days, divided by those characters, compared with the 30 days before: money to OpenRouter plus Azure credits at OpenAI's list price. A character's cost is its three portraits, retries, five poses and names and lines. A character sells for EUR 2.99. ${AI_SINCE}`,
+                (r) => `A character cost ${r.format(r.value)} in AI in the last 30 days${r.against("in the 30 days before")}.`, fixed([0.57, null], [0.58, null])),
+        ], charts: [
+            chart("ai_spend_per_bucket", (w) => `AI cost ${w.per}`, "bar", "usd", "date", {
+                note: () => `Money to OpenRouter, and Azure credits at OpenAI's list price. ${AI_SINCE}`,
+                definition: (w) => `The cost of every model call in each ${w.bucket}: money OpenRouter charged, and the Azure credits drawings used, at OpenAI's list price for their tokens. Retried calls count. ${AI_SINCE}`,
+                example: (r) => { const m = r.at("OpenRouter"), c = r.at("Azure credits"); return m === undefined || c === undefined ? null : `FitFight paid OpenRouter ${r.format(m)} and used ${r.format(c)} of Azure credits ${r.when}.`; },
+                gen: (w, env) => {
+                    const drawings = (t) => (3 * charactersOn(t, env) + 5 * charactersOn(t, env) + fightImagesOn(t, env)) * 0.0694;
+                    return [
+                        { name: "OpenRouter", previous: false, points: aiPoints(w, (ts) => ts.reduce((s, t) => s + charactersOn(t, env) * 0.031 + fightImagesOn(t, env) * 0.012 + drawings(t) * 0.03 * noise("ovf", t), 0)) },
+                        { name: "Azure credits", previous: false, points: aiPoints(w, (ts) => ts.reduce((s, t) => s + drawings(t) * (1 - 0.03 * noise("ovf", t)), 0)) },
+                    ];
+                },
+            }),
+            chart("ai_runs_per_bucket", (w) => `AI runs ${w.per}`, "bar", "count", "date", {
+                note: () => AI_SINCE,
+                definition: (w) => `Workflow runs in each ${w.bucket}, by workflow. A paid character makes three portrait runs, then a fitness set and names and lines. ${AI_SINCE}`,
+                example: (r) => { const n = r.at("Portrait"); return n === undefined ? null : `FitFight drew ${r.count(n, "portrait", "portraits")} ${r.when}.`; },
+                gen: (w, env) => [
+                    ["Portrait", (t) => 3 * charactersOn(t, env)], ["Fitness set", (t) => charactersOn(t, env)], ["Names and lines", (t) => Math.round(charactersOn(t, env) * 1.3)],
+                    ["Prompt check", (t) => Math.round(charactersOn(t, env) * 2.1)], ["Group photo", () => 0], ["Fight image", (t) => fightImagesOn(t, env)],
+                ].map(([name, daily]) => ({ name, previous: false, points: aiPoints(w, (ts) => ts.reduce((s, t) => s + daily(t), 0)) })),
+            }),
+            chart("ai_run_time_per_bucket", (w) => `Median run time ${w.per}`, "line", "seconds", "date", {
+                note: (w) => `From the first model call to the last, in each ${w.bucket}. ${AI_SINCE}`,
+                definition: (w) => `How long half of the finished runs of each workflow took in each ${w.bucket}, from the start of the first model call to the end of the last. Failed runs are left out. ${AI_SINCE}`,
+                example: (r) => { const n = r.at("Portrait"); return n === undefined ? null : `Half of the portraits took less than ${r.format(n)} ${r.when}.`; },
+                gen: (w) => [["Portrait", 44], ["Fitness set", 48], ["Names and lines", 9], ["Prompt check", 3], ["Fight image", 58]]
+                    .map(([name, base]) => ({ name, previous: false, points: aiPoints(w, (ts) => base * (0.92 + 0.16 * noise(`rt${name}`, ts[ts.length - 1]))) })),
+            }),
+            chart("ai_step_time_per_bucket", (w) => `Median model call time ${w.per}`, "line", "seconds", "date", {
+                note: (w) => `Drawings, text answers and the first token of text, in each ${w.bucket}. ${AI_SINCE}`,
+                definition: (w) => `How long half of the model calls took in each ${w.bucket}: a whole drawing, a whole text answer, and the wait for the first token of a text answer. ${AI_SINCE}`,
+                example: (r) => { const n = r.at("Drawing"); return n === undefined ? null : `Half of the drawings took less than ${r.format(n)} ${r.when}.`; },
+                gen: (w) => [["Drawing", 39], ["Text answer", 2.6], ["Text first token", 0.9]]
+                    .map(([name, base]) => ({ name, previous: false, points: aiPoints(w, (ts) => base * (0.9 + 0.2 * noise(`st${name}`, ts[ts.length - 1]))) })),
+            }),
+        ] },
     ];
-    const SECTION_TITLES = Object.fromEntries(SECTIONS.map((s) => [s.id, s.id[0].toUpperCase() + s.id.slice(1)]));
+    const SECTION_TITLES = Object.fromEntries(SECTIONS.map((s) => [s.id, s.id === "ai" ? "AI" : s.id[0].toUpperCase() + s.id.slice(1)]));
     // Signup cohorts, newest first: W0 is 100%, then each later week keeps fewer people.
     function cohorts(prefix, count, letter, spanDays, env) {
         const today = startOfToday();
@@ -10232,7 +10645,7 @@
     function dashState(ui, o = {}) {
         if (ui.adServer) return;
         ui.adServer = o.server || "production";
-        ui.adSection = "overview";
+        ui.adSection = o.section || "overview";
         ui.adTimeframe = "month";
         ui.adBucket = "auto";
         ui.adLoading = o.state === "loading";
@@ -10259,7 +10672,7 @@
             render();
         }, delay);
     }
-    action("adServer", (value, ctx) => { ctx.ui.adServer = value; startLoad(ctx.ui); });
+    action("adServer", (value, ctx) => { ctx.ui.adServer = value; ctx.ui.adRows = {}; startLoad(ctx.ui); });
     action("adSection", (value, ctx) => { ctx.ui.adSection = value; startLoad(ctx.ui); });
     action("adTimeframe", (value, ctx) => { ctx.ui.adTimeframe = value; startLoad(ctx.ui); });
     action("adBucket", (value, ctx) => { ctx.ui.adBucket = value; startLoad(ctx.ui); });
@@ -10288,7 +10701,7 @@
             const dim = ui.adLoaded !== requestOf(ui);
             const trendGroup = trends.length ? groupTitle("Over time") + seg(TIMEFRAMES.map(([v, t]) => [v, t]), ui.adTimeframe, "adTimeframe") + seg(GRANULARITIES, ui.adBucket, "adBucket") + trends.map((c) => chartCard(c, dim)).join("") : "";
             const breakdownGroup = breakdowns.length ? groupTitle("Breakdowns") + breakdowns.map((c) => chartCard(c, false)).join("") : "";
-            groups = `<div class="ad-grid">${shown.cards.map(tile).join("")}</div>${shown.charts[0]?.xKind === "date" ? trendGroup + breakdownGroup : breakdownGroup + trendGroup}`;
+            groups = `<div class="ad-grid">${shown.cards.map(tile).join("")}</div>${shown.charts[0]?.xKind === "date" ? trendGroup + breakdownGroup : breakdownGroup + trendGroup}${ui.adSection === "users" ? adminTable(ui) : ui.adSection === "ai" ? aiTables(ui) : ""}`;
         }
         return `<div class="ad-dash">
             ${FF.card(`<div class="hstack" style="gap:13px"><span class="ad-gift">${icon("gift")}</span><span class="grow vstack" style="gap:2px"><span class="t-heading">Free characters</span><span class="t-caption c-2">${esc(`${referrals.total} from referrals. Tap to see them or give some.`)}</span></span><span class="ad-row-chev">${icon("chevron.right")}</span></div>`, { on: "present:adminFreeCharacters" })}
@@ -10302,12 +10715,137 @@
     }
     globalThis.ADMIN = { dashboardTab };
 
+    // ═══ ADMIN TABLES (AdminTableCard): server-defined, the first column stays while the others scroll ═══
+    const USER_COLUMNS = ["Handle", "Name", "Email", "Joined", "Friends", "Everybody fight", "Fights", "Referred by",
+        "Referrals", "Apple Health", "Last sync", "App", "Notifications", "Sign-in", "Time zone"];
+    // The server's Newest users table: 35 fake accounts, newest first, Paris times.
+    function newestUsers() {
+        const names = ["Leo Martin", "Nina Petit", "Sam Bernard", "Theo Durand", "Ivy Laurent", "Alex Moreau", "Camille Simon",
+            "Hugo Michel", "Lea Garcia", "Jules Roux", "Manon David", "Ines Bertrand", "Paul Fournier", "Zoe Girard", "Adam Bonnet",
+            "Emma Dupont", "Louis Lambert", "Chloe Fontaine", "Noah Rousseau", "Jade Vincent", "Lina Muller", "Tom Lefevre",
+            "Rose Faure", "Oscar Andre", "Anna Mercier", "Mila Blanc", "Eli Guerin", "Victor Boyer", "Alice Garnier", "Sarah Chevalier",
+            "Gabriel Francois", "Arthur Legrand", "Lucie Gauthier", "Nathan Perrin", "Tess Robin"];
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const paris = (ms) => {
+            const part = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+                .formatToParts(new Date(ms)).map((item) => [item.type, item.value]));
+            return `${Number(part.day)} ${months[Number(part.month) - 1]} ${part.year}, ${part.hour}:${part.minute}`;
+        };
+        const value = (text) => ({ text: text ?? "-", muted: text == null, bold: false });
+        const yesNo = (on) => ({ text: on ? "Yes" : "No", muted: !on, bold: false });
+        return names.map((name, i) => {
+            const [first, last] = name.toLowerCase().split(" ");
+            const handle = i % 5 === 0 ? first : `${first}_${last.slice(0, 3)}`;
+            const apple = i % 3 !== 1;
+            const health = i % 4 !== 3;
+            return { id: handle, cells: [
+                i % 7 === 3 ? { text: "No username", muted: true, bold: false } : { text: `@${handle}`, muted: false, bold: true },
+                value(name),
+                value(apple && i % 4 === 0 ? `${first}${i}x7@privaterelay.appleid.com` : `${first}.${last}@gmail.com`),
+                value(paris(Date.now() - (i * 19 + 2) * 3600000)),
+                value(String([4, 1, 3, 1, 3, 2, 2, 1, 3, 2][i % 10])),
+                yesNo(i % 5 !== 2),
+                value(String(i % 6 === 5 ? 0 : 1)),
+                value(i > 1 && i % 3 === 0 ? (i % 2 === 0 ? "@leo" : "@nina_pet") : null),
+                value(String(i === 0 ? 5 : i === 1 ? 6 : 0)),
+                yesNo(health),
+                value(health ? paris(Date.now() - (i * 37 + 3) * 60000) : null),
+                value(health ? (i % 5 === 1 ? "1.1.3 (226)" : "1.2.1 (234)") : null),
+                yesNo(health && i % 3 !== 2),
+                value(i % 9 === 0 ? "Apple, Google" : apple ? "Apple" : "Google"),
+                value(["Europe/Paris", "America/New_York", "Europe/London", null, "America/Los_Angeles"][i % 5]),
+            ] };
+        });
+    }
+    // AdminTableCard: "10 of 35", the rows, then "Show 20 more" until every row shows.
+    function tableCard(ui, id, title, description, columns, all, first = 10, pageSize = 20) {
+        const rows = all.slice(0, (ui.adRows ??= {})[id] || first);
+        const left = all.length - rows.length;
+        const cell = (c) => `<td class="${c.muted ? "c-2" : ""}${c.bold ? " ad-bold" : ""}">${esc(c.text)}</td>`;
+        return FF.card(`<div class="vstack" style="gap:12px">
+            <div class="vstack" style="gap:4px"><span class="t-heading">${esc(title)}</span><span class="t-caption c-2">${esc(`${rows.length} of ${all.length}. ${description}`)}</span></div>
+            <div class="ad-table"><table><thead><tr>${columns.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.cells.map(cell).join("")}</tr>`).join("")}</tbody></table></div>
+            ${left > 0 ? `<div>${FF.button(`Show ${Math.min(pageSize, left)} more`, { kind: "secondary", size: "small", on: `adMoreRows:${id}:${first}:${pageSize}`, busy: ui.adRowsBusy === id, enabled: !ui.adRowsBusy })}</div>` : ""}
+        </div>`, { padding: 16 });
+    }
+    const adminTable = (ui) => tableCard(ui, "newest_users", "Newest users", "Newest signup first. Deleted accounts are left out. Times are Paris time.", USER_COLUMNS, newestUsers());
+    action("adMoreRows", (arg, ctx) => {
+        const [id, first, size] = arg.split(":");
+        ctx.ui.adRowsBusy = id;
+        render();
+        setTimeout(() => { ctx.ui.adRowsBusy = null; ctx.ui.adRows[id] = (ctx.ui.adRows[id] || Number(first)) + Number(size); render(); }, 500);
+    });
+
+    // The AI section's tables, by the server's aiTables: models, steps, people, then every model call by run.
+    function aiTables(ui) {
+        const cell = (text, bold = false) => ({ text: text ?? "-", muted: text == null, bold });
+        const money = (v) => cell(v == null ? null : readable(v, "usd"));
+        const secs = (ms) => cell(ms == null ? null : `${(ms / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} s`);
+        const num = (v) => cell(v == null ? null : Number(v).toLocaleString("en-US"));
+        const since = "Model calls are logged from 20 Oct 2026.";
+        const models = [
+            ["openai/gpt-image-2.5-sunburst", 1184, 9, 38900, 51200, null, 3012000, 2079000, 1146, 2.64, 82.41],
+            ["anthropic/claude-opus-5.5", 214, 1, 8700, 12400, 1900, 391000, 98000, 0, 4.18, 4.18],
+            ["anthropic/claude-fable-5.1", 162, 0, 11200, 15800, 2400, 498000, 61000, 0, 2.07, 2.07],
+            ["anthropic/claude-haiku-5.5", 341, 2, 2900, 4100, 600, 359000, 70000, 0, 0.07, 0.07],
+            ["z-ai/glm-5.3-flash", 401, 0, 1200, 1900, 500, 502000, 22000, 0, 0.03, 0.03],
+            ["google/gemini-2.5-flash", 142, 0, 2100, 2900, 1800, 86000, 11000, 0, 0.02, 0.02],
+        ].map(([m, calls, failed, med, slow, first, tin, tout, azure, paid, cost]) => ({ id: m, cells: [cell(m, true), num(calls), num(failed), secs(med), secs(slow), secs(first), num(tin), num(tout), num(azure), money(paid), money(cost)] }));
+        const steps = [
+            ["fitness: Draw strong", "openai/gpt-image-2.5-sunburst", 142, 1, 37800, 49100, 0.0698],
+            ["fitness: Draw soft", "openai/gpt-image-2.5-sunburst", 142, 2, 38400, 50300, 0.0697],
+            ["fitness: Draw resting", "openai/gpt-image-2.5-sunburst", 142, 0, 39900, 51800, 0.0695],
+            ["fitness: Draw fit", "openai/gpt-image-2.5-sunburst", 142, 1, 37200, 48800, 0.0697],
+            ["fitness: Draw average", "openai/gpt-image-2.5-sunburst", 142, 0, 38100, 49900, 0.0695],
+            ["avatar: Draw the avatar", "openai/gpt-image-2.5-sunburst", 429, 3, 40600, 52100, 0.0693],
+            ["trail: Draw the runners", "openai/gpt-image-2.5-sunburst", 151, 2, 46200, 61900, 0.0412],
+            ["companionLines: Write names and lines", "anthropic/claude-opus-5.5", 214, 1, 8700, 12400, 0.0195],
+            ["trail: Count the runners", "anthropic/claude-fable-5.1", 151, 0, 11100, 15700, 0.0128],
+            ["promptCheck: Check the description", "anthropic/claude-haiku-5.5", 341, 2, 2900, 4100, 0.0002],
+            ["avatar: Clean the description", "z-ai/glm-5.3-flash", 401, 0, 1200, 1900, 0.0001],
+            ["fitness: List the signature items", "google/gemini-2.5-flash", 142, 0, 2100, 2900, 0.0001],
+        ].map(([label, m, calls, failed, med, slow, per]) => ({ id: label, cells: [cell(label, true), cell(m), num(calls), num(failed), secs(med), secs(slow), money(per), money(per * calls)] }));
+        const people = ["leo", "nina_pet", "sam_ber", "theo_dur", "ivy_lau", "alex", "camille_sim", "hugo_mic", "lea_gar", "jules_rou", "manon_dav", "ines_ber"]
+            .map((handle, i) => {
+                const bought = [3, 2, 2, 1, 1, 1, 1, 0, 1, 0, 0, 0][i], free = [0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0][i];
+                const requests = (bought + free) * 6 + [4, 3, 2, 2, 1, 2, 1, 2, 1, 2, 3, 1][i];
+                return { id: handle, cells: [cell(`@${handle}`, true), num(requests), num(i % 4 === 3 ? 1 : 0), money((bought + free) * 0.61 + requests * 0.0002), num(bought), num(free)] };
+            });
+        const runs = [["avatar", ["Clean the description", "z-ai/glm-5.3-flash", "Wafer", 1165, 547, "1,253 / 54", 0.0001], ["Draw the avatar", "openai/gpt-image-2.5-sunburst", "Azure Sweden Central", 40647, null, "2,514 / 1,756", 0.0691]],
+            ["fitness", ["List the signature items", "google/gemini-2.5-flash", "Google AI Studio", 2182, 1858, "606 / 79", 0.0001], ...["resting", "soft", "average", "fit", "strong"].map((stage, k) => [`Draw ${stage}`, "openai/gpt-image-2.5-sunburst", `Azure ${["Poland Central", "Sweden Central", "East US 2", "West US 3", "UAE North"][k]}`, 34694 + k * 1300, null, "2,548 / 1,756", 0.0695])],
+            ["promptCheck", ["Check the description", "anthropic/claude-haiku-5.5", "Claude Platform on AWS", 3108, 610, "1,054 / 205", 0.0002]],
+            ["companionLines", ["Write names and lines", "anthropic/claude-opus-5.5", "Anthropic", 8712, 1904, "1,826 / 412", 0.0195]],
+            ["trail", ["Keep the scene in scope", "z-ai/glm-5.3-flash", "Wafer", 980, 412, "640 / 61", 0.0001], ["Draw the runners", "openai/gpt-image-2.5-sunburst", "Azure Poland Central", 46210, null, "3,102 / 1,372", 0.0412], ["Count the runners", "anthropic/claude-fable-5.1", "Anthropic", 11105, 2410, "3,066 / 377", 0.0128]]];
+        const calls = [];
+        for (let n = 0; n < 9; n++) {
+            const [workflow, ...run] = runs[n % runs.length];
+            const id = `wrun_01M5${String(9137 + n * 211).padStart(4, "0")}XQ${n}K`;
+            const handle = workflow === "trail" ? null : ["leo", "nina_pet", "sam_ber", "ivy_lau"][n % 4];
+            const start = Date.now() - (n * 23 + 4) * 60000;
+            run.forEach(([step, m, on, ms, first, tokens, cost], k) => {
+                const at = new Date(start + k * 2200);
+                const time = `${at.getDate()} ${MONTHS[at.getMonth()]}, ${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}:${String(at.getSeconds()).padStart(2, "0")}`;
+                calls.push({ id: `${id}:${k}`, cells: [cell(id.slice(-8), true), cell(time), cell(workflow), cell(step), num(1), cell(m), cell(on), { text: "Done", muted: false, bold: false }, secs(ms), secs(first), cell(tokens), money(cost), cell(handle && `@${handle}`), cell(null)] });
+            });
+        }
+        return [
+            tableCard(ui, "ai_models", "Models, last 30 days", `Every model FitFight called in the last 30 days, the highest cost first. ${since}`,
+                ["Model", "Calls", "Failed", "Median time", "Slowest 10%", "First token", "Tokens in", "Tokens out", "On Azure", "Paid", "Cost"], models),
+            tableCard(ui, "ai_steps", "Steps, last 30 days", `Every step of every workflow in the last 30 days, the most spent first. ${since}`,
+                ["Step", "Model", "Calls", "Failed", "Median time", "Slowest 10%", "Per call", "Cost"], steps),
+            tableCard(ui, "ai_people", "People, last 30 days", `Everyone who asked for AI in the last 30 days, the most spent first. Fight images belong to no one, so they are left out. ${since}`,
+                ["Person", "Requests", "Failed", "Cost", "Bought", "Free"], people),
+            tableCard(ui, "ai_calls", "Every model call", "Newest run first, then each run's calls in order: the trace of what each request did. Times are Paris time.",
+                ["Run", "Started", "Workflow", "Step", "Try", "Model", "Ran on", "Status", "Time", "First token", "Tokens", "Cost", "Person", "Error"], calls, 20, 50),
+        ].join("");
+    }
+
     // Profile > Dashboard with the Admin tab open (the Steps, Fights and Sports tabs belong to the profile area).
     screen("adminDashboard", {
         kind: "push", title: "Dashboard",
         render: (p, ui, ctx) => {
             // The profile area owns DashboardView; open it on the Admin tab when it is in the page.
-            dashState(ui, { state: p.state, server: p.server });
+            dashState(ui, { state: p.state, server: p.server, section: p.section });
             if (SCREENS.dashboard) { ui.tab ??= "admin"; return SCREENS.dashboard.render(p, ui, ctx); }
             return FF.screen(`${seg([["steps", "Steps"], ["fights", "Fights"], ["sports", "Sports"], ["admin", "Admin"]], "admin", "adDashTab")}${S.admin ? dashboardTab(ui, ctx.key) : ""}`, { top: navBar("Dashboard", { large: true }) });
         },
@@ -10725,6 +11263,13 @@
         .ad-small-spinner { width: 16px; height: 16px; color: var(--textSecondary); }
         .ad-loading { display: grid; place-items: center; padding: 40px 0; color: var(--textSecondary); }
         .ad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+        .ad-table { overflow-x: auto; }
+        .ad-table table { border-collapse: separate; border-spacing: 0; font-size: 12px; }
+        .ad-table th, .ad-table td { height: 36px; padding: 0 10px; text-align: left; white-space: nowrap; font-weight: 400; color: var(--text); box-shadow: inset 0 -1px 0 var(--hairline); }
+        .ad-table th { font-weight: 800; color: var(--textSecondary); }
+        .ad-table td.c-2 { color: var(--textSecondary); }
+        .ad-table td.ad-bold { font-weight: 800; }
+        .ad-table th:first-child, .ad-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--card); width: 124px; min-width: 124px; max-width: 124px; overflow: hidden; text-overflow: ellipsis; box-shadow: inset -1px 0 0 var(--hairline), inset 0 -1px 0 var(--hairline); }
         .ad-grid .ff-card { min-width: 0; }
         .ad-clamp2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
         .ad-tile-value { font-size: 28px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
@@ -10791,6 +11336,8 @@
         ["Slide haptics, custom", "#you/~slideHaptics?tab=custom", A],
         ["Dashboard, Admin tab", "#you/adminDashboard", { ...A, note: "Profile > Dashboard > Admin" }],
         ["Admin tab, Staging", "#you/adminDashboard?server=staging", A],
+        ["Users tab: newest users table", "#you/adminDashboard?section=users", { ...A, note: "Show 20 more; the handle stays while the table scrolls" }],
+        ["AI tab: spend, times, models and every model call", "#you/adminDashboard?section=ai", { ...A, note: "Four tables after the charts; Every model call is the trace of each run" }],
         ["Admin tab, loading", "#you/adminDashboard?state=loading", { ...A, note: "Refresh finishes the load" }],
         ["Admin tab, not the admin", "#you/adminDashboard?state=error", { ...A, note: "Retry loads it" }],
         ["Card page", "#you/adminDashboard/adminDetail?metric=total_users", A],

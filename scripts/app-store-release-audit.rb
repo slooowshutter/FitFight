@@ -53,11 +53,28 @@ if !version && mode == "draft"
         }
     }, Net::HTTP::Post)
 end
+if mode == "rename"
+    # Marc named the version after it went to review: pull that unreleased version back and rename it, keeping its listing.
+    version = versions.find { |item| item.dig("attributes", "versionString") == production_build }
+    abort "Missing #{production_build} to rename" unless version
+    if %w[WAITING_FOR_REVIEW IN_REVIEW].include?(version.dig("attributes", "appStoreState"))
+        pending = read.call("apps/6804230516/reviewSubmissions?filter[platform]=IOS&filter[state]=WAITING_FOR_REVIEW,IN_REVIEW").first
+        read.call("reviewSubmissions/#{pending.fetch('id')}", { data: { type: "reviewSubmissions", id: pending.fetch("id"), attributes: { canceled: true } } })
+        60.times do
+            version = read.call("appStoreVersions/#{version.fetch('id')}")
+            break if version.dig("attributes", "appStoreState") == "DEVELOPER_REJECTED"
+            sleep 5
+        end
+    end
+    renamed = read.call("appStoreVersions/#{version.fetch('id')}", { data: { type: "appStoreVersions", id: version.fetch("id"), attributes: { versionString: release_version } } })
+    puts JSON.generate({ renamed_version: renamed.fetch("attributes").slice("versionString", "appStoreState", "releaseType") })
+    exit
+end
 abort "Missing #{release_version} draft" unless version
 selected_build = read.call("appStoreVersions/#{version.fetch('id')}/build")
 puts JSON.generate({ selected_build: selected_build && selected_build.fetch("attributes").slice("version", "processingState", "usesNonExemptEncryption") })
 if ["configure", "prepare", "draft", "submit"].include?(mode)
-    abort "The draft is no longer editable" unless version.dig("attributes", "appStoreState") == "PREPARE_FOR_SUBMISSION"
+    abort "The draft is no longer editable" unless %w[PREPARE_FOR_SUBMISSION DEVELOPER_REJECTED].include?(version.dig("attributes", "appStoreState"))
     abort "Expected an explicit production build number" if mode == "submit" && !production_build
     if production_build
         abort "Expected an explicit production build number" unless production_build.match?(/\A[1-9]\d*\z/)

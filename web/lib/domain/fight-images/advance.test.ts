@@ -88,6 +88,7 @@ test("a due image renders one sheet and starts the trail workflow with the roste
     assert.equal(summary.started, 1);
     assert.equal(starts[0].workflowId, fightImageConfiguration.trail.workflowId);
     assert.match(String(starts[0].inputs.cast_roster), /^Total characters: 2\nBadger: /);
+    assert.deepEqual(starts[0].inputs.portraits, ["https://example.supabase.co/storage/v1/object/sign/fight-group-references/sheet-1.png?token=t"]);
     assert.equal(saved[0].layout, "trail");
     assert.equal(saved[0].runId, "run-new-1");
 });
@@ -98,6 +99,25 @@ test("a passing check makes the image ready", async () => {
     assert.equal(summary.ready, 1);
     assert.equal(finished[0].pass, true);
     assert.equal(finished[0].imageUrl, image);
+});
+
+test("a FitFight run returns its picture and count check, judged like a Blend run's", async () => {
+    const own = "https://zstzbfocunthczzubggz.supabase.co/storage/v1/object/public/ai-images/run/step.png";
+    const output = (check: string, imageUrl = own) => ({
+        data: { id: "run", status: "completed" as const, output: { image_url: imageUrl, check } },
+        rateLimit: {},
+    });
+    const ready = harness({ running: async () => [running(1)], read: async () => output(passCheck) });
+    assert.equal((await advanceFightGroupImages(performance.now() + 60_000, ready.deps)).ready, 1);
+    assert.equal(ready.finished[0].imageUrl, own);
+    assert.equal(ready.finished[0].check, passCheck);
+
+    const left = harness({ running: async () => [running(1)], read: async () => output(leftCheck) });
+    assert.equal((await advanceFightGroupImages(performance.now() + 60_000, left.deps)).retried, 1);
+
+    const elsewhere = harness({ running: async () => [running(1)], read: async () => output(passCheck, "https://example.com/a.png") });
+    await advanceFightGroupImages(performance.now() + 60_000, elsewhere.deps);
+    assert.deepEqual(elsewhere.finished[0].problems, ["no image in the result"]);
 });
 
 test("a runner facing left retries with the same inputs until the third attempt fails", async () => {

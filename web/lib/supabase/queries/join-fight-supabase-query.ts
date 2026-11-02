@@ -1,5 +1,4 @@
 import { recordSharedFightParticipation } from "./profile-events-supabase-query";
-import { profileCountRowSchema } from "@/lib/types/profiles/shared-profile";
 import { lockFightSeries } from "./fight-series-lock-supabase-query";
 import type { Sql } from "postgres";
 import { isJoinCode, normalizeJoinCode } from "@/lib/domain/fights/join-code";
@@ -29,7 +28,6 @@ import { loadSeries } from "./fight-access-supabase-query";
 import { mintNextRecurringFight } from "./mint-recurring-fight-supabase-query";
 import { recalculateFight } from "./recalculate-fight-supabase-query";
 
-export const JOINABLE_MEMBER_CAP = 50;
 const JOIN_ATTEMPTS_PER_USER_HOUR = 10;
 const JOIN_ATTEMPTS_PER_IP_HOUR = 30;
 const JOINABLE_FIGHT_SELECT =
@@ -289,7 +287,7 @@ export async function listJoinableFights(
             throw new ApiError(404, ERROR_CODES.not_found, "Fight not found");
         }
         const alreadyMember = fight.membership.length > 0;
-        if (suggestedOnly && (Date.parse(fight.ends_at) <= now.getTime() || (!alreadyMember && fight.roster[0].count >= JOINABLE_MEMBER_CAP))) continue;
+        if (suggestedOnly && Date.parse(fight.ends_at) <= now.getTime()) continue;
         summaries.push({
             fightId: fight.id,
             seriesId: row.id,
@@ -454,8 +452,6 @@ export async function joinFight(
             select state::text from public.fight_members where fight_id = ${current.id} and user_id = ${userId} for update
         `);
         if (members[0]?.state === "accepted" || members[0]?.state === "deferred") return { id: current.id, state: current.state };
-        const [count] = await transaction`select count(*)::int n from public.fight_members where fight_id = ${current.id} and state in ('accepted', 'deferred')`;
-        if (profileCountRowSchema.parse(count).n >= JOINABLE_MEMBER_CAP) throw new ApiError(409, ERROR_CODES.fight_full, "This fight is full");
         const memberState = fightJoinMemberState(input.start, canDeferFightJoin({
             recurring: currentSeries.recurring, paused: currentSeries.paused_at !== null,
             startsAt: current.starts_at.toISOString(), timeZone: current.time_zone, now,

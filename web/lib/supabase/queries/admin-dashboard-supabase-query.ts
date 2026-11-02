@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { ApiError, ERROR_CODES } from "@/lib/http";
 import { createDatabaseClient } from "@/lib/supabase/postgres";
 import {
     adminDashboardCardRowSchema,
@@ -7,6 +8,7 @@ import {
     adminDashboardRangeRowSchema,
     adminDashboardSchema,
     adminDashboardSectionValues,
+    adminDashboardTablePageSchema,
     type AdminDashboard,
     type AdminDashboardBucket,
     type AdminDashboardCard,
@@ -17,9 +19,13 @@ import {
     type AdminDashboardExampleReader,
     type AdminDashboardQueryFragment,
     type AdminDashboardSection,
+    type AdminDashboardTable,
+    type AdminDashboardTablePage,
     type AdminDashboardUnit,
     type AdminDashboardWindow,
 } from "@/lib/types/admin/admin-dashboard";
+import { adminUsersCountRowSchema, adminUsersSchema, type AdminUsers } from "@/lib/types/admin/admin-users";
+import { aiCallTableRowSchema, aiStepTableRowSchema } from "@/lib/types/admin/admin-ai";
 
 /**
  * The last `span` days, rolling to now, against the `span` days before them; rows expose `at`.
@@ -118,8 +124,69 @@ function samplePoints(sql: Sql, w: AdminDashboardWindow): AdminDashboardQueryFra
     `;
 }
 
-/** "8,234", "42%", "1 day", "1.2 seconds": a number in an example sentence, in English. */
+/**
+ * Every person's complete Apple Health Steps days before the Paris day `today`, with their Paris
+ * signup day. The website's Steps total adds the same days as the All-time steps card.
+ */
+export function stepHistory(sql: Sql, today: string, floor: AdminDashboardQueryFragment): AdminDashboardQueryFragment {
+    // Complete Apple Health days only: a complete row beats a newer incomplete one (profile statistics
+    // take the newest row), and real rows beat the Fight fallback.
+    // Window-bound queries pass a floor so they do not sort years of imported history.
+    // NOTE: 1.1.2 (210) phones that connected Health before 16 Sep 2026 fail their daily-Steps
+    // upload (HealthKit error 5) but still upload Fight totals. A day without a complete daily row
+    // takes the steps between two daily checkpoints of a Fight upload: whole days, highest Fight.
+    // Remove once no installed build is 1.1.2 (210); silly and samuel upload no Fights and stay missing.
+    return sql`
+        select latest.user_id, latest.day, latest.steps, (p.created_at at time zone 'Europe/Paris')::date as joined_day, p.handle
+        from (
+            select distinct on (days.user_id, days.day) days.user_id, days.day, days.steps, days.finalized
+            from (
+                select metric.user_id, metric.day, metric.value::float8 as steps, metric.updated_at,
+                    metric.observed_through >= metric.ends_at as finalized, 1 as priority
+                from private.activity_metrics as metric
+                join public.data_sources as source on source.id = metric.source_id
+                where metric.scope = 'day' and metric.metric = 'steps' and source.provider = 'apple_health'
+                    and metric.day >= ${floor}
+                union all
+                select legacy.user_id, legacy.day, legacy.value::float8, legacy.updated_at,
+                    legacy.finalized_at is not null, 0
+                from public.metric_days as legacy
+                join public.data_sources as source on source.id = legacy.source_id
+                where legacy.metric = 'steps' and source.provider = 'apple_health' and legacy.day >= ${floor}
+                union all
+                select fight.user_id, fight.day, max(fight.steps), max(fight.updated_at), true, -1
+                from (
+                    select snapshot.user_id, snapshot.created_at as updated_at, (point.value->>'day')::date as day,
+                        (point.value->>'steps')::float8 - coalesce(lag((point.value->>'steps')::float8)
+                            over (partition by snapshot.id order by point.ordinality), 0) as steps,
+                        (point.value->>'cutoff_at')::timestamptz = ((point.value->>'day')::date + 1)::timestamp at time zone f.time_zone
+                            and (point.value->>'day')::date::timestamp at time zone f.time_zone >= f.starts_at as whole
+                    from (
+                        select distinct on (s.fight_id, s.user_id) s.id, s.fight_id, s.user_id, s.created_at, s.step_checkpoints
+                        from private.fight_score_snapshots as s
+                        where s.step_checkpoints is not null and s.cutoff_at >= ${floor}
+                        order by s.fight_id, s.user_id, s.cutoff_at desc, s.created_at desc
+                    ) as snapshot
+                    join public.fights as f on f.id = snapshot.fight_id
+                    cross join lateral jsonb_array_elements(snapshot.step_checkpoints) with ordinality as point
+                ) as fight
+                where fight.whole and fight.day >= ${floor}
+                group by fight.user_id, fight.day
+            ) as days
+            order by days.user_id, days.day, days.finalized desc, days.priority < 0, days.updated_at desc, days.priority desc
+        ) as latest
+        join public.profiles as p on p.user_id = latest.user_id
+        where p.deleted_at is null and latest.finalized and latest.day < ${today}::date
+    `;
+}
+
+/** "8,234", "42%", "1 day", "1.2 seconds", "$0.0693": a number in an example sentence, in English. */
 function readable(value: number, unit: AdminDashboardUnit): string {
+    // Cents hide a model call's cost, so dollars under 1 keep four decimals; from $100, whole dollars.
+    if (unit === "usd") {
+        const size = Math.abs(value);
+        return `${value < 0 ? "-" : ""}$${size.toLocaleString("en-US", { minimumFractionDigits: size < 100 ? 2 : 0, maximumFractionDigits: size < 1 ? 4 : size < 100 ? 2 : 0 })}`;
+    }
     const digits = value.toLocaleString("en-US", { maximumFractionDigits: unit === "steps" ? 0 : 1 });
     if (unit === "percent") return `${digits}%`;
     if (unit === "count" || unit === "steps") return digits;
@@ -132,11 +199,12 @@ function counted(value: number, one: string, many: string): string {
     return `${digits} ${digits === "1" ? one : many}`;
 }
 
+// NOTE: fixed names, because English short months differ by ICU version ("Sep" or "Sept").
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 /** Reads a built chart for its example sentence, in English like the rest of the dashboard. */
 function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): AdminDashboardExampleReader {
     const points = (name?: string) => (name ? chart.series.find((line) => line.name === name) : chart.series[0])?.points ?? [];
-    // NOTE: fixed names, because English short months differ by ICU version ("Sep" or "Sept").
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const date = (x: string) => new Date(`${x}T00:00:00Z`);
     const dayMonth = (x: string) => `${date(x).getUTCDate()} ${months[date(x).getUTCMonth()]}`;
     const end = (x: string) => {
@@ -180,23 +248,10 @@ function exampleReader(chart: AdminDashboardChart, w: AdminDashboardWindow): Adm
 }
 
 /**
- * Cards have fixed spans named in their titles, so the app's period never changes them. Charts
- * over time (`x` date) cover the chosen period. Other charts name their own fixed span.
+ * Who counts as connected to Apple Health, referred, in a Fight, or a friend. The dashboard's tiles
+ * and the Users table share these rules, so a person reads the same in both.
  */
-function definitions(
-    sql: Sql,
-    w: AdminDashboardWindow,
-    section: AdminDashboardSection,
-): { cards: AdminDashboardCardDefinition[]; charts: AdminDashboardChartDefinition[] } {
-    const count = sql`count(*)`;
-    const people = sql`count(distinct e.user_id)`;
-    const per = `per ${w.bucket}`;
-    const ago = (days: number) => new Date(w.now.getTime() - days * 86_400_000);
-    const profiles = sql`
-        select user_id, created_at as at, created_at, handle, handle_set_at, time_zone,
-            companion_id, (created_at at time zone 'Europe/Paris')::date as joined_day
-        from public.profiles where deleted_at is null
-    `;
+function peopleRules(sql: Sql) {
     // NOTE: iOS answers a denied Apple Health read with an empty success, so a person counts as
     // connected only once their phone has sent a day with steps.
     const stepPeople = sql`
@@ -216,6 +271,72 @@ function definitions(
         join public.profiles as referred on referred.user_id = r.referred_user_id
         where referred.deleted_at is null and r.created_at <= referred.created_at + interval '7 days'
     `;
+    // NOTE: the Production view runs this code on the preview server against production, which has no
+    // host_id or friends column until 20261014140000_founder_fights and 20261015210000_friend_fights
+    // reach it. to_jsonb(row) ->> 'column' reads null there and the column elsewhere; use the columns
+    // directly once production has the migrations.
+    // The app-wide and suggested Fights invite people automatically, and every friendship gets a
+    // friend Fight; they distort social metrics.
+    // A founder Fight counts for its challenger, who accepted a real 30-day Fight, but not for the
+    // founder, who is in every one: tiles about a person's own progress add
+    // `m.user_id::text is distinct from f.host`.
+    const userFights = sql`
+        select f.*, to_jsonb(f) ->> 'host_id' as host from public.fights as f
+        left join public.fight_series as series on series.id = f.series_id
+        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false)
+            and (to_jsonb(f) ->> 'friends') is distinct from 'true'
+    `;
+    // A Fight counts once someone besides its owner has accepted a round of it. A Fight nobody
+    // joined, such as a solo test, is not a contest.
+    const userContests = sql`
+        select f.* from (${userFights}) as f
+        where f.state not in ('draft', 'cancelled') and exists (
+            select 1 from public.fights as round
+            join public.fight_members as m on m.fight_id = round.id
+            where round.series_id = f.series_id and m.state = 'accepted' and m.user_id <> round.owner_id
+        )
+    `;
+    // NOTE: declining or removing a friend deletes the pair's row, so requests only count the
+    // rows still here: pending or accepted. Deleted accounts and blocked pairs are left out,
+    // like the app's friends list.
+    const friendPairs = sql`
+        select friendship.user_low, friendship.user_high, friendship.state, friendship.created_at,
+            friendship.accepted_at
+        from private.profile_friendships as friendship
+        join public.profiles as low on low.user_id = friendship.user_low and low.deleted_at is null
+        join public.profiles as high on high.user_id = friendship.user_high and high.deleted_at is null
+        where not exists (
+            select 1 from (
+                select blocker_id, blocked_id from private.profile_blocks
+                union all select blocker_id, blocked_id from private.feed_blocks
+                union all select blocker_id, blocked_id from private.feedback_blocks
+            ) as block
+            where (block.blocker_id = friendship.user_low and block.blocked_id = friendship.user_high)
+                or (block.blocker_id = friendship.user_high and block.blocked_id = friendship.user_low)
+        )
+    `;
+    return { stepPeople, referrals, userFights, userContests, friendPairs };
+}
+
+/**
+ * Cards have fixed spans named in their titles, so the app's period never changes them. Charts
+ * over time (`x` date) cover the chosen period. Other charts name their own fixed span.
+ */
+function definitions(
+    sql: Sql,
+    w: AdminDashboardWindow,
+    section: AdminDashboardSection,
+): { cards: AdminDashboardCardDefinition[]; charts: AdminDashboardChartDefinition[] } {
+    const count = sql`count(*)`;
+    const people = sql`count(distinct e.user_id)`;
+    const per = `per ${w.bucket}`;
+    const ago = (days: number) => new Date(w.now.getTime() - days * 86_400_000);
+    const profiles = sql`
+        select user_id, created_at as at, created_at, handle, handle_set_at, time_zone,
+            companion_id, (created_at at time zone 'Europe/Paris')::date as joined_day
+        from public.profiles where deleted_at is null
+    `;
+    const { stepPeople, referrals, userFights, userContests } = peopleRules(sql);
     // NOTE: an open (or a pull to refresh) is a "foreground" (or "manual") trace that reads Apple
     // Health, or only refreshes Fights for someone without it. Not opens: that Fights refresh within
     // a minute after a background sync, the activity import after any sync (activity stages only),
@@ -261,75 +382,11 @@ function definitions(
     const activeDays = sql`
         select distinct user_id, (at at time zone 'Europe/Paris')::date as day from (${activity}) as activity
     `;
-    // Complete Apple Health days only: a complete row beats a newer incomplete one (profile statistics
-    // take the newest row), and real rows beat the Fight fallback.
-    // Window-bound queries pass a floor so they do not sort years of imported history.
-    // NOTE: 1.1.2 (210) phones that connected Health before 16 Sep 2026 fail their daily-Steps
-    // upload (HealthKit error 5) but still upload Fight totals. A day without a complete daily row
-    // takes the steps between two daily checkpoints of a Fight upload: whole days, highest Fight.
-    // Remove once no installed build is 1.1.2 (210); silly and samuel upload no Fights and stay missing.
-    const stepHistory = (floor: AdminDashboardQueryFragment) => sql`
-        select latest.user_id, latest.day, latest.steps, p.joined_day, p.handle
-        from (
-            select distinct on (days.user_id, days.day) days.user_id, days.day, days.steps, days.finalized
-            from (
-                select metric.user_id, metric.day, metric.value::float8 as steps, metric.updated_at,
-                    metric.observed_through >= metric.ends_at as finalized, 1 as priority
-                from private.activity_metrics as metric
-                join public.data_sources as source on source.id = metric.source_id
-                where metric.scope = 'day' and metric.metric = 'steps' and source.provider = 'apple_health'
-                    and metric.day >= ${floor}
-                union all
-                select legacy.user_id, legacy.day, legacy.value::float8, legacy.updated_at,
-                    legacy.finalized_at is not null, 0
-                from public.metric_days as legacy
-                join public.data_sources as source on source.id = legacy.source_id
-                where legacy.metric = 'steps' and source.provider = 'apple_health' and legacy.day >= ${floor}
-                union all
-                select fight.user_id, fight.day, max(fight.steps), max(fight.updated_at), true, -1
-                from (
-                    select snapshot.user_id, snapshot.created_at as updated_at, (point.value->>'day')::date as day,
-                        (point.value->>'steps')::float8 - coalesce(lag((point.value->>'steps')::float8)
-                            over (partition by snapshot.id order by point.ordinality), 0) as steps,
-                        (point.value->>'cutoff_at')::timestamptz = ((point.value->>'day')::date + 1)::timestamp at time zone f.time_zone
-                            and (point.value->>'day')::date::timestamp at time zone f.time_zone >= f.starts_at as whole
-                    from (
-                        select distinct on (s.fight_id, s.user_id) s.id, s.fight_id, s.user_id, s.created_at, s.step_checkpoints
-                        from private.fight_score_snapshots as s
-                        where s.step_checkpoints is not null and s.cutoff_at >= ${floor}
-                        order by s.fight_id, s.user_id, s.cutoff_at desc, s.created_at desc
-                    ) as snapshot
-                    join public.fights as f on f.id = snapshot.fight_id
-                    cross join lateral jsonb_array_elements(snapshot.step_checkpoints) with ordinality as point
-                ) as fight
-                where fight.whole and fight.day >= ${floor}
-                group by fight.user_id, fight.day
-            ) as days
-            order by days.user_id, days.day, days.finalized desc, days.priority < 0, days.updated_at desc, days.priority desc
-        ) as latest
-        join (${profiles}) as p on p.user_id = latest.user_id
-        where latest.finalized and latest.day < ${w.today}::date
-    `;
-    const history = stepHistory(sql`'-infinity'::date`);
+    const history = stepHistory(sql, w.today, sql`'-infinity'::date`);
     const steps = sql`select * from (${history}) as history where history.day >= history.joined_day`;
     const recentSteps = sql`
-        select * from (${stepHistory(sql`least(${w.start}::date, ${w.today}::date - 61)`)}) as history
+        select * from (${stepHistory(sql, w.today, sql`least(${w.start}::date, ${w.today}::date - 61)`)}) as history
         where history.day >= history.joined_day
-    `;
-    // NOTE: the Production view runs this code on the preview server against production, which has no
-    // host_id or friends column until 20261014140000_founder_fights and 20261015210000_friend_fights
-    // reach it. to_jsonb(row) ->> 'column' reads null there and the column elsewhere; use the columns
-    // directly once production has the migrations.
-    // The app-wide and suggested Fights invite people automatically, and every friendship gets a
-    // friend Fight; they distort social metrics.
-    // A founder Fight counts for its challenger, who accepted a real 30-day Fight, but not for the
-    // founder, who is in every one: tiles about a person's own progress add
-    // `m.user_id::text is distinct from f.host`.
-    const userFights = sql`
-        select f.*, to_jsonb(f) ->> 'host_id' as host from public.fights as f
-        left join public.fight_series as series on series.id = f.series_id
-        where coalesce(series.join_code, '') <> 'PGG7' and not coalesce(series.suggested, false)
-            and (to_jsonb(f) ->> 'friends') is distinct from 'true'
     `;
     // Fight counts and social tiles leave founder Fights out entirely.
     const realFights = sql`select * from (${userFights}) as f where f.host is null`;
@@ -348,16 +405,6 @@ function definitions(
                 )
         ) as in_fight
         from (${recentSteps}) as s
-    `;
-    // A Fight counts once someone besides its owner has accepted a round of it. A Fight nobody
-    // joined, such as a solo test, is not a contest.
-    const userContests = sql`
-        select f.* from (${userFights}) as f
-        where f.state not in ('draft', 'cancelled') and exists (
-            select 1 from public.fights as round
-            join public.fight_members as m on m.fight_id = round.id
-            where round.series_id = f.series_id and m.state = 'accepted' and m.user_id <> round.owner_id
-        )
     `;
     const contests = sql`select * from (${userContests}) as f where f.host is null`;
     // Rounds with one accepted fighter are not contests either.
@@ -613,6 +660,28 @@ function definitions(
                         example: (r) => `${r.count(r.value, "person", "people")} joined through a referral in the last 30 days${r.against("in the 30 days before")}.`,
                         query: eventCard(sql, w, 30, referrals, count),
                     },
+                    {
+                        id: "monthly_referrers", title: "Monthly referrers", unit: "count", better: true,
+                        note: "People whose link brought a signup in the last 30 days, vs the 30 before.",
+                        definition: "People whose referral link brought at least one signup in the last 30 days, up to now, compared with the 30 days before. Each person counts once, however many people they brought. A referral counts only when claimed within 7 days of signing up.",
+                        example: (r) => `${r.count(r.value, "person's link", "people's links")} brought someone to FitFight in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, referrals, people),
+                    },
+                    {
+                        id: "referrer_share", title: "Users who referred someone", unit: "percent", better: true,
+                        note: "Share of all users whose link brought a signup, now vs 7 days ago.",
+                        definition: "The share of all users whose referral link has brought at least one signup, now, compared with 7 days ago. A referral counts only when claimed within 7 days of signing up. Deleted accounts are not counted.",
+                        example: (r) => `${r.format(r.value)} of users have brought someone to FitFight${r.against("a week ago")}.`,
+                        query: sql`
+                            select 100.0 * count(*) filter (where p.user_id in (select r.user_id from (${referrals}) as r))
+                                    / nullif(count(*), 0) as value,
+                                100.0 * count(*) filter (where p.created_at < ${ago(7)} and p.user_id in (
+                                        select r.user_id from (${referrals}) as r where r.at < ${ago(7)}))
+                                    / nullif(count(*) filter (where p.created_at < ${ago(7)}), 0) as previous
+                            from public.profiles as p
+                            where p.deleted_at is null
+                        `,
+                    },
                 ],
                 charts: [
                     ...[
@@ -769,6 +838,44 @@ function definitions(
                             group by p.handle order by 2 desc, 1 limit 10
                         `,
                     },
+                    {
+                        id: "referred_vs_others", title: "Onboarding by referral, all users", kind: "table", unit: "percent", x: "label",
+                        definition: "All users in two groups: those who came through someone's referral link and the others. Each row is the share of the group who did that step, as of now. A referral counts only when claimed within 7 days of signing up. Connected Apple Health means their phone has sent at least one day with steps. Creating a fight counts once someone else joins it. Cancelled, app-wide and suggested Fights do not count. Founder Fights count for the challenger only, and friend Fights do not count. A group with fewer than 5 people is left out, because one person would swing it.",
+                        example: (r) => {
+                            const fought = (group: string) => r.series.find((line) => line.name === group)
+                                ?.points.find((point) => point.x === "Joined a fight")?.y;
+                            const referred = fought("Referred");
+                            const others = fought("Not referred");
+                            return referred === undefined || others === undefined ? null
+                                : `${r.format(referred)} of referred users joined a fight, against ${r.format(others)} of the others.`;
+                        },
+                        note: "Share of each group, as of now. Groups under 5 people are left out.",
+                        query: sql`
+                            with cohort as (
+                                select p.user_id in (select r.referred_user_id from (${referrals}) as r) as referred,
+                                    p.handle_set_at is not null as named,
+                                    p.user_id in (${stepPeople}) as health,
+                                    exists (select 1 from public.fight_members as m
+                                        join (${userContests}) as f on f.id = m.fight_id
+                                        where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host) as fought,
+                                    p.user_id in (select r.user_id from (${referrals}) as r) as referring
+                                from public.profiles as p
+                                where p.deleted_at is null
+                            )
+                            select step.x, (100.0 * count(*) filter (where step.done) / count(*))::float8 as y,
+                                case when cohort.referred then 'Referred' else 'Not referred' end as series
+                            from cohort
+                            cross join lateral (values
+                                (1, 'Picked a username', cohort.named),
+                                (2, 'Connected Apple Health', cohort.health),
+                                (3, 'Joined a fight', cohort.fought),
+                                (4, 'Referred someone', cohort.referring)
+                            ) as step(position, x, done)
+                            group by cohort.referred, step.position, step.x
+                            having count(*) >= 5
+                            order by cohort.referred desc, step.position
+                        `,
+                    },
                 ],
             };
         case "retention": {
@@ -778,7 +885,7 @@ function definitions(
             // covers the last 6 signup months, the cards' cohorts and the chart period.
             const synced = sql`
                 select distinct history.user_id, history.day
-                from (${stepHistory(sql`least(${w.start}::date, ${w.today}::date - 200)`)}) as history
+                from (${stepHistory(sql, w.today, sql`least(${w.start}::date, ${w.today}::date - 200)`)}) as history
                 where history.day >= history.joined_day
             `;
             const withHealth = sql`
@@ -951,7 +1058,7 @@ function definitions(
                 from (${activitySince(sql`${floor}::timestamp at time zone 'Europe/Paris'`)}) as activity
             `;
             const synced = sql`
-                select distinct history.user_id, history.day from (${stepHistory(floor)}) as history
+                select distinct history.user_id, history.day from (${stepHistory(sql, w.today, floor)}) as history
                 where history.day >= history.joined_day
             `;
             // People active in the `span` complete days before the latest `span` who were not active
@@ -2161,25 +2268,7 @@ function definitions(
             };
         }
         case "friends": {
-            // NOTE: declining or removing a friend deletes the pair's row, so requests only count the
-            // rows still here: pending or accepted. Deleted accounts and blocked pairs are left out,
-            // like the app's friends list.
-            const pairs = sql`
-                select friendship.user_low, friendship.user_high, friendship.state, friendship.created_at,
-                    friendship.accepted_at
-                from private.profile_friendships as friendship
-                join public.profiles as low on low.user_id = friendship.user_low and low.deleted_at is null
-                join public.profiles as high on high.user_id = friendship.user_high and high.deleted_at is null
-                where not exists (
-                    select 1 from (
-                        select blocker_id, blocked_id from private.profile_blocks
-                        union all select blocker_id, blocked_id from private.feed_blocks
-                        union all select blocker_id, blocked_id from private.feedback_blocks
-                    ) as block
-                    where (block.blocker_id = friendship.user_low and block.blocked_id = friendship.user_high)
-                        or (block.blocker_id = friendship.user_high and block.blocked_id = friendship.user_low)
-                )
-            `;
+            const pairs = peopleRules(sql).friendPairs;
             const friendships = sql`select * from (${pairs}) as pair where pair.state = 'accepted'`;
             // Every user's friends now and 7 days ago.
             const friendCounts = sql`
@@ -2789,6 +2878,193 @@ function definitions(
                 ],
             };
         }
+        case "ai": {
+            // NOTE: FitFight's own AI workflows log every model call in private.ai_steps from 20 Oct 2026. Blend
+            // runs before that have no step rows, so spend, times and models start then.
+            const since = "Model calls are logged from 20 Oct 2026, when FitFight stopped using Blend.";
+            const name = sql`case s.workflow when 'avatar' then 'Portrait' when 'fitness' then 'Fitness set'
+                when 'companionLines' then 'Names and lines' when 'promptCheck' then 'Prompt check'
+                when 'groupPhoto' then 'Group photo' when 'trail' then 'Fight image' when 'raceStart' then 'Fight image'
+                else s.workflow end`;
+            const steps = sql`select s.*, s.started_at as at from private.ai_steps as s`;
+            // A count call can finish but reject the picture. Only the saved ready image identifies the
+            // run that passed judgment, including when an earlier run of the same image was rejected.
+            const runs = sql`
+                select s.run_id, ${name} as series, min(s.started_at) as at,
+                    extract(epoch from max(s.started_at + s.duration_ms * interval '1 millisecond') - min(s.started_at)) as seconds,
+                    coalesce(max(r.status) = 'completed', s.workflow in ('trail', 'raceStart') and exists (
+                        select 1 from private.fight_group_images as image
+                        where image.run_id = s.run_id and image.status = 'ready'
+                    )) as finished
+                from private.ai_steps as s
+                left join private.ai_requests as r on r.run_handle ->> 'runId' = s.run_id
+                group by s.run_id, s.workflow
+            `;
+            const requests = sql`select r.*, r.created_at as at from private.ai_requests as r`;
+            const start = new Date(w.now.getTime() - 30 * 86_400_000);
+            const previousStart = new Date(w.now.getTime() - 60 * 86_400_000);
+            const medianRun = (workflow: string) => eventCard(
+                sql, w, 30, sql`select * from (${runs}) as run where run.series = ${workflow} and run.finished`,
+                sql`percentile_cont(0.5) within group (order by e.seconds)`,
+            );
+            return {
+                cards: [
+                    {
+                        id: "ai_spend", title: "AI money spent, 30 days", unit: "usd", better: false,
+                        note: "What OpenRouter charged: every text call, and drawings Azure had no room for. Last 30 days vs the 30 before.",
+                        definition: `Money OpenRouter charged in the last 30 days, up to now, compared with the 30 days before: every text call (cleaning, signature items, names and lines, prompt checks, runner counts) and every drawing that Azure could not take. Retried calls count, because each one is paid. Drawings on Azure use credits, in the next card. ${since}`,
+                        example: (r) => `OpenRouter charged FitFight ${r.format(r.value)} in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`select * from (${steps}) as s where s.provider = 'openrouter'`, sql`sum(e.cost_usd)`),
+                    },
+                    {
+                        id: "ai_azure_credits", title: "Azure credits used, 30 days", unit: "usd", better: false,
+                        note: "Drawings on Azure, at OpenAI's list price. Last 30 days vs the 30 before.",
+                        definition: `What the drawings made on Azure in the last 30 days, up to now, are worth at OpenAI's list price for their tokens, compared with the 30 days before. They are paid with Azure credits, not money. Retried drawings count. ${since}`,
+                        example: (r) => `Drawings on Azure used ${r.format(r.value)} of credits in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`select * from (${steps}) as s where s.provider = 'azure'`, sql`sum(e.cost_usd)`),
+                    },
+                    {
+                        id: "ai_azure_share", title: "Drawings on Azure, 30 days", unit: "percent", better: true,
+                        note: "The rest went to OpenRouter because every Azure region was full or down.",
+                        definition: "Of the drawings finished in the last 30 days, the share drawn on Azure, compared with the 30 days before. A drawing goes to OpenRouter, and costs money, only when all five Azure regions have used their drawings for the minute or failed.",
+                        example: (r) => `${r.format(r.value)} of the drawings in the last 30 days were drawn on Azure${r.against("in the 30 days before")}.`,
+                        query: sql`
+                            select 100.0 * count(*) filter (where e.provider = 'azure' and e.at >= ${start})
+                                    / nullif(count(*) filter (where e.at >= ${start}), 0) as value,
+                                100.0 * count(*) filter (where e.provider = 'azure' and e.at >= ${previousStart} and e.at < ${start})
+                                    / nullif(count(*) filter (where e.at >= ${previousStart} and e.at < ${start}), 0) as previous
+                            from (${steps}) as e where e.kind = 'image' and e.status = 'completed' and e.at < ${w.now}
+                        `,
+                    },
+                    {
+                        id: "ai_requests", title: "AI requests, 30 days", unit: "count", better: true,
+                        note: "Portraits, fitness sets, names, checks and group photos the app asked for. Fight images not included.",
+                        definition: "Requests the app made in the last 30 days, up to now, compared with the 30 days before: each portrait, fitness set, set of names and lines, prompt check and group photo counts once. Fight images are made by the server, so they are not counted.",
+                        example: (r) => `The app made ${r.count(r.value, "AI request", "AI requests")} in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, requests, sql`count(*)`),
+                    },
+                    {
+                        id: "ai_success", title: "AI success rate, 30 days", unit: "percent", better: true,
+                        note: "Finished requests that completed, last 30 days vs the 30 before.",
+                        definition: "Of the requests made in the last 30 days that have finished, the share that completed with a usable result, compared with the 30 days before. Failed, cancelled and unreadable results count against it. Requests still running are left out.",
+                        example: (r) => `${r.format(r.value)} of the finished AI requests in the last 30 days completed${r.against("in the 30 days before")}.`,
+                        query: sql`
+                            select 100.0 * count(*) filter (where e.status = 'completed' and e.at >= ${start})
+                                    / nullif(count(*) filter (where e.status in ('completed', 'failed', 'cancelled') and e.at >= ${start}), 0) as value,
+                                100.0 * count(*) filter (where e.status = 'completed' and e.at >= ${previousStart} and e.at < ${start})
+                                    / nullif(count(*) filter (where e.status in ('completed', 'failed', 'cancelled')
+                                        and e.at >= ${previousStart} and e.at < ${start}), 0) as previous
+                            from (${requests}) as e where e.at < ${w.now}
+                        `,
+                    },
+                    {
+                        id: "ai_portrait_time", title: "Median portrait time, 30 days", unit: "seconds", better: false,
+                        note: "From the first model call to the drawn picture, last 30 days vs the 30 before.",
+                        definition: `How long half of the portrait runs took in the last 30 days, from the start of the first model call to the end of the drawing, compared with the 30 days before. The app also waits for its next status check. ${since}`,
+                        example: (r) => `Half of the portraits took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`,
+                        query: medianRun("Portrait"),
+                    },
+                    {
+                        id: "ai_fitness_time", title: "Median fitness set time, 30 days", unit: "seconds", better: false,
+                        note: "Five drawings at the same time, last 30 days vs the 30 before.",
+                        definition: `How long half of the fitness sets took in the last 30 days, from the start of the first model call to the end of the last of the five drawings, compared with the 30 days before. ${since}`,
+                        example: (r) => `Half of the fitness sets took less than ${r.format(r.value)}${r.against("in the 30 days before")}.`,
+                        query: medianRun("Fitness set"),
+                    },
+                    {
+                        id: "ai_wait", title: "Median wait before AI starts, 30 days", unit: "seconds", better: false,
+                        note: "From the app's request to the first model call, last 30 days vs the 30 before.",
+                        definition: `How long half of the requests in the last 30 days waited between the app's request and the start of their first model call, compared with the 30 days before. It grows when Vercel queues the workflow. ${since}`,
+                        example: (r) => `Half of the requests started their first model call within ${r.format(r.value)}${r.against("in the 30 days before")}.`,
+                        query: eventCard(sql, w, 30, sql`
+                            select r.created_at as at, extract(epoch from first.at - r.created_at) as seconds
+                            from private.ai_requests as r
+                            join lateral (select min(s.started_at) as at from private.ai_steps as s where s.run_id = r.run_handle ->> 'runId') as first
+                                on first.at is not null
+                        `, sql`percentile_cont(0.5) within group (order by e.seconds)`),
+                    },
+                    {
+                        id: "ai_character_cost", title: "AI cost per character, 30 days", unit: "usd", better: false,
+                        note: "Portraits, poses and names of each character, paid or free. Last 30 days vs the 30 before.",
+                        definition: `The AI cost of the characters people made in the last 30 days, divided by those characters, compared with the 30 days before: money to OpenRouter plus Azure credits at OpenAI's list price. A character's cost is its three portraits, retries, five poses and names and lines. A character sells for EUR 2.99. ${since}`,
+                        example: (r) => `A character cost ${r.format(r.value)} in AI in the last 30 days${r.against("in the 30 days before")}.`,
+                        query: sql`
+                            with characters as (
+                                select r.resource_id, min(r.created_at) as at, sum(s.cost_usd) as cost
+                                from private.ai_requests as r
+                                join private.ai_steps as s on s.run_id = r.run_handle ->> 'runId'
+                                where r.resource_id is not null
+                                group by r.resource_id
+                            )
+                            select avg(cost) filter (where at >= ${start} and at < ${w.now}) as value,
+                                avg(cost) filter (where at >= ${previousStart} and at < ${start}) as previous
+                            from characters
+                        `,
+                    },
+                ],
+                charts: [
+                    {
+                        id: "ai_spend_per_bucket", title: `AI cost ${per}`, kind: "bar", unit: "usd", x: "date",
+                        note: `Money to OpenRouter, and Azure credits at OpenAI's list price. ${since}`,
+                        definition: `The cost of every model call in each ${w.bucket}: money OpenRouter charged, and the Azure credits drawings used, at OpenAI's list price for their tokens. Retried calls count. ${since}`,
+                        example: (r) => {
+                            const money = r.at("OpenRouter");
+                            const credits = r.at("Azure credits");
+                            return money === undefined || credits === undefined ? null
+                                : `FitFight paid OpenRouter ${r.format(money)} and used ${r.format(credits)} of Azure credits ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, sql`
+                            select s.started_at as at, case s.provider when 'azure' then 'Azure credits' else 'OpenRouter' end as series, s.cost_usd
+                            from private.ai_steps as s
+                        `, sql`coalesce(sum(e.cost_usd), 0)`, { series: ["OpenRouter", "Azure credits"] }),
+                    },
+                    {
+                        id: "ai_runs_per_bucket", title: `AI runs ${per}`, kind: "bar", unit: "count", x: "date",
+                        note: since,
+                        definition: `Workflow runs in each ${w.bucket}, by workflow. A paid character makes three portrait runs, then a fitness set and names and lines. ${since}`,
+                        example: (r) => {
+                            const portraits = r.at("Portrait");
+                            return portraits === undefined ? null : `FitFight drew ${r.count(portraits, "portrait", "portraits")} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, runs, sql`count(*)`, {
+                            series: ["Portrait", "Fitness set", "Names and lines", "Prompt check", "Group photo", "Fight image"],
+                        }),
+                    },
+                    {
+                        id: "ai_run_time_per_bucket", title: `Median run time ${per}`, kind: "line", unit: "seconds", x: "date",
+                        note: `From the first model call to the last, in each ${w.bucket}. ${since}`,
+                        definition: `How long half of the finished runs of each workflow took in each ${w.bucket}, from the start of the first model call to the end of the last. Failed runs are left out. ${since}`,
+                        example: (r) => {
+                            const portrait = r.at("Portrait");
+                            return portrait === undefined ? null : `Half of the portraits took less than ${r.format(portrait)} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, sql`select * from (${runs}) as run where run.finished`,
+                            sql`percentile_cont(0.5) within group (order by e.seconds)`, {
+                                gaps: true, series: ["Portrait", "Fitness set", "Names and lines", "Prompt check", "Fight image"],
+                            }),
+                    },
+                    {
+                        id: "ai_step_time_per_bucket", title: `Median model call time ${per}`, kind: "line", unit: "seconds", x: "date",
+                        note: `Drawings, text answers and the first token of text, in each ${w.bucket}. ${since}`,
+                        definition: `How long half of the model calls took in each ${w.bucket}: a whole drawing, a whole text answer, and the wait for the first token of a text answer. ${since}`,
+                        example: (r) => {
+                            const drawing = r.at("Drawing");
+                            return drawing === undefined ? null : `Half of the drawings took less than ${r.format(drawing)} ${r.when}.`;
+                        },
+                        query: perBucket(sql, w, sql`
+                            select s.started_at as at, case s.kind when 'image' then 'Drawing' else 'Text answer' end as series,
+                                s.duration_ms / 1000.0 as seconds
+                            from private.ai_steps as s where s.status = 'completed'
+                            union all
+                            select s.started_at, 'Text first token', s.first_token_ms / 1000.0
+                            from private.ai_steps as s where s.status = 'completed' and s.first_token_ms is not null
+                        `, sql`percentile_cont(0.5) within group (order by e.seconds)`, {
+                            gaps: true, series: ["Drawing", "Text answer", "Text first token"],
+                        }),
+                    },
+                ],
+            };
+        }
     }
 }
 
@@ -2825,8 +3101,8 @@ export async function readAdminDashboard(
     const { cards, charts } = definitions(database, w, section);
     const failure = (error: unknown) => `Query failed: ${error instanceof Error ? error.message : String(error)}`;
     // NOTE: tiles take turns on the pool's connections, so each note's time is the tile's own
-    // query, not its wait for a free connection.
-    let free = database.options.max;
+    // query, not its wait for a free connection. A transaction has no `options` and one connection.
+    let free = database.options?.max ?? 1;
     const turns: (() => void)[] = [];
     const timed = async <T extends { note: string | null }>(tile: () => Promise<T>): Promise<T> => {
         if (free > 0) free--;
@@ -2884,14 +3160,371 @@ export async function readAdminDashboard(
             }
         }))),
     ]);
+    const tables = await Promise.all(adminTables.filter((table) => table.section === section)
+        .map(async ({ section: _, read, first, ...table }): Promise<AdminDashboardTable> => {
+            try {
+                return { ...table, ...(await read(first, 0, environment, database)) };
+            } catch (error) {
+                return { ...table, total: 0, rows: [], note: failure(error) };
+            }
+        }));
     return adminDashboardSchema.parse({
         section,
         days,
         environment,
         bucket: w.bucket,
         generated_at: now.toISOString(),
-        sections: adminDashboardSectionValues.map((id) => ({ id, title: id[0].toUpperCase() + id.slice(1) })),
+        sections: adminDashboardSectionValues.map((id) => ({ id, title: id === "ai" ? "AI" : id[0].toUpperCase() + id.slice(1) })),
         cards: cardTiles,
         charts: chartTiles,
+        tables,
     });
+}
+
+/**
+ * The Users tab's table: the newest accounts first, `limit` of them from `offset`, each column by
+ * the dashboard's own rules. Deleted accounts are left out.
+ */
+export async function readAdminUsers(
+    limit: number,
+    offset: number,
+    environment: AdminDashboardEnvironment,
+    database: Sql = createDatabaseClient(),
+): Promise<AdminUsers> {
+    const sql = database;
+    const { stepPeople, referrals, userContests, friendPairs } = peopleRules(sql);
+    // NOTE: production has private.account_auth, the only way its read-only user reads emails, once
+    // 20261019120000_account_auth reaches `main`. Until then its emails and sign-in methods read null.
+    const { total, accounts } = adminUsersCountRowSchema.parse((await sql`
+        select count(*)::int as total, to_regclass('private.account_auth') is not null as accounts
+        from public.profiles where deleted_at is null
+    `)[0]);
+    const users = await sql`
+        with page as (
+            select user_id, handle, handle_set_at, display_name, created_at, time_zone
+            from public.profiles where deleted_at is null
+            order by created_at desc, user_id limit ${limit} offset ${offset}
+        ),
+        friends as (
+            select side.user_id, count(*)::int as friends
+            from (
+                select pair.user_low as user_id from (${friendPairs}) as pair where pair.state = 'accepted'
+                union all select pair.user_high from (${friendPairs}) as pair where pair.state = 'accepted'
+            ) as side
+            group by side.user_id
+        )
+        select p.user_id, p.handle, p.handle_set_at is not null as handle_set, p.display_name,
+            ${accounts ? sql`account.email, account.providers` : sql`null::text as email, null::text[] as providers`},
+            to_char(p.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as created_at,
+            coalesce(friends.friends, 0) as friends,
+            exists (
+                select 1 from public.fight_series_members as member
+                join public.fight_series as series on series.id = member.series_id
+                where member.user_id = p.user_id and member.state = 'accepted' and series.join_code = 'PGG7'
+            ) as everybody_fight,
+            (select count(distinct f.series_id)::int from public.fight_members as m
+                join (${userContests}) as f on f.id = m.fight_id
+                where m.user_id = p.user_id and m.state = 'accepted' and m.user_id::text is distinct from f.host) as fights,
+            (select referrer.handle from (${referrals}) as r
+                join public.profiles as referrer on referrer.user_id = r.user_id
+                where r.referred_user_id = p.user_id) as referred_by,
+            (select count(*)::int from (${referrals}) as r where r.user_id = p.user_id) as referrals,
+            p.user_id in (${stepPeople}) as health_connected,
+            (select to_char(max(source.last_success_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+                from public.data_sources as source
+                where source.user_id = p.user_id and source.provider = 'apple_health') as last_synced_at,
+            (select attempt.app_version || ' (' || attempt.app_build || ')' from private.healthkit_sync_attempts as attempt
+                where attempt.user_id = p.user_id order by attempt.received_at desc limit 1) as app_version,
+            exists (
+                select 1 from private.device_installations as device
+                where device.user_id = p.user_id and device.revoked_at is null
+                    and device.permission_status in ('authorized', 'provisional', 'ephemeral')
+            ) as notifications,
+            p.time_zone
+        from page as p
+        left join friends on friends.user_id = p.user_id
+        ${accounts ? sql`left join private.account_auth as account on account.user_id = p.user_id` : sql``}
+        order by p.created_at desc, p.user_id
+    `;
+    return adminUsersSchema.parse({
+        environment,
+        total,
+        users,
+        note: accounts ? null : "Emails and sign-in methods show here once this database has the 19 Oct 2026 migration.",
+    });
+}
+
+/**
+ * Tables by section. Each reads its rows already written as cells, so the apps draw a new table or
+ * column without an update. The dashboard holds the `first` rows; "Show more" reads `page_size` more.
+ */
+const adminTables: (Omit<AdminDashboardTable, "total" | "rows" | "note"> & {
+    section: AdminDashboardSection;
+    first: number;
+    read: (limit: number, offset: number, environment: AdminDashboardEnvironment, database: Sql) => Promise<AdminDashboardTablePage>;
+})[] = [
+    {
+        id: "newest_users", section: "users", title: "Newest users", first: 10, page_size: 20,
+        description: "Newest signup first. Deleted accounts are left out. Times are Paris time.",
+        columns: [
+            { title: "Handle", definition: "No username: the account still has the one FitFight generated at signup." },
+            { title: "Name", definition: null },
+            { title: "Email", definition: null },
+            { title: "Joined", definition: "When the account was created." },
+            { title: "Friends", definition: "Friends now. Blocked pairs and deleted accounts are not counted." },
+            { title: "Everybody fight", definition: "In the Everybody fight now: joined in onboarding or later, and not left." },
+            {
+                title: "Fights",
+                definition: "Fights joined, a repeating Fight once. A Fight counts once someone else joins it. Cancelled, Everybody, suggested and friend Fights do not count. Founder Fights count for the challenger only.",
+            },
+            { title: "Referred by", definition: "Whose referral link they signed up with. A referral counts only when claimed within 7 days of signing up." },
+            { title: "Referrals", definition: "People who signed up with their referral link." },
+            { title: "Apple Health", definition: "Their phone has sent at least one day with steps." },
+            { title: "Last sync", definition: "Their phone's last Apple Health upload." },
+            { title: "App", definition: "The version and build of their newest Apple Health sync." },
+            { title: "Notifications", definition: "A device registered for push notifications. Turning them off later in iOS Settings does not show here." },
+            { title: "Sign-in", definition: null },
+            { title: "Time zone", definition: null },
+        ],
+        read: async (limit, offset, environment, database) => {
+            const page = await readAdminUsers(limit, offset, environment, database);
+            const value = (text: string | null) => ({ text: text ?? "-", muted: text === null, bold: false });
+            const yesNo = (on: boolean) => ({ text: on ? "Yes" : "No", muted: !on, bold: false });
+            // "19 Oct 2026, 17:10" in Paris.
+            const time = (at: string) => {
+                const part = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "Europe/Paris", year: "numeric", month: "numeric", day: "numeric",
+                    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+                }).formatToParts(new Date(at)).map((item) => [item.type, item.value]));
+                return `${Number(part.day)} ${months[Number(part.month) - 1]} ${part.year}, ${part.hour}:${part.minute}`;
+            };
+            return {
+                total: page.total,
+                note: page.note,
+                rows: page.users.map((user) => ({
+                    id: user.user_id,
+                    cells: [
+                        user.handle_set
+                            ? { text: `@${user.handle}`, muted: false, bold: true }
+                            : { text: "No username", muted: true, bold: false },
+                        value(user.display_name),
+                        value(user.email),
+                        value(time(user.created_at)),
+                        value(String(user.friends)),
+                        yesNo(user.everybody_fight),
+                        value(String(user.fights)),
+                        value(user.referred_by && `@${user.referred_by}`),
+                        value(String(user.referrals)),
+                        yesNo(user.health_connected),
+                        value(user.last_synced_at && time(user.last_synced_at)),
+                        value(user.app_version),
+                        yesNo(user.notifications),
+                        value(user.providers?.length
+                            ? user.providers.map((provider) => provider[0].toUpperCase() + provider.slice(1)).join(", ")
+                            : null),
+                        value(user.time_zone),
+                    ],
+                })),
+            };
+        },
+    },
+    ...aiTables(),
+];
+
+/**
+ * The AI section's tables: by model, by step, by person, and every model call with its run, newest first.
+ * Each reads the last 30 days of private.ai_steps except the call list, which pages through all of them.
+ */
+function aiTables(): typeof adminTables {
+    const cell = (text: string | null, bold = false) => ({ text: text ?? "-", muted: text === null, bold });
+    const dollars = (value: number | null) => cell(value === null ? null : readable(value, "usd"));
+    const seconds = (ms: number | null) => cell(ms === null ? null : `${(ms / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} s`);
+    const number = (value: number | null) => cell(value === null ? null : value.toLocaleString("en-US"));
+    const since = "Model calls are logged from 20 Oct 2026.";
+    const page = async (rows: Promise<Record<string, unknown>[]>, total: Promise<Record<string, unknown>[]>) => {
+        const [read, [count]] = await Promise.all([rows, total]);
+        return { read, total: Number(count.total) };
+    };
+    return [
+        {
+            id: "ai_models", section: "ai", title: "Models, last 30 days", first: 10, page_size: 20,
+            description: `Every model FitFight called in the last 30 days, the highest cost first. ${since}`,
+            columns: [
+                { title: "Model", definition: "The model the workflow asked OpenRouter for." },
+                { title: "Calls", definition: "Model calls, retries included." },
+                { title: "Failed", definition: "Calls that ended in an error. The workflow may have retried them." },
+                { title: "Median time", definition: "Half of the finished calls took less." },
+                { title: "Slowest 10%", definition: "One finished call in ten took longer." },
+                { title: "First token", definition: "Text only: half of the answers started streaming sooner." },
+                { title: "Tokens in", definition: "Input tokens, words and pictures, of all the calls." },
+                { title: "Tokens out", definition: "Output tokens of all the calls, reasoning included." },
+                { title: "On Azure", definition: "Calls drawn on Azure, paid with credits." },
+                { title: "Paid", definition: "Money OpenRouter charged for the calls it ran." },
+                { title: "Cost", definition: "Money paid plus Azure credits at OpenAI's list price." },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    select s.model as label, count(*)::int as calls, count(*) filter (where s.status = 'failed')::int as failed,
+                        percentile_cont(0.5) within group (order by s.duration_ms) filter (where s.status = 'completed') as median_ms,
+                        percentile_cont(0.9) within group (order by s.duration_ms) filter (where s.status = 'completed') as slow_ms,
+                        percentile_cont(0.5) within group (order by s.first_token_ms) as first_token_ms,
+                        sum(s.input_tokens)::bigint as tokens_in, sum(s.output_tokens)::bigint as tokens_out, sum(s.cost_usd) as cost,
+                        count(*) filter (where s.provider = 'azure')::int as azure_calls,
+                        coalesce(sum(s.cost_usd) filter (where s.provider = 'openrouter'), 0) as paid
+                    from private.ai_steps as s where s.started_at >= now() - interval '30 days'
+                    group by s.model order by sum(s.cost_usd) desc nulls last, s.model limit ${limit} offset ${offset}
+                `, database`select count(distinct model) as total from private.ai_steps where started_at >= now() - interval '30 days'`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiStepTableRowSchema.parse(raw);
+                        return { id: row.label, cells: [cell(row.label, true), number(row.calls), number(row.failed),
+                            seconds(row.median_ms), seconds(row.slow_ms), seconds(row.first_token_ms),
+                            number(row.tokens_in), number(row.tokens_out), number(row.azure_calls ?? 0), dollars(row.paid ?? null),
+                            dollars(row.cost)] };
+                    }),
+                };
+            },
+        },
+        {
+            id: "ai_steps", section: "ai", title: "Steps, last 30 days", first: 10, page_size: 20,
+            description: `Every step of every workflow in the last 30 days, the most spent first. ${since}`,
+            columns: [
+                { title: "Step", definition: "The workflow, then the step's name in web/lib/ai/workflows.ts." },
+                { title: "Model", definition: null },
+                { title: "Calls", definition: "Model calls, retries included." },
+                { title: "Failed", definition: "Calls that ended in an error." },
+                { title: "Median time", definition: "Half of the finished calls took less." },
+                { title: "Slowest 10%", definition: "One finished call in ten took longer." },
+                { title: "Per call", definition: "The average cost of one call, Azure credits at OpenAI's list price." },
+                { title: "Cost", definition: "Money to OpenRouter plus Azure credits at OpenAI's list price." },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    select s.workflow || ': ' || s.step as label, min(s.model) as model, count(*)::int as calls,
+                        count(*) filter (where s.status = 'failed')::int as failed,
+                        percentile_cont(0.5) within group (order by s.duration_ms) filter (where s.status = 'completed') as median_ms,
+                        percentile_cont(0.9) within group (order by s.duration_ms) filter (where s.status = 'completed') as slow_ms,
+                        avg(s.cost_usd) as per_call, sum(s.cost_usd) as cost
+                    from private.ai_steps as s where s.started_at >= now() - interval '30 days'
+                    group by s.workflow, s.step order by sum(s.cost_usd) desc nulls last, 1 limit ${limit} offset ${offset}
+                `, database`select count(distinct (workflow, step)) as total from private.ai_steps where started_at >= now() - interval '30 days'`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiStepTableRowSchema.parse(raw);
+                        return { id: row.label, cells: [cell(row.label, true), cell(row.model ?? null), number(row.calls),
+                            number(row.failed), seconds(row.median_ms), seconds(row.slow_ms), dollars(row.per_call ?? null),
+                            dollars(row.cost)] };
+                    }),
+                };
+            },
+        },
+        {
+            id: "ai_people", section: "ai", title: "People, last 30 days", first: 10, page_size: 20,
+            description: `Everyone who asked for AI in the last 30 days, the most spent first. Fight images belong to no one, so they are left out. ${since}`,
+            columns: [
+                { title: "Person", definition: null },
+                { title: "Requests", definition: "Portraits, fitness sets, names and lines, prompt checks and group photos asked for." },
+                { title: "Failed", definition: "Requests that ended failed, cancelled or unreadable." },
+                { title: "Cost", definition: "Their requests' model calls: money to OpenRouter plus Azure credits at OpenAI's list price." },
+                { title: "Bought", definition: "Characters they bought at EUR 2.99 in the last 30 days, refunds left out." },
+                { title: "Free", definition: "Free characters they used in the last 30 days." },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    with asked as (
+                        select r.user_id, count(*)::int as requests,
+                            count(*) filter (where r.status in ('failed', 'cancelled'))::int as failed,
+                            sum((select sum(s.cost_usd) from private.ai_steps as s where s.run_id = r.run_handle ->> 'runId')) as cost
+                        from private.ai_requests as r where r.created_at >= now() - interval '30 days'
+                        group by r.user_id
+                    )
+                    select coalesce('@' || p.handle, 'Deleted account') as label, a.requests as calls, a.failed, a.cost,
+                        (select count(*) from private.custom_character_purchases as c
+                            join private.special_accounts as account on account.id = c.account_id
+                            where account.user_id = a.user_id and c.free_claim_key is null and c.revoked_at is null
+                                and c.created_at >= now() - interval '30 days')::int as bought,
+                        (select count(*) from private.custom_character_purchases as c
+                            join private.special_accounts as account on account.id = c.account_id
+                            where account.user_id = a.user_id and c.free_claim_key is not null
+                                and c.created_at >= now() - interval '30 days')::int as free
+                    from asked as a left join public.profiles as p on p.user_id = a.user_id
+                    order by a.cost desc nulls last, a.requests desc, 1 limit ${limit} offset ${offset}
+                `, database`select count(distinct user_id) as total from private.ai_requests where created_at >= now() - interval '30 days'`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiStepTableRowSchema.parse(raw);
+                        return { id: row.label, cells: [cell(row.label, true), number(row.calls), number(row.failed),
+                            dollars(row.cost), number(row.bought ?? 0), number(row.free ?? 0)] };
+                    }),
+                };
+            },
+        },
+        {
+            id: "ai_calls", section: "ai", title: "Every model call", first: 20, page_size: 50,
+            description: "Newest run first, then each run's calls in order: the trace of what each request did. Times are Paris time.",
+            columns: [
+                { title: "Run", definition: "The workflow run; its calls share this id. Its end matches the run in Vercel." },
+                { title: "Started", definition: null },
+                { title: "Workflow", definition: null },
+                { title: "Step", definition: null },
+                { title: "Try", definition: "1 for the first attempt; a retried call shows 2 or more." },
+                { title: "Model", definition: null },
+                { title: "Ran on", definition: "The Azure region, or the company behind OpenRouter that answered." },
+                { title: "Status", definition: null },
+                { title: "Time", definition: "From the call to the full answer." },
+                { title: "First token", definition: "Text only: from the call to the first streamed token." },
+                { title: "Tokens", definition: "Input, then output tokens." },
+                { title: "Cost", definition: "What OpenRouter charged, or the Azure credits at OpenAI's list price." },
+                { title: "Person", definition: "Who asked for the request. Fight images belong to no one." },
+                { title: "Error", definition: null },
+            ],
+            read: async (limit, offset, _environment, database) => {
+                const { read, total } = await page(database`
+                    select s.run_id as label, s.started_at, s.workflow, s.step, s.attempt, s.model, s.upstream, s.status,
+                        s.duration_ms as median_ms, s.first_token_ms, s.input_tokens as tokens_in, s.output_tokens as tokens_out,
+                        s.cost_usd as cost, s.error, p.handle
+                    from private.ai_steps as s
+                    join (select run_id, min(started_at) as run_start from private.ai_steps group by run_id) as run on run.run_id = s.run_id
+                    left join private.ai_requests as r on r.run_handle ->> 'runId' = s.run_id
+                    left join public.profiles as p on p.user_id = r.user_id
+                    order by run.run_start desc, s.run_id, s.started_at limit ${limit} offset ${offset}
+                `, database`select count(*) as total from private.ai_steps`);
+                return {
+                    total, note: null,
+                    rows: read.map((raw) => {
+                        const row = aiCallTableRowSchema.parse(raw);
+                        const at = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+                            timeZone: "Europe/Paris", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+                            second: "2-digit", hourCycle: "h23",
+                        }).formatToParts(row.started_at).map((item) => [item.type, item.value]));
+                        return { id: `${row.label}:${row.step}:${row.attempt}:${row.started_at.toISOString()}`, cells: [
+                            cell(row.label.slice(-8), true),
+                            cell(`${Number(at.day)} ${months[Number(at.month) - 1]}, ${at.hour}:${at.minute}:${at.second}`),
+                            cell(row.workflow), cell(row.step), number(row.attempt), cell(row.model), cell(row.upstream),
+                            { text: row.status === "completed" ? "Done" : "Failed", muted: false, bold: row.status === "failed" },
+                            seconds(row.median_ms), seconds(row.first_token_ms),
+                            cell(row.tokens_in === null ? null : `${row.tokens_in.toLocaleString("en-US")} / ${(row.tokens_out ?? 0).toLocaleString("en-US")}`),
+                            dollars(row.cost), cell(row.handle && `@${row.handle}`), cell(row.error),
+                        ] };
+                    }),
+                };
+            },
+        },
+    ];
+}
+
+/** A page of one table's rows, for its "Show more". */
+export async function readAdminTablePage(
+    id: string,
+    limit: number,
+    offset: number,
+    environment: AdminDashboardEnvironment,
+    database: Sql = createDatabaseClient(),
+): Promise<AdminDashboardTablePage> {
+    const table = adminTables.find((item) => item.id === id);
+    if (!table) throw new ApiError(404, ERROR_CODES.not_found, "No admin table has this id");
+    return adminDashboardTablePageSchema.parse(await table.read(limit, offset, environment, database));
 }

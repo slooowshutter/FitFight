@@ -3,9 +3,12 @@ import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import postgres from "postgres";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
+import { judgeFightImage } from "@/lib/domain/fight-images/plan";
 import { adminDashboardSectionValues } from "@/lib/types/admin/admin-dashboard";
+import type { AdminUser } from "@/lib/types/admin/admin-users";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
-import { readAdminDashboard } from "./admin-dashboard-supabase-query";
+import { readAdminDashboard, readAdminTablePage, readAdminUsers } from "./admin-dashboard-supabase-query";
+import { finishFightImageAttempt } from "./fight-images-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
 const database = postgres(env.DATABASE_URL, { max: 5 });
@@ -85,7 +88,7 @@ test("every admin dashboard card and chart runs on the migrated schema", async (
         const cardValues: string[] = [];
         for (const days of [1, 30, 3650]) {
             const dashboard = await readAdminDashboard(section, days, "staging", database);
-            const failed = [...dashboard.cards, ...dashboard.charts]
+            const failed = [...dashboard.cards, ...dashboard.charts, ...dashboard.tables]
                 .filter((tile) => tile.note?.startsWith("Query failed"))
                 .map((tile) => `${tile.id}: ${tile.note}`);
             assert.deepEqual(failed, [], `${section} over ${days} days`);
@@ -414,4 +417,270 @@ test("the metrics section lists every source, counts WHOOP as collected only and
     const today = after.points("raw_per_bucket", "WHOOP").at(-1);
     assert.ok(today);
     assert.equal(today.y - before.cell("raw_per_bucket", "WHOOP", today.x), 3);
+});
+
+test("the users table lists the newest accounts first, a page at a time, by the dashboard's rules", async (t) => {
+    const users = [randomUUID(), randomUUID(), randomUUID()];
+    const [ada, ben, cleo] = users;
+    const sourceId = randomUUID(), seriesId = randomUUID(), fightId = randomUUID();
+    t.after(async () => {
+        await database`delete from public.fights where id = ${fightId}`;
+        await database`delete from public.fight_series_members where user_id in ${database(users)}`;
+        await database`delete from public.fight_series where owner_id in ${database(users)}`;
+        await database`delete from auth.users where id in ${database(users)}`;
+    });
+    const referrersBefore = (await readAdminDashboard("users", 30, "staging", database)).cards
+        .find((card) => card.id === "monthly_referrers")?.value ?? 0;
+
+    // Ada signed up 3 days ago with Apple and later linked Google, Ben 2 days ago with Ada's link,
+    // and Cleo yesterday without an email or a username.
+    await database`
+        insert into auth.users(id, email, raw_app_meta_data, created_at) values
+            (${ada}, 'ada@example.com', ${database.json({ provider: "apple", providers: ["apple", "google"] })}, now() - interval '3 days'),
+            (${ben}, 'ben@example.com', ${database.json({ provider: "google", providers: ["google"] })}, now() - interval '2 days'),
+            (${cleo}, null, null, now() - interval '1 day')
+    `;
+    await database`
+        update public.profiles as p set created_at = u.created_at,
+            handle = case when p.user_id = ${cleo} then p.handle else 'u_' || left(replace(p.user_id::text, '-', ''), 12) end,
+            handle_set_at = case when p.user_id <> ${cleo} then u.created_at end,
+            time_zone = case when p.user_id = ${ada} then 'Europe/Paris' end
+        from auth.users as u where u.id = p.user_id and p.user_id in ${database(users)}
+    `;
+    await database`
+        insert into private.referrals(referred_user_id, referrer_user_id, created_at)
+        values (${ben}, ${ada}, now() - interval '2 days' + interval '1 hour')
+    `;
+    await database`
+        insert into private.profile_friendships(user_low, user_high, requester_id, state, created_at, accepted_at)
+        values (least(${ada}::uuid, ${ben}::uuid), greatest(${ada}::uuid, ${ben}::uuid), ${ada}, 'accepted',
+            now() - interval '1 day', now() - interval '1 day')
+    `;
+    // Ben is in the Everybody fight; Cleo joined it and left.
+    await database`
+        insert into public.fight_series (owner_id, join_code, duration_seconds, name, time_zone)
+        values (${ada}, 'PGG7', 2592000, 'Everybody', 'UTC')
+        on conflict do nothing
+    `;
+    await database`
+        insert into public.fight_series_members(series_id, user_id, state)
+        select series.id, member.user_id, member.state::public.fight_member_state
+        from public.fight_series as series
+        cross join (values (${ben}::uuid, 'accepted'), (${cleo}::uuid, 'withdrawn')) as member(user_id, state)
+        where series.join_code = 'PGG7'
+    `;
+    await database`
+        insert into public.fight_series (id, owner_id, name, visibility, recurring, duration_seconds, time_zone, join_code)
+        values (${seriesId}, ${ada}, 'Duel', 'invite_only', false, 604800, 'UTC', ${randomJoinCode()})
+    `;
+    await database`
+        insert into public.fights (id, owner_id, name, series_id, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+        values (${fightId}, ${ada}, 'Duel', ${seriesId}, 'live', now() - interval '1 day', now() + interval '6 days',
+            'UTC', 'highest_total', 'shared')
+    `;
+    await database`insert into public.fight_members (fight_id, user_id, state, accepted_at) values
+        (${fightId}, ${ada}, 'accepted', now()), (${fightId}, ${ben}, 'accepted', now())`;
+    await database`
+        insert into public.data_sources(id, user_id, provider, source_label, connection_route, capabilities, status,
+            connected_at, last_success_at)
+        values (${sourceId}, ${ben}, 'apple_health', 'Apple Health', 'healthkit', array['steps'], 'healthy',
+            now() - interval '2 days', '2026-10-18T10:00:00Z')
+    `;
+    await database`
+        insert into private.activity_metrics(user_id, source_id, scope, scope_key, metric, starts_at, ends_at,
+            observed_through, day, time_zone, value, unit, input_ids, calculation_version)
+        values (${ben}, ${sourceId}, 'day', 'day:' || (current_date - 1), 'steps', current_date - 1, current_date,
+            current_date, current_date - 1, 'Europe/Paris', 5000, 'count', array[gen_random_uuid()], 1)
+    `;
+    await database`
+        insert into private.healthkit_sync_attempts(user_id, attempt_id, trigger, started_at, received_at, outcome,
+            total_ms, stages, app_version, app_build)
+        values
+            (${ben}, gen_random_uuid(), 'foreground', now() - interval '1 day', now() - interval '1 day', 'succeeded',
+                900, '[]', '1.1.3', '226'),
+            (${ben}, gen_random_uuid(), 'foreground', now() - interval '1 hour', now() - interval '1 hour', 'succeeded',
+                900, '[]', '1.2.1', '234')
+    `;
+    // Ada allowed notifications; Ben's phone was revoked.
+    await database`
+        insert into private.device_installations(user_id, token_fingerprint, encrypted_token, encryption_iv,
+            encryption_tag, apns_environment, permission_status, revoked_at)
+        values
+            (${ada}, ${`fingerprint-${ada}`}, 'sealed', 'iv', 'tag', 'production', 'authorized', null),
+            (${ben}, ${`fingerprint-${ben}`}, 'sealed', 'iv', 'tag', 'production', 'authorized', now())
+    `;
+
+    const all = await readAdminUsers(100, 0, "staging", database);
+    const [{ total }] = await database<{ total: number }[]>`
+        select count(*)::int as total from public.profiles where deleted_at is null
+    `;
+    assert.equal(all.total, total);
+    assert.equal(all.environment, "staging");
+    assert.equal(all.note, null);
+    const mine = all.users.filter((user) => users.some((id) => id === user.user_id));
+    assert.deepEqual(mine.map((user) => user.user_id), [cleo, ben, ada], "Newest signup first");
+    assert.ok(mine.every((user) => /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(user.created_at)));
+    const columns = ({ user_id: _id, handle: _handle, display_name: _name, created_at: _created, ...rest }: AdminUser) => rest;
+    const handle = (id: string) => `u_${id.replaceAll("-", "").slice(0, 12)}`;
+    assert.deepEqual(mine.map(columns), [
+        {
+            handle_set: false, email: null, providers: [], friends: 0, everybody_fight: false, fights: 0,
+            referred_by: null, referrals: 0, health_connected: false, last_synced_at: null, app_version: null,
+            notifications: false, time_zone: null,
+        },
+        {
+            handle_set: true, email: "ben@example.com", providers: ["google"], friends: 1, everybody_fight: true,
+            fights: 1, referred_by: handle(ada), referrals: 0, health_connected: true,
+            last_synced_at: "2026-10-18T10:00:00Z", app_version: "1.2.1 (234)", notifications: false, time_zone: null,
+        },
+        {
+            handle_set: true, email: "ada@example.com", providers: ["apple", "google"], friends: 1,
+            everybody_fight: false, fights: 1, referred_by: null, referrals: 1, health_connected: false,
+            last_synced_at: null, app_version: null, notifications: true, time_zone: "Europe/Paris",
+        },
+    ]);
+
+    const at = all.users.findIndex((user) => user.user_id === cleo);
+    const pages = [await readAdminUsers(1, at, "staging", database), await readAdminUsers(2, at + 1, "staging", database)];
+    assert.deepEqual(
+        pages.flatMap((page) => page.users.map((user) => user.user_id)),
+        all.users.slice(at, at + 3).map((user) => user.user_id),
+        "Pages continue where the last one stopped",
+    );
+
+    // The Users tab draws the same rows as a server-defined table, in Paris time.
+    const dashboard = await readAdminDashboard("users", 30, "staging", database);
+    const table = dashboard.tables.find((item) => item.id === "newest_users");
+    assert.ok(table);
+    assert.equal(table.total, total);
+    assert.equal(table.page_size, 20);
+    assert.deepEqual(table.rows.map((row) => row.id), all.users.slice(0, 10).map((user) => user.user_id));
+    assert.ok(table.rows.every((row) => row.cells.length === table.columns.length), "One cell per column");
+    const tablePage = await readAdminTablePage("newest_users", 3, at, "staging", database);
+    assert.deepEqual(tablePage.rows.map((row) => row.id), [cleo, ben, ada]);
+    assert.deepEqual(tablePage.rows[0].cells[0], { text: "No username", muted: true, bold: false });
+    assert.deepEqual(tablePage.rows[1].cells.map((cell) => cell.text).filter((_, index) => index !== 1 && index !== 3), [
+        `@${handle(ben)}`, "ben@example.com", "1", "Yes", "1", `@${handle(ada)}`, "0", "Yes", "18 Oct 2026, 12:00",
+        "1.2.1 (234)", "No", "Google", "-",
+    ]);
+    assert.deepEqual(tablePage.rows[2].cells[13], { text: "Apple, Google", muted: false, bold: false });
+    await assert.rejects(readAdminTablePage("nothing", 1, 0, "staging", database), /No admin table has this id/);
+
+    // Production reads without the view until its migration reaches `main`.
+    const rollback = new Error("rollback");
+    await assert.rejects(database.begin(async (transaction) => {
+        await transaction`drop view private.account_auth`;
+        const before = await readAdminUsers(100, 0, "staging", transaction);
+        const ben = before.users.find((user) => user.user_id === users[1]);
+        assert.equal(ben?.email, null);
+        assert.equal(ben?.providers, null);
+        assert.equal(ben?.referred_by, handle(ada));
+        assert.match(before.note ?? "", /^Emails and sign-in methods show here once/);
+        throw rollback;
+    }), rollback);
+
+    const referrers = (await readAdminDashboard("users", 30, "staging", database)).cards
+        .find((card) => card.id === "monthly_referrers")?.value ?? 0;
+    assert.equal(referrers - referrersBefore, 1, "Ada's link brought Ben");
+});
+
+test("AI run times require a saved passing judgment for the same fight-image run", async () => {
+    const partialTrail = randomUUID();
+    const partialRace = randomUUID();
+    const failedTrail = randomUUID();
+    const completedTrail = randomUUID();
+    const completedRace = randomUUID();
+    const rejectedTrail = randomUUID();
+    const unreadableRace = randomUUID();
+    const unjudgedTrail = randomUUID();
+    const userId = randomUUID();
+    const fightId = randomUUID();
+    const imageUrl = "https://cdn.tryblend.ai/dashboard-test.png";
+    const passedCheck = JSON.stringify({ total: 2, counts: [{ name: "Cat", count: 1 }, { name: "Dog", count: 1 }] });
+    const rejectedCheck = JSON.stringify({ total: 1, counts: [{ name: "Cat", count: 1 }] });
+    const unreadableCheck = "The image looks fine.";
+    const startedAt = new Date();
+    startedAt.setUTCDate(startedAt.getUTCDate() - 2);
+    startedAt.setUTCHours(12, 0, 0, 0);
+    const day = startedAt.toISOString().slice(0, 10);
+    const rollback = new Error("rollback AI timing fixtures");
+    await assert.rejects(database.begin(async (transaction) => {
+        await transaction`insert into auth.users(id) values (${userId})`;
+        await transaction`
+            insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${userId}, 'AI dashboard', 'live', now() - interval '1 day', now() + interval '1 day',
+                'Europe/Paris', 'highest_total', 'shared')
+        `;
+        await transaction`
+            insert into private.ai_steps (
+                run_id, workflow, step, step_id, attempt, kind, provider, model,
+                status, started_at, duration_ms, input, code_version
+            )
+            select run_id, workflow, step, step_id, attempt, 'text', 'openrouter', 'test-model',
+                status, ${startedAt}::timestamptz + elapsed * interval '1 second', duration, '{}', 'test'
+            from (values
+                (${partialTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${partialRace}, 'raceStart', 'Draw the race start', 'draw', 1, 'completed', 0, 20000),
+                (${failedTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${failedTrail}, 'trail', 'Count the runners', 'count', 1, 'failed', 20, 1000),
+                (${completedTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${completedTrail}, 'trail', 'Draw the runners', 'draw', 1, 'failed', 3, 10000),
+                (${completedTrail}, 'trail', 'Draw the runners', 'draw', 2, 'completed', 14, 40000),
+                (${completedTrail}, 'trail', 'Count the runners', 'count', 1, 'completed', 55, 5000),
+                (${completedRace}, 'raceStart', 'Draw the race start', 'draw', 1, 'completed', 0, 30000),
+                (${completedRace}, 'raceStart', 'Count the featured runners', 'count', 1, 'failed', 31, 3000),
+                (${completedRace}, 'raceStart', 'Count the featured runners', 'count', 2, 'completed', 35, 5000),
+                (${rejectedTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${rejectedTrail}, 'trail', 'Draw the runners', 'draw', 1, 'completed', 3, 10000),
+                (${rejectedTrail}, 'trail', 'Count the runners', 'count', 1, 'completed', 15, 5000),
+                (${unreadableRace}, 'raceStart', 'Draw the race start', 'draw', 1, 'completed', 0, 10000),
+                (${unreadableRace}, 'raceStart', 'Count the featured runners', 'count', 1, 'completed', 11, 4000),
+                (${unjudgedTrail}, 'trail', 'Draw the runners', 'draw', 1, 'completed', 0, 20000),
+                (${unjudgedTrail}, 'trail', 'Count the runners', 'count', 1, 'completed', 21, 4000)
+            ) as fixture(run_id, workflow, step, step_id, attempt, status, elapsed, duration)
+        `;
+        await transaction`
+            update private.ai_steps set output = case run_id
+                when ${rejectedTrail} then to_jsonb(${rejectedCheck}::text)
+                when ${unreadableRace} then to_jsonb(${unreadableCheck}::text)
+                else to_jsonb(${passedCheck}::text) end
+            where run_id in (${rejectedTrail}, ${unreadableRace}, ${completedTrail}, ${completedRace}, ${unjudgedTrail})
+                and step in ('Count the runners', 'Count the featured runners') and status = 'completed'
+        `;
+        for (const fixture of [
+            { runId: rejectedTrail, check: rejectedCheck, judgment: judgeFightImage("trail", { Cat: 1, Dog: 1 }, rejectedCheck), nextRunId: completedTrail },
+            { runId: completedRace, check: passedCheck, judgment: judgeFightImage("race_start", { Cat: 1, Dog: 1 }, passedCheck), nextRunId: null },
+            { runId: unreadableRace, check: unreadableCheck, judgment: judgeFightImage("race_start", { Cat: 1, Dog: 1 }, unreadableCheck), nextRunId: null },
+        ]) {
+            const imageId = randomUUID();
+            await transaction`
+                insert into private.fight_group_images(id, fight_id, status, due_at, run_id, attempts)
+                values (${imageId}, ${fightId}, 'running', now(), ${fixture.runId}, 1)
+            `;
+            await finishFightImageAttempt(imageId, {
+                runId: fixture.runId, imageUrl, check: fixture.check, ...fixture.judgment, nextRunId: fixture.nextRunId,
+            }, transaction);
+            if (fixture.nextRunId) {
+                await finishFightImageAttempt(imageId, {
+                    runId: fixture.nextRunId, imageUrl, check: passedCheck,
+                    ...judgeFightImage("trail", { Cat: 1, Dog: 1 }, passedCheck),
+                }, transaction);
+            }
+        }
+        await transaction`
+            insert into private.fight_group_images(fight_id, status, due_at, run_id, attempts)
+            values (${fightId}, 'running', now(), ${unjudgedTrail}, 1)
+        `;
+        const dashboard = await readAdminDashboard("ai", 7, "staging", transaction, "day");
+        const timing = dashboard.charts.find((chart) => chart.id === "ai_run_time_per_bucket");
+        assert.ok(timing);
+        assert.ok(!timing.note?.startsWith("Query failed"), timing.note ?? "");
+        assert.deepEqual(timing.series.find((series) => series.name === "Fight image")?.points, [
+            { x: day, y: 50 },
+        ], "Only the judged 60-second trail retry and 40-second race contribute, not rejected, unreadable or unjudged counts");
+        const runs = dashboard.charts.find((chart) => chart.id === "ai_runs_per_bucket");
+        assert.equal(runs?.series.find((series) => series.name === "Fight image")?.points.find((point) => point.x === day)?.y, 8,
+            "Partial, failed, rejected, unreadable and unjudged workflows still count as runs");
+        throw rollback;
+    }), rollback);
 });

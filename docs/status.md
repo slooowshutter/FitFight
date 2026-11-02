@@ -1,23 +1,313 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **18 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **20 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The WHOOP connection (raw data pull) was approved on 18 Oct 2026; WHOOP-based Fights and other WHOOP UI still wait for the backlog. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
 
 ---
 
-## App Store 1.2.1, 19 Oct 2026
+## FitFight runs its own AI workflows, prepared 20 Oct 2026
+
+Marc asked to leave Blend because it is slow: on staging (12 to 17 Oct) Blend took a median
+44 s for a prompt check that OpenRouter answers in 2 to 3 s, 130 s for a portrait and 134 s for
+a fitness set. See [AI workflows](ai-workflows.md).
+
+**Code:** all seven Blend workflows are now functions in `web/lib/ai/workflows.ts`, run by the
+Vercel Workflow SDK, with every prompt copied word for word (`prompts.ts`, checked against the
+versions Blend published, read from Blend's database on 21 Oct). Text goes through OpenRouter.
+Sunburst drawings run on Blend's five Azure regions with their per-minute limits, paid with
+Azure credits, and go to OpenRouter only when every region is full or down. Every model call
+writes a row to the new `private.ai_steps` (time, first token, tokens, cost, model, input, output).
+Drawings go to the new public `ai-images` bucket. `/api/v1/ai/runs` and its contract are
+unchanged; old Blend runs still finish through Blend. The admin dashboard has a new **AI**
+section (iPhone, web and mirror): spend, success, times, wait, cost per character, four charts
+and four tables. The iPhone change is the `usd` unit only; older builds show dollars without
+the sign. Migration `20261020120000_ai_steps.sql` adds the table, bucket and new allowed
+picture hosts.
+
+**Checked on this Mac, 20 Oct:** typecheck, 116 unit tests, `next build` (7 workflows compiled),
+the iPhone Simulator build, the migration, schema lint and pgTAP (333) on a disposable local
+database, and the database tests (44 local failures, the same tests that fail on `develop`
+locally, 45 there; all of them pass once the local API port clash is avoided, except one
+HealthKit date test near midnight). Live runs of all seven workflows on the local database:
+prompt check 4.3 s, names and lines 17 s, portrait 42 s, fitness set 42 s (five drawings at
+once), group photo 47 s, trail image 53 s (check passed), race start 61 s (check missed two
+featured runners, so the cron would retry), all logged with cost. Local drawing links are refused
+by the picture checks, as expected, so those requests released their credit.
+
+**Contract:** `/api/v1/ai/runs` requests and answers are unchanged, so every installed build works;
+Blend runs started before the deploy still finish on Blend. The admin dashboard adds the `ai`
+section and the `usd` unit (`contracts/openapi.yaml`); older builds decode both as strings and
+show dollars without the sign. **Order:** the migration first (the old checks refuse FitFight
+picture links, so a backend without it would fail to settle completed drawings), then the
+backend.
+
+**Not done:** not deployed, not merged. Staging needs the migration, the secret
+`AI_WORKFLOWS_OPENROUTER_API_KEY` and the five `AZURE_IMAGE_*_API_KEY` secrets are in Vercel
+for Development and Preview (21 Oct), and staging still needs a real paid character end to end.
+Production needs the same six secrets before `main` ships this; do not use `OPENROUTER_API_KEY`
+there, it turns the paused daily statuses back on.
+
+**Review fixes, 31 Oct:** drawing and upload now use separate durable steps. A storage retry
+reuses the saved bytes, and the model charge is logged before upload. Streamed OpenRouter
+400/403 errors stop immediately, while 408/429 and server errors remain retryable. Fight-image
+timings require a successful final runner count, so partial runs do not lower the median.
+The app/API contracts and migration are unchanged by these fixes.
+
+**Checks for these fixes:** typecheck, all 573 unit tests and `git diff --check` passed in
+this workspace. The image regressions use the real Workflow compiler with a mocked scheduler
+and services. Before the fix, each storage scenario called the model twice. All four now call
+it once. Eleven text tests cover streamed and HTTP errors with mocked provider responses.
+The dashboard database regression is prepared for cloud CI, but was not run here because
+it requires the disposable CI database. Hosted Workflow persistence and live deployment remain unverified.
+
+**Review fixes, 1 Nov:** app workflows now carry their reserved request ID into every model log.
+The prepared `ai_steps` migration links those logs to the request with account-deletion cascade.
+The foreign key also rejects logs from workflows that finish after their owner deletes the account.
+Normal retention stays unlimited. Fight-image timings now require a saved `ready` image for the
+same run ID. Rejected counts, unreadable answers and unjudged runs stay in counts but not successful-run timings.
+
+**Contract and order:** `/api/v1/ai/runs`, account deletion and dashboard response shapes remain unchanged.
+The request ID is internal workflow input, supplied by the backend. Old Blend runs still use their existing inputs.
+The unshipped migration changed in place. Apply it before the backend, as above. No new native build is required.
+
+**Checks:** 16 request/log ownership assertions failed before the fix. All 64 targeted checks now pass.
+The full suite passed all 573 unit tests, typecheck, the destructive-SQL guard and whitespace checks.
+Database regressions cover account deletion before run-handle persistence, late callbacks, other-account isolation,
+rejected and unreadable counts, unjudged runs and a successful retry. They await the disposable cloud CI database,
+which this workspace cannot start. No hosted database, deployment or supported installed build was tested for these fixes.
+
+---
+
+## User feedback from @rad: pose, Feed composer, new companion, prepared 30 Oct 2026
+
+From the production Feedback tab (@rad, build 234, 19-26 Oct).
+
+- **Pose on Profile** ("Animal not syncing", 26 Oct): Fights shows your companion in the pose today's steps reached, but the Profile header showed the saved picture. For a custom character that is always the Resting pose (armchair, coffee), so 18K steps showed the couch. The custom poses now load in `ContentView` into `CompanionStore.fitnessImages` (a failed load tries again every 30 seconds), and the Profile header avatar (`CompanionAvatar(effort:)`) uses the same pose as Fights, stock animals too. What friends see (`companion_image_url`, Resting) is unchanged.
+- **Feed composer** ("Feed posting", 22 Oct): Choose no longer ticks every fight; it keeps what started ticked (nothing from Feed, the fight from a fight's Feed). Fights that are over leave the list and Everyone: only live fights, a recurring series between rounds, and the fight the post starts in.
+- **New companion** ("Animal generation special", 19 Oct; "Wording Change", 22 Oct): Create another shows on every step of a paid character (drawing, portrait pick, poses, problem), not only when finished. The old one stays on Yours and keeps drawing. The second step is now "Pick from our suggestions" ("Choisis parmi nos suggestions").
+
+**Not done:** hiding an unwanted custom character (needs a server column and route), changing a post's fights after posting and tagging people (API change, feature), an Add people button on the fight screen (new UI, mirror proposal first). "Character display bug" (22 Oct, an old uploaded photo on Fights) is handled by open PR #427.
+
+**Contract:** none. App and mirror only; no API, database or migration change.
+
+---
+
+## Dashboard: Fights first, values under the finger, fight days, Day/Week/Month pages, prepared 20 Oct 2026
+
+Marc (build 223, then 18 Oct): many charts let you slide but show no number;
+the dashed average needs a readable value, as a small badge; the Dashboard
+should lead with fights; keep Sports. From the proposals he picked the win rate
+ring (thin gaps), History's place squares and the rival cards.
+
+**Code (native only):**
+
+- Profile -> Dashboard opens on **Fights** (tabs: Fights, Steps, Sports, Admin).
+  Fights: the win rate in a ring split into won, drew and lost, with the three
+  counts beside it; your place in your last 10 fights as the same squares as a
+  fight's History (`FFPlaceSquare`), each opening the same round summary
+  (`RoundSummarySheet`) when the fight is loaded; your run and best win run;
+  Friends head to head: one card per rival (companion, score, who leads, a
+  won/drew/lost bar) from `/me/rivalries`, opening their profile, sorted A to Z by
+  handle, or by most fights, oldest or newest friends, with the Fights tab's Sort by
+  link and drawer (now shared as `FFSortButton` and `.ffSortSheet`); then history.
+- Steps: the dashed line's value ("Avg 8,771") sits in a small solid badge on the
+  line; the first date and Today sit under the bars; today reads "Today so far".
+  The top card compares the last 15 finished days with the 15 before. Averages
+  skip days without Steps, as on Profile. Days that overlap a fight from your
+  history are bright, the rest dimmed, with a "Fight day" tag and a Fight days vs
+  other days card. Average by weekday uses the last 8 weeks without today, and
+  you can slide on it.
+- Weeks and months (Steps) or a tap on any sport opens a page with Day (31
+  days), Week (26 weeks) and Month (12 months) bars from a year of Apple
+  Health, a labelled average, and Average, Best and Total.
+- Fight screen: on Line, Histogram and Pace the day and everyone's number read
+  above the chart instead of below it.
+- Empty Steps state has a Connect Apple Health button. Sport totals say "min".
+- Companion preview history: three-day fights with a free day between, so the
+  preview has fight days; the newest is the finished Coffee is on you fight, so its
+  square opens a summary. One 1.3.0 release note in English and French.
+
+**Mirror:** `app.html` has the same Dashboard, the chart page and the new preview
+history (data version 3). The `dashboard-fights` options are gone now that Marc
+picked: the winner is plain mirror code.
+
+**Contract:** additive. `GET /api/v1/me/rivalries` rows gain `friends_since`
+(when the friendship was accepted, null when not friends), in `contracts/openapi.yaml`.
+Older builds ignore it; a build with this change reads a missing field as null, so
+on an older server the friendship sorts fall back to A to Z. No database change.
+Order: deploy the backend, then ship the app. Fight days come from the first page
+of `/profiles/{id}/history`.
+
+**Verification (local, 20 Oct):** web typecheck and all 550 unit tests passed; the
+rivalries database test was updated but not run (needs a database). Generic Simulator build (Xcode 27) succeeded
+with no warnings in the changed files. Localization, fight chart, profile
+refresh and native API boundary checks passed. The mirror screens were rendered
+in headless Chrome. Not checked: the app in the Simulator (this Mac has no
+Simulator runtime installed since 18 Oct) and a device with real Apple Health data.
+
+## Marketing version 1.3.0, 20 Oct 2026
+
+Apple approved and released 1.2.1 (234) on 19 Oct 2026; production `/api/app-release`
+shows it as `latest`. That closed the 1.2.1 train: the staging TestFlight upload for #434
+(`preview` `6f9304b`, build 235) failed with "Invalid Pre-Release Train. The train version
+'1.2.1' is closed for new build submissions" (90186). By Marc's rule the next version is
+**1.3.0**: `MARKETING_VERSION`, the TestFlight, App Store and release-tools workflows,
+`AGENTS.md`, `shipping.md` and the mirror say 1.3.0. Nothing players see changed since
+1.2.1, so the required 1.3.0 release note says so (English and French); replace it when
+1.3.0 gets real changes.
+
+The first 1.3.0 upload (`preview` `88274c6`) stopped before building: the release-availability
+step crashed on a build that App Store Connect returned without beta detail (`undefined method
+external_build_state for nil`, `Fastfile` 196), first seen after 1.2.1 was released. Such a
+build is now treated as in no TestFlight state; `fastlane/testflight_test.rb` covers it.
+
+Also seen on 19 Oct: TestFlight installs the highest build by default, so Marc got the
+App Store build 1.2.1 (234, `prod`) instead of staging 233 ("App Store" strip). A staging
+1.3.0 build is higher and fixes that.
+
+---
+
+## Admin dashboard tables on iPhone and web, prepared 19 Oct 2026
+
+Marc saw no table on the iPhone Users tab: #431 built it on the web only. He wants every admin
+dashboard feature on both, always (now a hard rule in `AGENTS.md`), and the dashboard fully
+server-driven so it needs no TestFlight build.
+
+**Code:** tables are now server-defined like sections, cards and charts: the dashboard payload
+has `tables`, and "Show more" reads `GET /api/v1/admin/table`. The iPhone dashboard
+(`AdminTableCard`) and the web page (`TableCard`) draw any table: a fixed first column and
+scrolling columns. **Newest users** is the first table. `GET /api/v1/admin/users` (from #431,
+used only by the web page, never on `main`) is replaced by `/admin/table`. The mirror shows the
+table on the Users tab (map: "Users tab: newest users table"). No release note (admin only).
+See [backend](backend.md#admin-dashboard-tables-prepared-19-oct-2026).
+
+**Contract:** additive for installed apps: `tables` is a new optional field that builds before
+this one ignore. `/admin/users` had no app client. `contracts/fixtures/admin-dashboard.json`
+has a table, and `tests/APIContractTests.swift` decodes it.
+
+**Verification (local, 19 Oct):** web typecheck passed; the dashboard integration test passed on
+a migrated Postgres 17 copy, including the table's first page, its cells in Paris time, and the
+next pages. The mirror table rendered in Chrome: 10 rows, the fixed handle, then 30. Swift was
+not compiled here; the simulator build and contract tests run in CI.
+
+---
+
+## Home page: WHOOP, paid extras and closing art, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 for the home page to say FitFight has WHOOP too, to stop
+calling the companions "coming later", and to replace the tennis picture under "Your
+friends are already walking."
+
+- **Copy (English and French):** the hero line reads Free · iPhone · Apple Health ·
+  WHOOP, and the pricing list says "Apple Health and WHOOP sync". The card of paid extras
+  is titled "Optional extras" / "En option", and the FAQ cost answer calls Specials and custom
+  companions optional purchases. A new FAQ, "Does it work with WHOOP?", says that WHOOP
+  connects for sleep, recovery, strain and workouts and that Fight steps still come from Apple Health.
+- **Art:** the closing card shows `friends-running.webp`: Rabbit, Turtle, Fox and Badger
+  jogging on a trail, transparent, 786 x 404. It is the approved "FitFight Group
+  Vignette" Blend image `stb-s04-classic-race`, copied unchanged from
+  `docs/design/source/kit/fight-group-image-proposals.html`. The edge-fade mask that hid the
+  old opaque picture's box is removed. `tennis-night.webp` is removed. Marc found the
+  `raceNight.png` art ugly, and its background was black, not transparent.
+- **FAQ text:** the WHOOP answer names the screens in words. Nunito has no `→` glyph,
+  so the browser drew the arrows from another font, smaller and lower than the text.
+- **Live:** nothing deployed. Production gets it when `preview` merges to `main`. The
+  App Store version with WHOOP is 1.2.1, still in review. 1.1.3 has no WHOOP.
+
+---
+
+## Sample fight names and home page line, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 to rename the sample fight Eat it and to reword the home page
+line that said "get" twice.
+
+- **Names:** Eat it is now Roommate Rumble (Duel de colocs in French). A fourth live fight,
+  Office Showdown (Le match du bureau), joins: Alex, Sam and Theo, 2 weeks, 4 days left,
+  Alex 430 steps behind Sam, loser brings donuts on Friday.
+- **Home page line:** "Choose a length, set the stakes, then start walking." French:
+  "Choisissez une durée, fixez l’enjeu, puis mettez-vous en marche."
+- **Where:** `web/components/landing/landing-copy.ts`, `FitFight/CompanionPreview.swift`
+  (debug simulator only, so no release note) and the mirror. The next Screenshots run
+  captures the App Store set with the new names. App Store Connect still has the 1.2.0 set
+  until a new set is uploaded with the next App Store version.
+
+---
+
+## Admin Users table and referral stats, prepared 19 Oct 2026
+
+Marc asked on 19 Oct 2026 for a table of the latest users on the admin dashboard's Users tab,
+and for stats on whether people refer their friends.
+
+**Code:** the web admin page (`/app/admin`), Users tab, has a **Newest users** table: 10 rows on
+load, then **Show 20 more**. Columns: Handle (sticky while the others scroll sideways), Name,
+Email, Joined, Friends, Everybody fight, Fights, Referred by, Referrals, Apple Health, Last sync,
+App, Notifications, Sign-in, Time zone. Hovering a header explains its rule. It reads the new
+`GET /api/v1/admin/users` (replaced the same day by [server-defined tables](backend.md#admin-dashboard-tables-prepared-19-oct-2026)). The
+Users tab also has three referral tiles, in the app and on the web: **Monthly referrers**
+(people whose link brought a signup in the last 30 days), **Users who referred someone** (share
+of all users, now vs 7 days ago) and **Onboarding by referral, all users** (referred vs other
+users: picked a username, connected Apple Health, joined a fight, referred someone; groups under
+5 left out). No release note (admin only). This first version was web only; see the entry above.
+
+**Contract:** additive. One new admin route and three new dashboard tiles; the dashboard's shape,
+ids, kinds and units are unchanged, and the iPhone app draws new tiles without an update. The
+dashboard route's Production / Staging code moved into `openAdminDatabase`, unchanged.
+
+**Database:** migration `20261019120000_account_auth` adds the view `private.account_auth` (no
+table, no data copied) and grants it to `fitfight_analytics` where that role exists (production).
+Staging gets it with the `develop` merge. Production gets it only with a `main` release; until
+then the Production table shows every column except Email and Sign-in, with a note.
+
+**Verification (local, 19 Oct):** web typecheck and all 550 unit tests passed. On a scratch
+Postgres 17 with Supabase stubs and all 78 migrations, the 21 database-only integration files
+passed (83 tests), including a new test for the table (rules, order, paging, and the no-view
+path). A role without `auth` access read emails through the view and was refused `auth.users`.
+`next dev` with recorded API answers showed the table at 402 and 1280 px wide: 10, 30, then 35
+rows, the sticky handle, and no page-wide sideways scroll.
+
+**Live deployment:** #431 merged into `develop` and #432 into `preview` on 19 Oct; `preview` deployed.
+
+---
+
+## Website Steps total matches the admin, prepared 19 Oct 2026
+
+On 19 Oct 2026 Marc saw 10.6M Steps recorded on fitfight.app and 12.4M in the admin
+All-time steps card.
+
+- **Cause:** the home page summed `public.step_days`. Since the activity pipeline (#306,
+  23 Sep), new builds write `step_days` only for days inside an open Fight, so most days
+  were missing.
+- **Code:** `readCachedTotalSteps` now sums the admin's `stepHistory`, now shared: complete
+  Apple Health days from each person's signup day to yesterday in Paris, with the Fight
+  fallback for 1.1.2 (210). The hourly cache is unchanged. No API, database, app or release
+  setting changed.
+- **Verification (local):** web typecheck and 550 unit tests passed. The new query gave the
+  expected total on a local Postgres 16 with a small fake schema. The Database workflow
+  (migrated schema, `npm run build` prerenders `/`) has not run on it. Not deployed.
+
+---
+
+## App Store 1.2.1 submitted for review, 19 Oct 2026
 
 Marc asked on 19 Oct 2026 to merge `develop` → `preview` → `main` and submit the new App
 Store version as **1.2.1**, with full control. The code is the 1.2.0 (232) release plus
-`develop`'s documentation commits; only the marketing version changes.
+`develop`'s documentation commits; only the marketing version changed.
 
 - **Version:** `MARKETING_VERSION`, the TestFlight, App Store and release-tools workflows,
-  every Versions row since 1.1.3 and the mirror say 1.2.1.
-- **App Store Connect plan:** cancel the 1.2.0 review submission, rename that same version
-  to 1.2.1 (listing, What's new, review notes, screenshots and `AFTER_APPROVAL` carry over),
-  select the production 1.2.1 build from `main`, submit, then admit it as `review` in
-  `/api/app-release`.
+  every Versions row since 1.1.3 and the mirror say 1.2.1 (#424).
+- **Merges:** #424 into `develop`; `develop` → `preview` (`677f60e`); #425 `preview` → `main`
+  (`06cce99`). No migration or backend change.
+- **Builds:** TestFlight 1.2.1 (233, staging) and App Store candidate 1.2.1 (234, `prod`).
+- **App Store Connect:** `scripts/app-store-release-audit.rb rename 1.2.0` cancelled the
+  1.2.0 (232) review submission and renamed that same version to 1.2.1, so the listing,
+  What's new, review notes, screenshots and `AFTER_APPROVAL` carried over. `submit 234`
+  selected build 234 and submitted it: `WAITING_FOR_REVIEW` on 19 Oct at about 00:30 UTC.
+  The release-tools workflow is back to a read-only audit.
+- **Release endpoint:** `testflight-latest/releases.json` admits prod review 1.2.1 (234),
+  latest stays 1.1.3 (226).
+- **App Privacy:** checked in App Store Connect on 19 Oct: 14 data types including Product
+  Interaction and Purchase History, published 14 Oct. Unchanged.
 
 ---
 
@@ -537,6 +827,15 @@ refresh, so a fight opens with it already on screen. Rollout: apply
 Verified locally: unit, database and build checks; one cron pass turned a real
 2.7 MB staging PNG into a 303 KB `image/webp` with `max-age=31536000` in 1.5 s;
 in the Simulator, the first frame of an opened fight already shows the picture.
+
+**Custom characters drawn naked, prepared 31 Oct:** production images drew custom
+characters naked or in made-up clothes, because the model got the equipped Resting
+picture (armchair, blanket). #444 (on `develop` only) sends the Pushing picture in
+the running kit instead. The cast key now uses that same picture, so each running
+fight with a custom character draws once more (35 of 53 on production on 31 Oct,
+about $5), and a new round no longer reuses a naked picture. Verified locally:
+typecheck, 550 unit and 147 database tests; the new check fails on the old key.
+Not yet deployed.
 
 ---
 
@@ -1093,7 +1392,9 @@ the challenger's next refresh, or when the grace ends.
 
 **Everybody fight on production is full:** read-only on 14 Oct, `PGG7` had 50 of 50
 accepted or deferred members (the cap), 11 more invited who cannot accept, and 81 profiles.
-New users already see "Couldn't accept." on that onboarding page. The cap is unchanged here.
+New users already see "Couldn't accept." on that onboarding page. Marc removed the cap on
+21 Oct 2026: fights have no member limit. The apps still handle `fight_full` from older
+servers. The new backend never sends it. Production stays capped until `preview` merges to `main`.
 
 **Contract:** `/api/v1` unchanged for every installed build. Two new endpoints; no request or
 response field changed. Read-only `/api/app-release` on 14 Oct: production latest 1.1.2
@@ -1150,6 +1451,14 @@ the charge is verified there by Apple's signature. On production this works only
 while the release registry (`testflight-latest/releases.json`, refreshed every
 15 minutes) lists a production build in review. The allowlist is removed.
 App Store users only make Production charges.
+
+**Real charge after Sandbox purchases (fixed in code 20 Oct 2026):** Marc
+bought two characters in Sandbox on production on 15 Oct, which locked his
+account to the Sandbox shelf. His later real App Store purchase was then
+verified as Sandbox and failed with "Apple purchase signature could not be
+verified", so the app showed Purchase pending forever. A Production charge now
+moves the account back to the Production shelf. His production account row was
+moved by hand on 20 Oct so his pending charge can be claimed before the deploy.
 
 **Accepted risk:** during a review window, a TestFlight tester who rewrites the
 app's traffic could buy in Sandbox for their own production account and get a

@@ -1,5 +1,9 @@
 # Blend workflow requests
 
+**Since 20 Oct 2026 the workflows run in FitFight, not Blend: see [AI workflows](ai-workflows.md).**
+Blend only finishes runs started before. The app contract, credits, paid and free characters,
+admission, recovery and reconciliation below still apply to every request.
+
 Backend and native generation updated 19 Sep 2026. Disabled by default, not
 deployed. Marc's follow-up also authorizes the generation screen, phone recovery,
 image saving and companion assignment. Marc confirmed that Blend owns permanent image storage. Cloud results for each implementation are recorded in status.md. Deployment, configuration and a real staging generation are still
@@ -344,7 +348,7 @@ every environment. Changing one is a code change that ships with a deploy.
 | --- | --- |
 | `limits.globalDailyStarts` | 500 shared starts per UTC day |
 | `limits.globalConcurrentRuns` | 20 unresolved runs |
-| `limits.providerRequestsPerMinute` | 60 shared start/read HTTP calls |
+| `limits.providerRequestsPerMinute` | 600 shared start/read calls (60 while every run was on Blend) |
 | `workflows.avatar` | ID below, latest published version, price 1 |
 | `workflows.fitness` | ID below, latest published version, price unset |
 | `workflows.group_photo` | ID below, latest published version, price unset |

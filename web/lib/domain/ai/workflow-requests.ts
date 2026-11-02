@@ -1,11 +1,8 @@
 import { correlateAiRequest } from "@/lib/observability/ai-request-log";
 import { createHash } from "node:crypto";
 import { ApiError } from "@/lib/http";
-import { startBlendWorkflow, readBlendWorkflowRun } from "@/lib/blend/client";
-import {
-    blendWorkflowConfiguration,
-    blendProviderConfiguration,
-} from "@/lib/blend/workflows";
+import { readAiWorkflowRun, startAiWorkflow } from "@/lib/ai/runner";
+import { blendWorkflowConfiguration } from "@/lib/blend/workflows";
 import {
     reserveAiRequest,
     claimAiRequestPoll,
@@ -14,7 +11,12 @@ import {
 } from "@/lib/supabase/queries/ai-requests-supabase-query";
 import { aiErrorMessages, aiErrorCodeSchema } from "@/lib/types/ai/error";
 import {
+    aiAvatarResultSchema,
+    aiCompanionLinesResultSchema,
+    aiFitnessResultSchema,
+    aiPromptCheckResultSchema,
     aiRunResponseSchema,
+    blendConfiguration,
     blendAvatarOutputSchema,
     blendCompanionLinesOutputSchema,
     blendFitnessOutputSchema,
@@ -26,15 +28,16 @@ import {
 } from "@/lib/types/ai/workflow";
 import type { AiRequestRecord, AiRequestUpdate } from "@/lib/types/ai/request";
 import type { AiRequestDependencies } from "@/lib/types/ai/service";
-import { blendErrorDetailSchema } from "@/lib/types/blend/workflow";
+import { aiRunnerPrefix } from "@/lib/types/ai/step";
+import { blendErrorDetailSchema, blendOutputSchema } from "@/lib/types/blend/workflow";
 
 const dependencies: AiRequestDependencies = {
     reserve: reserveAiRequest,
     claim: claimAiRequestPoll,
     finish: finishAiRequestAttempt,
     submit: markAiSubmission,
-    start: startBlendWorkflow,
-    read: readBlendWorkflowRun,
+    start: startAiWorkflow,
+    read: readAiWorkflowRun,
 };
 
 function requestResponse(request: AiRequestRecord): AiRunResponse {
@@ -151,8 +154,26 @@ export async function startAiRun(
             extension: "png",
             mediaCategory: "image",
         }));
-        const inputs =
-            input.workflow === "avatar"
+        const inputs = request.workflow_version.workflowId.startsWith(aiRunnerPrefix)
+            ? input.workflow === "avatar" || input.workflow === "prompt_check"
+                ? input.parameters
+                : input.workflow === "fitness"
+                  ? { portraits: reservation.portraits, identity_details: input.parameters.identity_details }
+                  : input.workflow === "companion_lines"
+                    ? {
+                          portraits: reservation.portraits,
+                          description: input.parameters.description,
+                          language: input.parameters.language,
+                          avoid: input.parameters.avoid.map((option) => `${option.name}: ${option.line}`).join("\n"),
+                      }
+                    : {
+                          portraits: reservation.portraits,
+                          scene: input.parameters.scene,
+                          cast_roster: input.parameters.characters
+                              .map((character, index) => `${index + 1}. ${character.identity_details}`)
+                              .join("\n"),
+                      }
+            : input.workflow === "avatar"
                 ? {
                       [request.workflow_version.versionId ===
                       legacyAvatarVersionId
@@ -186,7 +207,10 @@ export async function startAiRun(
                             )
                             .join("\n"),
                     };
-        started = await deps.start(request.workflow_version, inputs);
+        // A step can finish before the run handle is saved, so its deletion link travels with the workflow input.
+        started = await deps.start(request.workflow_version, request.workflow_version.workflowId.startsWith(aiRunnerPrefix)
+            ? { ...inputs, request_id: request.id }
+            : inputs);
     } catch (error) {
         if (!(error instanceof ApiError)) throw error;
         const parsedCode = aiErrorCodeSchema.safeParse(error.code);
@@ -254,7 +278,7 @@ export async function startAiRun(
             started.rateLimit,
         );
     } catch {
-        // The reservation remains unresolved if Blend accepted before persistence failed.
+        // The reservation remains unresolved if the run started before persistence failed.
         throw new ApiError(
             503,
             "ai_start_unconfirmed",
@@ -285,11 +309,10 @@ export async function readAiRun(
     deps: AiRequestDependencies = dependencies,
     source: "app" | "reconciler" = "app",
 ): Promise<AiRunResponse> {
-    const config = blendProviderConfiguration();
     const claimed = await deps.claim(
         userId,
         requestId,
-        config.limits,
+        blendConfiguration.limits,
         undefined,
         source,
     );
@@ -377,8 +400,17 @@ export async function readAiRun(
             run.status === "failed" ? "ai_failed" : "ai_cancelled";
         update.providerResponse = response.providerResponse;
     } else if (run.status === "completed") {
-        const schema =
-            request.workflow === "avatar"
+        // A FitFight workflow returns the result itself; a Blend run wraps it in labelled output items.
+        const runner = request.run_handle.workflowId.startsWith(aiRunnerPrefix);
+        const schema = runner
+            ? request.workflow === "avatar" || request.workflow === "group_photo"
+                ? aiAvatarResultSchema
+                : request.workflow === "fitness"
+                  ? aiFitnessResultSchema
+                  : request.workflow === "companion_lines"
+                    ? aiCompanionLinesResultSchema
+                    : aiPromptCheckResultSchema
+            : request.workflow === "avatar"
                 ? blendAvatarOutputSchema
                 : request.workflow === "fitness"
                   ? blendFitnessOutputSchema
@@ -393,10 +425,11 @@ export async function readAiRun(
         } else {
             update.status = "failed";
             update.providerResponse = response.providerResponse;
+            const items = blendOutputSchema.safeParse(run.output);
             update.errorCode =
-                run.output != null &&
-                Object.values(run.output).some((items) =>
-                    items.some((item) => item.status === "failed"),
+                !runner && items.success &&
+                Object.values(items.data).some((list) =>
+                    list.some((item) => item.status === "failed"),
                 )
                     ? "ai_failed"
                     : "ai_invalid_result";

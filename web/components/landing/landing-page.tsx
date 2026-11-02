@@ -454,10 +454,10 @@ export function LandingPage({
                     <div className="lp-card lp-end-card">
                         <div className="lp-end-art">
                             <img
-                                src="/landing/tennis-night.webp"
+                                src="/landing/friends-running.webp"
                                 alt={copy.end.art}
-                                width={1448}
-                                height={1086}
+                                width={786}
+                                height={404}
                                 loading="lazy"
                             />
                         </div>

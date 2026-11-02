@@ -14,19 +14,32 @@ concurrency:
 jobs:
     audit:
         runs-on: ubuntu-latest
-        timeout-minutes: 20
+        timeout-minutes: 45
         permissions:
-            contents: read
+            contents: write
+        env:
+            FITFIGHT_RELEASE_VERSION: "1.3.0"
+            APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+            APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+            APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         steps:
             - uses: actions/checkout@v4
             - uses: ruby/setup-ruby@v1
               with:
                   ruby-version: "3.3"
                   bundler-cache: true
-            - name: Audit current release metadata and screenshots
-              env:
-                  FITFIGHT_RELEASE_VERSION: "1.2.1"
-                  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-                  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-                  APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-              run: bundle exec ruby scripts/app-store-release-audit.rb audit
+            - name: Create the 1.3.0 draft with its listing, review notes and screenshots
+              run: bundle exec ruby scripts/app-store-release-audit.rb draft
+            - name: Wait until Apple has processed 1.3.0 build 238
+              run: |
+                  for attempt in $(seq 1 40); do
+                    bundle exec ruby scripts/app-store-release-audit.rb audit > /tmp/audit.txt 2>&1 || true
+                    grep -q '"version":"238","processingState":"VALID"' /tmp/audit.txt && exit 0
+                    sleep 30
+                  done
+                  grep '"builds"' /tmp/audit.txt
+                  exit 1
+            - name: Select 1.3.0 build 238 and submit it for App Review
+              run: bundle exec ruby scripts/app-store-release-audit.rb submit 238
+            - name: Admit the submitted build as the production review build
+              run: bash scripts/publish-app-releases.sh

@@ -68,17 +68,17 @@ English (U.S.) and French (France) App Store copy. Keep the existing approved ap
 
 `step challenge,walking,fitness,friends,competition,pedometer,health`
 
-## What is new in 1.2.1
+## What is new in 1.3.0
 
-> Friends: a Steps fight with each friend that runs the whole month and starts again on the 1st. Tap Friends at the top of Fights.
-> Fight Marc: when you sign up, start a 30-day Steps fight against FitFight's founder.
-> Player cards: tap a name to see your record against that person, your steps side by side and your fights together.
-> Every fight has its own picture: everyone's companions running together.
-> Repeating fights: History shows every round with its podium, an all-time leaderboard and records.
-> New post: send it to everyone, or choose your friends and the fights that see it. Feed shows how many new posts are waiting.
-> Make your own companion on one page, play Snake while it draws, then give it a name and a line.
-> Settings has Connectors for Apple Health, Garmin and WHOOP.
-> Usernames show as you type, you can change your fight's code, and FitFight opens on your last fights, even offline.
+> Dashboard: it opens on your fights, with your win rate in a ring, your place in your last fights and your winning run. Tap a place to see how that fight ended.
+> Friends head to head: each friend's score and who leads. Sort A to Z, by most fights or by how long you have been friends.
+> Charts: slide across any chart to read its number. Steps marks the days you were in a fight. Tap Weeks and months, or a sport, for bars by day, week and month.
+> Inside a fight, Bars shows today at the top.
+> Profile shows your companion in the same pose as Fights, from today's steps.
+> Fight pictures show your own companion in its running kit.
+> Your own companion draws faster, and Create another works at every step.
+> New post: Choose starts with nothing ticked, and fights that are over leave the list.
+> Fights have no size limit: invite as many people as you like.
 
 ## Screenshot set
 
@@ -149,16 +149,16 @@ Keep English (U.S.) as the primary App Store language and add French (France) as
 
 `défi de pas,marche,fitness,amis,compétition,podomètre,santé`
 
-### Nouveautés de la version 1.2.1
+### Nouveautés de la version 1.3.0
 
-> Amis : un défi de pas avec chaque ami, sur tout le mois, qui recommence le 1er. Touchez Amis en haut de Défis.
-> Affrontez Marc : à l’inscription, lancez un défi de pas de 30 jours contre le fondateur de FitFight.
-> Cartes de joueur : touchez un nom pour voir votre bilan face à cette personne, vos pas côte à côte et vos défis en commun.
-> Chaque défi a sa propre image : les compagnons de tout le monde qui courent ensemble.
-> Défis récurrents : l’Historique montre chaque manche avec son podium, un classement de tous les temps et des records.
-> Nouvelle publication : envoyez-la à tout le monde, ou choisissez les amis et les défis qui la voient. Le Fil indique combien de nouvelles publications vous attendent.
-> Créez votre compagnon sur une seule page, jouez à Snake pendant qu’il se dessine, puis donnez-lui un nom et une phrase.
-> Les Réglages ont des Connexions pour Santé d’Apple, Garmin et WHOOP.
-> Les noms d’utilisateur s’affichent pendant la saisie, vous pouvez changer le code de votre défi, et FitFight s’ouvre sur vos derniers défis, même hors ligne.
+> Tableau de bord : il s’ouvre sur vos défis, avec votre taux de victoire dans un anneau, votre place dans vos derniers défis et votre série. Touchez une place pour voir comment ce défi s’est terminé.
+> Face-à-face entre amis : le score de chaque ami et qui mène. Triez de A à Z, par nombre de défis ou par ancienneté d’amitié.
+> Graphiques : glissez sur n’importe quel graphique pour lire son chiffre. Pas met en avant les jours où vous étiez en défi. Touchez Semaines et mois, ou un sport, pour des barres par jour, semaine et mois.
+> Dans un défi, Barres montre aujourd’hui en haut.
+> Le Profil montre votre compagnon dans la même pose que dans Défis, selon vos pas du jour.
+> Les images de défi montrent votre propre compagnon dans sa tenue de course.
+> Votre propre compagnon se dessine plus vite, et En créer un autre marche à chaque étape.
+> Nouvelle publication : Choix commence sans rien de coché, et les défis terminés quittent la liste.
+> Les défis n’ont plus de limite de taille : invitez autant de personnes que vous voulez.
 
 Use the same six screenshot subjects as English, from the `app-store-screenshots-fr` artifact.

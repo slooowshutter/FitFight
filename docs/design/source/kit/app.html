@@ -328,7 +328,7 @@
         <script>
             "use strict";
             // Which app this page matches. Update both lines whenever a Swift change is mirrored here.
-            const MIRROR = { matches: "develop 1c3b1c00, admin AI section with Azure", updated: "1 Nov 2026" };
+            const MIRROR = { matches: "develop 41f6770e, 1.3.0 placeholder release note removed", updated: "2 Nov 2026" };
             const STORE_KEY = "fitfight-app-mirror";
             // Bump when the fake data shape changes, so saved data from an older page is replaced.
             const DATA_VERSION = 3;
@@ -6743,7 +6743,9 @@
 
     // Changelog.swift, the 12 newest rows verbatim (newest first). Changelog.current is the first row of this marketing version.
     const CHANGELOG = [
-        ["1.3.0", "2026-10-20", "Version 1.3.0 starts here. This build changes nothing you can see yet."],
+        ["1.3.0", "2026-10-30", "Profile now shows your companion in the same pose as Fights, from today's steps. New post: Choose starts with nothing ticked, and fights that are over leave the list. New companion: Create another works at every step, and “Pick the words we draw” is now “Pick from our suggestions”."],
+        ["1.3.0", "2026-10-21", "Inside a fight, Bars now shows the newest day first, so today is at the top."],
+        ["1.3.0", "2026-10-20", "Dashboard opens on Fights: your win rate in a ring, your place in your last fights (tap one for its summary), your run, and Friends head to head with each friend's score and who leads, sorted A to Z, by most fights or by how long you have been friends. Slide across any chart to read its number; averages sit in a small badge. Steps marks the days you were in a fight. Tap Weeks and months, or a sport, for bars by day, week and month."],
         ["1.2.1", "2026-10-18", "Connect your WHOOP account in Settings → Connectors → WHOOP. FitFight keeps your WHOOP sleep, recovery, strain and workouts, updated every hour."],
         ["1.2.1", "2026-10-18", "Settings now has Connectors: Apple Health, Garmin and WHOOP. Tap Apple Health to sync, review what FitFight can read, and choose which device’s steps count. Garmin and WHOOP show how to send your steps to Apple Health, where FitFight reads them. The sync details are no longer in Settings."],
         ["1.2.1", "2026-10-17", "New post: Photo or video shows Take Photo and Photo Library right under the button, so adding a photo no longer sometimes does nothing."],
@@ -6753,8 +6755,6 @@
         ["1.2.1", "2026-10-17", "A fight now needs a title. The loser action is still optional, now fits 240 characters, and its box grows as you type so you can read all of it. The title box grows too."],
         ["1.2.1", "2026-10-17", "Fight pictures now open instantly instead of loading for several seconds."],
         ["1.2.1", "2026-10-17", "Friends: an Add friends button at the top, past rounds in each fight’s History, and a friend fight can now last 1 week instead of a month."],
-        ["1.2.1", "2026-10-17", "Opening FitFight no longer sometimes freezes on a blank Fights screen."],
-        ["1.2.1", "2026-10-16", "Creating your own companion looks calmer: the step you are on uses the usual card, without the yellow border."],
     ].map(([version, date, notes], i) => ({ id: i, version, date, notes }));
 
     // What the server would send about each other person. record is [wins, losses, draws]; shares is their

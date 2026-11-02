@@ -3101,8 +3101,8 @@ export async function readAdminDashboard(
     const { cards, charts } = definitions(database, w, section);
     const failure = (error: unknown) => `Query failed: ${error instanceof Error ? error.message : String(error)}`;
     // NOTE: tiles take turns on the pool's connections, so each note's time is the tile's own
-    // query, not its wait for a free connection.
-    let free = database.options.max;
+    // query, not its wait for a free connection. A transaction has no `options` and one connection.
+    let free = database.options?.max ?? 1;
     const turns: (() => void)[] = [];
     const timed = async <T extends { note: string | null }>(tile: () => Promise<T>): Promise<T> => {
         if (free > 0) free--;

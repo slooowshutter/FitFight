@@ -23,6 +23,9 @@ jobs:
             - name: Forbid destructive SQL
               run: python3 scripts/forbid-destructive-sql.py
 
+            - name: Require Data API grants
+              run: python3 scripts/check-data-api-grants.py
+
             - uses: supabase/setup-cli@v1
               with:
                   version: 2.115.0

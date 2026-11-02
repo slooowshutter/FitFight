@@ -1,5 +1,7 @@
 import { ApiError } from "@/lib/http";
+import { aiRunnerPrefix } from "@/lib/types/ai/step";
 import {
+    aiRunnerEnvironmentSchema,
     blendConfiguration,
     blendEnvironmentSchema,
     aiWorkflowConfigurationSchema,
@@ -7,23 +9,22 @@ import {
 } from "@/lib/types/ai/workflow";
 import { blendWorkflowVersionSchema } from "@/lib/types/blend/workflow";
 
-/** Polling needs transport limits, but must not depend on the current publication or new-start price. */
-export function blendProviderConfiguration() {
-    if (!blendEnvironmentSchema.safeParse(process.env).success)
+/**
+ * Each workflow has an explicit version and a server-selected price. A FitFight workflow's version is the deployed
+ * commit; it needs the AI workflows' OpenRouter key, and a Blend one needs Blend's.
+ */
+export function blendWorkflowConfiguration(workflow: AiWorkflow, paidCharacter = false) {
+    const { runner, workflowId, versionId, creditPrice } = blendConfiguration.workflows[workflow];
+    if (!(runner === "blend" ? blendEnvironmentSchema : aiRunnerEnvironmentSchema).safeParse(process.env).success)
         throw new ApiError(
             503,
             "ai_unavailable",
             "This feature is temporarily unavailable on our side.",
         );
-    return { limits: blendConfiguration.limits };
-}
-
-/** Each workflow has an explicit immutable publication and a server-selected price. */
-export function blendWorkflowConfiguration(workflow: AiWorkflow, paidCharacter = false) {
-    const provider = blendProviderConfiguration();
-    const { workflowId, versionId, creditPrice } =
-        blendConfiguration.workflows[workflow];
-    const version = blendWorkflowVersionSchema.safeParse({ workflowId, versionId });
+    const provider = { limits: blendConfiguration.limits };
+    const version = blendWorkflowVersionSchema.safeParse(runner === "blend"
+        ? { workflowId, versionId }
+        : { workflowId: `${aiRunnerPrefix}${workflow}`, versionId: process.env.VERCEL_GIT_COMMIT_SHA ?? "local" });
     if (!version.success)
         throw new ApiError(503, "ai_unavailable", "This feature is temporarily unavailable on our side.");
     // A prompt check is free text work done before buying, like a paid character's own runs.

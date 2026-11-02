@@ -51,18 +51,18 @@ test("paid character routes require authentication and reject caller-owned purch
 });
 
 test("paid portrait and fitness starts require no operator credit price", () => {
-    const previousApiKey = process.env.BLEND_API_KEY;
+    const previousApiKey = process.env.AI_WORKFLOWS_OPENROUTER_API_KEY;
     const previousPrice = blendConfiguration.workflows.fitness.creditPrice;
     try {
-        process.env.BLEND_API_KEY = "bai_test-only-blend-key";
+        process.env.AI_WORKFLOWS_OPENROUTER_API_KEY = "test-only-openrouter-key";
         blendConfiguration.workflows.fitness.creditPrice = undefined;
         assert.equal(blendWorkflowConfiguration("avatar", true).creditPrice, 0);
         assert.equal(blendWorkflowConfiguration("fitness", true).creditPrice, 0);
         assert.throws(() => blendWorkflowConfiguration("fitness"), { code: "ai_unavailable" });
     } finally {
         blendConfiguration.workflows.fitness.creditPrice = previousPrice;
-        if (previousApiKey === undefined) delete process.env.BLEND_API_KEY;
-        else process.env.BLEND_API_KEY = previousApiKey;
+        if (previousApiKey === undefined) delete process.env.AI_WORKFLOWS_OPENROUTER_API_KEY;
+        else process.env.AI_WORKFLOWS_OPENROUTER_API_KEY = previousApiKey;
     }
 });
 
@@ -191,14 +191,14 @@ test("stored suggestions are read as saved, even past today's limits", () => {
 });
 
 test("suggestion batches are free for a character and closed to credit starts", () => {
-    const previousApiKey = process.env.BLEND_API_KEY;
+    const previousApiKey = process.env.AI_WORKFLOWS_OPENROUTER_API_KEY;
     try {
-        process.env.BLEND_API_KEY = "bai_test-only-blend-key";
+        process.env.AI_WORKFLOWS_OPENROUTER_API_KEY = "test-only-openrouter-key";
         assert.equal(blendWorkflowConfiguration("companion_lines", true).creditPrice, 0);
         assert.throws(() => blendWorkflowConfiguration("companion_lines"), { code: "ai_unavailable" });
     } finally {
-        if (previousApiKey === undefined) delete process.env.BLEND_API_KEY;
-        else process.env.BLEND_API_KEY = previousApiKey;
+        if (previousApiKey === undefined) delete process.env.AI_WORKFLOWS_OPENROUTER_API_KEY;
+        else process.env.AI_WORKFLOWS_OPENROUTER_API_KEY = previousApiKey;
     }
     assert.equal(blendConfiguration.workflows.companion_lines.creditPrice, undefined);
 });

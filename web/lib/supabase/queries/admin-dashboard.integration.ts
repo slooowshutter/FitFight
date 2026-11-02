@@ -3,10 +3,12 @@ import { randomUUID } from "node:crypto";
 import { after, test } from "node:test";
 import postgres from "postgres";
 import { randomJoinCode } from "@/lib/domain/fights/join-code";
+import { judgeFightImage } from "@/lib/domain/fight-images/plan";
 import { adminDashboardSectionValues } from "@/lib/types/admin/admin-dashboard";
 import type { AdminUser } from "@/lib/types/admin/admin-users";
 import { databaseTestEnvironmentSchema } from "@/lib/types/testing/database";
 import { readAdminDashboard, readAdminTablePage, readAdminUsers } from "./admin-dashboard-supabase-query";
+import { finishFightImageAttempt } from "./fight-images-supabase-query";
 
 const env = databaseTestEnvironmentSchema.parse(process.env);
 const database = postgres(env.DATABASE_URL, { max: 5 });
@@ -580,4 +582,105 @@ test("the users table lists the newest accounts first, a page at a time, by the 
     const referrers = (await readAdminDashboard("users", 30, "staging", database)).cards
         .find((card) => card.id === "monthly_referrers")?.value ?? 0;
     assert.equal(referrers - referrersBefore, 1, "Ada's link brought Ben");
+});
+
+test("AI run times require a saved passing judgment for the same fight-image run", async () => {
+    const partialTrail = randomUUID();
+    const partialRace = randomUUID();
+    const failedTrail = randomUUID();
+    const completedTrail = randomUUID();
+    const completedRace = randomUUID();
+    const rejectedTrail = randomUUID();
+    const unreadableRace = randomUUID();
+    const unjudgedTrail = randomUUID();
+    const userId = randomUUID();
+    const fightId = randomUUID();
+    const imageUrl = "https://cdn.tryblend.ai/dashboard-test.png";
+    const passedCheck = JSON.stringify({ total: 2, counts: [{ name: "Cat", count: 1 }, { name: "Dog", count: 1 }] });
+    const rejectedCheck = JSON.stringify({ total: 1, counts: [{ name: "Cat", count: 1 }] });
+    const unreadableCheck = "The image looks fine.";
+    const startedAt = new Date();
+    startedAt.setUTCDate(startedAt.getUTCDate() - 2);
+    startedAt.setUTCHours(12, 0, 0, 0);
+    const day = startedAt.toISOString().slice(0, 10);
+    const rollback = new Error("rollback AI timing fixtures");
+    await assert.rejects(database.begin(async (transaction) => {
+        await transaction`insert into auth.users(id) values (${userId})`;
+        await transaction`
+            insert into public.fights(id, owner_id, name, state, starts_at, ends_at, time_zone, outcome_rule, goal_policy)
+            values (${fightId}, ${userId}, 'AI dashboard', 'live', now() - interval '1 day', now() + interval '1 day',
+                'Europe/Paris', 'highest_total', 'shared')
+        `;
+        await transaction`
+            insert into private.ai_steps (
+                run_id, workflow, step, step_id, attempt, kind, provider, model,
+                status, started_at, duration_ms, input, code_version
+            )
+            select run_id, workflow, step, step_id, attempt, 'text', 'openrouter', 'test-model',
+                status, ${startedAt}::timestamptz + elapsed * interval '1 second', duration, '{}', 'test'
+            from (values
+                (${partialTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${partialRace}, 'raceStart', 'Draw the race start', 'draw', 1, 'completed', 0, 20000),
+                (${failedTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${failedTrail}, 'trail', 'Count the runners', 'count', 1, 'failed', 20, 1000),
+                (${completedTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${completedTrail}, 'trail', 'Draw the runners', 'draw', 1, 'failed', 3, 10000),
+                (${completedTrail}, 'trail', 'Draw the runners', 'draw', 2, 'completed', 14, 40000),
+                (${completedTrail}, 'trail', 'Count the runners', 'count', 1, 'completed', 55, 5000),
+                (${completedRace}, 'raceStart', 'Draw the race start', 'draw', 1, 'completed', 0, 30000),
+                (${completedRace}, 'raceStart', 'Count the featured runners', 'count', 1, 'failed', 31, 3000),
+                (${completedRace}, 'raceStart', 'Count the featured runners', 'count', 2, 'completed', 35, 5000),
+                (${rejectedTrail}, 'trail', 'Keep the scene in scope', 'clean', 1, 'completed', 0, 2000),
+                (${rejectedTrail}, 'trail', 'Draw the runners', 'draw', 1, 'completed', 3, 10000),
+                (${rejectedTrail}, 'trail', 'Count the runners', 'count', 1, 'completed', 15, 5000),
+                (${unreadableRace}, 'raceStart', 'Draw the race start', 'draw', 1, 'completed', 0, 10000),
+                (${unreadableRace}, 'raceStart', 'Count the featured runners', 'count', 1, 'completed', 11, 4000),
+                (${unjudgedTrail}, 'trail', 'Draw the runners', 'draw', 1, 'completed', 0, 20000),
+                (${unjudgedTrail}, 'trail', 'Count the runners', 'count', 1, 'completed', 21, 4000)
+            ) as fixture(run_id, workflow, step, step_id, attempt, status, elapsed, duration)
+        `;
+        await transaction`
+            update private.ai_steps set output = case run_id
+                when ${rejectedTrail} then to_jsonb(${rejectedCheck}::text)
+                when ${unreadableRace} then to_jsonb(${unreadableCheck}::text)
+                else to_jsonb(${passedCheck}::text) end
+            where run_id in (${rejectedTrail}, ${unreadableRace}, ${completedTrail}, ${completedRace}, ${unjudgedTrail})
+                and step in ('Count the runners', 'Count the featured runners') and status = 'completed'
+        `;
+        for (const fixture of [
+            { runId: rejectedTrail, check: rejectedCheck, judgment: judgeFightImage("trail", { Cat: 1, Dog: 1 }, rejectedCheck), nextRunId: completedTrail },
+            { runId: completedRace, check: passedCheck, judgment: judgeFightImage("race_start", { Cat: 1, Dog: 1 }, passedCheck), nextRunId: null },
+            { runId: unreadableRace, check: unreadableCheck, judgment: judgeFightImage("race_start", { Cat: 1, Dog: 1 }, unreadableCheck), nextRunId: null },
+        ]) {
+            const imageId = randomUUID();
+            await transaction`
+                insert into private.fight_group_images(id, fight_id, status, due_at, run_id, attempts)
+                values (${imageId}, ${fightId}, 'running', now(), ${fixture.runId}, 1)
+            `;
+            await finishFightImageAttempt(imageId, {
+                runId: fixture.runId, imageUrl, check: fixture.check, ...fixture.judgment, nextRunId: fixture.nextRunId,
+            }, transaction);
+            if (fixture.nextRunId) {
+                await finishFightImageAttempt(imageId, {
+                    runId: fixture.nextRunId, imageUrl, check: passedCheck,
+                    ...judgeFightImage("trail", { Cat: 1, Dog: 1 }, passedCheck),
+                }, transaction);
+            }
+        }
+        await transaction`
+            insert into private.fight_group_images(fight_id, status, due_at, run_id, attempts)
+            values (${fightId}, 'running', now(), ${unjudgedTrail}, 1)
+        `;
+        const dashboard = await readAdminDashboard("ai", 7, "staging", transaction, "day");
+        const timing = dashboard.charts.find((chart) => chart.id === "ai_run_time_per_bucket");
+        assert.ok(timing);
+        assert.ok(!timing.note?.startsWith("Query failed"), timing.note ?? "");
+        assert.deepEqual(timing.series.find((series) => series.name === "Fight image")?.points, [
+            { x: day, y: 50 },
+        ], "Only the judged 60-second trail retry and 40-second race contribute, not rejected, unreadable or unjudged counts");
+        const runs = dashboard.charts.find((chart) => chart.id === "ai_runs_per_bucket");
+        assert.equal(runs?.series.find((series) => series.name === "Fight image")?.points.find((point) => point.x === day)?.y, 8,
+            "Partial, failed, rejected, unreadable and unjudged workflows still count as runs");
+        throw rollback;
+    }), rollback);
 });

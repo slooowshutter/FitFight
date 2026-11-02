@@ -948,7 +948,7 @@ paths:
                     "required": true,
                     "schema": {
                         "type": "string",
-                        "enum": ["overview", "retention", "churn", "users", "engagement", "steps", "fights", "social", "friends", "app", "metrics"]
+                        "enum": ["overview", "retention", "churn", "users", "engagement", "steps", "fights", "social", "friends", "app", "metrics", "ai"]
                     }
                 },
                 {
@@ -1019,7 +1019,7 @@ paths:
                                                 "title": { "type": "string" },
                                                 "value": { "type": ["number", "null"] },
                                                 "previous": { "type": ["number", "null"] },
-                                                "unit": { "type": "string", "enum": ["count", "steps", "percent", "days", "hours", "minutes", "seconds"] },
+                                                "unit": { "type": "string", "enum": ["count", "steps", "percent", "days", "hours", "minutes", "seconds", "usd"], "description": "usd is dollars, from 20 Oct 2026. Older apps show it as a plain number." },
                                                 "higher_is_better": { "type": ["boolean", "null"] },
                                                 "note": { "type": ["string", "null"] },
                                                 "definition": { "type": ["string", "null"], "description": "What the card measures and what it compares with. Servers before 11 Oct 2026 omit it." },

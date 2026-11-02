@@ -1,8 +1,81 @@
 # FitFight status: what works, what’s fake, what’s next
 
-Read this before building. Last updated **19 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
+Read this before building. Last updated **20 Oct 2026**. Production release: **1.1.2 (210)** (live release endpoint, 28 Sep).
 
 Do **not** restore removed surfaces. Do **not** build Strava, Active Minutes, Workout Count, payments beyond the approved Specials and custom-character purchases, or a broader marketing site unless the [Notion Product Backlog](https://app.notion.com/p/3d38907c7ecf816facdff36cb59f463e) says so. The WHOOP connection (raw data pull) was approved on 18 Oct 2026; WHOOP-based Fights and other WHOOP UI still wait for the backlog. Fight posts, the Feedback tab, challenge-reminder pushes, and feed social notifications are in this build. On the web, the home page, the privacy and support pages, the invite and referral pages, and the signed-in web app at `/app` exist.
+
+---
+
+## FitFight runs its own AI workflows, prepared 20 Oct 2026
+
+Marc asked to leave Blend because it is slow: on staging (12 to 17 Oct) Blend took a median
+44 s for a prompt check that OpenRouter answers in 2 to 3 s, 130 s for a portrait and 134 s for
+a fitness set. See [AI workflows](ai-workflows.md).
+
+**Code:** all seven Blend workflows are now functions in `web/lib/ai/workflows.ts`, run by the
+Vercel Workflow SDK, with every prompt copied word for word (`prompts.ts`, checked against the
+versions Blend published, read from Blend's database on 21 Oct). Text goes through OpenRouter.
+Sunburst drawings run on Blend's five Azure regions with their per-minute limits, paid with
+Azure credits, and go to OpenRouter only when every region is full or down. Every model call
+writes a row to the new `private.ai_steps` (time, first token, tokens, cost, model, input, output).
+Drawings go to the new public `ai-images` bucket. `/api/v1/ai/runs` and its contract are
+unchanged; old Blend runs still finish through Blend. The admin dashboard has a new **AI**
+section (iPhone, web and mirror): spend, success, times, wait, cost per character, four charts
+and four tables. The iPhone change is the `usd` unit only; older builds show dollars without
+the sign. Migration `20261020120000_ai_steps.sql` adds the table, bucket and new allowed
+picture hosts.
+
+**Checked on this Mac, 20 Oct:** typecheck, 116 unit tests, `next build` (7 workflows compiled),
+the iPhone Simulator build, the migration, schema lint and pgTAP (333) on a disposable local
+database, and the database tests (44 local failures, the same tests that fail on `develop`
+locally, 45 there; all of them pass once the local API port clash is avoided, except one
+HealthKit date test near midnight). Live runs of all seven workflows on the local database:
+prompt check 4.3 s, names and lines 17 s, portrait 42 s, fitness set 42 s (five drawings at
+once), group photo 47 s, trail image 53 s (check passed), race start 61 s (check missed two
+featured runners, so the cron would retry), all logged with cost. Local drawing links are refused
+by the picture checks, as expected, so those requests released their credit.
+
+**Contract:** `/api/v1/ai/runs` requests and answers are unchanged, so every installed build works;
+Blend runs started before the deploy still finish on Blend. The admin dashboard adds the `ai`
+section and the `usd` unit (`contracts/openapi.yaml`); older builds decode both as strings and
+show dollars without the sign. **Order:** the migration first (the old checks refuse FitFight
+picture links, so a backend without it would fail to settle completed drawings), then the
+backend.
+
+**Not done:** not deployed, not merged. Staging needs the migration, the secret
+`AI_WORKFLOWS_OPENROUTER_API_KEY` and the five `AZURE_IMAGE_*_API_KEY` secrets are in Vercel
+for Development and Preview (21 Oct), and staging still needs a real paid character end to end.
+Production needs the same six secrets before `main` ships this; do not use `OPENROUTER_API_KEY`
+there, it turns the paused daily statuses back on.
+
+**Review fixes, 31 Oct:** drawing and upload now use separate durable steps. A storage retry
+reuses the saved bytes, and the model charge is logged before upload. Streamed OpenRouter
+400/403 errors stop immediately, while 408/429 and server errors remain retryable. Fight-image
+timings require a successful final runner count, so partial runs do not lower the median.
+The app/API contracts and migration are unchanged by these fixes.
+
+**Checks for these fixes:** typecheck, all 573 unit tests and `git diff --check` passed in
+this workspace. The image regressions use the real Workflow compiler with a mocked scheduler
+and services. Before the fix, each storage scenario called the model twice. All four now call
+it once. Eleven text tests cover streamed and HTTP errors with mocked provider responses.
+The dashboard database regression is prepared for cloud CI, but was not run here because
+it requires the disposable CI database. Hosted Workflow persistence and live deployment remain unverified.
+
+**Review fixes, 1 Nov:** app workflows now carry their reserved request ID into every model log.
+The prepared `ai_steps` migration links those logs to the request with account-deletion cascade.
+The foreign key also rejects logs from workflows that finish after their owner deletes the account.
+Normal retention stays unlimited. Fight-image timings now require a saved `ready` image for the
+same run ID. Rejected counts, unreadable answers and unjudged runs stay in counts but not successful-run timings.
+
+**Contract and order:** `/api/v1/ai/runs`, account deletion and dashboard response shapes remain unchanged.
+The request ID is internal workflow input, supplied by the backend. Old Blend runs still use their existing inputs.
+The unshipped migration changed in place. Apply it before the backend, as above. No new native build is required.
+
+**Checks:** 16 request/log ownership assertions failed before the fix. All 64 targeted checks now pass.
+The full suite passed all 573 unit tests, typecheck, the destructive-SQL guard and whitespace checks.
+Database regressions cover account deletion before run-handle persistence, late callbacks, other-account isolation,
+rejected and unreadable counts, unjudged runs and a successful retry. They await the disposable cloud CI database,
+which this workspace cannot start. No hosted database, deployment or supported installed build was tested for these fixes.
 
 ---
 

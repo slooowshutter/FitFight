@@ -1246,8 +1246,14 @@ private func adminNumber(_ value: Double) -> String {
     return sign + digits + (tier?.1 ?? "")
 }
 
-/// A value in its unit: "42%", "4.2%", "3 h", "1.5K". `exact` shows grouped digits instead, whole for steps.
+/// A value in its unit: "42%", "4.2%", "3 h", "1.5K", "$0.0693". `exact` shows grouped digits instead, whole for steps.
 private func adminValue(_ value: Double, unit: String, exact: Bool = false) -> String {
+    // Dollars, like the server: a model call costs cents, so amounts under $1 keep four decimals.
+    if unit == "usd" {
+        let size = abs(value)
+        let digits = size < 1 ? 2...4 : size < 100 ? 2...2 : 0...0
+        return (value < 0 ? "-$" : "$") + size.formatted(.number.precision(.fractionLength(digits)).locale(Locale(identifier: "en_US")))
+    }
     let suffix: String
     switch unit {
     case "percent": suffix = "%"

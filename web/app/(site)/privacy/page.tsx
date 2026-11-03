@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">YOUR DATA, IN PLAIN LANGUAGE</p>
                 <h1>Privacy Policy</h1>
-                <p className="legal-updated">Effective 18 October 2026</p>
+                <p className="legal-updated">Effective 3 November 2026</p>
                 <p className="legal-intro">
                     FitFight lets named participants compete on who records the
                     most Steps during a private Fight. This policy explains the
@@ -233,7 +233,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section>
-                    <h2>Profile measurement and pair artwork</h2>
+                    <h2>Profile measurement</h2>
                     <p>
                         When profile measurement is enabled, FitFight records
                         successful profile opens using the viewer and target
@@ -257,14 +257,31 @@ export default function PrivacyPage() {
                         Only aggregate measurement reports are available to the
                         FitFight operator.
                     </p>
+                </section>
+
+                <section>
+                    <h2>Companions and Fight pictures</h2>
                     <p>
-                        Pair artwork generation is currently unavailable. No
-                        companion inputs are sent to an image-generation
-                        provider. Before enabling it, we will identify the
-                        provider, explain the inputs and obtain the
-                        participants&apos; specific permission. Profile sharing
-                        and Apple Health authorization do not grant permission
-                        for external image processing.
+                        When you create your own companion, FitFight sends the
+                        words you type, the portrait you choose, and the
+                        companion&apos;s name and line to outside services that
+                        check the words, suggest names and lines, and draw the
+                        pictures. These requests come from our server and do
+                        not include your email, username, Steps or Health data.
+                    </p>
+                    <p>
+                        Each Fight with at least two people gets a group picture
+                        of its members&apos; companions. To draw it, FitFight
+                        sends each member&apos;s companion picture, name and
+                        description. It does not send usernames, Steps or Health
+                        data. Only the Fight&apos;s members see the picture in
+                        the app.
+                    </p>
+                    <p>
+                        We keep a record of each request and its answer,
+                        including the words sent, to check cost and quality and
+                        to fix errors. The pictures are stored with Supabase at
+                        unlisted links.
                     </p>
                 </section>
 
@@ -354,6 +371,15 @@ export default function PrivacyPage() {
                         attachment links. The FitFight administrator can send a
                         report, its comments, device information, and attachment
                         links to Cursor to investigate and prepare a fix.
+                    </p>
+                    <p>
+                        For companions and Fight pictures, OpenRouter and the
+                        model providers it routes each request to (Anthropic,
+                        Google, OpenAI and Z.ai) check words, write names and
+                        lines, and check pictures. Microsoft Azure OpenAI
+                        Service draws the pictures in data centers in Sweden,
+                        Poland, the United States and the United Arab Emirates.
+                        When Azure is busy, OpenRouter draws them instead.
                     </p>
                     <p>
                         When daily-status generation is configured and enabled

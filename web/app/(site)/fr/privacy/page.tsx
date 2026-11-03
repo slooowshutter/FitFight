@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             <article className="legal-content">
                 <p className="eyebrow">VOS DONNÉES, EN TOUTE CLARTÉ</p>
                 <h1>Politique de confidentialité</h1>
-                <p className="legal-updated">En vigueur le 18 octobre 2026</p>
+                <p className="legal-updated">En vigueur le 3 novembre 2026</p>
                 <p className="legal-intro">
                     FitFight permet à des participants identifiés de comparer le
                     nombre de pas enregistrés pendant un défi privé. Cette
@@ -252,7 +252,7 @@ export default function PrivacyPage() {
                 </section>
 
                 <section>
-                    <h2>Mesure des profils et illustrations de rivalité</h2>
+                    <h2>Mesure des profils</h2>
                     <p>
                         Lorsque cette mesure est activée, FitFight enregistre les
                         ouvertures réussies avec les identifiants des deux comptes,
@@ -277,14 +277,33 @@ export default function PrivacyPage() {
                         servent aussi à limiter les abus. Seuls des rapports
                         agrégés sont accessibles à l’opérateur.
                     </p>
+                </section>
+
+                <section>
+                    <h2>Compagnons et images de défi</h2>
                     <p>
-                        La génération d’illustrations de rivalité est indisponible.
-                        Aucun compagnon n’est envoyé à un fournisseur de génération
-                        d’images. Avant son activation, nous nommerons le fournisseur,
-                        expliquerons les données transmises et demanderons une
-                        autorisation spécifique aux deux participants. Le partage
-                        du profil et l’autorisation Santé ne permettent pas ce
-                        traitement externe.
+                        Lorsque vous créez votre propre compagnon, FitFight
+                        envoie les mots que vous saisissez, le portrait choisi,
+                        ainsi que le nom et la phrase du compagnon à des services
+                        externes qui vérifient les mots, proposent des noms et
+                        des phrases, et dessinent les images. Ces requêtes
+                        partent de notre serveur et ne contiennent ni votre
+                        e-mail, ni votre nom d’utilisateur, ni vos pas, ni vos
+                        données Santé.
+                    </p>
+                    <p>
+                        Chaque défi d’au moins deux personnes reçoit une image
+                        de groupe avec les compagnons de ses membres. Pour la
+                        dessiner, FitFight envoie l’image, le nom et la
+                        description du compagnon de chaque membre. Ni noms
+                        d’utilisateur, ni pas, ni données Santé ne sont envoyés.
+                        Seuls les membres du défi voient l’image dans l’app.
+                    </p>
+                    <p>
+                        Nous conservons une trace de chaque requête et de sa
+                        réponse, y compris les mots envoyés, pour suivre le coût
+                        et la qualité et corriger les erreurs. Les images sont
+                        stockées chez Supabase, à des liens non répertoriés.
                     </p>
                 </section>
 
@@ -394,6 +413,17 @@ export default function PrivacyPage() {
                         signalement, ses commentaires, les informations
                         d’appareil et les liens des pièces jointes à Cursor pour
                         examiner le problème et préparer une correction.
+                    </p>
+                    <p>
+                        Pour les compagnons et les images de défi, OpenRouter et
+                        les fournisseurs de modèles vers lesquels il oriente
+                        chaque requête (Anthropic, Google, OpenAI et Z.ai)
+                        vérifient les mots, écrivent les noms et les phrases, et
+                        contrôlent les images. Microsoft Azure OpenAI Service
+                        dessine les images dans des centres de données en Suède,
+                        en Pologne, aux États-Unis et aux Émirats arabes unis.
+                        Lorsque Azure est saturé, OpenRouter les dessine à sa
+                        place.
                     </p>
                     <p>
                         Lorsque les bilans quotidiens sont configurés et activés
